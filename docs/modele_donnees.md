@@ -80,7 +80,7 @@ Un choix est soit **direct** (`outcome`), soit **avec test** (`check`, `success`
 | Champ | Description |
 |---|---|
 | `conditions` | Si elles ne sont pas remplies, le choix est **caché**. En mode debug (F12), il est affiché grisé, avec la raison (ex. « INT 12+ ») |
-| `check` | Test d20 : `{"skill": "<compétence>", "dc": N}` ou `{"ability": "<attribut>", "dc": N}` |
+| `check` | Test d20 : `{"skill": "<compétence>", "dc": N}`, `{"ability": "<attribut>", "dc": N}` ou `{"save": "<attribut>", "dc": N}` (jet de sauvegarde, avec la maîtrise si la classe le maîtrise) |
 | `outcome` / `success` / `failure` | `{"text": "...", "effects": [...]}` |
 
 **Tests :** on lance d20 + modificateur et on compare au DD. Un 20 naturel réussit toujours, un 1 naturel échoue
@@ -174,6 +174,16 @@ C'est un combat proche de D&D 5e. Les réglages sont dans `rules.json › combat
   - un objet ;
   - la fuite ;
   - ou passer leur tour.
+
+  Une action `free` (Fougue) ne consomme pas l'action du tour, et l'effet `extra_action` en donne une de plus :
+  le tour continue tant qu'il en reste (`Combat.actions_left`).
+- **Attaque supplémentaire** : l'action Attaque (`attack_action`) frappe 1 + `extra_attack` fois. Si la cible tombe,
+  les coups suivants visent l'ennemi le plus faible.
+- **Jets de sauvegarde** : un effet avec `save` fait lancer à la cible d20 + modificateur (+ maîtrise si sa classe
+  maîtrise cette sauvegarde) contre le DD des sorts de l'acteur (8 + maîtrise + attribut d'incantation), le `dc` de
+  l'effet ou le `save_dc` de la créature.
+- **Réactions** (première version) : l'Esquive instinctive divise par deux une attaque par round ; la réaction revient
+  au début du tour du personnage.
 - **Créatures** (ennemis, invocations) : elles jouent seules (IA). Un ennemi qui tire une action `prepared` l'annonce
   (« Prépare : … », visible au-dessus de lui), puis l'exécute à son tour suivant.
 - **Attaque** : d20 + bonus contre la CA. Un 20 naturel est un critique (dés doublés), un 1 naturel rate toujours.
@@ -195,7 +205,8 @@ victoire par classe, seul et avec un compagnon, ainsi que la durée moyenne en r
 	"description": "Trois fléchettes de force qui touchent toujours leur cible.",
 	"target": "enemy",
 	"cost": "spell_slot",
-	"effects": [{"type": "damage", "damage": "3d4+3", "damage_type": "force"}]
+	"spell_level": 1,
+	"effects": [{"type": "damage", "damage": "3d4+3", "damage_type": "force", "upcast": "1d4+1"}]
 }
 ```
 
@@ -203,16 +214,45 @@ victoire par classe, seul et avec un compagnon, ainsi que la durée moyenne en r
 |---|---|
 | `target` | `enemy`, `all_enemies`, `ally`, `all_allies`, `self`, `none` |
 | `effects` | Effets de combat (ci-dessous). Le texte d'aide en est généré automatiquement |
-| `cost` | Ressource consommée (ex. `spell_slot`), rechargée par un repos long (`long_rest`). Elle doit figurer dans `classes.json › resources` |
+| `cost` | Ressource consommée, rechargée par un repos long (`long_rest`). `spell_slot` : un emplacement de sort d'au moins `spell_level` (le plus bas disponible) ; sinon un id de ressource de la classe ou de ses aptitudes (ex. `indomitable`) |
+| `spell_level` | Niveau du sort (1 à 9), obligatoire avec `cost: "spell_slot"` |
 | `per_combat` | Nombre d'utilisations par combat |
+| `attack_action` | `true` pour l'action Attaque, qui profite d'Attaque supplémentaire |
+| `free` | `true` si l'action ne consomme pas l'action du tour (Fougue) |
 
 Une action sans `cost` ni `per_combat` est utilisable à volonté : attaque d'arme, tours de magie.
 
+**Sorts à un niveau supérieur :** si un effet d'un sort a `upcast`, le sort est proposé une fois par niveau
+d'emplacement disponible (« Projectile magique (niv. 3) »), avec `upcast` ajouté aux dégâts par niveau au-delà de
+`spell_level`. Sinon, le sort prend le plus bas emplacement disponible.
+
 Chaque classe déclare :
-- `actions` : la liste de ses actions ;
+- `actions` : ses actions dès le niveau 1 ;
+- `features` : ses aptitudes par niveau (voir ci-dessous) ;
+- `saving_throws` : ses deux jets de sauvegarde maîtrisés ;
 - `equipment` : son équipement ;
 - `spellcasting` : l'attribut d'incantation (pour les sorts, `"ability": "spell"`) ;
-- `resources` : ses ressources, par exemple `{"spell_slot": 2}`.
+- `spell_slots` : `full` (lanceur complet) ou `half` (demi-lanceur), qui renvoie aux tables de
+  `rules.json › spell_slots` (SRD 5.1) ;
+- `resources` : d'autres ressources fixes, rechargées par un repos long.
+
+### Aptitudes de classe (`classes.json › features`)
+
+```json
+{"level": 5, "id": "extra_attack", "name": "Attaque supplémentaire", "description": "L'action Attaque frappe deux fois.",
+ "modifiers": [{"type": "extra_attack", "amount": 1}]}
+```
+
+| Champ | Description |
+|---|---|
+| `level` | Niveau de classe auquel l'aptitude est acquise |
+| `actions` | Actions gagnées (ids de `actions.json`) |
+| `modifiers` | Modificateurs (voir Modificateurs) |
+| `resources` | Ressources ajoutées, qui s'additionnent entre aptitudes (Inflexible : 1 + 1 + 1) |
+
+Une aptitude sans aucun de ces champs est purement descriptive : par exemple « Tours de magie renforcés », dont l'effet
+vient de `scaling`. En montant de niveau, les aptitudes et les nouveaux emplacements sont annoncés, et les ressources
+gagnées sont immédiatement disponibles. L'API correspondante est `ClassFeatures`.
 
 ### Effets de combat
 
@@ -222,10 +262,20 @@ Ils sont communs aux actions des classes (`actions.json`) et à celles des créa
 |---|---|---|
 | `attack` | `weapon: true` (arme du personnage), ou `weapon: "<id>"` (arme du catalogue), ou `damage` + `damage_type` ; `ability`? (`spell`…), `to_hit`? (créatures), `extra_damage`?, `add_mod`? | Jet d'attaque contre la CA, puis dégâts. **Les effets qui suivent ne s'appliquent que si l'attaque touche** |
 | `damage` | `damage`, `damage_type` | Dégâts automatiques |
+| `extra_action` | — | Une action de plus ce tour |
 | `heal` | `amount` (`level` = niveau) | Soins |
 | `status` | `status`, `stacks` | Ajoute des charges d'état (sauf immunité) |
 | `cleanse` | `status` (ou `negative`) | Retire un état, ou tous les états négatifs |
 | `summon` | `creature` | Invoque une créature dans son camp (s'il reste de la place) |
+
+Champs facultatifs, valables pour tout effet :
+- `save` : `{"ability": "dex", "half"?: true, "dc"?: N}`. La cible fait un jet de sauvegarde. Si elle le réussit,
+  l'effet est annulé, ou ses dégâts sont divisés par deux avec `half`, et **les effets suivants sont ignorés** comme
+  après une attaque ratée. La Dérobade transforme « moitié » en « rien » et « plein » en « moitié ».
+- `scaling` : `{"table": "cantrip", "field"?: "damage" | "extra_damage"}`. Le nombre de dés suit le niveau de classe
+  (`rules.json › dice_scaling` : `cantrip` 1/2/3/4 dés aux niveaux 1/5/11/17, `sneak_attack` +1d6 tous les deux
+  niveaux).
+- `upcast` : dégâts ajoutés par niveau d'emplacement au-delà du niveau du sort.
 
 ### États (`status_effects.json`)
 
@@ -249,7 +299,8 @@ Ce fichier regroupe les ennemis et les invocations.
 | Champ | Description |
 |---|---|
 | `ac`, `hp` | Classe d'armure, et PV sous forme d'expression de dés (`2d6+2`), tirés à chaque combat |
-| `abilities` | Attributs (la DEX sert à l'initiative) |
+| `abilities` | Attributs (la DEX sert à l'initiative et aux jets de sauvegarde) |
+| `saves`?, `save_dc`? | Bonus aux jets de sauvegarde (`{"dex": 2}`), et DD des sauvegardes que ses actions imposent (10 par défaut) |
 | `size` | Taille : places occupées et taille du sprite |
 | `actions` | `[{"name", "weight", "target", "prepared"?, "effects"}]` : l'IA tire une action selon les poids. `prepared` : annoncée un tour à l'avance |
 | `xp`, `gold`?, `loot`? | Récompenses |
@@ -282,6 +333,8 @@ suivent automatiquement.
 | `Actions` | `actions.json` | `def(id)`, `name_of(id)`, `text_of(id)`, `resource_name(id)` |
 | `Creatures` | `creatures.json` | `def(id)`, `name_of(id)`, `size_of(id)`, `actions_of(id)` |
 | `Progression` | `rules.json` | `xp_for(niveau)`, `proficiency_bonus(niveau)`, `advancement_levels()` |
+| `Spellcasting` | `rules.json` | `slots(progression, niveau)`, `save_dc(personnage)`, `dice_count(table, niveau)`, `at_level(action, niveau)` |
+| `ClassFeatures` | `classes.json` | `of_class(id)`, `up_to(id, niveau)`, `at_level(id, niveau)`, `announce(personnage, niveau)` |
 | `Modifiers` | — | `sum(...)`, `grants(...)`, `defenses(...)`, `describe(...)` : interprète les modificateurs |
 | `Defenses` | — | `from_dict()`, `to_dict()`, `add()`, `remove()`, `has()`, `merge()`, `describe()` |
 
@@ -322,6 +375,12 @@ Les dons, les espèces et les équipements peuvent porter des `modifiers`. Ils s
 | `weapon_damage` | `amount` | Bonus aux dégâts des attaques d'arme |
 | `resistance` / `immunity` / `vulnerability` | `damage_type` | Défense contre un type de dégâts |
 | `status_immunity` | `status` | Immunité à un état |
+| `skill_expertise` | `id` | Expertise : bonus de maîtrise doublé dans une compétence maîtrisée |
+| `save_proficiency` | `id` | Maîtrise d'un jet de sauvegarde |
+| `extra_attack` | `amount` | Attaques en plus pour l'action Attaque |
+| `uncanny_dodge` | — | Une fois par round, les dégâts d'une attaque reçue sont divisés par deux |
+| `evasion` | — | Sauvegarde de DEX pour moitié : rien si elle réussit, moitié si elle échoue |
+| `reliable_talent` | — | Test d'une compétence maîtrisée : un d20 de 9 ou moins compte comme 10 |
 
 ### Équipement (`equipment.json`)
 

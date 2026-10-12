@@ -16,9 +16,22 @@ static func bbcode(ch: Character) -> String:
 	t += "[color=%s]PV[/color] %d / %d    [color=%s]CA[/color] %d    [color=%s]%s[/color] %d po\n" % [
 		gold, ch.hp, ch.max_hp, gold, ch.armor_class(), gold, Loc.ui("Or"), ch.gold]
 	t += "[color=%s]%s[/color] %d    [color=%s]XP[/color] %d\n" % [gold, Loc.ui("Niveau"), ch.level, gold, ch.xp]
-	for resource_id: String in ch.resources:
-		t += "[color=%s]%s[/color] %d / %d\n" % [gold, Actions.resource_name(resource_id).capitalize(),
-			int(ch.resources[resource_id]), ch.max_resource(resource_id)]
+	var slots := PackedStringArray()
+	for resource_id: String in ch.max_resources():
+		if Spellcasting.is_slot(resource_id):
+			slots.append(Loc.ui("niv. %d : %d/%d") % [Spellcasting.slot_level(resource_id), int(ch.resources.get(resource_id, 0)),
+				ch.max_resource(resource_id)])
+		else:
+			t += "[color=%s]%s[/color] %d / %d\n" % [gold, Actions.resource_name(resource_id),
+				int(ch.resources.get(resource_id, 0)), ch.max_resource(resource_id)]
+	if not slots.is_empty():
+		t += "[color=%s]%s[/color] %s\n" % [gold, Loc.ui("Emplacements de sort"), " · ".join(slots)]
+	var saves := PackedStringArray()
+	for id in Abilities.ids():
+		if ch.is_proficient_save(id):
+			saves.append("%s %s" % [Abilities.short_of(id), signed(ch.save_mod(id))])
+	if not saves.is_empty():
+		t += "[color=%s]%s[/color] %s\n" % [gold, Loc.ui("Sauvegardes maîtrisées"), ", ".join(saves)]
 	t += "\n"
 
 	t += "[table=3]"
@@ -32,6 +45,10 @@ static func bbcode(ch: Character) -> String:
 	for slot in Equipment.SLOTS:
 		if ch.equipment.has(slot):
 			t += Equipment.describe(ch.equipment[slot]) + "\n"
+	var features := ch.features()
+	if not features.is_empty():
+		t += "[color=%s]%s[/color] %s\n" % [gold, Loc.ui("Aptitudes"),
+			", ".join(PackedStringArray(features.map(func(f): return f["name"])))]
 	if not ch.feats.is_empty():
 		t += "[color=%s]%s[/color] %s\n" % [gold, Loc.ui("Dons"),
 			", ".join(PackedStringArray(ch.feats.map(func(id): return Feats.name_of(id))))]

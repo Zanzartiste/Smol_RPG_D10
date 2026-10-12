@@ -4,15 +4,19 @@
 > `claude_rpg/data/classes.json` et `actions.json`. Les champs techniques sont détaillés dans
 > [modele_donnees.md](modele_donnees.md).
 
-**Règles générales**
-- Niveaux 1 à 20. La progression suit pour l'instant les tables du **SRD 5.1** (emplacements de sorts, aptitudes,
-  bonus de maîtrise).
+## Règles générales
+
+- Niveaux 1 à 20. La progression suit pour l'instant le **SRD 5.1** : emplacements de sorts, aptitudes, bonus de
+  maîtrise.
 - Améliorations aux niveaux 4, 8, 12, 16 et 20 : +1 à un attribut **et** un don (`rules.json › advancement`).
-- **Multiclassage** prévu : les niveaux d'amélioration se comptent par classe (ex. « niveau 4 de Guerrier »).
-- Une classe **n'a aucun lien imposé avec un métier**, mais certaines s'y prêtent mieux (bonus, actions spéciales
-  dans les sous-systèmes d'artisanat, de cuisine…).
-- ⚠️ Licence : les classes du SRD 5.1 sont réutilisables (CC-BY 4.0). Les autres (ex. Artificier) doivent être
-  **conçues par nous**, sans recopier un livre non-SRD.
+- Chaque classe maîtrise **deux jets de sauvegarde**.
+- **Multiclassage** prévu : les niveaux d'amélioration et d'aptitudes se compteront par classe.
+- Une classe **n'impose aucun métier**, mais certaines s'y prêtent mieux (bonus ou actions spéciales dans les
+  sous-systèmes d'artisanat, de cuisine…).
+- ⚠️ Licence : les classes du SRD 5.1 sont réutilisables (CC-BY 4.0). Les autres (Artificier, Alchimiste…) doivent
+  être **conçues par nous**, sans recopier un livre hors SRD.
+- **Pas encore géré** : sous-classes (et leur choix), actions bonus, réactions autres que l'Esquive instinctive, repos
+  courts, choix des sorts appris (ils sont donnés par les aptitudes).
 
 ---
 
@@ -20,24 +24,27 @@
 
 ```markdown
 ### <Nom> (`<id>`)
+
 - **Concept** : une phrase.
 - **Statut** : disponible / à débloquer (indice, coût en Creator Points).
 - **Dé de vie** : d6 / d8 / d10 / d12.
 - **Priorité des attributs** (modèle d'achat de points) : ex. FOR > CON > DEX > SAG > CHA > INT.
-- **Jets de sauvegarde maîtrisés** : 2 attributs.
-- **Compétences** : N au choix parmi …
+- **Jets de sauvegarde maîtrisés** : deux attributs.
+- **Compétences maîtrisées** : …
 - **Équipement de départ** : arme, armure, objets.
-- **Lanceur de sorts** : non / complet / demi / tiers / pacte — attribut d'incantation.
-- **Ressources** : emplacements, utilisations par combat ou par repos…
+- **Lanceur de sorts** : non / complet / demi — attribut d'incantation.
+- **Actions de départ** : …
 - **Métiers favorisés** : (facultatif) forge, alchimie, cuisine, commerce…
 
-| Niveau | Aptitudes / actions gagnées |
-|---|---|
-| 1 | … |
-| 2 | … |
-| … | … |
+**Progression**
 
-**Sous-classes** (niveau 3 dans le SRD) : …
+- Niveau 1 : …
+- Niveau 2 : …
+- Niveau 3 : …
+- (une ligne par niveau qui apporte quelque chose)
+
+**Sous-classes** : …
+
 **Notes** : équilibrage, idées d'événements propres à la classe…
 ```
 
@@ -46,97 +53,172 @@
 ## Classes implémentées
 
 ### Guerrier (`fighter`)
+
 - **Concept** : maître des armes et des armures, il règle les problèmes de front.
 - **Statut** : disponible.
-- **Dé de vie** : d10. **Priorité** : FOR > CON > DEX > SAG > CHA > INT.
-- **Compétences** : Athlétisme, Perception, Survie. **Équipement** : épée longue, cotte de mailles.
-- **Actions actuelles** : attaque d'arme, Second souffle, Posture défensive, Coup de pommeau.
+- **Dé de vie** : d10.
+- **Priorité des attributs** : FOR > CON > DEX > SAG > CHA > INT.
+- **Jets de sauvegarde maîtrisés** : Force, Constitution.
+- **Compétences maîtrisées** : Athlétisme, Perception, Survie.
+- **Équipement de départ** : épée longue, cotte de mailles, une potion de soins.
+- **Lanceur de sorts** : non.
+- **Actions de départ** : Attaque, Second souffle, Posture défensive, Coup de pommeau.
 
-| Niveau | Aptitudes (SRD, à valider) |
-|---|---|
-| 1 | Style de combat, Second souffle |
-| 2 | Fougue (une action supplémentaire, 1 fois par repos) |
-| 3 | Archétype martial (sous-classe) |
-| 5 | Attaque supplémentaire (2 attaques) |
-| 9 | Inflexible (relancer un jet de sauvegarde raté) |
-| 11 | Attaque supplémentaire (3 attaques) |
-| 20 | Attaque supplémentaire (4 attaques) |
+**Progression** (implémentée)
+
+- Niveau 2 : Fougue (une action de plus, une fois par combat).
+- Niveau 5 : Attaque supplémentaire (deux coups par action Attaque).
+- Niveau 9 : Inflexible (relance automatique d'un jet de sauvegarde raté, une fois par repos long).
+- Niveau 11 : Attaque supplémentaire (trois coups).
+- Niveau 13 : Inflexible (deux utilisations).
+- Niveau 17 : Inflexible (trois utilisations).
+- Niveau 20 : Attaque supplémentaire (quatre coups).
+
+**À venir (SRD)** : Style de combat au niveau 1, archétype martial au niveau 3 (Champion dans le SRD : critique sur
+19-20…).
 
 ### Magicien (`wizard`)
+
 - **Concept** : érudit des arcanes, fragile mais redoutable.
 - **Statut** : disponible.
-- **Dé de vie** : d6. **Priorité** : INT > CON > DEX > SAG > CHA > FOR. **Incantation** : Intelligence, lanceur complet.
-- **Compétences** : Arcanes, Investigation, Médecine. **Équipement** : bâton.
-- **Actions actuelles** : attaque d'arme, Trait de feu, Rayon de givre, Projectile magique (emplacement), invocation
-  d'un familier.
-- **Ressources actuelles** : 2 emplacements (non dépendants du niveau pour l'instant).
+- **Dé de vie** : d6.
+- **Priorité des attributs** : INT > CON > DEX > SAG > CHA > FOR.
+- **Jets de sauvegarde maîtrisés** : Intelligence, Sagesse.
+- **Compétences maîtrisées** : Arcanes, Investigation, Médecine.
+- **Équipement de départ** : bâton.
+- **Lanceur de sorts** : complet, Intelligence.
+- **Actions de départ** :
+  - tours de magie : Trait de feu, Rayon de givre ;
+  - sorts du 1er niveau : Projectile magique, Mains brûlantes, Bouclier, Appel du familier.
 
-| Niveau | Aptitudes (SRD, à valider) |
-|---|---|
-| 1 | Incantation, Restauration arcanique |
-| 2 | Tradition arcanique (sous-classe : École d'évocation dans le SRD) |
-| 5 / 11 / 17 | Les sorts mineurs gagnent un dé de dégâts |
-| 18 | Maîtrise des sorts |
-| 20 | Sorts de prédilection |
+**Progression** (implémentée)
+
+- Emplacements de sort : table du lanceur complet (voir plus bas).
+- Niveau 3 : Rayons ardents (sort du 2e niveau).
+- Niveau 5 : Boule de feu (sort du 3e niveau), et tours de magie à deux dés.
+- Niveau 11 : tours de magie à trois dés.
+- Niveau 17 : tours de magie à quatre dés.
+
+**À venir (SRD)** : Restauration arcanique (demande les repos courts), tradition arcanique au niveau 2 (Évocation dans
+le SRD), sorts des niveaux 4 à 9, choix des sorts appris.
 
 ### Roublard (`rogue`)
-- **Concept** : discret, agile et beau parleur.
+
+- **Concept** : discret, agile et beau parleur. Les serrures n'ont pas de secret pour lui.
 - **Statut** : à débloquer (« Réussir un larcin audacieux à Brumeval », ou 10 Creator Points).
-- **Dé de vie** : d8. **Priorité** : DEX > CON > CHA > SAG > INT > FOR.
-- **Compétences** : Discrétion, Escamotage, Acrobaties, Perception. **Équipement** : rapière.
+- **Dé de vie** : d8.
+- **Priorité des attributs** : DEX > CON > CHA > SAG > INT > FOR.
+- **Jets de sauvegarde maîtrisés** : Dextérité, Intelligence.
+- **Compétences maîtrisées** : Discrétion, Escamotage, Acrobaties, Perception.
+- **Équipement de départ** : rapière, armure de cuir.
+- **Lanceur de sorts** : non.
+- **Actions de départ** : Attaque, Attaque sournoise, Lame empoisonnée.
 
-| Niveau | Aptitudes (SRD, à valider) |
-|---|---|
-| 1 | Attaque sournoise (1d6, +1d6 tous les 2 niveaux), Expertise |
-| 2 | Ruse (action bonus : se cacher, se désengager, foncer) |
-| 3 | Archétype (sous-classe : Voleur dans le SRD) |
-| 5 | Esquive instinctive (réaction : dégâts divisés par deux) |
-| 7 | Dérobade (dégâts de zone évités) |
-| 11 | Talent fiable |
-| 20 | Coup de chance |
+**Progression** (implémentée)
 
----
+- Niveau 1 : Expertise en Discrétion et en Escamotage (maîtrise doublée) ; Attaque sournoise à 1d6.
+- Niveaux 3, 5, 7… 19 : l'Attaque sournoise gagne 1d6 (10d6 au niveau 19).
+- Niveau 5 : Esquive instinctive (une attaque par round divisée par deux).
+- Niveau 6 : Expertise en Acrobaties et en Perception.
+- Niveau 7 : Dérobade (sauvegarde de DEX : rien si réussie, moitié si ratée).
+- Niveau 11 : Talent fiable (pas moins de 10 au d20 pour une compétence maîtrisée).
 
-## Emplacements de sorts (SRD 5.1, lanceur complet)
-
-Décision : on suit cette table. Les demi-lanceurs (Paladin, Rôdeur) utilisent la moitié de leur niveau, arrondie
-au supérieur à partir du niveau 2.
-
-| Niveau | 1er | 2e | 3e | 4e | 5e | 6e | 7e | 8e | 9e |
-|---|---|---|---|---|---|---|---|---|---|
-| 1 | 2 | | | | | | | | |
-| 2 | 3 | | | | | | | | |
-| 3 | 4 | 2 | | | | | | | |
-| 4 | 4 | 3 | | | | | | | |
-| 5 | 4 | 3 | 2 | | | | | | |
-| 6 | 4 | 3 | 3 | | | | | | |
-| 7 | 4 | 3 | 3 | 1 | | | | | |
-| 8 | 4 | 3 | 3 | 2 | | | | | |
-| 9 | 4 | 3 | 3 | 3 | 1 | | | | |
-| 10 | 4 | 3 | 3 | 3 | 2 | | | | |
-| 11–12 | 4 | 3 | 3 | 3 | 2 | 1 | | | |
-| 13–14 | 4 | 3 | 3 | 3 | 2 | 1 | 1 | | |
-| 15–16 | 4 | 3 | 3 | 3 | 2 | 1 | 1 | 1 | |
-| 17 | 4 | 3 | 3 | 3 | 2 | 1 | 1 | 1 | 1 |
-| 18 | 4 | 3 | 3 | 3 | 3 | 1 | 1 | 1 | 1 |
-| 19 | 4 | 3 | 3 | 3 | 3 | 2 | 1 | 1 | 1 |
-| 20 | 4 | 3 | 3 | 3 | 3 | 2 | 2 | 1 | 1 |
+**À venir (SRD)** : Ruse au niveau 2 (demande les actions bonus), archétype au niveau 3 (Voleur dans le SRD),
+Coup de chance au niveau 20, choix des compétences d'Expertise.
 
 ---
 
-## Classes candidates (à compléter par l'auteur)
+## Emplacements de sort (SRD 5.1)
 
-| Classe | Source | Rôle envisagé | Métiers favorisés | Priorité |
-|---|---|---|---|---|
-| Clerc | SRD | Soins, protection, divin | Médecine, temple | ? |
-| Rôdeur | SRD | Distance, nature, pistage | Chasse, guide | ? |
-| Barbare | SRD | Encaisseur, rage | — | ? |
-| Barde | SRD | Soutien, social | Spectacle, commerce | ? |
-| Druide | SRD | Nature, métamorphose | Herboristerie | ? |
-| Moine | SRD | Mains nues, mobilité | — | ? |
-| Paladin | SRD | Combattant sacré, demi-lanceur | — | ? |
-| Ensorceleur | SRD | Magie innée | — | ? |
-| Occultiste | SRD | Pacte, sorts courts | — | ? |
-| Artificier | **à concevoir** | Inventions, objets, tourelles | Forge, artisanat | ? |
-| Alchimiste | **à concevoir** | Potions, bombes, mutagènes | Alchimie, cuisine | ? |
-| … | | | | |
+Lanceur complet (Magicien, et plus tard Clerc, Druide, Barde, Ensorceleur), emplacements par niveau de sort :
+
+- Niveau 1 : 2 du 1er
+- Niveau 2 : 3 du 1er
+- Niveau 3 : 4 du 1er, 2 du 2e
+- Niveau 4 : 4 du 1er, 3 du 2e
+- Niveau 5 : 4 / 3 / 2 (jusqu'au 3e)
+- Niveau 6 : 4 / 3 / 3
+- Niveau 7 : 4 / 3 / 3 / 1 (jusqu'au 4e)
+- Niveau 8 : 4 / 3 / 3 / 2
+- Niveau 9 : 4 / 3 / 3 / 3 / 1 (jusqu'au 5e)
+- Niveau 10 : 4 / 3 / 3 / 3 / 2
+- Niveaux 11 et 12 : 4 / 3 / 3 / 3 / 2 / 1 (jusqu'au 6e)
+- Niveaux 13 et 14 : … / 1 du 7e
+- Niveaux 15 et 16 : … / 1 du 8e
+- Niveau 17 : 4 / 3 / 3 / 3 / 2 / 1 / 1 / 1 / 1 (jusqu'au 9e)
+- Niveau 18 : 4 / 3 / 3 / 3 / 3 / 1 / 1 / 1 / 1
+- Niveau 19 : 4 / 3 / 3 / 3 / 3 / 2 / 1 / 1 / 1
+- Niveau 20 : 4 / 3 / 3 / 3 / 3 / 2 / 2 / 1 / 1
+
+Demi-lanceur (Paladin, Rôdeur) : rien au niveau 1, puis 2 du 1er au niveau 2, et ainsi de suite jusqu'au 5e niveau
+de sort. La table complète est dans `rules.json › spell_slots › half`.
+
+---
+
+## Classes candidates (à compléter)
+
+### Clerc (SRD)
+
+- **Rôle envisagé** : soins, protection, magie divine.
+- **Métiers favorisés** : médecine, temple.
+- **Priorité** : ?
+
+### Rôdeur (SRD)
+
+- **Rôle envisagé** : combat à distance, nature, pistage ; demi-lanceur.
+- **Métiers favorisés** : chasse, guide.
+- **Priorité** : ?
+
+### Barbare (SRD)
+
+- **Rôle envisagé** : encaisser les coups, rage.
+- **Métiers favorisés** : —
+- **Priorité** : ?
+
+### Barde (SRD)
+
+- **Rôle envisagé** : soutien, social, magie.
+- **Métiers favorisés** : spectacle, commerce.
+- **Priorité** : ?
+
+### Druide (SRD)
+
+- **Rôle envisagé** : nature, métamorphose.
+- **Métiers favorisés** : herboristerie.
+- **Priorité** : ?
+
+### Moine (SRD)
+
+- **Rôle envisagé** : combat à mains nues, mobilité.
+- **Métiers favorisés** : —
+- **Priorité** : ?
+
+### Paladin (SRD)
+
+- **Rôle envisagé** : combattant sacré ; demi-lanceur.
+- **Métiers favorisés** : —
+- **Priorité** : ?
+
+### Ensorceleur (SRD)
+
+- **Rôle envisagé** : magie innée.
+- **Métiers favorisés** : —
+- **Priorité** : ?
+
+### Occultiste (SRD)
+
+- **Rôle envisagé** : pacte avec une entité, peu de sorts mais rechargés souvent.
+- **Métiers favorisés** : —
+- **Priorité** : ?
+
+### Artificier (à concevoir)
+
+- **Rôle envisagé** : inventions, objets, tourelles.
+- **Métiers favorisés** : forge, artisanat.
+- **Priorité** : ?
+
+### Alchimiste (à concevoir)
+
+- **Rôle envisagé** : potions, bombes, mutagènes.
+- **Métiers favorisés** : alchimie, cuisine.
+- **Priorité** : ?

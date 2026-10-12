@@ -281,8 +281,11 @@ Claude ne génère pas d'images lui-même. Il peut en revanche écrire le **guid
 
 **Feuille de route des systèmes (v0.4)**, dans l'ordre proposé :
 
-11. **Progression D&D** : emplacements de sorts par niveau (table SRD), aptitudes par niveau (Attaque
-    supplémentaire, Fougue, Attaque sournoise, sorts mineurs qui montent…), jets de sauvegarde maîtrisés.
+11. ~~**Progression D&D**~~ : emplacements de sort par niveau (tables SRD, sorts lancés à un niveau supérieur),
+    aptitudes par niveau (Fougue, Attaque supplémentaire, Inflexible, Expertise, Attaque sournoise qui monte, Esquive
+    instinctive, Dérobade, Talent fiable, tours de magie qui montent, Rayons ardents, Boule de feu), jets de
+    sauvegarde maîtrisés (événements et combat). Détail dans [classes.md](classes.md). Restent pour plus tard :
+    sous-classes, actions bonus, repos courts, choix des sorts.
 12. **Inventaire et équipement** : écran Inventaire depuis la fiche, équipement des compagnons, butin d'équipement,
     objets magiques.
 13. **Économie** : boutiques (achat, revente, stock), forge (fabrication et amélioration).

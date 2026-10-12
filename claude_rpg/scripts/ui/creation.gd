@@ -393,12 +393,23 @@ func _class_info(cls: Dictionary) -> String:
 	for slot in Equipment.SLOTS:
 		if equipment.has(slot):
 			gear.append(Equipment.describe(equipment[slot]))
-	return "[i]%s[/i]\n%s   %s\n%s" % [
+	var saves := PackedStringArray(cls.get("saving_throws", []).map(func(id): return Abilities.short_of(id)))
+	var text := "[i]%s[/i]\n%s   %s\n%s\n%s" % [
 		cls.get("description", ""),
 		_field(tr("Dé de vie :"), "d%d" % int(cls["hit_die"])),
+		_field(tr("Sauvegardes :"), ", ".join(saves)),
 		_field(tr("Maîtrises :"), _skill_names(cls.get("skills", []))),
 		_field(tr("Équipement :"), " · ".join(gear))] + "\n" + _field(tr("Actions :"),
 		", ".join(PackedStringArray(cls.get("actions", []).map(func(id): return Actions.name_of(id)))))
+	if cls.has("spell_slots"):
+		text += "\n" + _field(tr("Sorts :"), tr("emplacements de sort qui augmentent avec le niveau (%s)") %
+			ClassFeatures.slots_text(Spellcasting.slots(cls["spell_slots"], 1)))
+	var features := PackedStringArray()
+	for feature: Dictionary in ClassFeatures.of_class(cls["id"]):
+		features.append(tr("niv. %d : %s") % [int(feature["level"]), feature["name"]])
+	if not features.is_empty():
+		text += "\n" + _field(tr("Aptitudes :"), " · ".join(features))
+	return text
 
 
 func _background_info(background: Dictionary) -> String:

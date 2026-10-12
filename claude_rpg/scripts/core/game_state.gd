@@ -95,6 +95,7 @@ func finish_combat() -> Dictionary:
 			if member.hp > 0 and xp > 0:
 				for new_level in member.add_xp(xp):
 					lines.append(Loc.ui("%s atteint le niveau %d !") % [member.name, new_level])
+					lines.append_array(ClassFeatures.announce(member, new_level))
 					if Progression.is_advancement_level(new_level):
 						lines.append(Loc.ui("%s : %s.") % [member.name, Progression.advancement_text()])
 		if xp > 0:

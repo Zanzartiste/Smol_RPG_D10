@@ -6,6 +6,7 @@ extends VBoxContainer
 ##
 ## Au tour d'un personnage (héros ou compagnon), le joueur choisit UNE action : une action de classe
 ## (puis sa cible si besoin, en cliquant sur le champ de bataille), un objet, la fuite, ou passer.
+## Certaines actions (Fougue) en donnent une de plus : le tour continue tant qu'il en reste.
 ## Les créatures (ennemis, invocations) jouent seules.
 ## Raccourcis : 1-9 pour les actions, Échap annule le ciblage ; une touche accélère les dés.
 
@@ -126,8 +127,13 @@ func _action_label(actor: Combatant, action: Dictionary) -> String:
 			if e.get("type") == "attack":
 				label += ", %s" % CharacterSheet.signed(actor.attack_bonus(e))
 			break
-	if action.has("cost"):
-		label += " [%d/%d]" % [int(actor.character.resources.get(action["cost"], 0)), actor.character.max_resource(action["cost"])]
+	var key := actor.resource_key(action)
+	if key != "":
+		var left := int(actor.character.resources.get(key, 0))
+		if Spellcasting.is_slot(key):
+			label += tr(" [niv. %d : %d/%d]") % [Spellcasting.slot_level(key), left, actor.character.max_resource(key)]
+		else:
+			label += " [%d/%d]" % [left, actor.character.max_resource(key)]
 	if action.has("per_combat"):
 		label += " [%d/%d]" % [int(actor.uses.get(action["id"], 0)), int(action["per_combat"])]
 	return label
@@ -156,10 +162,12 @@ func _play(beats: Array[Dictionary]) -> void:
 	_refresh()
 
 
-## Joue l'action du personnage actif, anime le résultat, puis termine son tour.
+## Joue l'action du personnage actif, anime le résultat, puis termine son tour (sauf s'il lui reste
+## une action, ex. après Fougue).
 func _act(beats: Array[Dictionary]) -> void:
 	await _play(beats)
-	_turn_finished.emit()
+	if not combat.can_act_again():
+		_turn_finished.emit()
 
 
 # --- Choix du joueur ---------------------------------------------------------

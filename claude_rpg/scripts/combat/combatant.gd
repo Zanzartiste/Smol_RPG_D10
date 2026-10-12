@@ -18,6 +18,7 @@ var initiative := 0
 var statuses: Dictionary = {}  # id d'état -> charges
 var intent: Dictionary = {}  # action préparée, exécutée au prochain tour (ennemis)
 var uses: Dictionary = {}  # id d'action -> utilisations restantes dans ce combat (per_combat)
+var reaction_used := false  # réaction déjà utilisée ce round (Esquive instinctive…), rendue à son tour
 var _hp := 0
 var _max_hp := 0
 
@@ -80,6 +81,27 @@ func ability_mod(ability_id: String) -> int:
 	return Abilities.modifier(int(creature.get("abilities", {}).get(ability_id, 10)))
 
 
+## Jet de sauvegarde : modificateur d'attribut (+ maîtrise pour un personnage, + "saves" pour une créature).
+func save_mod(ability_id: String) -> int:
+	if character != null:
+		return character.save_mod(ability_id)
+	return ability_mod(ability_id) + int(creature.get("saves", {}).get(ability_id, 0))
+
+
+## DD des jets de sauvegarde imposés : DD des sorts pour un personnage, "save_dc" pour une créature.
+func save_dc() -> int:
+	return Spellcasting.save_dc(character) if character != null else int(creature.get("save_dc", 10))
+
+
+func has_modifier(type: String) -> bool:
+	return character != null and character.has_modifier(type)
+
+
+## Attaques en plus pour l'action Attaque (Attaque supplémentaire).
+func extra_attacks() -> int:
+	return Modifiers.sum(character.modifiers(), "extra_attack") if character != null else 0
+
+
 func initiative_bonus() -> int:
 	return character.initiative_bonus() if character != null else ability_mod("dex")
 
@@ -114,12 +136,41 @@ func combat_actions() -> Array[Dictionary]:
 	return result
 
 
+## Variantes d'une action proposées au joueur : un sort amélioré à niveau supérieur ("upcast") existe
+## en une variante par niveau d'emplacement disponible ; les autres actions en une seule.
+func action_variants(action: Dictionary) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if character != null and action.get("cost") == "spell_slot" and Spellcasting.can_upcast(action):
+		for level in range(int(action.get("spell_level", 1)), Spellcasting.MAX_SPELL_LEVEL + 1):
+			if int(character.resources.get(Spellcasting.slot_key(level), 0)) > 0:
+				result.append(Spellcasting.at_level(action, level))
+	if result.is_empty():
+		result.append(action)
+	return result
+
+
+## Ressource consommée par une action ("" si aucune). Pour un sort : l'emplacement fixé par la
+## variante, sinon le plus bas disponible à partir du niveau du sort.
+func resource_key(action: Dictionary) -> String:
+	var cost: String = action.get("cost", "")
+	if cost != "spell_slot":
+		return cost
+	if action.has("slot_level"):
+		return Spellcasting.slot_key(int(action["slot_level"]))
+	var base := int(action.get("spell_level", 1))
+	for level in range(base, Spellcasting.MAX_SPELL_LEVEL + 1):
+		if character != null and int(character.resources.get(Spellcasting.slot_key(level), 0)) > 0:
+			return Spellcasting.slot_key(level)
+	return Spellcasting.slot_key(base)
+
+
 ## Une action peut-elle être utilisée ? Retourne "" si oui, sinon la raison.
 func unavailable_reason(action: Dictionary) -> String:
 	if action.has("per_combat") and int(uses.get(action.get("id", ""), 0)) <= 0:
 		return Loc.ui("déjà utilisée")
-	if action.has("cost") and character != null and int(character.resources.get(action["cost"], 0)) <= 0:
-		return Loc.ui("plus d'%s") % Actions.resource_name(action["cost"])
+	var key := resource_key(action)
+	if key != "" and character != null and int(character.resources.get(key, 0)) <= 0:
+		return Loc.ui("plus d'%s") % Actions.resource_name(key)
 	return ""
 
 
@@ -127,8 +178,9 @@ func unavailable_reason(action: Dictionary) -> String:
 func consume(action: Dictionary) -> void:
 	if action.has("per_combat"):
 		uses[action["id"]] = int(uses.get(action["id"], 0)) - 1
-	if action.has("cost") and character != null:
-		character.resources[action["cost"]] = int(character.resources.get(action["cost"], 0)) - 1
+	var key := resource_key(action)
+	if key != "" and character != null:
+		character.resources[key] = int(character.resources.get(key, 0)) - 1
 
 
 # --- États -------------------------------------------------------------------
@@ -170,6 +222,13 @@ func attack_bonus(effect: Dictionary) -> int:
 ## Expression de dégâts d'un effet "attack" ou "damage", ex. « 1d8+3+1d6 ».
 func damage_expr(effect: Dictionary) -> String:
 	var expr: String = effect.get("damage", "1")
+	var extra: String = effect.get("extra_damage", "")
+	if effect.has("scaling") and character != null:
+		var count := Spellcasting.dice_count(effect["scaling"]["table"], character.class_level())
+		if effect["scaling"].get("field", "damage") == "extra_damage":
+			extra = Spellcasting.with_dice_count(extra, count)
+		else:
+			expr = Spellcasting.with_dice_count(expr, count)
 	var bonus := 0
 	if _uses_own_weapon(effect):
 		expr = character.weapon_damage()
@@ -179,8 +238,8 @@ func damage_expr(effect: Dictionary) -> String:
 	elif effect.get("add_mod", false) and character != null:
 		bonus += character.ability_mod(character.action_ability(effect.get("ability", "str")))
 	expr = Dice.add_mod(expr, bonus)
-	if effect.has("extra_damage"):
-		expr += "+" + effect["extra_damage"]
+	if extra != "":
+		expr += "+" + extra
 	return expr
 
 

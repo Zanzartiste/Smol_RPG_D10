@@ -61,8 +61,7 @@ func _fight(enemies: Array, life: LifeState) -> String:
 		combat.start_turn()
 		if not combat.is_over() and not combat.skipped:
 			if actor.is_player_controlled():
-				var choice := combat.auto_choice(actor)
-				combat.perform(actor, choice["action"], choice["target"])
+				combat.auto_turn(actor)
 			else:
 				combat.ai_turn(actor)
 		combat.end_turn()

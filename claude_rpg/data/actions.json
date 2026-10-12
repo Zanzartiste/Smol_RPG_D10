@@ -4,6 +4,7 @@
 		"name": "Attaque",
 		"description": "Une attaque avec votre arme.",
 		"target": "enemy",
+		"attack_action": true,
 		"effects": [{"type": "attack", "weapon": true}]
 	},
 	{
@@ -35,14 +36,14 @@
 		"name": "Trait de feu",
 		"description": "Tour de magie : un trait de flammes jaillit de vos doigts.",
 		"target": "enemy",
-		"effects": [{"type": "attack", "ability": "spell", "damage": "1d10", "damage_type": "fire"}]
+		"effects": [{"type": "attack", "ability": "spell", "damage": "1d10", "damage_type": "fire", "scaling": {"table": "cantrip"}}]
 	},
 	{
 		"id": "ray_of_frost",
 		"name": "Rayon de givre",
 		"description": "Tour de magie : un rayon glacé qui engourdit la cible.",
 		"target": "enemy",
-		"effects": [{"type": "attack", "ability": "spell", "damage": "1d8", "damage_type": "cold"}, {"type": "status", "status": "weakened", "stacks": 2}]
+		"effects": [{"type": "attack", "ability": "spell", "damage": "1d8", "damage_type": "cold", "scaling": {"table": "cantrip"}}, {"type": "status", "status": "weakened", "stacks": 2}]
 	},
 	{
 		"id": "magic_missile",
@@ -50,7 +51,8 @@
 		"description": "Trois fléchettes de force qui touchent toujours leur cible.",
 		"target": "enemy",
 		"cost": "spell_slot",
-		"effects": [{"type": "damage", "damage": "3d4+3", "damage_type": "force"}]
+		"spell_level": 1,
+		"effects": [{"type": "damage", "damage": "3d4+3", "damage_type": "force", "upcast": "1d4+1"}]
 	},
 	{
 		"id": "burning_hands",
@@ -58,7 +60,8 @@
 		"description": "Une gerbe de flammes embrase tous vos ennemis.",
 		"target": "all_enemies",
 		"cost": "spell_slot",
-		"effects": [{"type": "damage", "damage": "2d6", "damage_type": "fire"}, {"type": "status", "status": "burning", "stacks": 1}]
+		"spell_level": 1,
+		"effects": [{"type": "damage", "damage": "3d6", "damage_type": "fire", "save": {"ability": "dex", "half": true}, "upcast": "1d6"}, {"type": "status", "status": "burning", "stacks": 1}]
 	},
 	{
 		"id": "mage_shield",
@@ -66,6 +69,7 @@
 		"description": "Une barrière de force invisible vous protège.",
 		"target": "self",
 		"cost": "spell_slot",
+		"spell_level": 1,
 		"effects": [{"type": "status", "status": "shielded", "stacks": 6}]
 	},
 	{
@@ -74,6 +78,7 @@
 		"description": "Un petit esprit animal vient combattre à vos côtés.",
 		"target": "none",
 		"cost": "spell_slot",
+		"spell_level": 1,
 		"effects": [{"type": "summon", "creature": "familiar"}]
 	},
 	{
@@ -82,7 +87,7 @@
 		"description": "Une attaque vicieuse qui frappe là où ça fait mal.",
 		"target": "enemy",
 		"per_combat": 2,
-		"effects": [{"type": "attack", "weapon": true, "extra_damage": "1d6"}]
+		"effects": [{"type": "attack", "weapon": true, "extra_damage": "1d6", "scaling": {"table": "sneak_attack", "field": "extra_damage"}}]
 	},
 	{
 		"id": "poisoned_blade",
@@ -91,5 +96,36 @@
 		"target": "enemy",
 		"per_combat": 1,
 		"effects": [{"type": "attack", "weapon": true}, {"type": "status", "status": "poisoned", "stacks": 3}]
+	},
+	{
+		"id": "action_surge",
+		"name": "Fougue",
+		"description": "Vous puisez dans vos réserves pour agir une deuxième fois.",
+		"target": "self",
+		"per_combat": 1,
+		"free": true,
+		"effects": [{"type": "extra_action"}]
+	},
+	{
+		"id": "scorching_ray",
+		"name": "Rayons ardents",
+		"description": "Trois rayons de feu jaillissent de vos mains.",
+		"target": "enemy",
+		"cost": "spell_slot",
+		"spell_level": 2,
+		"effects": [
+			{"type": "attack", "ability": "spell", "damage": "2d6", "damage_type": "fire"},
+			{"type": "attack", "ability": "spell", "damage": "2d6", "damage_type": "fire"},
+			{"type": "attack", "ability": "spell", "damage": "2d6", "damage_type": "fire"}
+		]
+	},
+	{
+		"id": "fireball",
+		"name": "Boule de feu",
+		"description": "Une explosion de flammes engloutit vos ennemis.",
+		"target": "all_enemies",
+		"cost": "spell_slot",
+		"spell_level": 3,
+		"effects": [{"type": "damage", "damage": "8d6", "damage_type": "fire", "save": {"ability": "dex", "half": true}, "upcast": "1d6"}]
 	}
 ]

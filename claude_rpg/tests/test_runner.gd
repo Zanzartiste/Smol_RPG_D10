@@ -21,6 +21,8 @@ const TESTS := [
 	"_test_engine",
 	"_test_dice_expressions",
 	"_test_actions",
+	"_test_spell_progression",
+	"_test_class_features",
 	"_test_combat",
 	"_test_combat_turns",
 	"_test_companions",
@@ -491,8 +493,7 @@ func _play_out(combat: Combat) -> void:
 		combat.start_turn()
 		if not combat.is_over() and not combat.skipped:
 			if actor.is_player_controlled():
-				var choice := combat.auto_choice(actor)
-				combat.perform(actor, choice["action"], choice["target"])
+				combat.auto_turn(actor)
 			else:
 				combat.ai_turn(actor)
 		combat.end_turn()
@@ -579,13 +580,13 @@ func _test_actions() -> bool:
 	var missile := Actions.def("magic_missile")
 	combat.perform(mage, missile, combat.living("enemy")[0])
 	combat.perform(mage, missile, combat.living("enemy")[0] if not combat.living("enemy").is_empty() else null)
-	_expect(Game.life.character.resources["spell_slot"] == 0, "projectile magique : 2 emplacements dépensés")
-	_expect(combat.action_unavailable_reason(mage, missile) == "plus d'emplacement de sort", "plus d'emplacement")
+	_expect(Game.life.character.resources["spell_slot_1"] == 0, "projectile magique : 2 emplacements dépensés")
+	_expect(combat.action_unavailable_reason(mage, missile) == "plus d'emplacement de sort de niveau 1", "plus d'emplacement")
 	_expect(combat.action_unavailable_reason(mage, Actions.def("fire_bolt")) == ""
 		or combat.living("enemy").is_empty(), "tour de magie à volonté")
 	Game.finish_combat()
 	Effects.apply_all([{"type": "long_rest"}], Game.life, Meta)
-	_expect(Game.life.character.resources["spell_slot"] == 2, "repos long : emplacements restaurés")
+	_expect(Game.life.character.resources["spell_slot_1"] == 2, "repos long : emplacements restaurés")
 
 	Game.start_life(Character.create("human", "fighter", "Guerrier"), 8)
 	combat = Game.start_combat({"enemies": ["wolf"]})
@@ -597,7 +598,128 @@ func _test_actions() -> bool:
 	Game.combat = null
 	_expect(Actions.text_of("pommel_strike") == "Attaque avec votre arme. Si elle touche : 1 Étourdi.",
 		"texte généré d'une action")
-	_expect(Actions.text_of("burning_hands").begins_with("Tous les ennemis : Inflige 2d6 feu"), "texte : cible multiple")
+	_expect(Actions.text_of("burning_hands").begins_with("Tous les ennemis : Inflige 3d6 feu (sauvegarde de DEX : moitié)"),
+		"texte : cible multiple et sauvegarde")
+	return true
+
+
+## Personnage amené à un niveau par l'XP (aptitudes et emplacements compris).
+func _at_level(species: String, cls: String, level: int) -> Character:
+	var ch := Character.create(species, cls, "Niv%d" % level)
+	ch.add_xp(Progression.xp_for(level) - ch.xp)
+	return ch
+
+
+func _test_spell_progression() -> bool:
+	_expect(Spellcasting.slots("full", 1) == {"spell_slot_1": 2}
+		and Spellcasting.slots("full", 5) == {"spell_slot_1": 4, "spell_slot_2": 3, "spell_slot_3": 2}, "table SRD des emplacements")
+	_expect(Spellcasting.slots("half", 1).is_empty() and Spellcasting.slots("half", 5) == {"spell_slot_1": 4, "spell_slot_2": 2},
+		"demi-lanceur : rien au niveau 1")
+	_expect(Spellcasting.slots("full", 20).size() == 9, "niveau 20 : emplacements jusqu'au 9e niveau")
+
+	var mage := Character.create("goblin", "wizard", "Mage")
+	mage.resources["spell_slot_1"] = 0
+	mage.add_xp(Progression.xp_for(3) - mage.xp)
+	_expect(mage.resources["spell_slot_1"] == 2 and mage.resources["spell_slot_2"] == 2,
+		"montée de niveau : les emplacements gagnés sont disponibles, les dépensés le restent")
+	mage.long_rest()
+	_expect(mage.resources == {"spell_slot_1": 4, "spell_slot_2": 2}, "repos long : tous les emplacements")
+	_expect(ClassFeatures.announce(mage, 3).size() == 2, "annonce : nouvelle aptitude et nouveaux emplacements")
+
+	var old := Character.from_dict({"species_id": "goblin", "class_id": "wizard", "level": 1, "resources": {"spell_slot": 1}})
+	_expect(old.resources == {"spell_slot_1": 2}, "ancienne sauvegarde : ressources converties")
+
+	# Tours de magie qui montent avec le niveau, sorts lancés à un niveau supérieur.
+	var hero := Combatant.from_character(Character.create("human", "wizard", "W"), true)
+	var bolt: Dictionary = Actions.def("fire_bolt")["effects"][0]
+	_expect(hero.damage_expr(bolt) == "1d10", "Trait de feu : 1d10 au niveau 1")
+	hero.character.level = 5
+	_expect(hero.damage_expr(bolt) == "2d10", "Trait de feu : 2d10 au niveau 5")
+	hero.character.level = 17
+	_expect(hero.damage_expr(bolt) == "4d10", "Trait de feu : 4d10 au niveau 17")
+
+	Game.start_life(_at_level("human", "wizard", 5), 21)
+	var combat := Game.start_combat({"enemies": ["dire_wolf"]})
+	var missiles := combat.action_choices(combat.hero).filter(func(c): return c["action"]["id"] == "magic_missile")
+	_expect(missiles.size() == 3, "Projectile magique proposé aux niveaux 1, 2 et 3")
+	var high: Dictionary = missiles[2]["action"]
+	_expect(high["name"] == "Projectile magique (niv. 3)" and high["effects"][0]["damage"] == "3d4+3+1d4+1+1d4+1",
+		"niveau 3 : deux projectiles de plus")
+	combat.perform(combat.hero, high, combat.living("enemy")[0])
+	_expect(Game.life.character.resources["spell_slot_3"] == 1 and Game.life.character.resources["spell_slot_1"] == 4,
+		"l'emplacement du niveau choisi est dépensé")
+	_expect(combat.action_choices(combat.hero).any(func(c): return c["action"]["id"] == "fireball"), "Boule de feu au niveau 5")
+	Game.combat = null
+	return true
+
+
+func _test_class_features() -> bool:
+	DB.creatures["_target"] = {"id": "_target", "name": "Cible", "ac": 1, "hp": "200",
+		"actions": [{"name": "Rien", "weight": 1, "target": "self", "effects": [{"type": "status", "status": "shielded", "stacks": 0}]}]}
+
+	# Jets de sauvegarde.
+	var fighter := Character.create("human", "fighter", "G")
+	_expect(fighter.is_proficient_save("con") and not fighter.is_proficient_save("dex")
+		and fighter.save_mod("con") == fighter.ability_mod("con") + 2, "sauvegardes maîtrisées de la classe")
+	var check := {"save": "con", "dc": 10}
+	_expect(Dice.modifier(fighter, check) == fighter.save_mod("con") and Dice.stat_name(check) == "Sauvegarde de Constitution",
+		"test de sauvegarde dans un événement")
+
+	# Guerrier : Fougue, Attaque supplémentaire, Inflexible.
+	Game.start_life(_at_level("human", "fighter", 9), 31)
+	var combat := Game.start_combat({"enemies": ["_target"]})
+	var hero := combat.hero
+	combat.turn = combat.order.find(hero)
+	combat.start_turn()
+	combat.perform(hero, Actions.def("action_surge"))
+	_expect(combat.actions_left == 2 and combat.can_act_again(), "Fougue : une action de plus, sans coûter la sienne")
+	var before := combat.log.size()
+	combat.perform(hero, Actions.def("weapon_attack"), combat.enemies()[0])
+	_expect(combat.log.slice(before).count("Niv9 : attaque supplémentaire.") == 1, "Attaque supplémentaire : deux coups au niveau 9")
+	_expect(combat.actions_left == 1, "il reste l'action gagnée par la Fougue")
+	var beats: Array[Dictionary] = []
+	_expect(Game.life.character.resources["indomitable"] == 1, "Inflexible : 1 utilisation au niveau 9")
+	combat._saving_throw(combat.enemies()[0], hero, {"ability": "dex", "dc": 100}, beats, true)
+	_expect(Game.life.character.resources["indomitable"] == 0 and beats.size() == 2, "Inflexible : relance une sauvegarde ratée")
+	Game.combat = null
+
+	# Roublard : Expertise, Attaque sournoise, Esquive instinctive, Dérobade, Talent fiable.
+	var rogue := _at_level("goblin", "rogue", 11)
+	_expect(rogue.skill_mod("stealth") == rogue.ability_mod("dex") + 2 * rogue.proficiency_bonus(), "Expertise : maîtrise doublée")
+	var sneak := Combatant.from_character(rogue, true)
+	_expect(sneak.damage_expr(Actions.def("sneak_attack")["effects"][0]).ends_with("+6d6"), "Attaque sournoise : 6d6 au niveau 11")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5
+	var lowest := 20
+	for i in 40:
+		lowest = mini(lowest, Dice.roll_check(rogue, {"skill": "stealth", "dc": 30}, rng)["die"])
+	_expect(lowest == 10, "Talent fiable : jamais moins de 10 au d20")
+
+	Game.start_life(rogue, 41)
+	combat = Game.start_combat({"enemies": ["_target"]})
+	hero = combat.hero
+	var target := combat.enemies()[0]
+	var hp := hero.hp
+	combat._roll_damage(target, hero, "10", "", false, beats, 1.0, true)
+	combat._roll_damage(target, hero, "10", "", false, beats, 1.0, true)
+	_expect(hp - hero.hp == 5 + 10, "Esquive instinctive : la première attaque du round est divisée par deux")
+	hp = hero.hp
+	combat._apply(target, {"type": "damage", "damage": "10", "save": {"ability": "dex", "half": true, "dc": -100}}, hero, true)
+	_expect(hero.hp == hp, "Dérobade : sauvegarde réussie, aucun dégât")
+	combat._apply(target, {"type": "damage", "damage": "10", "save": {"ability": "dex", "half": true, "dc": 100}}, hero, true)
+	_expect(hp - hero.hp == 5, "Dérobade : sauvegarde ratée, moitié des dégâts")
+	Game.combat = null
+
+	# Sauvegarde contre un sort : moitié des dégâts, et l'état qui suit est évité.
+	Game.start_life(_at_level("human", "wizard", 1), 51)
+	combat = Game.start_combat({"enemies": ["_target"]})
+	target = combat.enemies()[0]
+	hp = target.hp
+	combat._resolve(combat.hero, [{"type": "damage", "damage": "10", "damage_type": "fire", "save": {"ability": "dex", "half": true, "dc": -100}},
+		{"type": "status", "status": "burning", "stacks": 1}], "enemy", target, true)
+	_expect(hp - target.hp == 5 and target.stacks("burning") == 0, "sauvegarde réussie : moitié et pas d'état")
+	Game.combat = null
+	DB.creatures.erase("_target")
 	return true
 
 

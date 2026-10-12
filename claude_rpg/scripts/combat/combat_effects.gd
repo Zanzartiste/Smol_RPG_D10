@@ -10,6 +10,14 @@ extends RefCounted
 ##   {"type": "status", "status": "poisoned", "stacks": 3}         ajoute des charges d'état
 ##   {"type": "cleanse", "status": "poisoned" | "negative"}        retire un état, ou tous les négatifs
 ##   {"type": "summon", "creature": "familiar"}                    invoque une créature dans son camp
+##   {"type": "extra_action"}                                     une action de plus ce tour (Fougue)
+## Champs communs facultatifs :
+##   "save": {"ability": "dex", "half"?: true, "dc"?: N}  la cible fait un jet de sauvegarde contre le DD
+##        des sorts (ou "dc", ou le save_dc de la créature) ; réussi : rien (ou moitié des dégâts si
+##        "half"), et les effets suivants sont ignorés comme après une attaque ratée.
+##   "scaling": {"table": "cantrip", "field"?: "damage" | "extra_damage"}  nombre de dés selon le niveau
+##        (rules.json › dice_scaling).
+##   "upcast": "1d6"   dégâts en plus par niveau d'emplacement au-delà du niveau du sort (Spellcasting).
 
 ## type -> champs obligatoires (utilisé par DataValidator)
 const SCHEMA := {
@@ -19,6 +27,7 @@ const SCHEMA := {
 	"status": ["status", "stacks"],
 	"cleanse": ["status"],
 	"summon": ["creature"],
+	"extra_action": [],
 }
 ## Cibles possibles d'une action (actions.json, actions des créatures).
 const TARGETS := ["enemy", "all_enemies", "ally", "all_allies", "self", "none"]
@@ -26,7 +35,7 @@ const TARGETS := ["enemy", "all_enemies", "ally", "all_allies", "self", "none"]
 const CHOSEN_TARGETS := ["enemy", "ally"]
 
 ## Effets qui ne visent personne : ils s'appliquent une seule fois, quelle que soit la cible.
-const UNTARGETED := ["summon"]
+const UNTARGETED := ["summon", "extra_action"]
 
 const TARGET_PREFIX := {
 	"all_enemies": "Tous les ennemis : ",
@@ -66,7 +75,7 @@ static func describe(e: Dictionary) -> String:
 				text += Loc.ui(" (+%s dégâts)") % e["extra_damage"]
 			return text
 		"damage":
-			return Loc.ui("Inflige %s") % _damage_text(e)
+			return Loc.ui("Inflige %s") % _damage_text(e) + _save_text(e)
 		"heal":
 			return Loc.ui("Soigne %s PV") % String(e["amount"]).replace("level", Loc.ui("niveau"))
 		"status":
@@ -77,7 +86,18 @@ static func describe(e: Dictionary) -> String:
 			return Loc.ui("Retire %s") % StatusEffects.name_of(e["status"])
 		"summon":
 			return Loc.ui("Invoque : %s") % Creatures.name_of(e["creature"])
+		"extra_action":
+			return Loc.ui("Une action de plus ce tour")
 	return str(e)
+
+
+## Ex. « (sauvegarde de DEX : moitié) ».
+static func _save_text(e: Dictionary) -> String:
+	if not e.has("save"):
+		return ""
+	var save: Dictionary = e["save"]
+	var outcome := Loc.ui("moitié") if save.get("half", false) else Loc.ui("annule")
+	return Loc.ui(" (sauvegarde de %s : %s)") % [Abilities.short_of(save["ability"]), outcome]
 
 
 static func _damage_text(e: Dictionary) -> String:

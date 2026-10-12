@@ -17,6 +17,12 @@ const SCHEMA := {
 	"immunity": ["damage_type"],
 	"vulnerability": ["damage_type"],
 	"status_immunity": ["status"],
+	"skill_expertise": ["id"],  # bonus de maîtrise doublé dans une compétence maîtrisée
+	"save_proficiency": ["id"],  # maîtrise d'un jet de sauvegarde
+	"extra_attack": ["amount"],  # attaques en plus pour l'action Attaque
+	"uncanny_dodge": [],  # une fois par round, dégâts d'une attaque divisés par deux
+	"evasion": [],  # sauvegarde de DEX pour moitié : 0 si réussie, moitié si ratée
+	"reliable_talent": [],  # test d'une compétence maîtrisée : un d20 sous 10 compte comme 10
 }
 
 ## Types de modificateurs qui deviennent des défenses (type -> sorte de Defenses).
@@ -75,6 +81,18 @@ static func describe(m: Dictionary) -> String:
 			return Loc.ui("Vulnérabilité : %s") % DamageTypes.name_of(m["damage_type"])
 		"status_immunity":
 			return Loc.ui("Immunité à l'état : %s") % StatusEffects.name_of(m["status"])
+		"skill_expertise":
+			return Loc.ui("Expertise : %s") % Skills.name_of(m["id"])
+		"save_proficiency":
+			return Loc.ui("Maîtrise des sauvegardes : %s") % Abilities.name_of(m["id"])
+		"extra_attack":
+			return Loc.ui("%s attaque(s) par action Attaque") % signed
+		"uncanny_dodge":
+			return Loc.ui("Esquive instinctive")
+		"evasion":
+			return Loc.ui("Dérobade")
+		"reliable_talent":
+			return Loc.ui("Talent fiable")
 	return str(m)
 
 

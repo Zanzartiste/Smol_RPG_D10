@@ -2,7 +2,8 @@ class_name Dice
 extends RefCounted
 ## Tests de caractéristique façon d20 : d20 + modificateur >= DD.
 ## Comme dans Baldur's Gate 3, un 20 naturel réussit toujours et un 1 naturel échoue toujours.
-## Un test s'écrit {"skill": "athletics", "dc": 12} ou {"ability": "dex", "dc": 12}.
+## Un test s'écrit {"skill": "athletics", "dc": 12}, {"ability": "dex", "dc": 12}
+## ou {"save": "con", "dc": 12} (jet de sauvegarde : maîtrise si la classe le maîtrise).
 
 
 static var _term_regex := RegEx.create_from_string("([+-]?)\\s*(?:(\\d*)d(\\d+)|(\\d+))")
@@ -64,7 +65,16 @@ static func add_mod(expr: String, mod: int) -> String:
 static func modifier(ch: Character, check: Dictionary) -> int:
 	if check.has("skill"):
 		return ch.skill_mod(check["skill"])
+	if check.has("save"):
+		return ch.save_mod(check["save"])
 	return ch.ability_mod(check.get("ability", "str"))
+
+
+## Talent fiable : un test de compétence maîtrisée ne descend jamais sous 10 au d20.
+static func minimum_die(ch: Character, check: Dictionary) -> int:
+	if check.has("skill") and ch.is_proficient(check["skill"]) and ch.has_modifier("reliable_talent"):
+		return 10
+	return 1
 
 
 static func label(check: Dictionary) -> String:
@@ -73,16 +83,22 @@ static func label(check: Dictionary) -> String:
 
 ## Nom de la compétence ou de l'attribut testé.
 static func stat_name(check: Dictionary) -> String:
-	return Skills.name_of(check["skill"]) if check.has("skill") else Abilities.name_of(check.get("ability", "str"))
+	if check.has("skill"):
+		return Skills.name_of(check["skill"])
+	if check.has("save"):
+		return Loc.ui("Sauvegarde de %s") % Abilities.name_of(check["save"])
+	return Abilities.name_of(check.get("ability", "str"))
 
 
 static func success_chance(ch: Character, check: Dictionary) -> float:
 	var needed := int(check["dc"]) - modifier(ch, check)  # résultat minimum au d20
+	if minimum_die(ch, check) + modifier(ch, check) >= int(check["dc"]):
+		return 1.0
 	return clampf((21 - needed) / 20.0, 0.05, 0.95)
 
 
 static func roll_check(ch: Character, check: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
-	var die := rng.randi_range(1, 20)
+	var die := maxi(rng.randi_range(1, 20), minimum_die(ch, check))
 	var mod := modifier(ch, check)
 	var dc := int(check["dc"])
 	var success := die == 20 or (die != 1 and die + mod >= dc)

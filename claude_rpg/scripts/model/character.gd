@@ -2,7 +2,7 @@ class_name Character
 extends RefCounted
 ## Un personnage (le héros ou un compagnon). Règles inspirées du SRD 5e.
 ## Les règles elles-mêmes vivent dans scripts/rules/ (Abilities, Skills, Feats, Equipment,
-## DamageTypes, Modifiers, Defenses) : ce script ne fait que les combiner.
+## DamageTypes, Modifiers, Defenses, ClassFeatures, Spellcasting) : ce script ne fait que les combiner.
 
 var name := ""
 var species_id := ""
@@ -25,7 +25,7 @@ var start_age := 18
 var age_days := 0  # jours vécus depuis le début de la partie
 var art_seed := 0  # graine des variations du portrait procédural
 var template_id := ""  # pour un compagnon : son id dans companions.json
-var resources: Dictionary = {}  # ressources restantes (ex. spell_slot), rechargées par un repos long
+var resources: Dictionary = {}  # ressources restantes (spell_slot_1…, indomitable…), rechargées par un repos long
 
 
 ## Options : "abilities" (scores, sinon modèle de la classe), "background", "gender".
@@ -52,7 +52,7 @@ static func create(species: String, cls: String, char_name: String, options: Dic
 
 	c.max_hp = c.compute_max_hp()
 	c.hp = c.max_hp
-	c.resources = class_data.get("resources", {}).duplicate()
+	c.resources = c.max_resources()
 	c.gold = int(DB.rules.get("start_gold", 0)) + int(background.get("gold", 0))
 	for source: Dictionary in [class_data, background]:
 		var start_items: Dictionary = source.get("start_items", {})
@@ -91,6 +91,7 @@ static func create_companion(companion_id: String) -> Character:
 	c.xp = Progression.xp_for(c.level)
 	c.max_hp = c.compute_max_hp()
 	c.hp = c.max_hp
+	c.resources = c.max_resources()
 	return c
 
 
@@ -98,17 +99,24 @@ static func _pick(list: Array, rng: RandomNumberGenerator) -> Variant:
 	return list[rng.randi_range(0, list.size() - 1)]
 
 
-# --- Modificateurs (espèce, dons, équipement) -------------------------------
+# --- Modificateurs (espèce, aptitudes de classe, dons, équipement) ---------
 
 ## Tous les modificateurs qui s'appliquent au personnage.
 func modifiers() -> Array:
 	var result: Array = []
 	result.append_array(DB.species[species_id].get("modifiers", []))
+	for feature: Dictionary in features():
+		result.append_array(feature.get("modifiers", []))
 	for feat_id in feats:
 		result.append_array(Feats.modifiers_of(feat_id))
 	for slot: String in equipment:
 		result.append_array(Equipment.modifiers_of(equipment[slot]))
 	return result
+
+
+## Le personnage a-t-il un modificateur sans valeur (ex. "evasion", "uncanny_dodge") ?
+func has_modifier(type: String) -> bool:
+	return modifiers().any(func(m): return m.get("type") == type)
 
 
 ## Défenses complètes : celles du personnage + celles de l'espèce, des dons et de l'équipement.
@@ -140,8 +148,25 @@ func is_proficient(skill_id: String) -> bool:
 		or Modifiers.grants(modifiers(), "skill_proficiency", skill_id)
 
 
+## Expertise : bonus de maîtrise doublé dans la compétence.
+func has_expertise(skill_id: String) -> bool:
+	return is_proficient(skill_id) and Modifiers.grants(modifiers(), "skill_expertise", skill_id)
+
+
 func skill_mod(skill_id: String) -> int:
-	return ability_mod(Skills.ability_of(skill_id)) + (proficiency_bonus() if is_proficient(skill_id) else 0)
+	var proficiency := 0
+	if is_proficient(skill_id):
+		proficiency = proficiency_bonus() * (2 if has_expertise(skill_id) else 1)
+	return ability_mod(Skills.ability_of(skill_id)) + proficiency
+
+
+## Jets de sauvegarde maîtrisés : ceux de la classe et des modificateurs.
+func is_proficient_save(ability_id: String) -> bool:
+	return ability_id in DB.classes[class_id].get("saving_throws", []) 		or Modifiers.grants(modifiers(), "save_proficiency", ability_id)
+
+
+func save_mod(ability_id: String) -> int:
+	return ability_mod(ability_id) + (proficiency_bonus() if is_proficient_save(ability_id) else 0)
 
 
 # --- Dons --------------------------------------------------------------------
@@ -261,19 +286,60 @@ func attack_bonus(ability: String) -> int:
 	return ability_mod(action_ability(ability)) + proficiency_bonus()
 
 
+# --- Aptitudes de classe et ressources -----------------------------------------
+
+## Niveau dans la classe (égal au niveau du personnage tant qu'il n'y a pas de multiclassage).
+func class_level() -> int:
+	return level
+
+
+## Aptitudes de classe acquises (classes.json › features).
+func features() -> Array:
+	return ClassFeatures.up_to(class_id, class_level())
+
+
+## Ressources maximales : celles de la classe et des aptitudes, plus les emplacements de sort.
+func max_resources() -> Dictionary:
+	var result: Dictionary = DB.classes[class_id].get("resources", {}).duplicate()
+	for feature: Dictionary in features():
+		var granted: Dictionary = feature.get("resources", {})
+		for id: String in granted:
+			result[id] = int(result.get(id, 0)) + int(granted[id])
+	result.merge(Spellcasting.slots(DB.classes[class_id].get("spell_slots", ""), class_level()))
+	for id: String in result:
+		result[id] = int(result[id])
+	return result
+
+
 func max_resource(resource_id: String) -> int:
-	return int(DB.classes[class_id].get("resources", {}).get(resource_id, 0))
+	return int(max_resources().get(resource_id, 0))
 
 
-## Actions de combat de la classe (ids de actions.json).
+## Actions de combat : celles de la classe puis celles des aptitudes acquises (ids de actions.json).
 func combat_actions() -> Array:
-	return DB.classes[class_id].get("actions", [])
+	var result: Array = DB.classes[class_id].get("actions", []).duplicate()
+	for feature: Dictionary in features():
+		for action_id: String in feature.get("actions", []):
+			if action_id not in result:
+				result.append(action_id)
+	return result
 
 
 ## Repos long : PV et ressources (emplacements de sort…) au maximum.
 func long_rest() -> void:
 	hp = max_hp
-	resources = DB.classes[class_id].get("resources", {}).duplicate()
+	resources = max_resources()
+
+
+## Ajuste les ressources après un changement de niveau : les nouvelles sont pleines, celles qui
+## augmentent gagnent la différence, celles qui n'existent plus disparaissent.
+func _sync_resources(previous_max: Dictionary) -> void:
+	var new_max := max_resources()
+	var synced := {}
+	for id: String in new_max:
+		var gained := int(new_max[id]) - int(previous_max.get(id, 0))
+		synced[id] = clampi(int(resources.get(id, 0)) + gained, 0, int(new_max[id]))
+	resources = synced
 
 
 # --- Âge et taille -----------------------------------------------------------
@@ -324,6 +390,7 @@ func refresh_max_hp() -> void:
 func add_xp(amount: int) -> Array[int]:
 	xp += amount
 	var reached: Array[int] = []
+	var previous_max := max_resources()
 	while level < Progression.max_level() and xp >= Progression.xp_for(level + 1):
 		level += 1
 		refresh_max_hp()
@@ -331,6 +398,8 @@ func add_xp(amount: int) -> Array[int]:
 			pending_ability_points += Progression.ability_points_per_advancement()
 			pending_feats += Progression.feats_per_advancement()
 		reached.append(level)
+	if not reached.is_empty():
+		_sync_resources(previous_max)
 	return reached
 
 
@@ -393,6 +462,14 @@ static func from_dict(data: Dictionary) -> Character:
 	c.art_seed = int(data.get("art_seed", 0))
 	c.template_id = data.get("template_id", "")
 	c.resources = _int_dict(data.get("resources", {}))
+	# Anciennes sauvegardes (ex. "spell_slot" unique) : on ne garde que les ressources connues.
+	var max_now := c.max_resources()
+	for id: String in max_now:
+		if not c.resources.has(id):
+			c.resources[id] = max_now[id]
+	for id: String in c.resources.keys():
+		if not max_now.has(id):
+			c.resources.erase(id)
 	return c
 
 

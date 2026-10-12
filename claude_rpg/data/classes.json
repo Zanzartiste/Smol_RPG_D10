@@ -5,9 +5,19 @@
 		"description": "Maître des armes et des armures, il règle les problèmes de front.",
 		"hit_die": 10,
 		"ability_priority": ["str", "con", "dex", "wis", "cha", "int"],
+		"saving_throws": ["str", "con"],
 		"skills": ["athletics", "perception", "survival"],
 		"equipment": {"main_hand": "longsword", "armor": "chain_mail"},
 		"actions": ["weapon_attack", "second_wind", "defensive_stance", "pommel_strike"],
+		"features": [
+			{"level": 2, "id": "action_surge", "name": "Fougue", "description": "Une fois par combat, vous pouvez agir une deuxième fois pendant votre tour.", "actions": ["action_surge"]},
+			{"level": 5, "id": "extra_attack", "name": "Attaque supplémentaire", "description": "L'action Attaque frappe deux fois.", "modifiers": [{"type": "extra_attack", "amount": 1}]},
+			{"level": 9, "id": "indomitable", "name": "Inflexible", "description": "Une fois par repos long, vous relancez automatiquement un jet de sauvegarde raté.", "resources": {"indomitable": 1}},
+			{"level": 11, "id": "extra_attack_2", "name": "Attaque supplémentaire (2)", "description": "L'action Attaque frappe trois fois.", "modifiers": [{"type": "extra_attack", "amount": 1}]},
+			{"level": 13, "id": "indomitable_2", "name": "Inflexible (2 utilisations)", "description": "Deux relances par repos long.", "resources": {"indomitable": 1}},
+			{"level": 17, "id": "indomitable_3", "name": "Inflexible (3 utilisations)", "description": "Trois relances par repos long.", "resources": {"indomitable": 1}},
+			{"level": 20, "id": "extra_attack_3", "name": "Attaque supplémentaire (3)", "description": "L'action Attaque frappe quatre fois.", "modifiers": [{"type": "extra_attack", "amount": 1}]}
+		],
 		"start_items": {"potion_heal": 1},
 		"art": {"headgear": "helmet", "outfit": "#6e6e78", "accent": "#9a2f2f"}
 	},
@@ -17,11 +27,17 @@
 		"description": "Érudit des arcanes, fragile mais redoutable.",
 		"hit_die": 6,
 		"ability_priority": ["int", "con", "dex", "wis", "cha", "str"],
+		"saving_throws": ["int", "wis"],
 		"skills": ["arcana", "investigation", "medicine"],
 		"equipment": {"main_hand": "quarterstaff"},
 		"spellcasting": "int",
-		"resources": {"spell_slot": 2},
+		"spell_slots": "full",
 		"actions": ["weapon_attack", "fire_bolt", "ray_of_frost", "magic_missile", "burning_hands", "mage_shield", "find_familiar"],
+		"features": [
+			{"level": 3, "id": "spells_level_2", "name": "Sorts du 2e niveau", "description": "Vous apprenez Rayons ardents.", "actions": ["scorching_ray"]},
+			{"level": 5, "id": "spells_level_3", "name": "Sorts du 3e niveau", "description": "Vous apprenez Boule de feu.", "actions": ["fireball"]},
+			{"level": 5, "id": "cantrip_2", "name": "Tours de magie renforcés", "description": "Vos tours de magie lancent deux dés de dégâts (trois au niveau 11, quatre au niveau 17)."}
+		],
 		"start_items": {},
 		"art": {"headgear": "wizard_hat", "outfit": "#3b3a7a", "accent": "#d4b06a"}
 	},
@@ -34,9 +50,18 @@
 		"unlock_cost": 10,
 		"hit_die": 8,
 		"ability_priority": ["dex", "con", "cha", "wis", "int", "str"],
+		"saving_throws": ["dex", "int"],
 		"skills": ["stealth", "sleight_of_hand", "acrobatics", "perception"],
 		"equipment": {"main_hand": "rapier", "armor": "leather"},
 		"actions": ["weapon_attack", "sneak_attack", "poisoned_blade"],
+		"features": [
+			{"level": 1, "id": "expertise", "name": "Expertise", "description": "Bonus de maîtrise doublé en Discrétion et en Escamotage.", "modifiers": [{"type": "skill_expertise", "id": "stealth"}, {"type": "skill_expertise", "id": "sleight_of_hand"}]},
+			{"level": 3, "id": "sneak_attack_2", "name": "Attaque sournoise (2d6)", "description": "L'Attaque sournoise gagne un dé tous les deux niveaux (2d6 au niveau 3, 3d6 au niveau 5…)."},
+			{"level": 5, "id": "uncanny_dodge", "name": "Esquive instinctive", "description": "Une fois par round, les dégâts d'une attaque qui vous touche sont divisés par deux.", "modifiers": [{"type": "uncanny_dodge"}]},
+			{"level": 6, "id": "expertise_2", "name": "Expertise (2)", "description": "Bonus de maîtrise doublé en Acrobaties et en Perception.", "modifiers": [{"type": "skill_expertise", "id": "acrobatics"}, {"type": "skill_expertise", "id": "perception"}]},
+			{"level": 7, "id": "evasion", "name": "Dérobade", "description": "Contre un effet qui permet un jet de Dextérité pour réduire les dégâts de moitié : aucun dégât en cas de réussite, la moitié en cas d'échec.", "modifiers": [{"type": "evasion"}]},
+			{"level": 11, "id": "reliable_talent", "name": "Talent fiable", "description": "Pour un test d'une compétence maîtrisée, un résultat de 9 ou moins au d20 compte comme un 10.", "modifiers": [{"type": "reliable_talent"}]}
+		],
 		"start_items": {},
 		"art": {"headgear": "hood", "outfit": "#3a4a2e", "accent": "#6b4a2a"}
 	}

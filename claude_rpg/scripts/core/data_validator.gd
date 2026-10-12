@@ -110,6 +110,10 @@ static func _validate_modifiers(db: Node, mods: Variant, ctx: String, errors: Ar
 				_expect_ref(db.abilities, m["id"], "attribut", ctx, errors)
 			"skill_proficiency":
 				_expect_ref(db.skills, m["id"], "compétence", ctx, errors)
+			"skill_expertise":
+				_expect_ref(db.skills, m["id"], "compétence", ctx, errors)
+			"save_proficiency":
+				_expect_ref(db.abilities, m["id"], "attribut", ctx, errors)
 			"resistance", "immunity", "vulnerability":
 				_expect_ref(db.damage_types, m["damage_type"], "type de dégâts", ctx, errors)
 			"status_immunity":
@@ -173,6 +177,25 @@ static func _validate_classes(db: Node, errors: Array[String]) -> void:
 				errors.append(ctx + " : équipement inconnu « %s »" % equipment[slot])
 			elif Equipment.slot_for(equipment[slot]) != slot:
 				errors.append(ctx + " : « %s » ne va pas dans l'emplacement « %s »" % [equipment[slot], slot])
+		for ability_id in cls.get("saving_throws", []):
+			_expect_ref(db.abilities, ability_id, "attribut (saving_throws)", ctx, errors)
+		if cls.has("spell_slots") and cls["spell_slots"] not in Spellcasting.progressions():
+			errors.append(ctx + " : spell_slots « %s » inconnu (rules.json › spell_slots : %s)" % [
+				cls["spell_slots"], Spellcasting.progressions()])
+		var feature_ids := {}
+		for feature: Dictionary in cls.get("features", []):
+			var fctx := "%s › aptitude %s" % [ctx, feature.get("id", "?")]
+			for key in ["level", "id", "name", "description"]:
+				if not feature.has(key):
+					errors.append(fctx + " : champ « %s » manquant" % key)
+			if feature_ids.has(feature.get("id")):
+				errors.append(fctx + " : id en double")
+			feature_ids[feature.get("id")] = true
+			if int(feature.get("level", 0)) < 1 or int(feature.get("level", 0)) > Progression.max_level():
+				errors.append(fctx + " : niveau hors de 1–%d" % Progression.max_level())
+			for action_id in feature.get("actions", []):
+				_expect_ref(db.actions, action_id, "action", fctx, errors)
+			_validate_modifiers(db, feature.get("modifiers", []), fctx, errors, true)
 
 
 static func _validate_backgrounds(db: Node, errors: Array[String]) -> void:
@@ -218,11 +241,19 @@ static func _validate_combat_data(db: Node, errors: Array[String]) -> void:
 		var ctx := "classes.json › %s" % cls["id"]
 		if cls.get("actions", []).is_empty():
 			errors.append(ctx + " : aucune action de combat")
-		for action_id: String in cls.get("actions", []):
+		var resource_ids: Array = cls.get("resources", {}).keys()
+		var action_ids: Array = cls.get("actions", []).duplicate()
+		for feature: Dictionary in cls.get("features", []):
+			resource_ids.append_array(feature.get("resources", {}).keys())
+			action_ids.append_array(feature.get("actions", []))
+		for action_id: String in action_ids:
 			_expect_ref(db.actions, action_id, "action", ctx, errors)
 			var cost: String = db.actions.get(action_id, {}).get("cost", "")
-			if cost != "" and not cls.get("resources", {}).has(cost):
-				errors.append(ctx + " : l'action « %s » coûte « %s », absent des resources de la classe" % [action_id, cost])
+			if cost == "spell_slot":
+				if not cls.has("spell_slots"):
+					errors.append(ctx + " : l'action « %s » coûte un emplacement de sort, mais la classe n'a pas de spell_slots" % action_id)
+			elif cost != "" and cost not in resource_ids:
+				errors.append(ctx + " : l'action « %s » coûte « %s », absent des resources de la classe et de ses aptitudes" % [action_id, cost])
 
 	for companion: Dictionary in db.companions.values():
 		var ctx := "companions.json › %s" % companion["id"]
@@ -255,6 +286,10 @@ static func _validate_ai_actions(db: Node, actions: Variant, ctx: String, errors
 			errors.append(actx + " : nom manquant")
 		if action.get("target", "enemy") not in CombatEffects.TARGETS:
 			errors.append(actx + " : cible inconnue « %s » (%s)" % [action.get("target"), CombatEffects.TARGETS])
+		if action.get("cost") == "spell_slot":
+			var spell_level := int(action.get("spell_level", 0))
+			if spell_level < 1 or spell_level > Spellcasting.MAX_SPELL_LEVEL:
+				errors.append(actx + " : un sort à emplacement doit avoir un spell_level de 1 à 9")
 		_validate_combat_effects(db, action.get("effects", []), actx, errors)
 
 
@@ -266,6 +301,18 @@ static func _validate_combat_effects(db: Node, effects: Variant, ctx: String, er
 		if typeof(e) != TYPE_DICTIONARY or not CombatEffects.SCHEMA.has(e.get("type", "")):
 			errors.append(ctx + " : effet de combat invalide %s (types : %s)" % [str(e), CombatEffects.SCHEMA.keys()])
 			continue
+		if e.has("save"):
+			var save: Variant = e["save"]
+			if typeof(save) != TYPE_DICTIONARY or not db.abilities.has(save.get("ability", "")):
+				errors.append(ctx + " : save doit valoir {\"ability\": <attribut>, \"half\"?, \"dc\"?}")
+		if e.has("upcast") and not Dice.is_valid_expr(e["upcast"]):
+			errors.append(ctx + " : upcast invalide « %s »" % e["upcast"])
+		if e.has("scaling"):
+			var scaling: Variant = e["scaling"]
+			if typeof(scaling) != TYPE_DICTIONARY or scaling.get("table", "") not in Spellcasting.scaling_tables():
+				errors.append(ctx + " : scaling doit valoir {\"table\": %s, \"field\"?}" % [Spellcasting.scaling_tables()])
+			elif scaling.get("field", "damage") not in ["damage", "extra_damage"]:
+				errors.append(ctx + " : scaling.field doit valoir damage ou extra_damage")
 		var missing: Array = CombatEffects.SCHEMA[e["type"]].filter(func(k): return not e.has(k))
 		if not missing.is_empty():
 			errors.append(ctx + " : effet « %s » sans %s" % [e["type"], missing])
@@ -348,8 +395,10 @@ static func _validate_event(db: Node, ev: Dictionary, errors: Array[String]) -> 
 				errors.append(cctx + " : compétence inconnue « %s »" % check["skill"])
 			elif check.has("ability") and not db.abilities.has(check["ability"]):
 				errors.append(cctx + " : attribut inconnu « %s »" % check["ability"])
-			elif not check.has("skill") and not check.has("ability"):
-				errors.append(cctx + " : le test doit indiquer « skill » ou « ability »")
+			elif check.has("save") and not db.abilities.has(check["save"]):
+				errors.append(cctx + " : sauvegarde inconnue « %s »" % check["save"])
+			elif not check.has("skill") and not check.has("ability") and not check.has("save"):
+				errors.append(cctx + " : le test doit indiquer « skill », « ability » ou « save »")
 			for key in ["success", "failure"]:
 				if not choice.has(key):
 					errors.append(cctx + " : résultat « %s » manquant" % key)
