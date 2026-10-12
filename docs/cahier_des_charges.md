@@ -226,3 +226,14 @@ Claude ne génère pas d'images lui-même. Il peut en revanche écrire le **guid
 6. Ajouter le combat.
 7. Ajouter sauvegarde et méta.
 8. Produire le contenu du MVP, puis faire tester.
+
+## 11. Backlog (idées validées, non prioritaires)
+
+- **Passer des années** : un bouton (ou une action) pour faire passer plusieurs années d'un coup, par exemple en
+  s'installant comme forgeron. Sans lui, la vieillesse n'arrive presque jamais avec l'échelle de temps actuelle
+  (10 jours par an).
+
+## 12. Outils de développement
+
+- **Mode debug** : F12 en jeu, ou lancer avec `-- --debug`. Il affiche les choix verrouillés (grisés, avec la raison),
+  qui sont cachés en jeu normal.

@@ -4,9 +4,17 @@ extends Node
 
 signal life_changed
 signal life_ended
+signal debug_changed
 
 var life: LifeState
 var current_event: Dictionary = {}
+## Mode debug : affiche notamment les choix verrouillés. F12 en jeu, ou lancer avec « -- --debug ».
+var debug := "--debug" in OS.get_cmdline_user_args()
+
+
+func toggle_debug() -> void:
+	debug = not debug
+	debug_changed.emit()
 
 
 ## Commence une vie avec un personnage créé (écran de création).

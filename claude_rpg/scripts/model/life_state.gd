@@ -71,10 +71,13 @@ func _new_day() -> void:
 
 
 ## Modifie un attribut. Un attribut qui tombe à 0 tue le personnage.
+## Un changement de Constitution recalcule les PV (et peut aussi tuer si les PV tombent à 0).
 func change_ability(ability_id: String, amount: int, cause: String) -> void:
 	var value := clampi(int(character.abilities.get(ability_id, 10)) + amount, 0, 30)
 	character.abilities[ability_id] = value
-	if value <= 0:
+	if ability_id == "con":
+		character.refresh_max_hp()
+	if value <= 0 or character.hp <= 0:
 		die(cause)
 
 

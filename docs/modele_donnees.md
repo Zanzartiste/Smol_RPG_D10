@@ -62,7 +62,6 @@ Un choix est soit **direct** (`outcome`), soit **avec test** (`check`, `success`
 	"id": "fight",
 	"text": "L'affronter",
 	"conditions": [{"type": "class", "in": ["wizard"]}],
-	"hide_if_locked": false,
 	"check": {"skill": "athletics", "dc": 13},
 	"success": {"text": "La bête s'effondre.", "effects": [{"type": "xp", "amount": 100}]},
 	"failure": {"text": "Ses crocs se referment sur vous.", "effects": [{"type": "hp", "amount": -6, "cause": "Dévoré par un loup"}]}
@@ -71,8 +70,7 @@ Un choix est soit **direct** (`outcome`), soit **avec test** (`check`, `success`
 
 | Champ | Description |
 |---|---|
-| `conditions` | Si elles ne sont pas remplies, le choix est **grisé**, avec la raison affichée (ex. « INT 12+ ») |
-| `hide_if_locked` | `true` : le choix est carrément **caché** s'il est verrouillé. Utile pour les secrets liés à des flags |
+| `conditions` | Si elles ne sont pas remplies, le choix est **caché**. En mode debug (F12), il est affiché grisé, avec la raison (ex. « INT 12+ ») |
 | `check` | Test d20 : `{"skill": "<compétence>", "dc": N}` ou `{"ability": "<attribut>", "dc": N}` |
 | `outcome` / `success` / `failure` | `{"text": "...", "effects": [...]}` |
 

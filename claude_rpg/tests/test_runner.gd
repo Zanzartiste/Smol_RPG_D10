@@ -67,6 +67,21 @@ func _test_character() -> bool:
 		"la taille dépend de l'espèce")
 	_expect(c.age_years() == 12 and c.life_stage() == "adult", "gobelin de 12 ans adulte")
 	_expect(Character.create("human", "fighter", "N", {"background": "noble"}).gold == 15 + 25, "or du passé Noble")
+
+	# PV : d10 + CON (+2) au niveau 1 pour un guerrier au modèle (CON 15).
+	var life := _new_life("human", "fighter")
+	var f := life.character
+	_expect(f.max_hp == 12 and f.hp == 12, "PV du guerrier : 10 + 2")
+	f.hp = 7
+	life.change_ability("con", -2, "test")
+	_expect(f.max_hp == 11 and f.hp == 6, "CON 15 -> 13 : PV max et actuels -1")
+	life.change_ability("con", 4, "test")
+	_expect(f.max_hp == 13 and f.hp == 8, "CON 13 -> 17 : PV max et actuels +2")
+	f.add_xp(300)
+	_expect(f.level == 2 and f.max_hp == 13 + 6 + 3, "niveau 2 : + (d10/2 + 1) + CON")
+	f.hp = 1
+	life.change_ability("con", -10, "Affaibli")
+	_expect(life.dead and life.death_cause == "Affaibli", "une baisse de CON qui vide les PV tue")
 	var levels := c.add_xp(300)
 	_expect(levels == [2] and c.level == 2, "300 XP => niveau 2")
 	c.age_days = DB.days_per_year() * 30
@@ -187,11 +202,20 @@ func _test_engine() -> bool:
 	var market: Dictionary = DB.events["town_market"]
 	life.character.gold = 0
 	var choices := EventEngine.visible_choices(market, life, meta)
-	_expect(choices.size() == 4, "les choix verrouillés restent visibles")
-	_expect(not choices[0]["available"] and choices[0]["reason"] == "Or 10+", "raison du verrouillage affichée")
+	_expect(choices.size() == 1 and choices[0]["choice"]["id"] == "leave", "les choix verrouillés sont cachés")
+	choices = EventEngine.visible_choices(market, life, meta, true)
+	_expect(choices.size() == 4, "en debug, les choix verrouillés sont visibles")
+	_expect(not choices[0]["available"] and choices[0]["reason"] == "Or 10+", "en debug, la raison est affichée")
 
 	var shrine: Dictionary = DB.events["forest_shrine"]
-	_expect(EventEngine.visible_choices(shrine, life, meta).size() == 2, "choix masqué sans le flag")
+	_expect(EventEngine.visible_choices(shrine, life, meta).size() == 2, "choix secrets cachés sans le flag ni le passé")
+
+	# Validation : un événement dont tous les choix ont des conditions pourrait bloquer le joueur.
+	var errors: Array[String] = []
+	var trap := {"id": "trap", "location": "town", "text": "?", "choices": [
+		{"id": "a", "text": "A", "conditions": [{"type": "gold", "min": 1}], "outcome": {"text": "", "effects": []}}]}
+	DataValidator._validate_event(DB, trap, errors)
+	_expect(errors.any(func(e): return "sans condition" in e), "le validateur refuse un événement sans issue")
 	meta.free()
 	return true
 

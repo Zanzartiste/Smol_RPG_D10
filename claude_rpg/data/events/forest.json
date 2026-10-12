@@ -161,7 +161,6 @@
 				"id": "decipher_known",
 				"text": "Prononcer la formule lue dans le grimoire",
 				"conditions": [{"type": "flag", "id": "knows_shrine_rune"}],
-				"hide_if_locked": true,
 				"check": {"skill": "arcana", "dc": 10},
 				"success": {
 					"text": "Les runes s'embrasent. Une voix ancienne murmure votre nom. Les elfes se souviendront de ce jour.",
@@ -176,7 +175,6 @@
 				"id": "pray",
 				"text": "Se recueillir comme on vous l'a appris au temple",
 				"conditions": [{"type": "background", "in": ["acolyte"]}],
-				"hide_if_locked": true,
 				"check": {"skill": "religion", "dc": 13},
 				"success": {
 					"text": "Votre prière trouve un écho dans les pierres. Les runes s'embrasent doucement. Les elfes se souviendront de ce jour.",

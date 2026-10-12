@@ -2,7 +2,8 @@ extends Control
 ## Écran principal : fiche du personnage à gauche, scène courante à droite.
 ## La zone de droite affiche tour à tour le hub (choix du lieu), un événement, le lancer de dés,
 ## son résultat ou la mort.
-## Raccourcis : touches 1 à 9 pour choisir une option ; n'importe quelle touche accélère les dés.
+## Raccourcis : touches 1 à 9 pour choisir une option ; n'importe quelle touche accélère les dés ;
+## F12 active ou désactive le mode debug (choix verrouillés visibles).
 
 const CREATION_SCENE := "res://scenes/creation.tscn"
 
@@ -15,10 +16,15 @@ const CREATION_SCENE := "res://scenes/creation.tscn"
 @onready var body_text: RichTextLabel = %BodyText
 @onready var choices_box: VBoxContainer = %Choices
 
+var _debug_badge := Label.new()
+var _event_on_screen: Dictionary = {}  # événement dont les choix sont affichés (pour les réafficher en debug)
+
 
 func _ready() -> void:
 	theme = UITheme.build()
 	Game.life_changed.connect(_refresh_sheet)
+	Game.debug_changed.connect(_on_debug_changed)
+	_setup_debug_badge()
 	if Game.life == null or Game.life.dead:
 		Game.new_life()  # scène lancée directement, sans passer par la création
 	_refresh_sheet()
@@ -31,6 +37,10 @@ func _ready() -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
 	if key == null or not key.pressed or key.echo:
+		return
+	if key.keycode == KEY_F12:
+		Game.toggle_debug()
+		accept_event()
 		return
 	if dice_tray.is_playing():
 		dice_tray.skip()
@@ -66,8 +76,14 @@ func _show_event(ev: Dictionary) -> void:
 	illustration.texture = ArtProvider.event_image(ev, life)
 	title_label.text = Loc.fill(Loc.t("evt.%s.title" % ev["id"], ev.get("title", "")), life)
 	body_text.text = Loc.fill(Loc.t("evt.%s.text" % ev["id"], ev.get("text", "")), life)
+	_show_event_choices(ev)
+
+
+func _show_event_choices(ev: Dictionary) -> void:
+	var life := Game.life
 	_clear_choices()
-	for entry in EventEngine.visible_choices(ev, life, Meta):
+	_event_on_screen = ev
+	for entry in EventEngine.visible_choices(ev, life, Meta, Game.debug):
 		var choice: Dictionary = entry["choice"]
 		var label := Loc.fill(Loc.t("evt.%s.%s.text" % [ev["id"], choice["id"]], choice.get("text", "")), life)
 		if choice.has("check"):
@@ -153,6 +169,7 @@ func _refresh_sheet() -> void:
 # --- Utilitaires -------------------------------------------------------------
 
 func _clear_choices() -> void:
+	_event_on_screen = {}
 	for child in choices_box.get_children():
 		choices_box.remove_child(child)
 		child.queue_free()
@@ -166,3 +183,27 @@ func _add_choice(text: String, callback: Callable, enabled := true) -> void:
 	button.disabled = not enabled
 	button.pressed.connect(callback, CONNECT_DEFERRED)
 	choices_box.add_child(button)
+
+
+# --- Mode debug --------------------------------------------------------------
+
+func _setup_debug_badge() -> void:
+	_debug_badge.text = tr("DEBUG (F12)")
+	_debug_badge.add_theme_color_override("font_color", UITheme.BAD)
+	_debug_badge.add_theme_font_size_override("font_size", 15)
+	var badge_box := StyleBoxFlat.new()
+	badge_box.bg_color = Color(0.08, 0.06, 0.05, 0.9)
+	badge_box.border_color = UITheme.BAD
+	badge_box.set_border_width_all(1)
+	badge_box.set_content_margin_all(6)
+	_debug_badge.add_theme_stylebox_override("normal", badge_box)
+	_debug_badge.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 34)
+	_debug_badge.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_debug_badge.visible = Game.debug
+	add_child(_debug_badge)
+
+
+func _on_debug_changed() -> void:
+	_debug_badge.visible = Game.debug
+	if not _event_on_screen.is_empty():
+		_show_event_choices(_event_on_screen)

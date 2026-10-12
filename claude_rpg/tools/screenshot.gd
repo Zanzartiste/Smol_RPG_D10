@@ -25,6 +25,9 @@ func _ready() -> void:
 	await _capture("2_hub.png")
 	main._on_location_chosen("forest")
 	await _capture("3_event.png")
+	Game.toggle_debug()
+	await _capture("3b_event_debug.png")
+	Game.toggle_debug()
 
 	# Premier choix avec un test de dés.
 	var with_check: Array = EventEngine.visible_choices(Game.current_event, Game.life, Meta).filter(

@@ -222,7 +222,6 @@
 				"id": "read_sage",
 				"text": "Reconnaître l'écriture grâce à vos années d'étude",
 				"conditions": [{"type": "background", "in": ["sage"]}],
-				"hide_if_locked": true,
 				"outcome": {
 					"text": "Vous avez déjà croisé cet alphabet dans un traité poussiéreux. Les runes décrivent un sanctuaire caché au cœur de la Forêt des Murmures, et la formule pour l'éveiller.",
 					"effects": [{"type": "xp", "amount": 100}, {"type": "set_flag", "id": "knows_shrine_rune"}]

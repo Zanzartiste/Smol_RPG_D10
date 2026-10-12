@@ -99,6 +99,11 @@ static func _validate_event(db: Node, ev: Dictionary, errors: Array[String]) -> 
 	if typeof(choices) != TYPE_ARRAY or choices.is_empty():
 		errors.append(ctx + " : aucun choix")
 		return
+	# Les choix verrouillés étant cachés, il faut toujours une issue pour ne pas bloquer le joueur.
+	if choices.all(func(c): return typeof(c) == TYPE_DICTIONARY and not c.get("conditions", []).is_empty()):
+		errors.append(ctx + " : au moins un choix doit être sans condition (sinon le joueur peut se retrouver bloqué)")
+	if choices.any(func(c): return typeof(c) == TYPE_DICTIONARY and c.has("hide_if_locked")):
+		errors.append(ctx + " : « hide_if_locked » n'existe plus (les choix verrouillés sont toujours cachés hors debug)")
 	var choice_ids := {}
 	for choice: Dictionary in choices:
 		var cctx := "%s › choix %s" % [ctx, choice.get("id", "?")]

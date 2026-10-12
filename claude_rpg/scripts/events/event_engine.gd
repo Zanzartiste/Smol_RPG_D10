@@ -57,18 +57,21 @@ static func fallback_event(location_id: String) -> Dictionary:
 
 
 ## Liste des choix à afficher : [{choice, available, reason}].
-static func visible_choices(ev: Dictionary, life: LifeState, meta: MetaState) -> Array[Dictionary]:
+## Les choix dont les conditions ne sont pas remplies n'apparaissent qu'avec `show_locked`
+## (mode debug), grisés et accompagnés de la raison.
+static func visible_choices(ev: Dictionary, life: LifeState, meta: MetaState,
+		show_locked := false) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	for choice: Dictionary in ev.get("choices", []):
 		var failed: Array = choice.get("conditions", []).filter(
 			func(c): return not Conditions.check(c, life, meta))
-		if not failed.is_empty() and choice.get("hide_if_locked", false):
+		if not failed.is_empty() and not show_locked:
 			continue
 		var reasons := failed.map(Conditions.describe).filter(func(s): return s != "")
 		result.append({
 			"choice": choice,
 			"available": failed.is_empty(),
-			"reason": ", ".join(PackedStringArray(reasons)) if not reasons.is_empty() else Loc.ui("Indisponible"),
+			"reason": ", ".join(PackedStringArray(reasons)) if not reasons.is_empty() else Loc.ui("conditions non remplies"),
 		})
 	return result
 

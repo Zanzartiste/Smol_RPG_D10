@@ -36,7 +36,7 @@ static func create(species: String, cls: String, char_name: String, options: Dic
 	for ability: String in DB.abilities:
 		c.abilities[ability] = int(scores.get(ability, 10))
 
-	c.max_hp = maxi(1, int(class_data["hit_die"]) + c.ability_mod("con"))
+	c.max_hp = c.compute_max_hp()
 	c.hp = c.max_hp
 	c.gold = int(DB.rules.get("start_gold", 0)) + int(background.get("gold", 0))
 	for source: Dictionary in [class_data, background]:
@@ -108,17 +108,31 @@ func life_stage() -> String:
 	return current
 
 
-## Ajoute de l'XP et retourne la liste des niveaux atteints.
+## PV max façon D&D 5e : dé de vie complet + CON au niveau 1, puis (dé / 2 + 1) + CON par niveau,
+## au moins 1 PV par niveau.
 @warning_ignore("integer_division")
+func compute_max_hp() -> int:
+	var hit_die := int(DB.classes[class_id]["hit_die"])
+	var con := ability_mod("con")
+	return maxi(1, hit_die + con) + (level - 1) * maxi(1, hit_die / 2 + 1 + con)
+
+
+## Recalcule les PV max (après un changement de niveau ou de Constitution).
+## Les PV actuels suivent la même variation, sans sortir de [0, PV max].
+func refresh_max_hp() -> void:
+	var new_max := compute_max_hp()
+	hp = clampi(hp + new_max - max_hp, 0, new_max)
+	max_hp = new_max
+
+
+## Ajoute de l'XP et retourne la liste des niveaux atteints.
 func add_xp(amount: int) -> Array[int]:
 	xp += amount
 	var reached: Array[int] = []
 	var table: Array = DB.rules.get("xp_by_level", [0])
 	while level < table.size() and xp >= int(table[level]):
 		level += 1
-		var gain := maxi(1, int(DB.classes[class_id]["hit_die"]) / 2 + 1 + ability_mod("con"))
-		max_hp += gain
-		hp += gain
+		refresh_max_hp()
 		reached.append(level)
 	return reached
 
