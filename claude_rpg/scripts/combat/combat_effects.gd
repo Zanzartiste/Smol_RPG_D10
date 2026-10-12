@@ -1,6 +1,6 @@
 class_name CombatEffects
 extends RefCounted
-## Effets de combat, communs aux cartes, aux actions des créatures et des compagnons.
+## Effets de combat, communs aux actions des classes (actions.json) et des créatures (creatures.json).
 ##   {"type": "attack", "weapon": true | "<id d'arme>", "ability"?: "spell" | "str"…, "to_hit"?: N,
 ##    "damage"?: "1d10", "damage_type"?: "fire", "extra_damage"?: "1d6", "add_mod"?: bool}
 ##        Jet d'attaque contre la CA puis dégâts. Les effets qui suivent une attaque ne s'appliquent
@@ -9,7 +9,6 @@ extends RefCounted
 ##   {"type": "heal", "amount": "1d10+level"}                     soins (« level » = niveau)
 ##   {"type": "status", "status": "poisoned", "stacks": 3}         ajoute des charges d'état
 ##   {"type": "cleanse", "status": "poisoned" | "negative"}        retire un état, ou tous les négatifs
-##   {"type": "draw", "count": 2}                                  le héros pioche
 ##   {"type": "summon", "creature": "familiar"}                    invoque une créature dans son camp
 
 ## type -> champs obligatoires (utilisé par DataValidator)
@@ -19,11 +18,15 @@ const SCHEMA := {
 	"heal": ["amount"],
 	"status": ["status", "stacks"],
 	"cleanse": ["status"],
-	"draw": ["count"],
 	"summon": ["creature"],
 }
+## Cibles possibles d'une action (actions.json, actions des créatures).
+const TARGETS := ["enemy", "all_enemies", "ally", "all_allies", "self", "none"]
+## Cibles qui demandent un choix (au joueur, ou à l'IA).
+const CHOSEN_TARGETS := ["enemy", "ally"]
+
 ## Effets qui ne visent personne : ils s'appliquent une seule fois, quelle que soit la cible.
-const UNTARGETED := ["draw", "summon"]
+const UNTARGETED := ["summon"]
 
 const TARGET_PREFIX := {
 	"all_enemies": "Tous les ennemis : ",
@@ -72,8 +75,6 @@ static func describe(e: Dictionary) -> String:
 			if e["status"] == "negative":
 				return Loc.ui("Retire les états négatifs")
 			return Loc.ui("Retire %s") % StatusEffects.name_of(e["status"])
-		"draw":
-			return Loc.ui("Piochez %d carte(s)") % int(e["count"])
 		"summon":
 			return Loc.ui("Invoque : %s") % Creatures.name_of(e["creature"])
 	return str(e)

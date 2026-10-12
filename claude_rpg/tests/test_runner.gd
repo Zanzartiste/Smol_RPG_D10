@@ -20,8 +20,7 @@ const TESTS := [
 	"_test_aging",
 	"_test_engine",
 	"_test_dice_expressions",
-	"_test_mana",
-	"_test_cards",
+	"_test_actions",
 	"_test_combat",
 	"_test_combat_turns",
 	"_test_companions",
@@ -226,9 +225,9 @@ func _test_defenses() -> bool:
 	Game.start_life(Character.create("human", "fighter", "Testeur"), 3)
 	var combat := Game.start_combat({"enemies": ["_golem"]})
 	var golem := combat.enemies()[0]
-	var beats := combat.basic_attack(golem)
-	if beats.size() == 2:
-		_expect(100 - golem.hp <= 13 and "résistance" in beats[1]["text"], "combat : résistance appliquée")
+	var beats := combat.perform(combat.hero, Actions.def("weapon_attack"), golem)
+	if beats.size() == 3:
+		_expect(100 - golem.hp <= 13 and "résistance" in beats[2]["text"], "combat : résistance appliquée")
 	DB.creatures.erase("_golem")
 	Game.combat = null
 
@@ -442,8 +441,9 @@ func _play_out(combat: Combat) -> void:
 		var actor := combat.current()
 		combat.start_turn()
 		if not combat.is_over() and not combat.skipped:
-			if actor.is_hero():
-				combat.auto_hero_turn()
+			if actor.is_player_controlled():
+				var choice := combat.auto_choice(actor)
+				combat.perform(actor, choice["action"], choice["target"])
 			else:
 				combat.ai_turn(actor)
 		combat.end_turn()
@@ -478,13 +478,11 @@ func _test_combat() -> bool:
 	_expect(fighter.damage_type({"type": "attack", "weapon": true}) == "slashing", "épée longue : dégâts tranchants")
 	_expect(life.character.armor_class() == 16, "CA du guerrier : 16")
 	var mage := Combatant.from_character(Character.create("goblin", "wizard", "Mage"), true)
-	_expect(mage.attack_bonus(Cards.effects_of("fire_bolt")[0]) == 5, "trait de feu : INT +3 + maîtrise")
+	_expect(mage.attack_bonus(Actions.def("fire_bolt")["effects"][0]) == 5, "trait de feu : INT +3 + maîtrise")
 
 	var combat := Game.start_combat({"enemies": ["wolf", "wolf"]})
 	_expect(combat.combatants.size() == 3 and combat.order.size() == 3, "combat : héros + 2 loups")
 	_expect(combat.enemies()[0].name == "Loup A" and combat.enemies()[1].name == "Loup B", "ennemis identiques numérotés")
-	_expect(combat.deck.hand.size() == 1, "main de départ : max(1, mod INT) = 1 pour un guerrier INT 8")
-	_expect(combat.deck.library.size() == 39, "le reste du deck est dans la pioche")
 	_play_out(combat)
 	var result := Game.finish_combat()
 	_expect(result["outcome"] in ["victory", "defeat"], "le combat aboutit à une victoire ou une défaite")
@@ -514,7 +512,7 @@ func _test_combat() -> bool:
 		guard += 1
 		combat.start_turn()
 		if combat.current().is_hero():
-			combat.flee()
+			combat.flee(combat.current())
 		combat.end_turn()
 	result = Game.finish_combat()
 	_expect(result["outcome"] == "fled" and Game.life.has_flag("ran"), "fuite : issue « fled » et ses effets")
@@ -522,86 +520,41 @@ func _test_combat() -> bool:
 	return true
 
 
-func _test_mana() -> bool:
-	_expect(Mana.parse("{2}{R}{R}") == {"generic": 2, "R": 2} and Mana.mana_value("{2}{R}{R}") == 4, "lecture d'un coût")
-	_expect(Mana.is_valid_cost("{1}{U}") and Mana.is_valid_cost("{C}") and not Mana.is_valid_cost("{X}")
-		and not Mana.is_valid_cost("1R"), "validation des coûts")
-	var shares := {"W": 0.5, "G": 0.5}
-	_expect(Mana.generate(1, shares) == {"C": 1}, "50/50 au tour 1 : 1 générique")
-	_expect(Mana.generate(2, shares) == {"W": 1, "G": 1}, "50/50 au tour 2 : 1 blanc et 1 vert")
-	_expect(Mana.generate(3, shares) == {"W": 1, "G": 1, "C": 1}, "50/50 au tour 3 : 1 blanc, 1 vert, 1 générique")
-	_expect(Mana.generate(2, {"R": 1.0}) == {"R": 2}, "deck monocolore")
-	var pool := {"R": 1, "W": 1, "C": 1}
-	_expect(Mana.can_pay(pool, "{R}") and Mana.can_pay(pool, "{1}{R}{W}") and not Mana.can_pay(pool, "{U}"),
-		"paiement des coûts colorés et génériques")
-	_expect(Mana.pay(pool, "{1}{R}")["pool"] == {"W": 1}, "le générique se paie d'abord avec l'incolore")
-	_expect(not Mana.can_pay({"R": 1}, "{C}"), "un coût {C} exige du mana incolore")
-	var deck_shares := Mana.deck_shares({"fire_bolt": 2, "mage_shield": 1, "force_orb": 1})
-	_expect(is_equal_approx(deck_shares["R"], 0.5) and is_equal_approx(deck_shares["U"], 0.25)
-		and is_equal_approx(deck_shares["C"], 0.25), "parts de couleurs d'un deck")
-	_expect(is_equal_approx(Mana.deck_shares({"vanish": 2})["U"], 0.5), "carte multicolore : moitié par couleur")
-	return true
+func _test_actions() -> bool:
+	# Actions de classe, utilisations par combat et emplacements de sort.
+	Game.start_life(Character.create("goblin", "wizard", "Mage"), 7)
+	var combat := Game.start_combat({"enemies": ["giant_rat", "giant_rat"]})
+	var mage := combat.hero
+	var names := combat.action_choices(mage).map(func(c): return c["action"]["id"])
+	_expect(names == Game.life.character.combat_actions(), "actions du magicien : celles de sa classe")
+	var missile := Actions.def("magic_missile")
+	combat.perform(mage, missile, combat.living("enemy")[0])
+	combat.perform(mage, missile, combat.living("enemy")[0] if not combat.living("enemy").is_empty() else null)
+	_expect(Game.life.character.resources["spell_slot"] == 0, "projectile magique : 2 emplacements dépensés")
+	_expect(combat.action_unavailable_reason(mage, missile) == "plus d'emplacement de sort", "plus d'emplacement")
+	_expect(combat.action_unavailable_reason(mage, Actions.def("fire_bolt")) == ""
+		or combat.living("enemy").is_empty(), "tour de magie à volonté")
+	Game.finish_combat()
+	Effects.apply_all([{"type": "long_rest"}], Game.life, Meta)
+	_expect(Game.life.character.resources["spell_slot"] == 2, "repos long : emplacements restaurés")
 
-
-func _test_cards() -> bool:
-	for class_id: String in DB.classes:
-		var c := Character.create("human", class_id, "x")
-		_expect(c.deck_size() == 40 and c.is_deck_valid(), "deck de départ de 40 cartes : %s" % class_id)
-	var c := Character.create("human", "fighter", "x")
-	_expect(Cards.text_of("rend") == "Attaque avec votre arme. Si elle touche : 1 Affaibli.", "texte généré d'une carte")
-	_expect(Cards.text_of("burning_hands").begins_with("Tous les ennemis : Inflige 1d6 feu"), "texte : cible multiple")
-	c.set_deck_count("power_strike", 0)
-	_expect(c.deck_size() == 32 and not c.is_deck_valid(), "deck sous le minimum : invalide")
-	c.set_deck_count("power_strike", 99)
-	_expect(c.deck["power_strike"] == 8, "pas plus d'exemplaires que dans la collection")
-	var life := _new_life("human", "fighter")
-	Effects.apply_all([{"type": "add_card", "id": "feral_fury", "count": 2}], life, Meta)
-	_expect(life.character.collection["feral_fury"] == 2 and life.character.deck_size() == 42, "effet add_card")
-
-	# Pioche : la défausse est remélangée quand la bibliothèque est vide.
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 1
-	var d := CombatDeck.new({"darts": 3}, rng, 7)
-	d.draw(3)
-	d.play(0)
-	d.play(0)
-	_expect(d.hand.size() == 1 and d.discard.size() == 2 and d.library.is_empty(), "jouer envoie à la défausse")
-	_expect(d.draw(2).size() == 2 and d.discard.is_empty(), "défausse remélangée")
-
-	# Écran de composition du deck.
-	Game.start_life(Character.create("human", "rogue", "x"), 2)
-	var builder: Control = load("res://scenes/deck_builder.tscn").instantiate()
-	add_child(builder)
-	builder._change("darts", -4)
-	_expect(Game.life.character.deck_size() == 36 and builder.done_button.disabled, "composition : retirer des cartes")
-	builder._on_all_pressed()
-	_expect(Game.life.character.deck_size() == 40 and not builder.done_button.disabled, "composition : toute la collection")
-	builder.free()
+	Game.start_life(Character.create("human", "fighter", "Guerrier"), 8)
+	combat = Game.start_combat({"enemies": ["wolf"]})
+	var wind := Actions.def("second_wind")
+	combat.hero.hp = 3
+	combat.perform(combat.hero, wind)
+	_expect(combat.hero.hp > 3 and combat.action_unavailable_reason(combat.hero, wind) == "déjà utilisée",
+		"Second souffle : soigne, une fois par combat")
+	Game.combat = null
+	_expect(Actions.text_of("pommel_strike") == "Attaque avec votre arme. Si elle touche : 1 Étourdi.",
+		"texte généré d'une action")
+	_expect(Actions.text_of("burning_hands").begins_with("Tous les ennemis : Inflige 2d6 feu"), "texte : cible multiple")
 	return true
 
 
 func _test_combat_turns() -> bool:
-	# Magicien gobelin : INT 17 (+3) -> main de départ de 3 cartes ; tour 1 -> 1 mana.
-	Game.start_life(Character.create("goblin", "wizard", "Mage"), 21)
-	var combat := Game.start_combat({"enemies": ["giant_rat"]})
-	_expect(combat.deck.hand.size() == 3, "main de départ = mod INT (3)")
-	while not combat.current().is_hero():
-		combat.start_turn()
-		combat.ai_turn(combat.current())
-		combat.end_turn()
-	combat.start_turn()
-	_expect(Mana.total(combat.mana) == 1 and combat.hero_turns == 1, "tour 1 : 1 mana")
-	combat.end_turn()
-	while not combat.current().is_hero() and not combat.is_over():
-		combat.start_turn()
-		combat.ai_turn(combat.current())
-		combat.end_turn()
-	if not combat.is_over():
-		combat.start_turn()
-		_expect(Mana.total(combat.mana) == 2 and combat.deck.hand.size() == 4, "tour 2 : 2 mana et une pioche")
-	Game.combat = null
-
 	# États : poison (dégâts bruts, -1 charge), brûlure (% des PV max), étourdi, protection, affaibli.
+	var combat: Combat
 	DB.creatures["_dummy"] = {"id": "_dummy", "name": "Mannequin", "ac": 5, "hp": "100", "abilities": {"dex": -50},
 		"actions": [{"name": "Rien", "weight": 1, "target": "self", "effects": [{"type": "status", "status": "shielded", "stacks": 0}]}]}
 	Game.start_life(Character.create("human", "fighter", "Testeur"), 4)
@@ -641,10 +594,16 @@ func _test_combat_turns() -> bool:
 	Game.start_life(Character.create("human", "wizard", "Mage"), 9)
 	combat = Game.start_combat({"enemies": ["wolf"]})
 	_expect(combat.capacity_used("ally") == 1.0, "le héros occupe 1 place")
+	var familiar := Actions.def("find_familiar")
+	combat.perform(combat.hero, familiar)
+	_expect(combat.living("ally").size() == 2 and combat.living("ally")[1].summoned, "Appel du familier : une invocation")
 	for i in 7:
 		combat._apply(combat.hero, {"type": "summon", "creature": "familiar"}, null, false)
 	_expect(combat.living("ally").size() == 7 and combat.capacity_used("ally") == 4.0,
 		"6 familiers (½ place) + le héros = 4 places, pas plus")
+	_expect(combat.action_unavailable_reason(combat.hero, familiar) != "", "plus d'invocation sans place")
+	var summon := combat.living("ally")[1]
+	_expect(not summon.is_player_controlled() and not combat.ai_turn(summon).is_empty(), "l'invocation joue seule")
 	Game.combat = null
 	_expect(Combat.size_slots("large") == 2.0 and Combat.size_slots("small") == 0.5, "places selon la taille")
 	return true
@@ -666,9 +625,11 @@ func _test_companions() -> bool:
 	var combat := Game.start_combat({"enemies": ["wolf"]})
 	_expect(combat.allies().size() == 2, "le compagnon participe au combat")
 	var ally := combat.allies()[1]
-	_expect(ally.kind == "companion" and ally.ai_actions().size() == 2, "compagnon contrôlé par l'IA (actions de classe)")
-	var beats := combat.ai_turn(ally)
-	_expect(not beats.is_empty(), "le compagnon agit seul")
+	_expect(ally.kind == "companion" and ally.is_player_controlled(), "compagnon contrôlé par le joueur")
+	_expect(combat.action_choices(ally).any(func(c): return c["action"]["id"] == "sneak_attack"),
+		"le compagnon a les actions de sa classe")
+	var choice := combat.auto_choice(ally)
+	_expect(not combat.perform(ally, choice["action"], choice["target"]).is_empty(), "le compagnon agit")
 	# Le compagnon tombe pendant un combat mortel : il meurt pour de bon.
 	ally.hp = 0
 	combat.enemies()[0].hp = 0

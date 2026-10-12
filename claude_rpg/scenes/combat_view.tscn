@@ -1,10 +1,8 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/combat_view.gd" id="1_view"]
 [ext_resource type="Script" path="res://scripts/ui/battle_view.gd" id="2_battle"]
 [ext_resource type="Script" path="res://scripts/ui/dice_tray.gd" id="3_dice"]
-[ext_resource type="Script" path="res://scripts/ui/mana_view.gd" id="4_mana"]
-[ext_resource type="Script" path="res://scripts/ui/hand_view.gd" id="5_hand"]
 
 [node name="CombatView" type="VBoxContainer"]
 anchors_preset = 15
@@ -12,12 +10,12 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 8
 script = ExtResource("1_view")
 
 [node name="Battlefield" type="Control" parent="."]
 clip_contents = true
-custom_minimum_size = Vector2(0, 286)
+custom_minimum_size = Vector2(0, 330)
 layout_mode = 2
 
 [node name="Background" type="TextureRect" parent="Battlefield"]
@@ -56,33 +54,16 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("3_dice")
 
-[node name="InfoRow" type="HBoxContainer" parent="."]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="TurnLabel" type="Label" parent="InfoRow"]
+[node name="TurnLabel" type="Label" parent="."]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
 theme_type_variation = &"SectionLabel"
-
-[node name="ManaView" type="Control" parent="InfoRow"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(180, 24)
-layout_mode = 2
-script = ExtResource("4_mana")
-
-[node name="DeckLabel" type="Label" parent="InfoRow"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.549, 0.51, 0.451, 1)
-theme_override_font_sizes/font_size = 14
 
 [node name="LogText" type="RichTextLabel" parent="."]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
-theme_override_font_sizes/normal_font_size = 14
+size_flags_vertical = 3
+theme_override_font_sizes/normal_font_size = 15
 bbcode_enabled = true
 scroll_active = false
 
@@ -92,38 +73,8 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.831, 0.69, 0.416, 1)
 theme_override_font_sizes/font_size = 14
 
-[node name="Hand" type="Control" parent="."]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 180)
-layout_mode = 2
-size_flags_vertical = 3
-script = ExtResource("5_hand")
-
-[node name="ActionRow" type="HBoxContainer" parent="."]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="AttackButton" type="Button" parent="ActionRow"]
+[node name="ActionBar" type="HFlowContainer" parent="."]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Attaque"
-
-[node name="ItemButton" type="MenuButton" parent="ActionRow"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Objet"
-flat = false
-
-[node name="FleeButton" type="Button" parent="ActionRow"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Fuir"
-
-[node name="Spacer" type="Control" parent="ActionRow"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="EndTurnButton" type="Button" parent="ActionRow"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Fin du tour"
+theme_override_constants/h_separation = 6
+theme_override_constants/v_separation = 6

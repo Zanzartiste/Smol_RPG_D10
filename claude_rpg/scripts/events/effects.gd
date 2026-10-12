@@ -25,7 +25,6 @@ const SCHEMA := {
 	"recruit": ["companion"],
 	"combat": ["enemies"],
 	"add_feat": ["id"],
-	"add_card": ["id"],
 	"equip": ["id"],
 	"add_defense": ["kind", "id"],
 	"remove_defense": ["kind", "id"],
@@ -107,7 +106,7 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 			"long_rest":
 				for member in life.party():
 					member.long_rest()
-				lines.append(Loc.ui("PV restaurés."))
+				lines.append(Loc.ui("PV et emplacements de sort restaurés."))
 			"recruit":
 				if life.has_companion(e["companion"]):
 					pass
@@ -119,10 +118,6 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 					lines.append(Loc.ui("%s rejoint votre groupe !") % companion.name)
 			"combat":
 				combat = e
-			"add_card":
-				var count := int(e.get("count", 1))
-				ch.add_cards({e["id"]: count})
-				lines.append(Loc.ui("Nouvelle carte : %s ×%d") % [Cards.name_of(e["id"]), count])
 			"add_feat":
 				if ch.add_feat(e["id"]):
 					lines.append(Loc.ui("Nouveau don : %s !") % Feats.name_of(e["id"]))

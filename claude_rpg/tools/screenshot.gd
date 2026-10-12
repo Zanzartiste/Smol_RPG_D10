@@ -20,11 +20,6 @@ func _ready() -> void:
 	Game.start_life(creation.build_character(), 7)
 	creation.queue_free()
 
-	var builder: Control = load("res://scenes/deck_builder.tscn").instantiate()
-	add_child(builder)
-	await _capture("1b_deck_builder.png")
-	builder.queue_free()
-
 	var main: Control = load("res://scenes/main.tscn").instantiate()
 	add_child(main)
 	await _capture("2_hub.png")
@@ -58,7 +53,7 @@ func _ready() -> void:
 		main.choices_box.get_child(0).pressed.emit()
 		await _wait_frames(3)
 
-	# Combat avec Mira contre un groupe mixte (Mira joue seule, le héros joue ses cartes).
+	# Combat avec Mira contre un groupe mixte (le joueur contrôle le héros et Mira).
 	Effects.apply_all([{"type": "recruit", "companion": "mira"}], Game.life, Meta)
 	Game.life.character.hp = Game.life.character.max_hp
 	main._refresh_sheet()
@@ -67,34 +62,24 @@ func _ready() -> void:
 	var view: CombatView = main.combat_view
 	await _wait_for_hero(view)
 	await _capture("7_combat.png")
-	# Première carte jouable qui demande une cible, sinon l'attaque de base.
-	var chosen := -1
-	for i in view.combat.deck.hand.size():
-		if view.combat.card_unplayable_reason(i) == "" and Cards.target_of(view.combat.deck.hand[i]) == "enemy":
-			chosen = i
-			break
-	if chosen >= 0:
-		view._on_card_pressed(chosen)
-	else:
-		view._on_attack_pressed()
+	# Une action qui demande une cible (plusieurs ennemis : le champ de bataille passe en mode ciblage).
+	view._on_action_pressed(Actions.def("weapon_attack"))
 	await _wait_frames(4)
 	await _capture("8_combat_targeting.png")
 	view._on_target_chosen(view.combat.living("enemy")[0])
 	await get_tree().create_timer(0.35).timeout
 	await _capture("9_combat_dice.png")
-	# Le reste du combat en accéléré : le héros attaque puis termine son tour.
+	# Le reste du combat en accéléré : chaque personnage joue l'action choisie automatiquement.
 	Engine.time_scale = 4.0
 	while view.visible:
 		await _wait_for_hero(view)
 		if not view.visible:
 			break
-		if not view.attack_button.disabled:
-			view._on_attack_pressed()
-			if not view._pending.is_empty():
-				view._on_target_chosen(view.combat.living("enemy")[0])
-			await _wait_for_hero(view)
-		if view.visible and view._hero_turn:
-			view._on_end_turn_pressed()
+		var choice := view.combat.auto_choice(view._actor)
+		if choice["target"] != null and choice["action"].get("target") in CombatEffects.CHOSEN_TARGETS:
+			view._execute({"kind": "action", "action": choice["action"]}, choice["target"])
+		else:
+			view._on_action_pressed(choice["action"])
 		await _wait_frames(2)
 	Engine.time_scale = 1.0
 	await _capture("10_combat_end.png")
@@ -103,7 +88,7 @@ func _ready() -> void:
 
 ## Attend que le héros puisse agir (ou que le combat soit terminé).
 func _wait_for_hero(view: CombatView) -> void:
-	while view.visible and (not view._hero_turn or view._busy):
+	while view.visible and (view._actor == null or view._busy):
 		await get_tree().process_frame
 
 

@@ -1,9 +1,10 @@
 class_name Combatant
 extends RefCounted
 ## Participant à un combat :
-##   - "hero"      : le personnage joué (Character), qui joue des cartes ;
-##   - "companion" : un compagnon (Character), contrôlé par l'IA avec les actions de sa classe ;
+##   - "hero"      : le personnage joué (Character), contrôlé par le joueur ;
+##   - "companion" : un compagnon (Character), contrôlé par le joueur lui aussi ;
 ##   - "creature"  : une créature du bestiaire (ennemi ou invocation), contrôlée par l'IA.
+## Les personnages agissent avec les actions de leur classe (actions.json) ; les créatures avec les leurs.
 ## Pour un personnage, les PV sont ceux du Character : les dégâts persistent après le combat.
 
 var id := ""  # unique dans le combat
@@ -16,6 +17,7 @@ var summoned := false  # invoqué pendant le combat (disparaît à la fin)
 var initiative := 0
 var statuses: Dictionary = {}  # id d'état -> charges
 var intent: Dictionary = {}  # action préparée, exécutée au prochain tour (ennemis)
+var uses: Dictionary = {}  # id d'action -> utilisations restantes dans ce combat (per_combat)
 var _hp := 0
 var _max_hp := 0
 
@@ -35,6 +37,9 @@ static func from_character(ch: Character, hero: bool) -> Combatant:
 	c.kind = "hero" if hero else "companion"
 	c.id = "hero" if hero else "ally_" + ch.template_id
 	c.name = ch.name
+	for action in c.combat_actions():
+		if action.has("per_combat"):
+			c.uses[action["id"]] = int(action["per_combat"])
 	return c
 
 
@@ -93,11 +98,37 @@ func slots() -> float:
 	return Combat.size_slots(size())
 
 
-## Actions de l'IA : celles de la créature, ou les actions de compagnon de la classe.
-func ai_actions() -> Array:
+## Le joueur choisit les actions des personnages (héros et compagnons) ; l'IA celles des créatures.
+func is_player_controlled() -> bool:
+	return character != null
+
+
+## Actions de combat : celles de la classe (actions.json) pour un personnage, celles de la créature sinon.
+func combat_actions() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
 	if character != null:
-		return DB.classes[character.class_id].get("companion_actions", [])
-	return creature.get("actions", [])
+		for action_id in character.combat_actions():
+			result.append(Actions.def(action_id))
+	else:
+		result.assign(creature.get("actions", []))
+	return result
+
+
+## Une action peut-elle être utilisée ? Retourne "" si oui, sinon la raison.
+func unavailable_reason(action: Dictionary) -> String:
+	if action.has("per_combat") and int(uses.get(action.get("id", ""), 0)) <= 0:
+		return Loc.ui("déjà utilisée")
+	if action.has("cost") and character != null and int(character.resources.get(action["cost"], 0)) <= 0:
+		return Loc.ui("plus d'%s") % Actions.resource_name(action["cost"])
+	return ""
+
+
+## Décompte une utilisation (par combat) et la ressource éventuelle (emplacement de sort…).
+func consume(action: Dictionary) -> void:
+	if action.has("per_combat"):
+		uses[action["id"]] = int(uses.get(action["id"], 0)) - 1
+	if action.has("cost") and character != null:
+		character.resources[action["cost"]] = int(character.resources.get(action["cost"], 0)) - 1
 
 
 # --- États -------------------------------------------------------------------

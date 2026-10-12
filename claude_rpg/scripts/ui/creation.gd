@@ -284,9 +284,8 @@ func _class_info(cls: Dictionary) -> String:
 		cls.get("description", ""),
 		_field(tr("Dé de vie :"), "d%d" % int(cls["hit_die"])),
 		_field(tr("Maîtrises :"), _skill_names(cls.get("skills", []))),
-		_field(tr("Équipement :"), " · ".join(gear))] + "
-" + _field(tr("Deck de départ :"),
-		"%d cartes %s" % [Cards.count(cls.get("cards", {})), _deck_colors(cls.get("cards", {}))])
+		_field(tr("Équipement :"), " · ".join(gear))] + "\n" + _field(tr("Actions :"),
+		", ".join(PackedStringArray(cls.get("actions", []).map(func(id): return Actions.name_of(id)))))
 
 
 func _background_info(background: Dictionary) -> String:
@@ -298,15 +297,6 @@ func _background_info(background: Dictionary) -> String:
 	if background.has("gold"):
 		text += "   " + _field(tr("Or :"), "+%d po" % int(background["gold"]))
 	return text
-
-
-func _deck_colors(cards: Dictionary) -> String:
-	var shares := Mana.deck_shares(cards)
-	var parts := PackedStringArray()
-	for color in Mana.color_ids() + [Mana.COLORLESS]:
-		if shares.has(color):
-			parts.append("%s %d %%" % [Mana.color_name(color), roundi(shares[color] * 100)])
-	return "(%s)" % ", ".join(parts)
 
 
 func _field(label: String, value: String) -> String:

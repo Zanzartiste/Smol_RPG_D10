@@ -180,7 +180,7 @@ l'architecture dès le départ, voir §9).
 | **Espèce** | Taille et âges, **aucun effet sur les attributs** | La taille (Petite, Moyenne…) est une variable du personnage, utilisable dans les conditions. |
 | **Passé** | Choisi à la création | Il donne 2 compétences maîtrisées (et parfois de l'or ou des objets). Il est utilisable dans les conditions d'événements. |
 | **Genre** | Femme, homme ou non-binaire | Aucun effet sur l'apparence ni sur les règles. Il sert aux accords dans les textes, avec la syntaxe `{g:masculin\|féminin\|neutre}`. |
-| **Combat** | Tour par tour, **sans positionnement**, **4 contre 4** au maximum | Taille des groupes réglable (`rules.json › max_companions`, `max_enemies`), invocations comprises. Les sprites suivent la taille : environ 50 % pour une petite créature, 200 % pour une grande. **Système de decks à concevoir** (§9.3). |
+| **Combat** | Tour par tour façon **D&D**, **sans positionnement**, **4 contre 4** au maximum | Une action par tour (action de classe, sort avec emplacements, objet, fuite). Le joueur contrôle le héros et les compagnons, et les invocations jouent seules. Capacité des camps réglable (`rules.json › combat`), invocations comprises. Les sprites suivent la taille : environ 50 % pour une petite créature, 200 % pour une grande. Le système de decks a été essayé puis abandonné (2026-10-12). |
 | **Langue** | Français d'abord, **localisation FR/EN prévue** | Les textes d'interface passent par `tr()` dès le départ. Les textes des JSON sont écrits en français ; leurs clés de traduction sont dérivées des ids (ex. `evt.<id>.text`), et un script générera le CSV de traduction le moment venu. |
 | **Direction artistique** | Inspirée de **Baldur's Gate 3**, produite par **IA générative** | Images 2D fixes uniquement : portraits, illustrations d'événements, icônes. L'**interface** a l'ambiance BG3 (sombre, bordures dorées, police serif, fonds parchemin). Voir §9.2 pour le pipeline. |
 
@@ -231,7 +231,7 @@ Claude ne génère pas d'images lui-même. Il peut en revanche écrire le **guid
 | **Voyages** | Ils passent par des événements. On peut quitter une ville définitivement et ne jamais y revenir. |
 | **Métiers** | Une suite d'activités, comme « être aventurier » ne se résume pas à un bouton Combat. Certaines classes s'y prêtent mieux (Artificier pour l'artisanat, Alchimiste pour l'alchimie et la cuisine…). |
 | **Contenu** | Les événements sont générés au besoin. L'utilisateur fournira plus tard des campagnes, des suites de quêtes et son **lore**, déjà bien avancé. |
-| **Combat** | Seul le héros a un **deck** façon MTG (40 cartes minimum, composé par le joueur). Mana coloré généré selon les couleurs du deck (N au tour N). Main de départ = mod INT (au moins 1). Les compagnons et invocations agissent par IA, et les ennemis ont des actions « préparées » visibles. États cumulables (poison, brûlure, étourdi, affaibli, protection). Détails dans modele_donnees.md › Combat. |
+| **Combat** | Proche de D&D : actions de classe, sorts à emplacements, états cumulables (poison, brûlure, étourdi, affaibli, protection), actions « préparées » des ennemis visibles à l'avance. Le joueur contrôle héros et compagnons. Détails dans modele_donnees.md › Combat. |
 | **Équipement** | Il s'obtient par le butin, l'achat et la forge. |
 | **Difficulté** | La mortalité dépend des risques pris par le joueur. |
 | **Présentation** | Le style pixel art actuel convient, et le son viendra plus tard. |
@@ -246,8 +246,8 @@ Claude ne génère pas d'images lui-même. Il peut en revanche écrire le **guid
 5. ~~Écran de création de personnage~~ (espèce, genre, classe, passé, achat de points, nom, apparence), ~~lancers de
    dés animés~~ et ~~règles de vieillissement~~.
 6. ~~Ajouter le combat~~ : initiative, attaques contre la CA, critiques, sorts et emplacements, objets, fuite, compagnon contrôlé par le joueur, issues victoire / fuite / défaite (mortelle ou K.-O.), banc d'équilibrage.
-7. ~~**Combat avec decks**~~ : mana façon MTG, cartes, composition du deck, états cumulables, intentions ennemies,
-   invocations, 4 places par camp, sprites à l'échelle de la taille. Reste : les réactions et les cartes hors combat.
+7. ~~**Refonte du combat**~~ : états cumulables, intentions ennemies, invocations, 4 places par camp, sprites à
+   l'échelle de la taille, nouvel écran de combat. Les decks ont été essayés puis abandonnés au profit d'actions façon D&D.
 8. Sauvegarde (vie en cours et méta) et écran titre.
 9. Creator Points et chronique.
 10. Contenu du MVP, puis première version pour les testeurs.

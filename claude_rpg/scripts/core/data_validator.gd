@@ -178,24 +178,12 @@ static func _validate_backgrounds(db: Node, errors: Array[String]) -> void:
 
 static func _validate_combat_data(db: Node, errors: Array[String]) -> void:
 	var combat: Dictionary = db.rules.get("combat", {})
-	for key in ["side_capacity", "size_slots", "sprite_scale", "deck_min_size", "max_hand_size", "draw_per_turn", "max_mana"]:
+	for key in ["side_capacity", "size_slots", "sprite_scale"]:
 		if not combat.has(key):
 			errors.append("rules.json › combat : champ « %s » manquant" % key)
-	for color: Dictionary in db.mana_colors.values():
-		if color["id"] == Mana.COLORLESS or color["id"].is_valid_int():
-			errors.append("mana_colors.json › %s : id réservé (C = incolore, nombres = générique)" % color["id"])
 
-	for card: Dictionary in db.cards.values():
-		var ctx := "cards.json › %s" % card["id"]
-		if not Mana.is_valid_cost(card.get("cost", "")):
-			errors.append(ctx + " : coût invalide « %s » (ex. {1}{R})" % card.get("cost"))
-		if card.get("type") not in Cards.TYPE_NAMES:
-			errors.append(ctx + " : type inconnu « %s » (%s)" % [card.get("type"), Cards.TYPE_NAMES.keys()])
-		if card.get("rarity", "common") not in Cards.RARITY_NAMES:
-			errors.append(ctx + " : rareté inconnue « %s »" % card.get("rarity"))
-		if card.get("target") not in Cards.TARGETS:
-			errors.append(ctx + " : cible inconnue « %s » (%s)" % [card.get("target"), Cards.TARGETS])
-		_validate_combat_effects(db, card.get("effects", []), ctx, errors)
+	# Actions de classe (actions.json).
+	_validate_ai_actions(db, db.actions.values(), "actions.json", errors)
 
 	var size_ids := _ids(db.rules.get("sizes", []))
 	for creature: Dictionary in db.creatures.values():
@@ -214,21 +202,16 @@ static func _validate_combat_data(db: Node, errors: Array[String]) -> void:
 			_validate_defenses(db, creature["defenses"], ctx, errors)
 		for loot: Dictionary in creature.get("loot", []):
 			_expect_ref(db.items, loot.get("item"), "objet", ctx, errors)
-		for loot: Dictionary in creature.get("loot_cards", []):
-			_expect_ref(db.cards, loot.get("card"), "carte", ctx, errors)
 
-	var min_deck := int(combat.get("deck_min_size", 40))
 	for cls: Dictionary in db.classes.values():
 		var ctx := "classes.json › %s" % cls["id"]
-		_validate_card_list(db, cls.get("cards", {}), ctx, errors)
-		if Cards.count(cls.get("cards", {})) < min_deck:
-			errors.append(ctx + " : la classe doit débloquer au moins %d cartes (deck minimum)" % min_deck)
-		_validate_ai_actions(db, cls.get("companion_actions", []), ctx + " › companion_actions", errors)
-		if cls.has("basic_attack"):
-			_validate_combat_effects(db, cls["basic_attack"].get("effects", []), ctx + " › basic_attack", errors)
-	for table in ["species", "backgrounds", "feats", "equipment"]:
-		for entry: Dictionary in db.get(table).values():
-			_validate_card_list(db, entry.get("cards", {}), "%s.json › %s" % [table, entry["id"]], errors)
+		if cls.get("actions", []).is_empty():
+			errors.append(ctx + " : aucune action de combat")
+		for action_id: String in cls.get("actions", []):
+			_expect_ref(db.actions, action_id, "action", ctx, errors)
+			var cost: String = db.actions.get(action_id, {}).get("cost", "")
+			if cost != "" and not cls.get("resources", {}).has(cost):
+				errors.append(ctx + " : l'action « %s » coûte « %s », absent des resources de la classe" % [action_id, cost])
 
 	for companion: Dictionary in db.companions.values():
 		var ctx := "companions.json › %s" % companion["id"]
@@ -249,29 +232,21 @@ static func _validate_combat_data(db: Node, errors: Array[String]) -> void:
 			_expect_ref(db.status_effects, use["cleanse"], "état", "items.json › %s" % item["id"], errors)
 
 
-static func _validate_card_list(db: Node, cards: Variant, ctx: String, errors: Array[String]) -> void:
-	if typeof(cards) != TYPE_DICTIONARY:
-		errors.append(ctx + " : « cards » doit être un objet {id de carte: nombre}")
-		return
-	for card_id: String in cards:
-		_expect_ref(db.cards, card_id, "carte", ctx, errors)
-
-
-## Actions de l'IA (créatures, compagnons) : {"name", "weight", "target", "prepared"?, "effects"}.
+## Actions de combat (classes, créatures) : {"name", "target", "effects", "weight"?, "prepared"?,
+## "cost"?, "per_combat"?}.
 static func _validate_ai_actions(db: Node, actions: Variant, ctx: String, errors: Array[String]) -> void:
 	if typeof(actions) != TYPE_ARRAY or actions.is_empty():
 		errors.append(ctx + " : il faut au moins une action")
 		return
 	for action: Dictionary in actions:
-		var actx := "%s › action %s" % [ctx, action.get("name", "?")]
+		var actx := "%s › action %s" % [ctx, action.get("id", action.get("name", "?"))]
 		if not action.has("name"):
 			errors.append(actx + " : nom manquant")
-		if action.get("target", "enemy") not in Cards.TARGETS:
-			errors.append(actx + " : cible inconnue « %s »" % action.get("target"))
+		if action.get("target", "enemy") not in CombatEffects.TARGETS:
+			errors.append(actx + " : cible inconnue « %s » (%s)" % [action.get("target"), CombatEffects.TARGETS])
 		_validate_combat_effects(db, action.get("effects", []), actx, errors)
 
 
-## Effets de combat (cartes, actions) : voir CombatEffects.
 static func _validate_combat_effects(db: Node, effects: Variant, ctx: String, errors: Array[String]) -> void:
 	if typeof(effects) != TYPE_ARRAY or effects.is_empty():
 		errors.append(ctx + " : « effects » doit être une liste non vide")

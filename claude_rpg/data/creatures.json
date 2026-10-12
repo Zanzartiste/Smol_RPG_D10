@@ -52,7 +52,6 @@
 		],
 		"xp": 200,
 		"loot": [{"item": "wolf_pelt", "chance": 1.0, "count": 2}],
-		"loot_cards": [{"card": "feral_fury", "chance": 1.0}],
 		"death_cause": "Dévoré par l'alpha des loups",
 		"art": {"type": "wolf", "fur": "#3c3a40", "belly": "#6a6670", "eyes": "#e0402a"}
 	},
@@ -83,7 +82,6 @@
 		],
 		"xp": 25,
 		"gold": "1d6",
-		"loot_cards": [{"card": "dirty_trick", "chance": 0.25}],
 		"death_cause": "Tué par des brigands",
 		"art": {
 			"type": "humanoid",

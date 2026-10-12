@@ -1,7 +1,0 @@
-[
-	{"id": "W", "name": "Blanc", "color": "#efe4c4", "ink": "#3a2e1c", "theme": "Ordre, protection, soins"},
-	{"id": "U", "name": "Bleu", "color": "#4f86c6", "ink": "#f2f6ff", "theme": "Savoir, ruse, contrôle"},
-	{"id": "B", "name": "Noir", "color": "#4a3d55", "ink": "#efe6f6", "theme": "Mort, poison, sacrifice"},
-	{"id": "R", "name": "Rouge", "color": "#c64a31", "ink": "#fff1e6", "theme": "Feu, fureur, impulsion"},
-	{"id": "G", "name": "Vert", "color": "#4f9446", "ink": "#f0fbea", "theme": "Nature, force, bêtes"}
-]

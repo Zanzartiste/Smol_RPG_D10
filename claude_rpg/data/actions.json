@@ -1,0 +1,95 @@
+[
+	{
+		"id": "weapon_attack",
+		"name": "Attaque",
+		"description": "Une attaque avec votre arme.",
+		"target": "enemy",
+		"effects": [{"type": "attack", "weapon": true}]
+	},
+	{
+		"id": "second_wind",
+		"name": "Second souffle",
+		"description": "Vous puisez dans vos réserves pour regagner des forces.",
+		"target": "self",
+		"per_combat": 1,
+		"effects": [{"type": "heal", "amount": "1d10+level"}]
+	},
+	{
+		"id": "defensive_stance",
+		"name": "Posture défensive",
+		"description": "Vous vous mettez en garde derrière votre arme.",
+		"target": "self",
+		"per_combat": 2,
+		"effects": [{"type": "status", "status": "shielded", "stacks": 5}]
+	},
+	{
+		"id": "pommel_strike",
+		"name": "Coup de pommeau",
+		"description": "Un coup sec qui sonne l'adversaire.",
+		"target": "enemy",
+		"per_combat": 1,
+		"effects": [{"type": "attack", "weapon": true}, {"type": "status", "status": "stunned", "stacks": 1}]
+	},
+	{
+		"id": "fire_bolt",
+		"name": "Trait de feu",
+		"description": "Tour de magie : un trait de flammes jaillit de vos doigts.",
+		"target": "enemy",
+		"effects": [{"type": "attack", "ability": "spell", "damage": "1d10", "damage_type": "fire"}]
+	},
+	{
+		"id": "ray_of_frost",
+		"name": "Rayon de givre",
+		"description": "Tour de magie : un rayon glacé qui engourdit la cible.",
+		"target": "enemy",
+		"effects": [{"type": "attack", "ability": "spell", "damage": "1d8", "damage_type": "cold"}, {"type": "status", "status": "weakened", "stacks": 2}]
+	},
+	{
+		"id": "magic_missile",
+		"name": "Projectile magique",
+		"description": "Trois fléchettes de force qui touchent toujours leur cible.",
+		"target": "enemy",
+		"cost": "spell_slot",
+		"effects": [{"type": "damage", "damage": "3d4+3", "damage_type": "force"}]
+	},
+	{
+		"id": "burning_hands",
+		"name": "Mains brûlantes",
+		"description": "Une gerbe de flammes embrase tous vos ennemis.",
+		"target": "all_enemies",
+		"cost": "spell_slot",
+		"effects": [{"type": "damage", "damage": "2d6", "damage_type": "fire"}, {"type": "status", "status": "burning", "stacks": 1}]
+	},
+	{
+		"id": "mage_shield",
+		"name": "Bouclier",
+		"description": "Une barrière de force invisible vous protège.",
+		"target": "self",
+		"cost": "spell_slot",
+		"effects": [{"type": "status", "status": "shielded", "stacks": 6}]
+	},
+	{
+		"id": "find_familiar",
+		"name": "Appel du familier",
+		"description": "Un petit esprit animal vient combattre à vos côtés.",
+		"target": "none",
+		"cost": "spell_slot",
+		"effects": [{"type": "summon", "creature": "familiar"}]
+	},
+	{
+		"id": "sneak_attack",
+		"name": "Attaque sournoise",
+		"description": "Une attaque vicieuse qui frappe là où ça fait mal.",
+		"target": "enemy",
+		"per_combat": 2,
+		"effects": [{"type": "attack", "weapon": true, "extra_damage": "1d6"}]
+	},
+	{
+		"id": "poisoned_blade",
+		"name": "Lame empoisonnée",
+		"description": "Votre lame enduite de venin empoisonne la cible.",
+		"target": "enemy",
+		"per_combat": 1,
+		"effects": [{"type": "attack", "weapon": true}, {"type": "status", "status": "poisoned", "stacks": 3}]
+	}
+]

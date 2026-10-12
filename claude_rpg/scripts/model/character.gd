@@ -25,8 +25,7 @@ var start_age := 18
 var age_days := 0  # jours vécus depuis le début de la partie
 var art_seed := 0  # graine des variations du portrait procédural
 var template_id := ""  # pour un compagnon : son id dans companions.json
-var collection: Dictionary = {}  # cartes possédées : id de carte -> nombre d'exemplaires
-var deck: Dictionary = {}  # deck de combat composé à partir de la collection (au moins 40 cartes)
+var resources: Dictionary = {}  # ressources restantes (ex. spell_slot), rechargées par un repos long
 
 
 ## Options : "abilities" (scores, sinon modèle de la classe), "background", "gender".
@@ -50,18 +49,10 @@ static func create(species: String, cls: String, char_name: String, options: Dic
 	if background_feat != "":
 		c.feats.append(background_feat)
 
-	# Cartes débloquées par la classe, l'espèce, le passé, les dons et l'équipement ; le deck de départ
-	# reprend toute la collection.
-	var sources: Array = [class_data, DB.species[species], background]
-	for feat_id in c.feats:
-		sources.append(DB.feats.get(feat_id, {}))
-	for slot: String in c.equipment:
-		sources.append(Equipment.def(c.equipment[slot]))
-	for source: Dictionary in sources:
-		c.add_cards(source.get("cards", {}))
 
 	c.max_hp = c.compute_max_hp()
 	c.hp = c.max_hp
+	c.resources = class_data.get("resources", {}).duplicate()
 	c.gold = int(DB.rules.get("start_gold", 0)) + int(background.get("gold", 0))
 	for source: Dictionary in [class_data, background]:
 		var start_items: Dictionary = source.get("start_items", {})
@@ -165,41 +156,7 @@ func add_feat(feat_id: String) -> bool:
 		return false
 	feats.append(feat_id)
 	refresh_max_hp()  # le don peut changer la CON ou les PV par niveau
-	add_cards(DB.feats.get(feat_id, {}).get("cards", {}))
 	return true
-
-
-# --- Cartes ------------------------------------------------------------------
-
-## Ajoute des cartes à la collection (et au deck, par défaut).
-func add_cards(cards: Dictionary, to_deck := true) -> void:
-	for card_id: String in cards:
-		collection[card_id] = int(collection.get(card_id, 0)) + int(cards[card_id])
-		if to_deck:
-			deck[card_id] = int(deck.get(card_id, 0)) + int(cards[card_id])
-
-
-func deck_size() -> int:
-	return Cards.count(deck)
-
-
-## Deck jouable : taille minimale atteinte et pas plus d'exemplaires que dans la collection.
-func is_deck_valid() -> bool:
-	if deck_size() < int(Combat.setting("deck_min_size", 40)):
-		return false
-	for card_id: String in deck:
-		if int(deck[card_id]) > int(collection.get(card_id, 0)):
-			return false
-	return true
-
-
-## Change le nombre d'exemplaires d'une carte dans le deck (dans les limites de la collection).
-func set_deck_count(card_id: String, count: int) -> void:
-	var n := clampi(count, 0, int(collection.get(card_id, 0)))
-	if n > 0:
-		deck[card_id] = n
-	else:
-		deck.erase(card_id)
 
 
 ## Dons que le personnage peut choisir : prérequis remplis et pas encore possédés.
@@ -260,7 +217,6 @@ func equip(item_id: String) -> String:
 	var slot := Equipment.slot_for(item_id)
 	var previous: String = equipment.get(slot, "")
 	equipment[slot] = item_id
-	add_cards(Equipment.def(item_id).get("cards", {}))  # un équipement débloque ses cartes
 	if slot == "main_hand" and Equipment.has_property(item_id, "two_handed"):
 		equipment.erase("off_hand")
 	if slot == "off_hand" and Equipment.has_property(weapon_id(), "two_handed"):
@@ -305,9 +261,19 @@ func attack_bonus(ability: String) -> int:
 	return ability_mod(action_ability(ability)) + proficiency_bonus()
 
 
-## Repos long : PV au maximum.
+func max_resource(resource_id: String) -> int:
+	return int(DB.classes[class_id].get("resources", {}).get(resource_id, 0))
+
+
+## Actions de combat de la classe (ids de actions.json).
+func combat_actions() -> Array:
+	return DB.classes[class_id].get("actions", [])
+
+
+## Repos long : PV et ressources (emplacements de sort…) au maximum.
 func long_rest() -> void:
 	hp = max_hp
+	resources = DB.classes[class_id].get("resources", {}).duplicate()
 
 
 # --- Âge et taille -----------------------------------------------------------

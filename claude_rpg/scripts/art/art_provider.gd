@@ -7,13 +7,11 @@ extends RefCounted
 ##   événements : res://assets/events/<id_événement>.png
 ##   lieux      : res://assets/locations/<id_lieu>.png
 ##   créatures  : res://assets/creatures/<id_créature>.png
-##   cartes     : res://assets/cards/<id_carte>.png
 
 const PORTRAIT_DIR := "res://assets/portraits/"
 const EVENT_DIR := "res://assets/events/"
 const LOCATION_DIR := "res://assets/locations/"
 const CREATURE_DIR := "res://assets/creatures/"
-const CARD_DIR := "res://assets/cards/"
 
 static var _cache: Dictionary = {}
 
@@ -56,19 +54,6 @@ static func character_sprite(ch: Character) -> Texture2D:
 		var species_art: Dictionary = DB.species[ch.species_id].get("art", {})
 		var class_art: Dictionary = DB.classes[ch.class_id].get("art", {})
 		_cache[key] = ImageTexture.create_from_image(PixelArt.portrait(species_art, class_art, ch.life_stage(), ch.art_seed, false))
-	return _cache[key]
-
-
-## Illustration d'une carte (res://assets/cards/<id>.png s'il existe, sinon icône pixel art).
-static func card_art(card_id: String) -> Texture2D:
-	var file: String = CARD_DIR + card_id + ".png"
-	if ResourceLoader.exists(file):
-		return load(file)
-	var key: String = "card:" + card_id
-	if not _cache.has(key):
-		var colors := Cards.colors_of(card_id)
-		var tint := Mana.color_value(colors[0]) if colors.size() == 1 else Cards.frame_color(card_id)
-		_cache[key] = ImageTexture.create_from_image(PixelArt.card_icon(Cards.def(card_id).get("art", {}).get("icon", ""), tint, hash(card_id)))
 	return _cache[key]
 
 

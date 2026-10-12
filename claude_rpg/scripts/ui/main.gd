@@ -6,7 +6,6 @@ extends Control
 ## F12 active ou désactive le mode debug (choix verrouillés visibles).
 
 const CREATION_SCENE := "res://scenes/creation.tscn"
-const DECK_BUILDER_SCENE := "res://scenes/deck_builder.tscn"
 const MAX_CHOICES_HEIGHT := 330  # au-delà, la liste de choix défile
 
 
@@ -82,8 +81,6 @@ func _show_hub() -> void:
 	for loc_id in DB.location_order:
 		var loc: Dictionary = DB.locations[loc_id]
 		_add_choice("%s — %s" % [loc["name"], loc.get("description", "")], _on_location_chosen.bind(loc_id))
-	_add_choice(tr("Composer son deck (%d cartes)") % life.character.deck_size(), _on_deck_builder)
-
 
 func _show_event(ev: Dictionary) -> void:
 	var life := Game.life
@@ -208,10 +205,6 @@ func _on_continue(goto: String) -> void:
 			_show_death()
 		else:
 			_show_hub()
-
-
-func _on_deck_builder() -> void:
-	get_tree().change_scene_to_file(DECK_BUILDER_SCENE)
 
 
 func _on_new_life() -> void:

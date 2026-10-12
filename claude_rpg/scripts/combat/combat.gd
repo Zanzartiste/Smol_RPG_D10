@@ -1,13 +1,13 @@
 class_name Combat
 extends RefCounted
-## Combat au tour par tour avec decks (façon Magic: The Gathering) et jets de dés (façon D&D).
-## Aucune dépendance à l'interface : chaque action retourne des « étapes » (texte + jet de dés)
-## que l'interface anime, l'état étant déjà à jour.
+## Combat au tour par tour façon D&D 5e simplifié. Aucune dépendance à l'interface : chaque action
+## retourne des « étapes » (texte + jet de dés) que l'interface anime, l'état étant déjà à jour.
 ##
 ## Déroulement : ordre d'initiative (d20 + DEX). Chaque tour commence par start_turn() (effets des
-## états, tour passé si étourdi ; pour le héros : mana et pioche), puis :
-##   - le héros joue des cartes (mana) et une action de base (attaque d'arme ou objet), ou fuit ;
-##   - les autres agissent via ai_turn() (les ennemis peuvent « préparer » une action annoncée).
+## états, tour passé si étourdi), puis le combattant fait UNE action :
+##   - héros et compagnons (contrôlés par le joueur) : une action de classe (perform), un objet
+##     (use_item) ou la fuite (flee) ;
+##   - créatures (ennemis, invocations) : ai_turn(). Un ennemi peut « préparer » une action annoncée.
 ## end_turn() passe au suivant. Réglages : rules.json › combat.
 ##
 ## Spécification (effet "combat" d'un événement) :
@@ -25,14 +25,8 @@ var turn := 0  # index dans `order`
 var round_number := 1
 var outcome := ""  # "" en cours, puis "victory", "defeat" ou "fled"
 var log: Array[String] = []
-
 var hero: Combatant
-var deck: CombatDeck
-var mana: Dictionary = {}  # réserve de mana du héros pour ce tour
-var hero_turns := 0  # nombre de tours joués par le héros (le mana généré en dépend)
-var basic_actions_left := 0
 var skipped := false  # le combattant actif passe son tour (étourdi, mort pendant ses états…)
-var _mana_shares: Dictionary = {}
 var _next_id := 0
 
 
@@ -62,12 +56,6 @@ func _init(combat_spec: Dictionary, life_state: LifeState) -> void:
 		if enemy_ids.count(id) > 1:
 			label += " " + "ABCDEFGH"[enemy_ids.slice(0, i).count(id)]
 		_add(Combatant.from_creature(id, label, "enemy", rng))
-
-	var ch := life.character
-	deck = CombatDeck.new(ch.deck, rng, int(setting("max_hand_size", 7)))
-	_mana_shares = Mana.deck_shares(ch.deck)
-	var opening := deck.draw(maxi(1, ch.ability_mod("int")))
-	log.append(Loc.ui("Main de départ : %d carte(s) (modificateur d'Intelligence).") % opening.size())
 	_roll_initiative()
 
 
@@ -123,24 +111,45 @@ func usable_items() -> Array[Dictionary]:
 
 ## Cibles possibles pour un acteur et un type de cible ("enemy", "ally", "self"…).
 func targets(actor: Combatant, target: String) -> Array[Combatant]:
-	var own := actor.side
 	var opposing := "enemy" if actor.is_ally() else "ally"
 	match target:
 		"self":
 			var only_self: Array[Combatant] = [actor]
 			return only_self
 		"ally", "all_allies":
-			return living(own)
+			return living(actor.side)
 		"enemy", "all_enemies":
 			return living(opposing)
 	var none: Array[Combatant] = []
 	return none
 
 
-# --- Début de tour -----------------------------------------------------------
+## Actions d'un personnage pour l'interface : [{action, available, reason}].
+func action_choices(actor: Combatant) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for action in actor.combat_actions():
+		var reason := action_unavailable_reason(actor, action)
+		result.append({"action": action, "available": reason == "", "reason": reason})
+	return result
 
-## Début du tour du combattant actif : effets des états, puis mana et pioche pour le héros.
-## Après l'appel, `skipped` indique si le combattant passe son tour.
+
+func action_unavailable_reason(actor: Combatant, action: Dictionary) -> String:
+	var reason := actor.unavailable_reason(action)
+	if reason != "":
+		return reason
+	var target: String = action.get("target", "enemy")
+	if target in ["enemy", "all_enemies"] and living("enemy").is_empty():
+		return Loc.ui("aucune cible")
+	for e: Dictionary in action.get("effects", []):
+		if e.get("type") == "summon" and not can_add(actor.side, Creatures.size_of(e["creature"])):
+			return Loc.ui("plus de place dans votre camp")
+	return ""
+
+
+# --- Tours -------------------------------------------------------------------
+
+## Début du tour du combattant actif : effets des états. Après l'appel, `skipped` indique si le
+## combattant passe son tour.
 func start_turn() -> Array[Dictionary]:
 	var actor := current()
 	var beats: Array[Dictionary] = []
@@ -161,14 +170,6 @@ func start_turn() -> Array[Dictionary]:
 	if not actor.is_alive():
 		skipped = true
 	_check_end()
-	if actor.is_hero() and not skipped and not is_over():
-		hero_turns += 1
-		mana = Mana.generate(mini(hero_turns, int(setting("max_mana", 10))), _mana_shares)
-		basic_actions_left = int(setting("basic_actions_per_turn", 1))
-		if hero_turns > 1:
-			var drawn := deck.draw(int(setting("draw_per_turn", 1)))
-			if not drawn.is_empty():
-				_beat(beats, Loc.ui("%s pioche : %s.") % [actor.name, ", ".join(PackedStringArray(drawn.map(func(id): return Cards.name_of(id))))])
 	return beats
 
 
@@ -190,55 +191,21 @@ func end_turn() -> void:
 			return
 
 
-# --- Actions du héros --------------------------------------------------------
+# --- Actions des personnages (joueur) ----------------------------------------
 
-## Raison pour laquelle la carte d'index `index` ne peut pas être jouée ("" si elle peut l'être).
-func card_unplayable_reason(index: int) -> String:
-	var card := deck.hand[index]
-	if not Mana.can_pay(mana, Cards.cost_of(card)):
-		return Loc.ui("mana insuffisant")
-	var target := Cards.target_of(card)
-	if target in ["enemy", "all_enemies"] and living("enemy").is_empty():
-		return Loc.ui("aucune cible")
-	for e: Dictionary in Cards.effects_of(card):
-		if e.get("type") == "summon" and not can_add("ally", Creatures.size_of(e["creature"])):
-			return Loc.ui("plus de place dans votre camp")
-	return ""
-
-
-## Joue une carte de la main (le mana est dépensé). `target` est requis pour les cibles "enemy" / "ally".
-func play_card(index: int, target: Combatant = null) -> Array[Dictionary]:
-	var card := deck.hand[index]
-	mana = Mana.pay(mana, Cards.cost_of(card))["pool"]
-	deck.play(index)
+## Effectue une action de classe. `target` est requis pour les cibles "enemy" / "ally".
+func perform(actor: Combatant, action: Dictionary, target: Combatant = null) -> Array[Dictionary]:
+	actor.consume(action)
 	var beats: Array[Dictionary] = []
-	_beat(beats, Loc.ui("%s joue %s.") % [hero.name, Cards.name_of(card)])
-	beats.append_array(_resolve(hero, Cards.effects_of(card), Cards.target_of(card), target, false))
+	_beat(beats, Loc.ui("%s : %s.") % [actor.name, action["name"]])
+	beats.append_array(_resolve(actor, action.get("effects", []), action.get("target", "enemy"), target,
+		not actor.is_player_controlled()))
 	_check_end()
 	return beats
 
 
-## Attaque de base (action de base) : celle de la classe (classes.json › basic_attack, ex. un tour de
-## magie à volonté pour le magicien), sinon une attaque avec l'arme équipée.
-func basic_attack(target: Combatant) -> Array[Dictionary]:
-	basic_actions_left -= 1
-	var beats := _resolve(hero, basic_attack_effects(), "enemy", target, false)
-	_check_end()
-	return beats
-
-
-func basic_attack_effects() -> Array:
-	return DB.classes[hero.character.class_id].get("basic_attack", {}).get("effects", [{"type": "attack", "weapon": true}])
-
-
-func basic_attack_name() -> String:
-	var custom: Dictionary = DB.classes[hero.character.class_id].get("basic_attack", {})
-	return custom.get("name", Equipment.name_of(hero.character.weapon_id()))
-
-
-## Utilise un objet (action de base).
-func use_item(item_id: String, target: Combatant) -> Array[Dictionary]:
-	basic_actions_left -= 1
+## Utilise un objet de l'inventaire du héros (soins, antidote…).
+func use_item(actor: Combatant, item_id: String, target: Combatant) -> Array[Dictionary]:
 	var item: Dictionary = DB.items[item_id]
 	life.character.remove_item(item_id)
 	var effects: Array = []
@@ -248,23 +215,21 @@ func use_item(item_id: String, target: Combatant) -> Array[Dictionary]:
 	if use.has("cleanse"):
 		effects.append({"type": "cleanse", "status": use["cleanse"]})
 	var beats: Array[Dictionary] = []
-	_beat(beats, Loc.ui("%s utilise : %s.") % [hero.name, item["name"]])
-	beats.append_array(_resolve(hero, effects, "ally", target, false))
+	_beat(beats, Loc.ui("%s utilise : %s.") % [actor.name, item["name"]])
+	beats.append_array(_resolve(actor, effects, "ally", target, false))
 	_check_end()
 	return beats
 
 
-## Tentative de fuite (termine le tour) : d20 + DEX contre le DD de fuite.
-func flee() -> Array[Dictionary]:
+## Tentative de fuite du groupe : d20 + DEX contre le DD de fuite.
+func flee(actor: Combatant) -> Array[Dictionary]:
 	var die := rng.randi_range(1, 20)
-	var mod := hero.ability_mod("dex")
+	var mod := actor.ability_mod("dex")
 	var success := die == 20 or (die != 1 and die + mod >= flee_dc())
 	var beats: Array[Dictionary] = []
-	beats.append({"fast": false, "text": Loc.ui("%s tente de fuir : %s.") % [
-		hero.name, Loc.ui("réussite") if success else Loc.ui("échec")], "roll": {
-		"dice": [{"sides": 20, "value": die}], "mod": mod, "dc": flee_dc(), "success": success,
-		"stat": Loc.ui("Fuite (Dextérité)")}})
-	log.append(beats[0]["text"])
+	_beat(beats, Loc.ui("%s tente de fuir : %s.") % [actor.name, Loc.ui("réussite") if success else Loc.ui("échec")],
+		{"dice": [{"sides": 20, "value": die}], "mod": mod, "dc": flee_dc(), "success": success,
+		"stat": Loc.ui("Fuite (Dextérité)")})
 	if success:
 		outcome = "fled"
 	return beats
@@ -272,9 +237,8 @@ func flee() -> Array[Dictionary]:
 
 # --- Tours de l'IA -----------------------------------------------------------
 
-## Tour d'un combattant contrôlé par l'IA (ennemi, compagnon, invocation).
-## Un ennemi qui a préparé une action l'exécute ; sinon il en choisit une (pondérée) et, si elle est
-## « préparée », se contente de l'annoncer.
+## Tour d'une créature (ennemi ou invocation). Un ennemi qui a préparé une action l'exécute ; sinon il
+## en choisit une (pondérée) et, si elle est « préparée », se contente de l'annoncer.
 func ai_turn(actor: Combatant) -> Array[Dictionary]:
 	var beats: Array[Dictionary] = []
 	var action: Dictionary
@@ -292,12 +256,12 @@ func ai_turn(actor: Combatant) -> Array[Dictionary]:
 			return beats
 	var target_mode: String = action.get("target", "enemy")
 	var chosen: Combatant = null
-	if target_mode in Cards.CHOSEN_TARGETS:
+	if target_mode in CombatEffects.CHOSEN_TARGETS:
 		var candidates := targets(actor, target_mode)
 		if candidates.is_empty():
 			return beats
 		candidates.sort_custom(func(a, b): return a.hp < b.hp)
-		# Les alliés visent le plus faible, les ennemis choisissent au hasard.
+		# Les invocations alliées visent le plus faible, les ennemis choisissent au hasard.
 		chosen = candidates[0] if actor.is_ally() else candidates[rng.randi_range(0, candidates.size() - 1)]
 	_beat(beats, Loc.ui("%s : %s.") % [actor.name, action["name"]])
 	beats.append_array(_resolve(actor, action.get("effects", []), target_mode, chosen, not actor.is_ally()))
@@ -306,8 +270,8 @@ func ai_turn(actor: Combatant) -> Array[Dictionary]:
 
 
 func _pick_action(actor: Combatant) -> Dictionary:
-	var actions := actor.ai_actions().filter(func(a): return not targets(actor, a.get("target", "enemy")).is_empty() \
-		or a.get("target") == "none")
+	var actions := actor.combat_actions().filter(func(a): return a.get("target") == "none" \
+		or not targets(actor, a.get("target", "enemy")).is_empty())
 	var total := 0.0
 	for a: Dictionary in actions:
 		total += float(a.get("weight", 1))
@@ -319,6 +283,61 @@ func _pick_action(actor: Combatant) -> Dictionary:
 	return actions.back() if not actions.is_empty() else {}
 
 
+## Choix automatique pour un personnage (tests, banc d'équilibrage, futur combat automatique) :
+## l'action disponible la plus utile (dégâts attendus, soins ou protection si les PV sont bas),
+## contre l'ennemi le plus faible.
+func auto_choice(actor: Combatant) -> Dictionary:
+	var best: Dictionary = {}
+	var best_score := -1.0
+	for choice in action_choices(actor):
+		if not choice["available"]:
+			continue
+		var score := _action_score(actor, choice["action"])
+		if score > best_score:
+			best_score = score
+			best = choice["action"]
+	var target: Combatant = null
+	var mode: String = best.get("target", "enemy")
+	if mode in CombatEffects.CHOSEN_TARGETS:
+		var candidates := targets(actor, mode)
+		if mode == "ally":
+			candidates.sort_custom(func(a, b): return float(a.hp) / a.max_hp() < float(b.hp) / b.max_hp())
+		else:
+			candidates.sort_custom(func(a, b): return a.hp < b.hp)
+		target = candidates[0]
+	return {"action": best, "target": target}
+
+
+func _action_score(actor: Combatant, action: Dictionary) -> float:
+	var score := 0.0
+	var spread := living("enemy").size() if action.get("target") == "all_enemies" else 1
+	var hurt := actor.hp < actor.max_hp() * 0.5
+	for e: Dictionary in action.get("effects", []):
+		match e.get("type"):
+			"attack":
+				var chance := clampf((21.0 - (12 - actor.attack_bonus(e))) / 20.0, 0.05, 0.95)
+				score += Dice.average(actor.damage_expr(e)) * chance * spread
+			"damage":
+				score += Dice.average(actor.damage_expr(e)) * spread
+			"heal":
+				score += Dice.average(actor.heal_expr(String(e["amount"]))) if hurt else 0.0
+			"status":
+				var stacks := int(e["stacks"])
+				match e["status"]:
+					"shielded":
+						score += stacks * (0.8 if hurt else 0.3)
+					"stunned":
+						score += 4.0 * spread
+					_:
+						score += stacks * 1.2 * spread
+			"summon":
+				score += 5.0
+	# Les ressources limitées (emplacements, utilisations par combat) valent un peu moins.
+	if action.has("cost") or action.has("per_combat"):
+		score *= 0.9
+	return score
+
+
 # --- Résolution des effets ---------------------------------------------------
 
 ## Applique une liste d'effets. `target_mode` : "enemy", "all_enemies", "ally", "all_allies", "self", "none".
@@ -326,12 +345,11 @@ func _pick_action(actor: Combatant) -> Dictionary:
 func _resolve(actor: Combatant, effects: Array, target_mode: String, chosen: Combatant, fast: bool) -> Array[Dictionary]:
 	var beats: Array[Dictionary] = []
 	var target_list: Array[Combatant] = []
-	if target_mode in Cards.CHOSEN_TARGETS:
+	if target_mode in CombatEffects.CHOSEN_TARGETS:
 		if chosen != null:
 			target_list.append(chosen)
 	else:
 		target_list = targets(actor, target_mode)
-	# Effets sans cible (pioche, invocation) : une seule fois.
 	for e: Dictionary in effects:
 		if e.get("type") in CombatEffects.UNTARGETED:
 			beats.append_array(_apply(actor, e, null, fast)["beats"])
@@ -392,10 +410,6 @@ func _apply(actor: Combatant, e: Dictionary, target: Combatant, fast: bool) -> D
 					removed.append(StatusEffects.name_of(status_id))
 			if not removed.is_empty():
 				_beat(beats, Loc.ui("%s n'est plus affecté par : %s.") % [target.name, ", ".join(removed)])
-		"draw":
-			if actor.is_hero():
-				var drawn := deck.draw(int(e["count"]))
-				_beat(beats, Loc.ui("%s pioche %d carte(s).") % [actor.name, drawn.size()])
 		"summon":
 			var creature_id: String = e["creature"]
 			if can_add(actor.side, Creatures.size_of(creature_id)):
@@ -511,69 +525,3 @@ func _roll_initiative() -> void:
 		parts.append("%s %d" % [c.name, c.initiative])
 	log.append(Loc.ui("Initiative : %s") % ", ".join(parts))
 	log.append(Loc.ui("— Round %d —") % round_number)
-
-
-# --- Jeu automatique (tests, banc d'équilibrage) -----------------------------
-
-## Joue le tour du héros automatiquement : cartes jouables les plus utiles, puis attaque de base.
-func auto_hero_turn() -> Array[Dictionary]:
-	var beats: Array[Dictionary] = []
-	var guard := 0
-	while not is_over() and guard < 20:
-		guard += 1
-		var best := -1
-		var best_score := 0.0
-		for i in deck.hand.size():
-			if card_unplayable_reason(i) == "":
-				var score := _card_score(deck.hand[i])
-				if score > best_score:
-					best_score = score
-					best = i
-		if best < 0:
-			break
-		beats.append_array(play_card(best, _auto_target(Cards.target_of(deck.hand[best]))))
-	if not is_over() and basic_actions_left > 0 and not living("enemy").is_empty():
-		beats.append_array(basic_attack(_auto_target("enemy")))
-	return beats
-
-
-func _auto_target(target: String) -> Combatant:
-	if target not in Cards.CHOSEN_TARGETS:
-		return null
-	var candidates := targets(hero, target)
-	if candidates.is_empty():
-		return null
-	if target == "ally":
-		candidates.sort_custom(func(a, b): return float(a.hp) / a.max_hp() < float(b.hp) / b.max_hp())
-	else:
-		candidates.sort_custom(func(a, b): return a.hp < b.hp)
-	return candidates[0]
-
-
-## Valeur approximative d'une carte pour le jeu automatique.
-func _card_score(card: String) -> float:
-	var score := 0.0
-	var enemies_count := living("enemy").size()
-	var spread := enemies_count if Cards.target_of(card) == "all_enemies" else 1
-	for e: Dictionary in Cards.effects_of(card):
-		match e.get("type"):
-			"attack":
-				score += Dice.average(hero.damage_expr(e)) * 0.6 * spread
-			"damage":
-				score += Dice.average(hero.damage_expr(e)) * spread
-			"heal":
-				score += Dice.average(hero.heal_expr(String(e["amount"]))) if hero.hp < hero.max_hp() * 0.5 else 0.0
-			"status":
-				var stacks := int(e["stacks"])
-				match e["status"]:
-					"shielded":
-						score += stacks * 0.6
-					"stunned":
-						score += 4.0 * spread
-					_:
-						score += stacks * 1.2 * spread
-			"draw":
-				score += 1.5 * int(e["count"])
-			"summon":
-				score += 5.0
-	return score

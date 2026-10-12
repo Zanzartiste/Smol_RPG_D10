@@ -2,8 +2,8 @@ extends Node
 ## Banc d'équilibrage : joue chaque rencontre des événements de nombreuses fois en automatique,
 ## pour chaque classe (PV pleins, seul ou avec Mira), et affiche le taux de victoire.
 ##   godot --headless --path . res://tools/combat_bench.tscn
-## Le héros joue avec Combat.auto_hero_turn() (cartes utiles puis attaque d'arme), les autres avec leur IA, sans fuite
-## ni objets : c'est une estimation pessimiste. Affiche aussi la durée moyenne en rounds.
+## Héros et compagnons jouent avec Combat.auto_choice() (action la plus utile), les créatures avec leur IA,
+## sans fuite ni objets : c'est une estimation pessimiste. Affiche aussi la durée moyenne en rounds.
 
 const RUNS := 300
 
@@ -59,8 +59,9 @@ func _fight(enemies: Array, life: LifeState) -> String:
 		var actor := combat.current()
 		combat.start_turn()
 		if not combat.is_over() and not combat.skipped:
-			if actor.is_hero():
-				combat.auto_hero_turn()
+			if actor.is_player_controlled():
+				var choice := combat.auto_choice(actor)
+				combat.perform(actor, choice["action"], choice["target"])
 			else:
 				combat.ai_turn(actor)
 		combat.end_turn()
