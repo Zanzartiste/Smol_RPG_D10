@@ -24,6 +24,7 @@ func start_life(character: Character, seed_value: int = 0) -> void:
 	life.character = character
 	current_event = {}
 	life_changed.emit()
+	Saves.save_all()
 
 
 ## Commence une vie avec un personnage aléatoire (tests, lancement direct de la scène principale).
@@ -50,7 +51,10 @@ func roll_check(choice: Dictionary) -> Dictionary:
 
 func resolve_choice(choice: Dictionary, roll: Dictionary = {}) -> Dictionary:
 	var result := EventEngine.resolve_choice(current_event, choice, life, Meta, roll)
+	if not result["combat"].is_empty():
+		life.pending_combat = result["combat"]  # reprendra au chargement si on quitte avant de le jouer
 	_after_change()
+	Saves.save_all()
 	return result
 
 
@@ -59,6 +63,7 @@ var combat: Combat
 
 
 func start_combat(spec: Dictionary) -> Combat:
+	life.pending_combat = spec
 	combat = Combat.new(spec, life)
 	return combat
 
@@ -68,6 +73,7 @@ func start_combat(spec: Dictionary) -> Combat:
 func finish_combat() -> Dictionary:
 	var c := combat
 	combat = null
+	life.pending_combat = {}
 	var lines: Array[String] = []
 	var knockout: bool = c.spec.get("on_defeat", "death") == "knockout"
 
@@ -114,7 +120,10 @@ func finish_combat() -> Dictionary:
 	}
 	var applied := Effects.apply_all(outcome.get("effects", []), life, Meta)
 	lines.append_array(applied["lines"])
+	if not applied["combat"].is_empty():
+		life.pending_combat = applied["combat"]
 	_after_change()
+	Saves.save_all()
 	return {"outcome": key, "text": outcome.get("text", default_texts.get(key, "")), "roll": {},
 		"lines": lines, "goto": applied["goto"], "combat": applied["combat"]}
 
@@ -124,6 +133,7 @@ func end_event() -> void:
 	current_event = {}
 	life.advance_time(1)
 	_after_change()
+	Saves.save_all()
 
 
 func _after_change() -> void:
@@ -131,4 +141,5 @@ func _after_change() -> void:
 	if life.dead and not life.recorded:
 		life.recorded = true
 		Meta.record_life(life)
+		Saves.save_all()  # la méta garde la vie dans la chronique, la sauvegarde de vie est supprimée
 		life_ended.emit()

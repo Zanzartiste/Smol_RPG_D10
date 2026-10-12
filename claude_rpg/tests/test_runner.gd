@@ -26,12 +26,17 @@ const TESTS := [
 	"_test_companions",
 	"_test_creation",
 	"_test_dice_tray",
+	"_test_saves",
 	"_test_simulation",
 	"_test_art",
 ]
 
 
 func _ready() -> void:
+	# Les tests n'écrivent jamais dans les vraies sauvegardes (voir _test_saves, qui utilise un dossier à part).
+	Saves.enabled = false
+	Saves.directory = "user://test_saves"
+	Meta.reset()  # indépendant des sauvegardes éventuelles du joueur
 	for test: String in TESTS:
 		# Une erreur de script interrompt la fonction, qui retourne alors null au lieu de true.
 		_expect(call(test) == true, "%s s'exécute jusqu'au bout (voir les erreurs ci-dessus)" % test)
@@ -637,6 +642,63 @@ func _test_companions() -> bool:
 	var result := Game.finish_combat()
 	_expect(life.companions.is_empty() and result["lines"].has("Mira a péri au combat."), "mort définitive du compagnon")
 	_expect(not Conditions.check({"type": "companion", "id": "mira"}, life, Meta), "plus de compagnon")
+	return true
+
+
+func _test_saves() -> bool:
+	var meta_backup := Meta.to_dict()
+	Saves.enabled = true
+	Saves.reset_world()
+
+	# Une vie bien remplie : compagnon, don, équipement, défense, flags, temps, combat en attente.
+	Game.start_life(Character.create("goblin", "rogue", "Mibz", {"background": "criminal", "gender": "female"}), 77)
+	var life := Game.life
+	Effects.apply_all([
+		{"type": "recruit", "companion": "mira"}, {"type": "add_feat", "id": "tough"}, {"type": "equip", "id": "shortsword"},
+		{"type": "add_defense", "kind": "resistance", "id": "fire"}, {"type": "set_flag", "id": "quest"},
+		{"type": "add_item", "id": "antidote", "count": 2}, {"type": "xp", "amount": 350}, {"type": "unlock", "id": "species:elf"},
+	], life, Meta)
+	life.advance_time(7)
+	life.mark_seen("town_market")
+	life.pending_combat = {"enemies": ["wolf"]}
+	life.rng.randi()
+	Saves.save_all()
+	var before := JSON.stringify(life.to_dict())
+	var next_roll := life.rng.randi()
+
+	Game.life = null
+	Meta.reset()
+	Saves.load_meta()
+	_expect(Meta.is_unlocked("species:elf"), "sauvegarde : la méta est rechargée")
+	_expect(Saves.has_life() and Saves.load_life(), "sauvegarde : la vie en cours est rechargée")
+	_expect(JSON.stringify(Game.life.to_dict()) == before, "sauvegarde : la vie est identique après rechargement")
+	var ch := Game.life.character
+	_expect(ch.has_feat("tough") and ch.weapon_id() == "shortsword" and ch.all_defenses().has(Defenses.RESISTANCE, "fire")
+		and ch.item_count("antidote") == 2 and ch.level == 2 and Game.life.companions[0].name == "Mira",
+		"sauvegarde : don, équipement, défense, objets, niveau et compagnon")
+	_expect(typeof(ch.abilities["str"]) == TYPE_INT and typeof(ch.inventory["antidote"]) == TYPE_INT,
+		"sauvegarde : les nombres redeviennent des entiers")
+	_expect(Game.life.pending_combat == {"enemies": ["wolf"]}, "sauvegarde : le combat en attente est conservé")
+	_expect(Game.life.rng.randi() == next_roll, "sauvegarde : le hasard reprend là où il s'était arrêté")
+
+	# À la mort, la vie disparaît des sauvegardes et entre dans la chronique.
+	Game.life.die("Test")
+	Game._after_change()
+	_expect(not Saves.has_life(), "sauvegarde : la vie est supprimée à la mort")
+	Meta.reset()
+	Saves.load_meta()
+	_expect(Meta.chronicle.size() == 1 and Meta.chronicle[0]["name"] == "Mibz", "sauvegarde : la chronique est conservée")
+
+	# Sauvegarde d'une autre version : ignorée.
+	var file := FileAccess.open(Saves.life_path(), FileAccess.WRITE)
+	file.store_string(JSON.stringify({"version": 999, "data": {"day": 3}}))
+	file.close()
+	_expect(not Saves.has_life(), "sauvegarde d'une autre version ignorée")
+
+	Saves.reset_world()
+	Saves.delete_life()
+	Saves.enabled = false
+	Meta.load_dict(meta_backup)
 	return true
 
 

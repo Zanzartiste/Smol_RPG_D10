@@ -420,6 +420,33 @@ Les textes du JSON sont en français. Leur clé de traduction est dérivée des 
 Quand une traduction existe pour la langue courante, elle remplace le texte du JSON. Les textes d'interface passent par
 `tr()`, avec la phrase française comme clé.
 
+## Sauvegarde
+
+L'autoload `Saves` (`scripts/core/save_manager.gd`) gère deux fichiers JSON dans `user://`. Sur Windows, ce dossier
+est `%APPDATA%/Godot/app_userdata/Lifantasy/` ; sur le Web, les données vont dans le stockage du navigateur.
+
+| Fichier | Contenu |
+|---|---|
+| `meta.json` | Ce qui survit à la mort : flags du monde, déblocages, événements déjà vus, chronique des vies |
+| `life.json` | La vie en cours : personnage, compagnons, temps, flags, hasard (graine et état), combat en attente. Supprimé à la mort |
+
+**Quand la partie est-elle sauvegardée ?** Automatiquement :
+- au début d'une vie ;
+- à chaque retour au hub ;
+- après chaque choix ;
+- à la fin de chaque combat ;
+- à la mort ;
+- avec Échap (retour au menu) et à la fermeture de la fenêtre.
+
+**Anti-triche :** un combat déclenché est noté comme « en attente » (`pending_combat`) et reprend au chargement.
+Quitter le jeu ne permet donc pas de l'esquiver, mais il recommence depuis le début.
+
+**Format :** chaque fichier est `{"version": N, "data": …}`. Une sauvegarde d'une autre version est ignorée. Si le
+format change, il faudra augmenter `Saves.VERSION` et prévoir une conversion.
+
+**Écran titre** (`scenes/title.tscn`, scène de démarrage) : Continuer, Nouvelle vie, Chronique des vies passées,
+Nouveau monde (efface tout, avec confirmation), Quitter.
+
 ## Outils
 
 Toutes les commandes se lancent depuis le dossier `claude_rpg/`, avec `godot` désignant l'exécutable console de Godot

@@ -15,6 +15,9 @@ var dead := false
 var death_cause := ""
 var recorded := false  # déjà inscrite dans la chronique
 var notices: Array[String] = []  # messages à afficher au prochain retour au hub
+## Combat déclenché mais pas encore terminé : il reprend au chargement d'une sauvegarde
+## (quitter le jeu ne permet pas d'esquiver un combat).
+var pending_combat: Dictionary = {}
 
 
 func slot_id() -> String:
@@ -101,3 +104,37 @@ func _check_old_age() -> void:
 	var id: String = ids[rng.randi_range(0, ids.size() - 1)]
 	notices.append(Loc.ui("Le poids des ans : %s −1.") % Abilities.name_of(id))
 	change_ability(id, -1, Loc.ui("Mort de vieillesse"))
+
+
+# --- Sauvegarde ----------------------------------------------------------------
+
+func to_dict() -> Dictionary:
+	return {
+		"character": character.to_dict(),
+		"companions": companions.map(func(c): return c.to_dict()),
+		"rng_seed": str(rng.seed),  # en texte : les entiers 64 bits ne survivent pas aux décimaux du JSON
+		"rng_state": str(rng.state),
+		"day": day, "slot": slot, "flags": flags, "seen": seen, "last_seen_day": last_seen_day,
+		"dead": dead, "death_cause": death_cause, "recorded": recorded, "notices": notices,
+		"pending_combat": pending_combat,
+	}
+
+
+static func from_dict(data: Dictionary) -> LifeState:
+	var life := LifeState.new()
+	life.character = Character.from_dict(data.get("character", {}))
+	for c: Dictionary in data.get("companions", []):
+		life.companions.append(Character.from_dict(c))
+	life.rng.seed = String(data.get("rng_seed", "0")).to_int()
+	life.rng.state = String(data.get("rng_state", "0")).to_int()
+	life.day = int(data.get("day", 1))
+	life.slot = int(data.get("slot", 0))
+	life.flags = data.get("flags", {})
+	life.seen = Character._int_dict(data.get("seen", {}))
+	life.last_seen_day = Character._int_dict(data.get("last_seen_day", {}))
+	life.dead = data.get("dead", false)
+	life.death_cause = data.get("death_cause", "")
+	life.recorded = data.get("recorded", false)
+	life.notices.assign(data.get("notices", []))
+	life.pending_combat = data.get("pending_combat", {})
+	return life

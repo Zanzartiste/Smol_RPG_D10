@@ -7,9 +7,20 @@ var out_dir := ""
 
 
 func _ready() -> void:
+	Saves.enabled = false  # les captures ne touchent pas aux vraies sauvegardes
 	var args := OS.get_cmdline_user_args()
 	out_dir = args[0] if args.size() > 0 else ProjectSettings.globalize_path("user://screenshots")
 	DirAccess.make_dir_recursive_absolute(out_dir)
+
+	# Écran titre, avec une chronique d'exemple.
+	Meta.chronicle.append({"name": "Grik", "species": "goblin", "class": "wizard", "age": 13, "days": 41, "level": 2,
+		"cause": "Dévoré par un loup"})
+	Meta.unlock("class:rogue")
+	var title: Control = load("res://scenes/title.tscn").instantiate()
+	add_child(title)
+	await _capture("0_title.png")
+	title.queue_free()
+	Meta.reset()
 
 	var creation: Control = load("res://scenes/creation.tscn").instantiate()
 	add_child(creation)

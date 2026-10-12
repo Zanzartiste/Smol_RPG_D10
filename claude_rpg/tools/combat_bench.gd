@@ -20,6 +20,7 @@ const ENCOUNTERS := {
 
 
 func _ready() -> void:
+	Saves.enabled = false
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 2026
 	for with_mira in [false, true]:

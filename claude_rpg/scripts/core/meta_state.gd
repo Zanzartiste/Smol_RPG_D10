@@ -66,3 +66,26 @@ func record_life(life: LifeState) -> void:
 		"level": ch.level,
 		"cause": life.death_cause,
 	})
+
+
+# --- Sauvegarde ----------------------------------------------------------------
+
+func to_dict() -> Dictionary:
+	return {"world_flags": world_flags, "unlocks": unlocks, "seen_events": seen_events, "chronicle": chronicle}
+
+
+func load_dict(data: Dictionary) -> void:
+	world_flags = data.get("world_flags", {})
+	unlocks = data.get("unlocks", {})
+	seen_events = Character._int_dict(data.get("seen_events", {}))
+	chronicle.clear()
+	for entry: Dictionary in data.get("chronicle", []):
+		var life := entry.duplicate()
+		for key in ["age", "days", "level"]:
+			life[key] = int(life.get(key, 0))
+		chronicle.append(life)
+
+
+## Efface toute la méta-progression (nouveau monde).
+func reset() -> void:
+	load_dict({})

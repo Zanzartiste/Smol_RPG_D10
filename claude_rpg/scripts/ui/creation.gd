@@ -66,6 +66,12 @@ func _ready() -> void:
 		pair[1].call(picked)
 
 
+func _unhandled_key_input(event: InputEvent) -> void:
+	var key := event as InputEventKey
+	if key != null and key.pressed and key.keycode == KEY_ESCAPE:
+		get_tree().change_scene_to_file("res://scenes/title.tscn")
+
+
 func build_character() -> Character:
 	var ch := Character.create(_species, _class, name_edit.text.strip_edges(), {
 		"abilities": _point_buy.final_scores(),

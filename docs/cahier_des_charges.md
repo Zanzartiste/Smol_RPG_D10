@@ -248,7 +248,8 @@ Claude ne génère pas d'images lui-même. Il peut en revanche écrire le **guid
 6. ~~Ajouter le combat~~ : initiative, attaques contre la CA, critiques, sorts et emplacements, objets, fuite, compagnon contrôlé par le joueur, issues victoire / fuite / défaite (mortelle ou K.-O.), banc d'équilibrage.
 7. ~~**Refonte du combat**~~ : états cumulables, intentions ennemies, invocations, 4 places par camp, sprites à
    l'échelle de la taille, nouvel écran de combat. Les decks ont été essayés puis abandonnés au profit d'actions façon D&D.
-8. Sauvegarde (vie en cours et méta) et écran titre.
+8. ~~Sauvegarde (vie en cours et méta) et écran titre~~ : autosauvegarde, reprise des combats interrompus,
+   chronique des vies sur l'écran titre.
 9. Creator Points et chronique.
 10. Contenu du MVP, puis première version pour les testeurs.
 

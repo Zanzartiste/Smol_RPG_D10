@@ -3,9 +3,11 @@ extends Control
 ## La zone de droite affiche tour à tour le hub (choix du lieu), un événement, le lancer de dés,
 ## son résultat, un combat ou la mort.
 ## Raccourcis : touches 1 à 9 pour choisir une option ; n'importe quelle touche accélère les dés ;
-## F12 active ou désactive le mode debug (choix verrouillés visibles).
+## F12 active ou désactive le mode debug (choix verrouillés visibles) ; Échap sauvegarde et revient au menu.
+## La partie est sauvegardée automatiquement (voir Saves), et aussi à la fermeture de la fenêtre.
 
 const CREATION_SCENE := "res://scenes/creation.tscn"
+const TITLE_SCENE := "res://scenes/title.tscn"
 const MAX_CHOICES_HEIGHT := 330  # au-delà, la liste de choix défile
 
 
@@ -31,9 +33,13 @@ func _ready() -> void:
 	Game.debug_changed.connect(_on_debug_changed)
 	_setup_debug_badge()
 	if Game.life == null or Game.life.dead:
-		Game.new_life()  # scène lancée directement, sans passer par la création
+		if not Saves.load_life():
+			Game.new_life()  # scène lancée directement, sans sauvegarde ni création
 	_refresh_sheet()
 	_show_hub()
+	# Un combat interrompu (jeu fermé pendant la bataille) reprend immédiatement.
+	if not Game.life.pending_combat.is_empty():
+		_run_combat.call_deferred(Game.life.pending_combat)
 	if not DB.errors.is_empty():
 		body_text.text += "\n\n[color=%s]%s\n%s[/color]" % [
 			UITheme.BAD.to_html(false), tr("Erreurs dans les données :"), "\n".join(PackedStringArray(DB.errors))]
@@ -45,6 +51,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	if key.keycode == KEY_F12:
 		Game.toggle_debug()
+		accept_event()
+		return
+	if key.keycode == KEY_ESCAPE and not dice_tray.is_playing():
+		_on_menu()
 		accept_event()
 		return
 	if dice_tray.is_playing():
@@ -63,6 +73,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 func _show_hub() -> void:
 	# Un membre du groupe a gagné une amélioration en montant de niveau : on la lui fait choisir d'abord.
+	Saves.save_all()
 	for member in Game.life.party():
 		if member.can_increase_ability():
 			_show_ability_choice(member)
@@ -138,6 +149,7 @@ func _show_death() -> void:
 	body_text.text += "\n\n" + tr("Vies vécues dans ce monde : %d") % Meta.chronicle.size()
 	_clear_choices()
 	_add_choice(tr("Commencer une nouvelle vie"), _on_new_life)
+	_add_choice(tr("Menu principal"), _on_menu)
 
 
 func _show_ability_choice(member: Character) -> void:
@@ -205,6 +217,22 @@ func _on_continue(goto: String) -> void:
 			_show_death()
 		else:
 			_show_hub()
+
+
+## Sauvegarde et retour à l'écran titre. Un événement en cours sera repris depuis le hub ;
+## un combat déclenché reprendra au chargement.
+func _on_menu() -> void:
+	if combat_view.visible:
+		return
+	Saves.save_all()
+	get_tree().change_scene_to_file(TITLE_SCENE)
+
+
+func _notification(what: int) -> void:
+	# Fermeture de la fenêtre : on sauvegarde (sauf en plein combat : la sauvegarde d'avant le combat
+	# le fera reprendre au chargement).
+	if what == NOTIFICATION_WM_CLOSE_REQUEST and Game.life != null and combat_view != null and not combat_view.visible:
+		Saves.save_all()
 
 
 func _on_new_life() -> void:

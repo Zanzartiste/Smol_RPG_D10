@@ -353,3 +353,52 @@ func remove_item(item_id: String, count := 1) -> int:
 	else:
 		inventory.erase(item_id)
 	return removed
+
+
+# --- Sauvegarde ----------------------------------------------------------------
+
+func to_dict() -> Dictionary:
+	return {
+		"name": name, "species_id": species_id, "class_id": class_id, "background_id": background_id,
+		"gender": gender, "abilities": abilities, "feats": feats, "pending_feats": pending_feats,
+		"pending_ability_points": pending_ability_points, "equipment": equipment, "defenses": defenses.to_dict(),
+		"level": level, "xp": xp, "hp": hp, "max_hp": max_hp, "gold": gold, "inventory": inventory,
+		"start_age": start_age, "age_days": age_days, "art_seed": art_seed, "template_id": template_id,
+		"resources": resources,
+	}
+
+
+## Recrée un personnage sauvegardé. Le JSON ne distingue pas entiers et décimaux : on reconvertit.
+static func from_dict(data: Dictionary) -> Character:
+	var c := Character.new()
+	c.name = data.get("name", "")
+	c.species_id = data.get("species_id", "")
+	c.class_id = data.get("class_id", "")
+	c.background_id = data.get("background_id", "")
+	c.gender = data.get("gender", "nonbinary")
+	c.abilities = _int_dict(data.get("abilities", {}))
+	c.feats.assign(data.get("feats", []))
+	c.pending_feats = int(data.get("pending_feats", 0))
+	c.pending_ability_points = int(data.get("pending_ability_points", 0))
+	c.equipment = data.get("equipment", {})
+	c.defenses = Defenses.from_dict(data.get("defenses", {}))
+	c.level = int(data.get("level", 1))
+	c.xp = int(data.get("xp", 0))
+	c.hp = int(data.get("hp", 1))
+	c.max_hp = int(data.get("max_hp", 1))
+	c.gold = int(data.get("gold", 0))
+	c.inventory = _int_dict(data.get("inventory", {}))
+	c.start_age = int(data.get("start_age", 18))
+	c.age_days = int(data.get("age_days", 0))
+	c.art_seed = int(data.get("art_seed", 0))
+	c.template_id = data.get("template_id", "")
+	c.resources = _int_dict(data.get("resources", {}))
+	return c
+
+
+static func _int_dict(data: Variant) -> Dictionary:
+	var result := {}
+	if typeof(data) == TYPE_DICTIONARY:
+		for key in data:
+			result[key] = int(data[key])
+	return result
