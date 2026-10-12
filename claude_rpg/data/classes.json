@@ -29,7 +29,7 @@
 		"ability_priority": ["int", "con", "dex", "wis", "cha", "str"],
 		"saving_throws": ["int", "wis"],
 		"skills": ["arcana", "investigation", "medicine"],
-		"equipment": {"main_hand": "quarterstaff"},
+		"equipment": {"main_hand": "quarterstaff", "armor": "robe"},
 		"spellcasting": "int",
 		"spell_slots": "full",
 		"actions": ["weapon_attack", "fire_bolt", "ray_of_frost", "magic_missile", "burning_hands", "mage_shield", "find_familiar"],

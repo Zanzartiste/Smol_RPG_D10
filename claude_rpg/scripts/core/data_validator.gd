@@ -79,7 +79,9 @@ static func _validate_rule_tables(db: Node, errors: Array[String]) -> void:
 					errors.append(ctx + " : arme polyvalente sans versatile_damage valide")
 			"armor":
 				if item.get("armor_type") not in Equipment.ARMOR_TYPE_NAMES:
-					errors.append(ctx + " : armor_type doit valoir light, medium ou heavy")
+					errors.append(ctx + " : armor_type doit valoir clothing, light, medium ou heavy")
+				elif not item.has("strength") and not db.rules.get("armor_strength", {}).has(item.get("armor_type")):
+					errors.append(ctx + " : aucune Force requise définie pour « %s » (rules.json › armor_strength)" % item.get("armor_type"))
 				if not item.has("base_ac"):
 					errors.append(ctx + " : base_ac manquant")
 			"shield", "accessory":

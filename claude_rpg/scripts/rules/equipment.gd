@@ -7,7 +7,9 @@ extends RefCounted
 ## Arme  : {"category": "weapon", "damage": "1d8", "damage_type": "slashing",
 ##          "properties": ["finesse", "light", "thrown", "versatile", "heavy", "two_handed", "ranged"],
 ##          "versatile_damage": "1d10"}
-## Armure : {"category": "armor", "armor_type": "light" | "medium" | "heavy", "base_ac": 11}
+## Armure : {"category": "armor", "armor_type": "clothing" | "light" | "medium" | "heavy", "base_ac": 11,
+##           "strength"?: N}  Force minimale pour la porter ; par défaut celle de son type
+##           (rules.json › armor_strength : vêtements 0, légère 10, intermédiaire 12, lourde 14).
 ## Bouclier : {"category": "shield", "ac_bonus": 2}
 ## Accessoire : {"category": "accessory", "slot": "cloak" | "amulet" | "ring"}
 ## Facultatif pour tous : "modifiers" (voir Modifiers), "rarity", "value", "description" (voir Items).
@@ -27,7 +29,7 @@ const PROPERTY_NAMES := {
 	"finesse": "finesse", "light": "légère", "thrown": "lancer", "versatile": "polyvalente",
 	"heavy": "lourde", "two_handed": "à deux mains", "ranged": "à distance",
 }
-const ARMOR_TYPE_NAMES := {"light": "légère", "medium": "intermédiaire", "heavy": "lourde"}
+const ARMOR_TYPE_NAMES := {"clothing": "vêtement", "light": "légère", "medium": "intermédiaire", "heavy": "lourde"}
 
 
 static func ids() -> Array[String]:
@@ -109,7 +111,18 @@ static func attack_ability(id: String, str_mod: int, dex_mod: int) -> String:
 	return "str"
 
 
-## Classe d'armure : sans armure 10 + DEX ; légère base + DEX ; intermédiaire base + DEX (max 2) ;
+## Force minimale pour porter un équipement (0 si aucune) : "strength" de l'objet, sinon celle de son
+## type d'armure (rules.json › armor_strength).
+static func strength_required(id: String) -> int:
+	var item := def(id)
+	if item.has("strength"):
+		return int(item["strength"])
+	if is_armor(id):
+		return int(DB.rules.get("armor_strength", {}).get(item.get("armor_type", ""), 0))
+	return 0
+
+
+## Classe d'armure : sans armure 10 + DEX ; vêtements et armure légère base + DEX ; intermédiaire base + DEX (max 2) ;
 ## lourde base seule ; + bonus du bouclier.
 static func armor_class(armor_id: String, shield_id: String, dex_mod: int) -> int:
 	var ac := 10 + dex_mod
@@ -117,7 +130,7 @@ static func armor_class(armor_id: String, shield_id: String, dex_mod: int) -> in
 		var armor := def(armor_id)
 		var base := int(armor.get("base_ac", 10))
 		match armor.get("armor_type", "light"):
-			"light":
+			"clothing", "light":
 				ac = base + dex_mod
 			"medium":
 				ac = base + mini(dex_mod, MEDIUM_ARMOR_DEX_CAP)
@@ -147,8 +160,11 @@ static func describe(id: String) -> String:
 				props.append(label)
 			return text + (" (%s)" % ", ".join(props) if not props.is_empty() else "")
 		"armor":
-			return "%s — CA %d (%s)" % [item["name"], int(item.get("base_ac", 10)),
+			var text := "%s — CA %d (%s)" % [item["name"], int(item.get("base_ac", 10)),
 				ARMOR_TYPE_NAMES.get(item.get("armor_type", "light"), "")]
+			if strength_required(id) > 0:
+				text += Loc.ui(", FOR %d requise") % strength_required(id)
+			return text
 		"shield":
 			return "%s — CA +%d" % [item["name"], int(item.get("ac_bonus", 2))]
 		"accessory":

@@ -13,6 +13,8 @@
 	{"id": "shortbow", "name": "Arc court", "category": "weapon", "damage": "1d6", "damage_type": "piercing", "properties": ["ranged", "two_handed"]},
 	{"id": "longbow", "name": "Arc long", "category": "weapon", "damage": "1d8", "damage_type": "piercing", "properties": ["ranged", "heavy", "two_handed"]},
 
+	{"id": "clothes", "name": "Vêtements ordinaires", "category": "armor", "armor_type": "clothing", "base_ac": 10, "value": 1},
+	{"id": "robe", "name": "Robe d'érudit", "category": "armor", "armor_type": "clothing", "base_ac": 10, "value": 2},
 	{"id": "padded", "name": "Armure matelassée", "category": "armor", "armor_type": "light", "base_ac": 11},
 	{"id": "leather", "name": "Armure de cuir", "category": "armor", "armor_type": "light", "base_ac": 11},
 	{"id": "studded_leather", "name": "Cuir clouté", "category": "armor", "armor_type": "light", "base_ac": 12},

@@ -24,6 +24,7 @@ const TESTS := [
 	"_test_spell_progression",
 	"_test_class_features",
 	"_test_inventory",
+	"_test_armor_strength",
 	"_test_combat",
 	"_test_combat_turns",
 	"_test_companions",
@@ -799,6 +800,30 @@ func _test_inventory() -> bool:
 	_expect(saved.equipment.get("cloak", "") == "" and saved.equipment["ring"] == "ring_fire_resistance",
 		"sauvegarde : accessoires équipés")
 	Game.combat = null
+	return true
+
+
+func _test_armor_strength() -> bool:
+	_expect(Equipment.strength_required("robe") == 0 and Equipment.strength_required("leather") == 10
+		and Equipment.strength_required("chain_shirt") == 12 and Equipment.strength_required("plate") == 14
+		and Equipment.strength_required("longsword") == 0, "Force requise : vêtements 0, légère 10, intermédiaire 12, lourde 14")
+	_expect(Equipment.describe("chain_mail").ends_with("FOR 14 requise"), "description : Force requise")
+
+	var weak := {"str": 8, "dex": 15, "con": 14, "int": 10, "wis": 12, "cha": 13}
+	var fighter := Character.create("human", "fighter", "Fluet", {"abilities": weak})
+	_expect(not fighter.equipment.has("armor") and fighter.item_count("chain_mail") == 1,
+		"création : l'armure trop lourde reste dans le sac")
+	_expect(fighter.wear_problem("chain_mail") == "Force 14 requise (vous avez 8)" and fighter.can_wear("robe"), "raison affichée")
+	var strong := Character.create("human", "fighter", "Costaud")
+	_expect(strong.equipment["armor"] == "chain_mail", "guerrier au modèle (FOR 17) : cotte de mailles portée")
+
+	Game.start_life(fighter, 71)
+	_expect(not Game.life.equip(fighter, "chain_mail") and fighter.item_count("chain_mail") == 1, "équiper : refusé sans la Force")
+	fighter.abilities["str"] = 14
+	_expect(Game.life.equip(fighter, "chain_mail") and fighter.equipment["armor"] == "chain_mail", "équiper : accepté avec FOR 14")
+	fighter.abilities["str"] = 8
+	Effects.apply_all([{"type": "equip", "id": "plate"}], Game.life, Meta)
+	_expect(fighter.equipment["armor"] == "chain_mail" and fighter.item_count("plate") == 1, "effet equip : trop lourd, rangé dans le sac")
 	return true
 
 

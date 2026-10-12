@@ -77,6 +77,13 @@
 		{"id": "venerable", "name": "Vénérable"}
 	],
 	"start_gold": 15,
+	"armor_strength": {
+		"_doc": "Force minimale pour porter une armure, selon son type (un objet peut la redéfinir avec \"strength\").",
+		"clothing": 0,
+		"light": 10,
+		"medium": 12,
+		"heavy": 14
+	},
 	"max_companions": 3,
 	"combat": {
 		"side_capacity": 4,

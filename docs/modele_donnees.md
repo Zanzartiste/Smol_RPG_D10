@@ -389,7 +389,7 @@ Les dons, les espèces et les équipements peuvent porter des `modifiers`. Ils s
 | Catégorie | Champs |
 |---|---|
 | `weapon` | `damage`, `damage_type`, `properties` (`finesse`, `light`, `thrown`, `versatile`, `heavy`, `two_handed`, `ranged`), `versatile_damage` pour une arme polyvalente |
-| `armor` | `armor_type` (`light` : base + DEX, `medium` : base + DEX max 2, `heavy` : base seule), `base_ac` |
+| `armor` | `armor_type` (`clothing` et `light` : base + DEX, `medium` : base + DEX max 2, `heavy` : base seule), `base_ac`, `strength`? (Force requise, voir ci-dessous) |
 | `shield` | `ac_bonus` |
 | `accessory` | `slot` : `cloak` (cape), `amulet` (amulette) ou `ring` (anneau) |
 
@@ -419,6 +419,10 @@ la couleur du nom), `value` (prix en po), `description`.
 - Une arme polyvalente tenue sans bouclier fait ses dégâts à deux mains.
 - Une arme à deux mains et un bouclier s'excluent.
 - L'entrée `unarmed` (mains nues) est obligatoire.
+- **Force requise** pour porter une armure, selon son type (`rules.json › armor_strength`) : vêtements 0, légère 10,
+  intermédiaire 12, lourde 14. Un objet peut la redéfinir avec `strength`. Sans la Force, on ne peut pas l'équiper
+  (bouton grisé avec la raison) ; à la création, l'armure de la classe reste alors dans le sac, et l'effet `equip`
+  d'un événement la range aussi dans le sac. Une armure déjà portée reste portée si la Force baisse ensuite.
 
 ### Défenses
 

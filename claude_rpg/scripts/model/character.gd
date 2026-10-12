@@ -44,10 +44,17 @@ static func create(species: String, cls: String, char_name: String, options: Dic
 		scores = PointBuy.from_class(cls).final_scores()
 	for ability in Abilities.ids():
 		c.abilities[ability] = int(scores.get(ability, 10))
-	c.equipment = class_data.get("equipment", {}).duplicate()
 	var background_feat := Feats.for_background(c.background_id)
 	if background_feat != "":
 		c.feats.append(background_feat)
+	# Équipement de la classe : ce que le personnage n'a pas la force de porter reste dans le sac.
+	var class_equipment: Dictionary = class_data.get("equipment", {})
+	for slot: String in class_equipment:
+		var item_id: String = class_equipment[slot]
+		if c.wear_problem(item_id) == "":
+			c.equipment[slot] = item_id
+		else:
+			c.add_item(item_id)
 
 
 	c.max_hp = c.compute_max_hp()
@@ -232,6 +239,19 @@ func choose_feat(feat_id: String) -> bool:
 
 
 # --- Équipement --------------------------------------------------------------
+
+## Raison pour laquelle le personnage ne peut pas porter un équipement ("" s'il le peut).
+func wear_problem(item_id: String) -> String:
+	var required := Equipment.strength_required(item_id)
+	var strength := ability_score("str")
+	if strength < required:
+		return Loc.ui("Force %d requise (vous avez %d)") % [required, strength]
+	return ""
+
+
+func can_wear(item_id: String) -> bool:
+	return wear_problem(item_id) == ""
+
 
 func weapon_id() -> String:
 	return equipment.get("main_hand", Equipment.UNARMED)

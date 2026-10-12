@@ -179,7 +179,14 @@ func _fill_bag() -> void:
 		label.tooltip_text = Items.description_of(item_id)
 		row.add_child(label)
 		if Items.is_equipment(item_id):
-			row.add_child(_small_button(tr("Équiper"), _on_equip.bind(item_id)))
+			var equip := _small_button(tr("Équiper"), _on_equip.bind(item_id))
+			var problem := _member.wear_problem(item_id)
+			equip.disabled = problem != ""
+			equip.tooltip_text = problem
+			row.add_child(equip)
+			if problem != "":
+				label.text += "\n[font_size=14][color=%s]%s : %s[/color][/font_size]" % [UITheme.BAD.to_html(false),
+					_member.name, problem]
 		if Items.is_usable_outside_combat(item_id):
 			var use := _small_button(tr("Utiliser"), _on_use.bind(item_id))
 			use.disabled = _member.hp >= _member.max_hp
