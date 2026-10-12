@@ -17,8 +17,9 @@ dans la console Godot. Les tests automatisés le signalent aussi.
 | `classes.json` | Classes : dé de vie, modèle d'attributs, compétences maîtrisées, objets de départ |
 | `backgrounds.json` | Passés : compétences maîtrisées, or et objets de départ éventuels |
 | `items.json` | Objets (`use` : utilisable en combat, ex. `{"heal": "2d4+2"}`) |
-| `enemies.json` | Ennemis : CA, PV, attaques, XP, butin, apparence |
-| `actions.json` | Actions de combat des classes (attaques, sorts, soins) |
+| `creatures.json` | Bestiaire : ennemis et invocations (API `Creatures`) |
+| `cards.json` | Cartes de combat (API `Cards`) |
+| `mana_colors.json` | Couleurs de mana (API `Mana`) |
 | `companions.json` | Compagnons recrutables |
 | `locations.json` | Lieux proposés au joueur (l'ordre du fichier est l'ordre d'affichage) |
 | `events/*.json` | Événements, un fichier par lieu ou par thème (tous les `.json` du dossier sont chargés) |
@@ -131,7 +132,8 @@ Chaque condition est un objet avec un champ `type`. Une liste de conditions est 
 | `goto` | `event` | Enchaîne directement sur un autre événement, après le bouton « Continuer » |
 | `pass_time` | `slots`?, `days`? | Fait passer du temps en plus |
 | `die` | `cause`? | Tue le personnage |
-| `long_rest` | — | Repos long : PV et ressources (emplacements de sort) du groupe au maximum |
+| `long_rest` | — | Repos long : PV du groupe au maximum |
+| `add_card` | `id`, `count`? | Ajoute une carte à la collection et au deck |
 | `recruit` | `companion` | Le compagnon rejoint le groupe (dans la limite de `max_companions`) |
 | `combat` | `enemies`, … | Lance un combat (voir plus bas). **Doit être le dernier effet de la liste** |
 | `add_feat` | `id` | Le personnage obtient un don |
@@ -157,51 +159,123 @@ Un combat se lance avec l'effet `combat` :
 
 | Champ | Description |
 |---|---|
-| `enemies` | Ids d'`enemies.json`. Les doublons sont numérotés (Brigand A, Brigand B) |
+| `enemies` | Ids de `creatures.json`. Les doublons sont numérotés (Brigand A, Brigand B). Le total des places ne doit pas dépasser la capacité d'un camp |
 | `flee` (true), `flee_dc` (12) | La fuite est-elle possible, et son DD (d20 + DEX) |
 | `on_defeat` | `death` (par défaut) : le héros à 0 PV meurt, les compagnons à 0 PV aussi. `knockout` : tout le monde se relève à 1 PV, comme pour une bagarre de taverne |
 | `victory` / `fled` / `defeat` | Texte et effets de chaque issue. `defeat` ne sert qu'en `knockout` |
 
-**Déroulement :**
-- **Initiative** : chacun lance d20 + DEX, puis le groupe et les ennemis agissent dans cet ordre.
-- **Attaque** : d20 + bonus contre la CA de la cible. Un 20 naturel est un critique (dés de dégâts doublés), un 1 naturel
-  rate toujours.
-- **Bonus d'attaque d'un allié** : le modificateur de l'attribut, plus la maîtrise.
-- **Récompenses à la victoire** : l'XP de tous les ennemis va à chaque membre du groupe encore debout, et l'or et le
-  butin s'ajoutent.
+### Déroulement
 
-**Équilibrage :** `tools/combat_bench.tscn` joue chaque rencontre des centaines de fois et affiche le taux de victoire,
-par classe, en solo et avec un compagnon.
+Les réglages sont dans `rules.json › combat`.
 
-### Ennemis (`enemies.json`)
+- **Initiative** : chacun lance d20 + DEX (+ bonus d'initiative).
+- **Début de chaque tour** : les états agissent (poison, brûlure…) puis perdent leurs charges. Un combattant étourdi
+  passe son tour.
+- **Tour du héros** :
+  - il reçoit son mana du tour (voir plus bas) et pioche `draw_per_turn` carte(s), sauf au premier tour ;
+  - il joue autant de cartes que son mana le permet ;
+  - il fait `basic_actions_per_turn` action(s) de base : l'attaque (avec son arme, ou l'attaque propre à sa classe
+    décrite par `classes.json › basic_attack`, comme le tour de magie du Magicien) ou l'utilisation d'un objet ;
+  - il peut aussi tenter de fuir, ce qui termine son tour.
+- **Autres combattants** : ennemis, compagnons et invocations jouent seuls (IA). Un ennemi qui tire une action
+  `prepared` l'annonce (« Prépare : … », visible au-dessus de lui), puis l'exécute à son tour suivant.
+- **Attaque** : d20 + bonus contre la CA. Un 20 naturel est un critique (dés doublés), un 1 naturel rate toujours.
+- **Places** : chaque camp a `side_capacity` places (4). Une créature en occupe `size_slots[taille]` : ½ pour une petite,
+  1 pour une moyenne, 2 pour une grande. Sa taille à l'écran suit `sprite_scale`.
+- **Récompenses à la victoire** : l'XP de tous les ennemis va à chaque membre du groupe encore debout. L'or, le butin
+  (`loot`) et les cartes (`loot_cards`, ajoutées à la collection et au deck) s'y ajoutent.
+
+**Équilibrage :** `tools/combat_bench.tscn` joue chaque rencontre des centaines de fois. Il affiche le taux de
+victoire par classe, seul et avec un compagnon, ainsi que la durée moyenne en rounds.
+
+### Deck et mana (façon Magic: The Gathering)
+
+Seul le héros a un deck. Les compagnons et les invocations jouent avec leurs actions d'IA.
+
+- **Collection** : les cartes possédées. La classe (`cards`), l'espèce, le passé, les dons, l'équipement (`cards` dans
+  chacun), le butin (`loot_cards`) et les événements (`add_card`) la complètent.
+- **Deck** : composé à partir de la collection (au moins `deck_min_size` cartes, 40), depuis le hub (« Composer son
+  deck »). Une nouvelle carte entre directement dans le deck. Le joueur peut l'en retirer.
+- **Main de départ** : max(1, modificateur d'INT) cartes. Une pioche par tour ensuite, et la main est limitée à
+  `max_hand_size` (7). Quand la pioche est vide, la défausse est remélangée.
+- **Coût** d'une carte : `{1}` générique (n'importe quel mana), `{C}` incolore, `{W}` `{U}` `{B}` `{R}` `{G}` colorés.
+  Les couleurs sont dans `mana_colors.json`.
+- **Mana du tour** : au N-ième tour du héros, il reçoit N mana (plafonné à `max_mana`), réparti selon la part de
+  chaque couleur dans le deck. Chaque part est arrondie à l'inférieur, et le reste devient du mana incolore
+  (« générique »). Le mana non dépensé est perdu. Par exemple, avec un deck 50 % blanc / 50 % vert :
+  - tour 1 : `{C}` ;
+  - tour 2 : `{W}{G}` ;
+  - tour 3 : `{W}{G}{C}`.
+
+### Cartes (`cards.json`)
+
+```json
+{
+	"id": "rend",
+	"name": "Entaille",
+	"cost": "{R}",
+	"type": "maneuver",
+	"rarity": "common",
+	"target": "enemy",
+	"effects": [{"type": "attack", "weapon": true}, {"type": "status", "status": "weakened", "stacks": 1}],
+	"art": {"icon": "claw"}
+}
+```
+
+| Champ | Description |
+|---|---|
+| `type` | `spell` (Sort), `maneuver` (Manœuvre), `summon` (Invocation) |
+| `rarity` | `common`, `uncommon`, `rare`, `mythic` |
+| `target` | `enemy`, `all_enemies`, `ally`, `all_allies`, `self`, `none` |
+| `effects` | Effets de combat (ci-dessous). Le texte de la carte en est **généré automatiquement**, sauf si `text` est fourni |
+| `art.icon` | Icône du placeholder : `sword`, `swords`, `dagger`, `claw`, `boot`, `horn`, `heart`, `shield`, `star`, `fist`, `flame`, `bolt`, `snowflake`, `eye`, `feather`, `orb`, `drop`, `skull`, `mask`, `wind`, `smoke`, `arrow`, `paw` |
+
+### Effets de combat
+
+Ils sont communs aux cartes, aux actions des créatures, à celles des compagnons et aux attaques de base.
+
+| type | Champs | Effet |
+|---|---|---|
+| `attack` | `weapon: true` (arme du héros ou du compagnon), ou `weapon: "<id>"` (arme du catalogue), ou `damage` + `damage_type` ; `ability`? (`spell`…), `to_hit`? (créatures), `extra_damage`?, `add_mod`? | Jet d'attaque contre la CA, puis dégâts. **Les effets qui suivent ne s'appliquent que si l'attaque touche** |
+| `damage` | `damage`, `damage_type` | Dégâts automatiques |
+| `heal` | `amount` (`level` = niveau) | Soins |
+| `status` | `status`, `stacks` | Ajoute des charges d'état (sauf immunité) |
+| `cleanse` | `status` (ou `negative`) | Retire un état, ou tous les états négatifs |
+| `draw` | `count` | Le héros pioche |
+| `summon` | `creature` | Invoque une créature dans son camp (s'il reste de la place) |
+
+### États (`status_effects.json`)
+
+Les états se cumulent en charges. Leur mécanique est entièrement décrite dans les données :
+
+| Champ | Effet |
+|---|---|
+| `tick_damage_per_stack` | Dégâts **bruts** par charge au début du tour (ignorent défenses et Protection), comme le Poison |
+| `tick_max_hp_percent_per_stack` | Dégâts en % des PV max par charge (au moins 1 par charge), comme la Brûlure |
+| `tick_damage_type` | Type des dégâts de tick (les défenses s'appliquent alors) |
+| `skip_turn` | Passe son tour (Étourdi) |
+| `damage_dealt_per_stack` | Modifie les dégâts infligés (Affaibli : -1 par charge) |
+| `absorb` | Chaque charge absorbe 1 point de dégâts (Protection) |
+| `decay` / `decay_at` | Charges perdues par tour (un nombre, ou `all`), au début (`start`) ou à la fin (`end`) du tour |
+| `negative`, `death_cause`, `color` | État négatif (pour `cleanse`), texte de mort, couleur de la pastille |
+
+### Créatures (`creatures.json`)
+
+Ce fichier regroupe les ennemis et les invocations.
 
 | Champ | Description |
 |---|---|
 | `ac`, `hp` | Classe d'armure, et PV sous forme d'expression de dés (`2d6+2`), tirés à chaque combat |
 | `abilities` | Attributs (la DEX sert à l'initiative) |
-| `attacks` | `[{"name", "to_hit", "damage", "damage_type"}]`, ou `[{"name", "to_hit", "weapon": "scimitar", "damage_bonus"?}]` pour reprendre une arme du catalogue. L'ennemi choisit une attaque au hasard et vise un membre du groupe au hasard |
-| `defenses` | Résistances, immunités et vulnérabilités : `{"resistances": ["slashing"], "immunities": [], "vulnerabilities": [], "status_immunities": []}` |
-| `size` | Taille (`small`, `medium`, `large`…), qui détermine la taille du sprite |
-| `xp`, `gold`?, `loot`? | Récompenses. `loot` : `[{"item", "chance", "count"?}]` |
-| `death_cause` | Texte de l'écran de mort si l'ennemi tue le héros |
+| `size` | Taille : places occupées et taille du sprite |
+| `actions` | `[{"name", "weight", "target", "prepared"?, "effects"}]` : l'IA tire une action selon les poids. `prepared` : annoncée un tour à l'avance |
+| `xp`, `gold`?, `loot`?, `loot_cards`? | Récompenses. `loot_cards` : `[{"card", "chance", "count"?}]` |
+| `defenses` | Résistances, immunités et vulnérabilités (voir Défenses) |
+| `death_cause` | Texte de l'écran de mort si la créature tue le héros |
+| `summon` | `true` pour une invocation |
 | `art` | Placeholder : `{"type": "wolf" \| "rat" \| "humanoid", …}` |
 
-### Actions de combat (`actions.json`)
-
-| Champ | Description |
-|---|---|
-| `type` | `attack` (jet contre la CA), `auto` (touche toujours) ou `heal` |
-| `target` | `enemy`, `ally` ou `self` |
-| `ability` | `weapon` (attribut de l'arme), `spell` (attribut d'incantation de la classe) ou un id d'attribut |
-| `damage` | Expression de dés, ou `weapon` pour les dégâts de l'arme. `add_mod` : ajoute le modificateur. `extra_damage` : dés en plus |
-| `damage_type` | Type de dégâts (`fire`, `force`…), ou `weapon` pour celui de l'arme |
-| `heal` | Expression de soins (`level` = niveau du personnage) |
-| `per_combat` | Nombre d'utilisations par combat |
-| `cost` | Ressource consommée (ex. `spell_slot`), rechargée par `long_rest` |
-
-Les classes déclarent `equipment` (`{"main_hand": "longsword", "armor": "chain_mail", "off_hand": "shield"}`, ids de
-`equipment.json`), `actions`, et selon le cas
-`spellcasting` (attribut) et `resources` (ex. `{"spell_slot": 2}`).
+Les compagnons utilisent les `companion_actions` de leur classe (même format que les actions des créatures).
 
 ### Expressions de dés
 
@@ -221,7 +295,11 @@ suivent automatiquement.
 | `Feats` | `feats.json` | `ids()`, `name_of(id)`, `modifiers_of(id)`, `meets_prerequisites(id, personnage)` |
 | `Equipment` | `equipment.json` | `name_of(id)`, `slot_for(id)`, `weapon_damage(id, deux_mains)`, `damage_type_of(id)`, `attack_ability(id, mod_FOR, mod_DEX)`, `armor_class(armure, bouclier, mod_DEX)`, `describe(id)` |
 | `DamageTypes` | `damage_types.json` | `ids()`, `name_of(id)`, `is_physical(id)`, `apply(dégâts, type, défenses)` |
-| `StatusEffects` | `status_effects.json` | `ids()`, `name_of(id)` |
+| `StatusEffects` | `status_effects.json` | `ids()`, `name_of(id)`, `tick_damage()`, `skips_turn()`, `absorbs()`… |
+| `Cards` | `cards.json` | `name_of(id)`, `cost_of(id)`, `colors_of(id)`, `text_of(id)`, `effects_of(id)` |
+| `Mana` | `mana_colors.json` | `parse(coût)`, `can_pay()`, `pay()`, `deck_shares(deck)`, `generate(n, parts)` |
+| `Creatures` | `creatures.json` | `def(id)`, `name_of(id)`, `size_of(id)`, `actions_of(id)` |
+| `Progression` | `rules.json` | `xp_for(niveau)`, `proficiency_bonus(niveau)`, `advancement_levels()` |
 | `Modifiers` | — | `sum(...)`, `grants(...)`, `defenses(...)`, `describe(...)` : interprète les modificateurs |
 | `Defenses` | — | `from_dict()`, `to_dict()`, `add()`, `remove()`, `has()`, `merge()`, `describe()` |
 

@@ -25,7 +25,16 @@
 	],
 	"start_gold": 15,
 	"max_companions": 3,
-	"max_enemies": 4,
+	"combat": {
+		"side_capacity": 4,
+		"size_slots": {"tiny": 0.5, "small": 0.5, "medium": 1, "large": 2, "huge": 3},
+		"sprite_scale": {"tiny": 0.4, "small": 0.5, "medium": 1, "large": 2, "huge": 2.5},
+		"deck_min_size": 40,
+		"max_hand_size": 7,
+		"draw_per_turn": 1,
+		"max_mana": 10,
+		"basic_actions_per_turn": 1
+	},
 	"xp_by_level": [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000],
 	"proficiency_by_level": [2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6],
 	"advancement_levels": [4, 8, 12, 16, 20],

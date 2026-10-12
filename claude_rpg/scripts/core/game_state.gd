@@ -74,15 +74,21 @@ func finish_combat() -> Dictionary:
 	if c.outcome == "victory":
 		var xp := 0
 		for enemy in c.enemies():
-			xp += int(enemy.enemy.get("xp", 0))
-			if enemy.enemy.has("gold"):
-				var gold := maxi(0, int(Dice.roll_expr(enemy.enemy["gold"], life.rng)["total"]))
+			var creature := enemy.creature
+			xp += int(creature.get("xp", 0))
+			if creature.has("gold"):
+				var gold := maxi(0, int(Dice.roll_expr(creature["gold"], life.rng)["total"]))
 				life.character.gold += gold
 				lines.append(Loc.ui("Butin : %d po") % gold)
-			for loot: Dictionary in enemy.enemy.get("loot", []):
+			for loot: Dictionary in creature.get("loot", []):
 				if life.rng.randf() < float(loot.get("chance", 1.0)):
 					life.character.add_item(loot["item"], int(loot.get("count", 1)))
 					lines.append(Loc.ui("Butin : %s ×%d") % [DB.items[loot["item"]]["name"], int(loot.get("count", 1))])
+			# Cartes de butin : ajoutées à la collection et au deck.
+			for loot: Dictionary in creature.get("loot_cards", []):
+				if life.rng.randf() < float(loot.get("chance", 1.0)):
+					life.character.add_cards({loot["card"]: int(loot.get("count", 1))})
+					lines.append(Loc.ui("Nouvelle carte : %s !") % Cards.name_of(loot["card"]))
 		# Chaque membre du groupe encore debout gagne toute l'XP.
 		for member in life.party():
 			if member.hp > 0 and xp > 0:

@@ -2,10 +2,13 @@ extends Node
 ## Banc d'équilibrage : joue chaque rencontre des événements de nombreuses fois en automatique,
 ## pour chaque classe (PV pleins, seul ou avec Mira), et affiche le taux de victoire.
 ##   godot --headless --path . res://tools/combat_bench.tscn
-## Les alliés jouent avec Combat.auto_choice() (meilleure attaque, ennemi le plus faible), sans fuite,
-## objets ni soins : c'est une estimation pessimiste.
+## Le héros joue avec Combat.auto_hero_turn() (cartes utiles puis attaque d'arme), les autres avec leur IA, sans fuite
+## ni objets : c'est une estimation pessimiste. Affiche aussi la durée moyenne en rounds.
 
 const RUNS := 300
+
+var _rounds := 0
+var _fights := 0
 ## Rencontre -> {ennemis, niveau du groupe}
 const ENCOUNTERS := {
 	"Rats (cave)": {"enemies": ["giant_rat", "giant_rat"], "level": 1},
@@ -42,16 +45,25 @@ func _ready() -> void:
 					if _fight(encounter["enemies"], life) == "victory":
 						wins += 1
 				line += "%11d%%" % roundi(100.0 * wins / RUNS)
-			print(line)
+			print(line + "   (%.1f rounds en moyenne)" % (float(_rounds) / maxi(1, _fights)))
+			_rounds = 0
+			_fights = 0
 	get_tree().quit()
 
 
 func _fight(enemies: Array, life: LifeState) -> String:
 	var combat := Combat.new({"enemies": enemies, "flee": false}, life)
 	var guard := 0
-	while not combat.is_over() and guard < 500:
+	while not combat.is_over() and guard < 300:
 		guard += 1
-		var choice := combat.auto_choice(combat.current())
-		combat.perform(combat.current(), choice["action"], choice["target"])
+		var actor := combat.current()
+		combat.start_turn()
+		if not combat.is_over() and not combat.skipped:
+			if actor.is_hero():
+				combat.auto_hero_turn()
+			else:
+				combat.ai_turn(actor)
 		combat.end_turn()
+	_rounds += combat.round_number
+	_fights += 1
 	return combat.outcome

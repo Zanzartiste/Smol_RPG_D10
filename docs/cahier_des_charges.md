@@ -231,7 +231,7 @@ Claude ne génère pas d'images lui-même. Il peut en revanche écrire le **guid
 | **Voyages** | Ils passent par des événements. On peut quitter une ville définitivement et ne jamais y revenir. |
 | **Métiers** | Une suite d'activités, comme « être aventurier » ne se résume pas à un bouton Combat. Certaines classes s'y prêtent mieux (Artificier pour l'artisanat, Alchimiste pour l'alchimie et la cuisine…). |
 | **Contenu** | Les événements sont générés au besoin. L'utilisateur fournira plus tard des campagnes, des suites de quêtes et son **lore**, déjà bien avancé. |
-| **Combat** | Chaque combattant a un **deck** façon MTG (sorts, manœuvres…), dans lequel il pioche les actions disponibles. Avec de vrais effets de statut. Conception en cours. |
+| **Combat** | Seul le héros a un **deck** façon MTG (40 cartes minimum, composé par le joueur). Mana coloré généré selon les couleurs du deck (N au tour N). Main de départ = mod INT (au moins 1). Les compagnons et invocations agissent par IA, et les ennemis ont des actions « préparées » visibles. États cumulables (poison, brûlure, étourdi, affaibli, protection). Détails dans modele_donnees.md › Combat. |
 | **Équipement** | Il s'obtient par le butin, l'achat et la forge. |
 | **Difficulté** | La mortalité dépend des risques pris par le joueur. |
 | **Présentation** | Le style pixel art actuel convient, et le son viendra plus tard. |
@@ -246,7 +246,8 @@ Claude ne génère pas d'images lui-même. Il peut en revanche écrire le **guid
 5. ~~Écran de création de personnage~~ (espèce, genre, classe, passé, achat de points, nom, apparence), ~~lancers de
    dés animés~~ et ~~règles de vieillissement~~.
 6. ~~Ajouter le combat~~ : initiative, attaques contre la CA, critiques, sorts et emplacements, objets, fuite, compagnon contrôlé par le joueur, issues victoire / fuite / défaite (mortelle ou K.-O.), banc d'équilibrage.
-7. **Combat avec decks** (conception en cours), effets de statut, groupes de 4 contre 4 et sprites à l'échelle de la taille.
+7. ~~**Combat avec decks**~~ : mana façon MTG, cartes, composition du deck, états cumulables, intentions ennemies,
+   invocations, 4 places par camp, sprites à l'échelle de la taille. Reste : les réactions et les cartes hors combat.
 8. Sauvegarde (vie en cours et méta) et écran titre.
 9. Creator Points et chronique.
 10. Contenu du MVP, puis première version pour les testeurs.

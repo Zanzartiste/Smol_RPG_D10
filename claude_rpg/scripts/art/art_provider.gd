@@ -6,12 +6,14 @@ extends RefCounted
 ##   portraits : res://assets/portraits/<species>_<classe>_<étape>.png   (ex. goblin_wizard_adult.png)
 ##   événements : res://assets/events/<id_événement>.png
 ##   lieux      : res://assets/locations/<id_lieu>.png
-##   ennemis    : res://assets/enemies/<id_ennemi>.png
+##   créatures  : res://assets/creatures/<id_créature>.png
+##   cartes     : res://assets/cards/<id_carte>.png
 
 const PORTRAIT_DIR := "res://assets/portraits/"
 const EVENT_DIR := "res://assets/events/"
 const LOCATION_DIR := "res://assets/locations/"
-const ENEMY_DIR := "res://assets/enemies/"
+const CREATURE_DIR := "res://assets/creatures/"
+const CARD_DIR := "res://assets/cards/"
 
 static var _cache: Dictionary = {}
 
@@ -29,17 +31,44 @@ static func portrait(ch: Character) -> Texture2D:
 	return _cache[key]
 
 
-## Image d'un combattant : portrait pour un membre du groupe, sprite pour un ennemi
-## (res://assets/enemies/<id>.png s'il existe).
+## Image d'un combattant sur le champ de bataille : personnage détouré ou sprite de créature.
 static func combatant(c: Combatant) -> Texture2D:
 	if c.character != null:
-		return portrait(c.character)
-	var file: String = ENEMY_DIR + c.enemy["id"] + ".png"
+		return character_sprite(c.character)
+	return creature(c.creature["id"])
+
+
+## Sprite d'une créature du bestiaire (res://assets/creatures/<id>.png s'il existe).
+static func creature(creature_id: String) -> Texture2D:
+	var file: String = CREATURE_DIR + creature_id + ".png"
 	if ResourceLoader.exists(file):
 		return load(file)
-	var key: String = "enemy:" + c.enemy["id"]
+	var key: String = "creature:" + creature_id
 	if not _cache.has(key):
-		_cache[key] = ImageTexture.create_from_image(PixelArt.creature(c.enemy.get("art", {}), hash(c.enemy["id"])))
+		_cache[key] = ImageTexture.create_from_image(PixelArt.creature(Creatures.def(creature_id).get("art", {}), hash(creature_id)))
+	return _cache[key]
+
+
+## Sprite détouré d'un personnage (héros, compagnon) pour le champ de bataille.
+static func character_sprite(ch: Character) -> Texture2D:
+	var key := "sprite:%s:%s:%s:%d" % [ch.species_id, ch.class_id, ch.life_stage(), ch.art_seed]
+	if not _cache.has(key):
+		var species_art: Dictionary = DB.species[ch.species_id].get("art", {})
+		var class_art: Dictionary = DB.classes[ch.class_id].get("art", {})
+		_cache[key] = ImageTexture.create_from_image(PixelArt.portrait(species_art, class_art, ch.life_stage(), ch.art_seed, false))
+	return _cache[key]
+
+
+## Illustration d'une carte (res://assets/cards/<id>.png s'il existe, sinon icône pixel art).
+static func card_art(card_id: String) -> Texture2D:
+	var file: String = CARD_DIR + card_id + ".png"
+	if ResourceLoader.exists(file):
+		return load(file)
+	var key: String = "card:" + card_id
+	if not _cache.has(key):
+		var colors := Cards.colors_of(card_id)
+		var tint := Mana.color_value(colors[0]) if colors.size() == 1 else Cards.frame_color(card_id)
+		_cache[key] = ImageTexture.create_from_image(PixelArt.card_icon(Cards.def(card_id).get("art", {}).get("icon", ""), tint, hash(card_id)))
 	return _cache[key]
 
 

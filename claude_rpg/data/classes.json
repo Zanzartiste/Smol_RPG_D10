@@ -7,7 +7,26 @@
 		"ability_priority": ["str", "con", "dex", "wis", "cha", "int"],
 		"skills": ["athletics", "perception", "survival"],
 		"equipment": {"main_hand": "longsword", "armor": "chain_mail"},
-		"actions": ["weapon_attack", "second_wind"],
+		"cards": {
+			"power_strike": 8,
+			"rend": 6,
+			"charge": 4,
+			"flurry": 2,
+			"war_cry": 4,
+			"second_wind": 4,
+			"defensive_stance": 6,
+			"discipline": 4,
+			"pommel_strike": 2
+		},
+		"companion_actions": [
+			{"name": "Attaque", "weight": 3, "target": "enemy", "effects": [{"type": "attack", "weapon": true}]},
+			{
+				"name": "Posture défensive",
+				"weight": 1,
+				"target": "self",
+				"effects": [{"type": "status", "status": "shielded", "stacks": 4}]
+			}
+		],
 		"start_items": {"potion_heal": 1},
 		"art": {"headgear": "helmet", "outfit": "#6e6e78", "accent": "#9a2f2f"}
 	},
@@ -19,9 +38,39 @@
 		"ability_priority": ["int", "con", "dex", "wis", "cha", "str"],
 		"skills": ["arcana", "investigation", "medicine"],
 		"equipment": {"main_hand": "quarterstaff"},
+		"basic_attack": {
+			"name": "Trait de feu",
+			"effects": [{"type": "attack", "ability": "spell", "damage": "1d10", "damage_type": "fire"}]
+		},
+		"cards": {
+			"burning_hands": 4,
+			"ignite": 4,
+			"magic_missile": 4,
+			"mage_shield": 6,
+			"ray_of_frost": 6,
+			"insight": 4,
+			"find_familiar": 2,
+			"force_orb": 2,
+			"scorching_ray": 8
+		},
+		"companion_actions": [
+			{
+				"name": "Trait de feu",
+				"weight": 3,
+				"target": "enemy",
+				"effects": [{"type": "attack", "ability": "spell", "damage": "1d10", "damage_type": "fire"}]
+			},
+			{
+				"name": "Rayon de givre",
+				"weight": 1,
+				"target": "enemy",
+				"effects": [
+					{"type": "attack", "ability": "spell", "damage": "1d8", "damage_type": "cold"},
+					{"type": "status", "status": "weakened", "stacks": 1}
+				]
+			}
+		],
 		"spellcasting": "int",
-		"resources": {"spell_slot": 2},
-		"actions": ["weapon_attack", "fire_bolt", "magic_missile"],
 		"start_items": {},
 		"art": {"headgear": "wizard_hat", "outfit": "#3b3a7a", "accent": "#d4b06a"}
 	},
@@ -35,7 +84,26 @@
 		"ability_priority": ["dex", "con", "cha", "wis", "int", "str"],
 		"skills": ["stealth", "sleight_of_hand", "acrobatics", "perception"],
 		"equipment": {"main_hand": "rapier", "armor": "leather"},
-		"actions": ["weapon_attack", "sneak_attack"],
+		"cards": {
+			"sneak_attack": 6,
+			"poisoned_blade": 8,
+			"low_blow": 4,
+			"concentrated_venom": 2,
+			"feint": 4,
+			"evasion": 6,
+			"preparation": 4,
+			"vanish": 2,
+			"darts": 4
+		},
+		"companion_actions": [
+			{"name": "Coup de lame", "weight": 2, "target": "enemy", "effects": [{"type": "attack", "weapon": true}]},
+			{
+				"name": "Lame empoisonnée",
+				"weight": 1,
+				"target": "enemy",
+				"effects": [{"type": "attack", "weapon": true}, {"type": "status", "status": "poisoned", "stacks": 2}]
+			}
+		],
 		"start_items": {},
 		"art": {"headgear": "hood", "outfit": "#3a4a2e", "accent": "#6b4a2a"}
 	}

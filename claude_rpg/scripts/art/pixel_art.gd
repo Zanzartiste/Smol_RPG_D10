@@ -208,7 +208,7 @@ static func _draw_ears(img: Image, kind: String, ey: int, hx: int, skin: Color) 
 
 # --- Créatures ---------------------------------------------------------------
 
-## Sprite de combat détouré (32×32) d'un ennemi, d'après son champ "art" (enemies.json).
+## Sprite de combat détouré (32×32) d'une créature, d'après son champ "art" (creatures.json).
 static func creature(art: Dictionary, seed_value: int) -> Image:
 	match art.get("type", ""):
 		"humanoid":
@@ -276,6 +276,169 @@ static func _shade_rect(img: Image, x: int, y: int, w: int, h: int, amount: floa
 	for yy in range(y, y + h):
 		for xx in range(x, x + w):
 			_shade(img, xx, yy, amount)
+
+
+# --- Icônes de cartes --------------------------------------------------------
+
+const CARD_ART_W := 48
+const CARD_ART_H := 32
+
+## Illustration de carte (48×32) : fond teinté de la couleur de la carte et icône (data cards.json › art.icon).
+## Icônes : sword, swords, dagger, claw, boot, horn, heart, shield, star, fist, flame, bolt, snowflake,
+## eye, feather, orb, drop, skull, mask, wind, smoke, arrow, paw.
+static func card_icon(icon: String, tint: Color, seed_value: int) -> Image:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value
+	var w := CARD_ART_W
+	var h := CARD_ART_H
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	for y in h:
+		for x in w:
+			var d := Vector2((x - w / 2.0) / w, (y - h / 2.0) / h).length() * 1.6
+			img.set_pixel(x, y, tint.darkened(0.35).lerp(tint.darkened(0.8), clampf(d, 0.0, 1.0)))
+	for i in 18:
+		_px(img, rng.randi_range(0, w - 1), rng.randi_range(0, h - 1), tint.lightened(0.15).darkened(0.3))
+	var fig := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	_draw_icon(fig, icon, tint)
+	img.blend_rect(_outlined(fig), Rect2i(0, 0, w, h), Vector2i.ZERO)
+	return img
+
+
+@warning_ignore("integer_division")
+static func _draw_icon(img: Image, icon: String, tint: Color) -> void:
+	var steel := Color(0.82, 0.84, 0.88)
+	var gold := Color(0.85, 0.68, 0.3)
+	var wood := Color(0.45, 0.3, 0.18)
+	var light := tint.lightened(0.55)
+	match icon:
+		"sword", "dagger":
+			var top := 4 if icon == "sword" else 10
+			_rect(img, 23, top, 2, 20 - top, steel)
+			_px(img, 23, top - 1, steel)
+			_rect(img, 18, 20, 12, 2, gold)
+			_rect(img, 23, 22, 2, 5, wood)
+			_rect(img, 22, 27, 4, 2, gold)
+		"swords":
+			_line(img, Vector2i(12, 26), Vector2i(34, 4), steel, 2)
+			_line(img, Vector2i(36, 26), Vector2i(14, 4), steel, 2)
+			_line(img, Vector2i(10, 22), Vector2i(16, 28), gold, 2)
+			_line(img, Vector2i(38, 22), Vector2i(32, 28), gold, 2)
+		"claw":
+			for i in 3:
+				_line(img, Vector2i(14 + i * 7, 5), Vector2i(20 + i * 7, 27), Color(0.92, 0.85, 0.8), 2)
+		"boot", "arrow":
+			_line(img, Vector2i(8, 16), Vector2i(36, 16), steel if icon == "arrow" else light, 2)
+			_line(img, Vector2i(36, 16), Vector2i(29, 9), steel if icon == "arrow" else light, 2)
+			_line(img, Vector2i(36, 16), Vector2i(29, 23), steel if icon == "arrow" else light, 2)
+			if icon == "arrow":
+				_line(img, Vector2i(8, 16), Vector2i(4, 12), Color(0.9, 0.9, 0.85), 1)
+				_line(img, Vector2i(8, 16), Vector2i(4, 20), Color(0.9, 0.9, 0.85), 1)
+		"horn", "wind":
+			for i in 3:
+				var r := 6.0 + i * 5.0
+				for a in range(-40, 41, 4):
+					var p := Vector2(14, 16) + Vector2.from_angle(deg_to_rad(a)) * r
+					_px(img, int(p.x), int(p.y), light)
+					_px(img, int(p.x) + 1, int(p.y), light)
+		"heart":
+			_ellipse(img, 19.0, 12.0, 6.0, 5.5, Color(0.86, 0.2, 0.25))
+			_ellipse(img, 29.0, 12.0, 6.0, 5.5, Color(0.86, 0.2, 0.25))
+			for y in range(12, 28):
+				var half := (28 - y) * 11 / 16
+				_hline(img, 24 - half, 23 + half, y, Color(0.86, 0.2, 0.25))
+			_px(img, 18, 10, Color(1, 0.7, 0.7))
+		"shield":
+			_rect(img, 15, 5, 18, 13, steel)
+			for y in range(18, 28):
+				var half := (28 - y) * 9 / 10
+				_hline(img, 24 - half, 23 + half, y, steel)
+			_rect(img, 23, 7, 2, 18, tint)
+			_rect(img, 18, 12, 12, 2, tint)
+		"star":
+			_line(img, Vector2i(24, 3), Vector2i(24, 29), light, 2)
+			_line(img, Vector2i(10, 16), Vector2i(38, 16), light, 2)
+			_ellipse(img, 24.5, 16.5, 5.0, 5.0, Color(1, 0.95, 0.75))
+		"fist":
+			_rect(img, 16, 10, 16, 14, Color(0.85, 0.65, 0.5))
+			for i in 4:
+				_rect(img, 16 + i * 4, 8, 4, 4, Color(0.9, 0.7, 0.55))
+				_px(img, 16 + i * 4, 9, Color(0.6, 0.42, 0.3))
+			_rect(img, 18, 24, 12, 5, wood)
+		"flame":
+			_ellipse(img, 24.0, 19.0, 9.0, 10.0, Color(0.95, 0.4, 0.1))
+			for y in range(3, 12):
+				var half := (y - 2) / 2
+				_hline(img, 24 - half, 24 + half, y, Color(0.95, 0.4, 0.1))
+			_ellipse(img, 24.0, 21.0, 5.0, 6.0, Color(1.0, 0.8, 0.2))
+			_ellipse(img, 24.0, 23.0, 2.5, 3.0, Color(1.0, 0.97, 0.8))
+		"bolt":
+			var points := [Vector2i(30, 3), Vector2i(18, 17), Vector2i(26, 17), Vector2i(16, 30)]
+			for i in points.size() - 1:
+				_line(img, points[i], points[i + 1], Color(0.75, 0.9, 1.0), 3)
+		"snowflake":
+			for a in [0, 60, 120]:
+				var d := Vector2.from_angle(deg_to_rad(a)) * 12.0
+				_line(img, Vector2i(Vector2(24, 16) - d), Vector2i(Vector2(24, 16) + d), Color(0.85, 0.95, 1.0), 2)
+		"eye":
+			_ellipse(img, 24.0, 16.0, 13.0, 7.0, Color(0.95, 0.93, 0.88))
+			_ellipse(img, 24.0, 16.0, 5.0, 5.0, tint.lightened(0.2))
+			_ellipse(img, 24.0, 16.0, 2.0, 2.0, Color(0.05, 0.05, 0.08))
+		"feather":
+			for i in 22:
+				var p := Vector2(14 + i, 27 - i)
+				_ellipse(img, p.x, p.y, 2.0 + (i % 11) * 0.3, 2.0, light)
+			_line(img, Vector2i(12, 29), Vector2i(36, 5), Color(0.95, 0.95, 0.9), 1)
+		"drop":
+			_ellipse(img, 24.0, 20.0, 8.0, 8.0, Color(0.45, 0.8, 0.3))
+			for y in range(4, 14):
+				var half := (y - 3) * 7 / 10
+				_hline(img, 24 - half, 24 + half, y, Color(0.45, 0.8, 0.3))
+			_px(img, 21, 18, Color(0.85, 1, 0.75))
+		"skull":
+			_ellipse(img, 24.0, 13.0, 10.0, 9.0, Color(0.92, 0.9, 0.82))
+			_rect(img, 18, 19, 12, 8, Color(0.92, 0.9, 0.82))
+			_ellipse(img, 20.0, 13.0, 2.5, 3.0, Color(0.08, 0.06, 0.06))
+			_ellipse(img, 28.0, 13.0, 2.5, 3.0, Color(0.08, 0.06, 0.06))
+			for x in [20, 23, 26]:
+				_rect(img, x, 23, 1, 4, Color(0.3, 0.28, 0.25))
+		"mask":
+			_ellipse(img, 24.0, 14.0, 13.0, 10.0, light)
+			_ellipse(img, 19.0, 13.0, 3.0, 2.0, Color(0.05, 0.05, 0.08))
+			_ellipse(img, 29.0, 13.0, 3.0, 2.0, Color(0.05, 0.05, 0.08))
+			_hline(img, 19, 29, 20, tint.darkened(0.4))
+		"smoke":
+			for i in 6:
+				_ellipse(img, 12.0 + i * 5.0, 18.0 - (i % 2) * 5.0, 6.0, 5.0, Color(0.6, 0.6, 0.65, 0.9))
+		"paw":
+			_ellipse(img, 24.0, 21.0, 7.0, 6.0, Color(0.25, 0.2, 0.18))
+			for p in [Vector2(15, 12), Vector2(21, 7), Vector2(28, 7), Vector2(34, 12)]:
+				_ellipse(img, p.x, p.y, 3.0, 3.5, Color(0.25, 0.2, 0.18))
+		_:
+			_ellipse(img, 24.0, 16.0, 10.0, 10.0, light)
+			_ellipse(img, 21.0, 13.0, 3.0, 3.0, Color(1, 1, 1, 0.8))
+
+
+## Segment épais (algorithme de Bresenham).
+static func _line(img: Image, a: Vector2i, b: Vector2i, col: Color, thickness := 1) -> void:
+	var dx := absi(b.x - a.x)
+	var dy := -absi(b.y - a.y)
+	var sx := 1 if a.x < b.x else -1
+	var sy := 1 if a.y < b.y else -1
+	var err := dx + dy
+	var p := a
+	while true:
+		for ox in thickness:
+			for oy in thickness:
+				_px(img, p.x + ox, p.y + oy, col)
+		if p == b:
+			break
+		var e2 := 2 * err
+		if e2 >= dy:
+			err += dy
+			p.x += sx
+		if e2 <= dx:
+			err += dx
+			p.y += sy
 
 
 # --- Décors ------------------------------------------------------------------

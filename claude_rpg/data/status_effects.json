@@ -1,10 +1,62 @@
 [
-	{"id": "asleep", "name": "Endormi", "description": "Inconscient jusqu'à ce qu'on le réveille ou qu'il subisse des dégâts."},
-	{"id": "blinded", "name": "Aveuglé", "description": "Ne voit plus rien."},
-	{"id": "charmed", "name": "Charmé", "description": "Ne peut pas attaquer celui qui l'a charmé."},
-	{"id": "frightened", "name": "Effrayé", "description": "Terrorisé par la source de sa peur."},
-	{"id": "paralyzed", "name": "Paralysé", "description": "Incapable de bouger ou d'agir."},
-	{"id": "poisoned", "name": "Empoisonné", "description": "Affaibli par un poison."},
-	{"id": "prone", "name": "À terre", "description": "Renversé au sol."},
-	{"id": "stunned", "name": "Étourdi", "description": "Sonné, incapable d'agir."}
+	{
+		"id": "poisoned",
+		"name": "Poison",
+		"negative": true,
+		"description": "Au début de son tour, subit 1 dégât brut par charge, puis perd 1 charge.",
+		"tick_damage_per_stack": 1,
+		"decay": 1,
+		"color": "#7ac943",
+		"death_cause": "Emporté par le poison"
+	},
+	{
+		"id": "burning",
+		"name": "Brûlure",
+		"negative": true,
+		"description": "Au début de son tour, subit 5 % de ses PV max par charge (au moins 1 par charge, dégâts de feu), puis perd 1 charge.",
+		"tick_max_hp_percent_per_stack": 5,
+		"tick_damage_type": "fire",
+		"decay": 1,
+		"color": "#f08a2e",
+		"death_cause": "Réduit en cendres"
+	},
+	{
+		"id": "stunned",
+		"name": "Étourdi",
+		"negative": true,
+		"description": "Passe son tour, puis perd 1 charge.",
+		"skip_turn": true,
+		"decay": 1,
+		"color": "#e8d44a"
+	},
+	{
+		"id": "weakened",
+		"name": "Affaibli",
+		"negative": true,
+		"description": "Inflige 1 dégât de moins par charge. Perd 1 charge à la fin de son tour.",
+		"damage_dealt_per_stack": -1,
+		"decay": 1,
+		"color": "#9a8cc8",
+		"decay_at": "end"
+	},
+	{
+		"id": "shielded",
+		"name": "Protection",
+		"negative": false,
+		"description": "Chaque charge absorbe 1 point de dégâts. Disparaît au début de son prochain tour.",
+		"absorb": true,
+		"decay": "all",
+		"color": "#8fc3e8"
+	},
+	{
+		"id": "asleep",
+		"name": "Endormi",
+		"negative": true,
+		"description": "Inconscient jusqu'à ce qu'on le réveille ou qu'il subisse des dégâts."
+	},
+	{"id": "blinded", "name": "Aveuglé", "negative": true, "description": "Ne voit plus rien."},
+	{"id": "charmed", "name": "Charmé", "negative": true, "description": "Ne peut pas attaquer celui qui l'a charmé."},
+	{"id": "frightened", "name": "Effrayé", "negative": true, "description": "Terrorisé par la source de sa peur."},
+	{"id": "paralyzed", "name": "Paralysé", "negative": true, "description": "Incapable de bouger ou d'agir."},
+	{"id": "prone", "name": "À terre", "negative": true, "description": "Renversé au sol."}
 ]

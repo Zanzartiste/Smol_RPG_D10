@@ -20,6 +20,11 @@ func _ready() -> void:
 	Game.start_life(creation.build_character(), 7)
 	creation.queue_free()
 
+	var builder: Control = load("res://scenes/deck_builder.tscn").instantiate()
+	add_child(builder)
+	await _capture("1b_deck_builder.png")
+	builder.queue_free()
+
 	var main: Control = load("res://scenes/main.tscn").instantiate()
 	add_child(main)
 	await _capture("2_hub.png")
@@ -53,39 +58,52 @@ func _ready() -> void:
 		main.choices_box.get_child(0).pressed.emit()
 		await _wait_frames(3)
 
-	# Combat avec Mira contre un groupe mixte.
+	# Combat avec Mira contre un groupe mixte (Mira joue seule, le héros joue ses cartes).
 	Effects.apply_all([{"type": "recruit", "companion": "mira"}], Game.life, Meta)
 	Game.life.character.hp = Game.life.character.max_hp
 	main._refresh_sheet()
 	main.illustration.texture = ArtProvider.location_image("forest", Game.life)
 	main._run_combat({"enemies": ["dire_wolf", "bandit", "giant_rat"]})
-	await _wait_for_menu(main)
-	await _capture("7_combat_menu.png")
-	main.choices_box.get_child(0).pressed.emit()
-	await _wait_frames(4)
-	await _capture("8_combat_targets.png")
-	main.choices_box.get_child(0).pressed.emit()
-	await get_tree().create_timer(0.35).timeout
-	await _capture("9_combat_roll.png")
-	# On joue le reste du combat en accéléré, en prenant toujours la première option disponible.
-	Engine.time_scale = 4.0
-	while main.battle_view.visible:
-		await _wait_for_menu(main)
-		if not main.battle_view.visible:
+	var view: CombatView = main.combat_view
+	await _wait_for_hero(view)
+	await _capture("7_combat.png")
+	# Première carte jouable qui demande une cible, sinon l'attaque de base.
+	var chosen := -1
+	for i in view.combat.deck.hand.size():
+		if view.combat.card_unplayable_reason(i) == "" and Cards.target_of(view.combat.deck.hand[i]) == "enemy":
+			chosen = i
 			break
-		for button: Button in main.choices_box.get_children():
-			if not button.disabled:
-				button.pressed.emit()
-				break
+	if chosen >= 0:
+		view._on_card_pressed(chosen)
+	else:
+		view._on_attack_pressed()
+	await _wait_frames(4)
+	await _capture("8_combat_targeting.png")
+	view._on_target_chosen(view.combat.living("enemy")[0])
+	await get_tree().create_timer(0.35).timeout
+	await _capture("9_combat_dice.png")
+	# Le reste du combat en accéléré : le héros attaque puis termine son tour.
+	Engine.time_scale = 4.0
+	while view.visible:
+		await _wait_for_hero(view)
+		if not view.visible:
+			break
+		if not view.attack_button.disabled:
+			view._on_attack_pressed()
+			if not view._pending.is_empty():
+				view._on_target_chosen(view.combat.living("enemy")[0])
+			await _wait_for_hero(view)
+		if view.visible and view._hero_turn:
+			view._on_end_turn_pressed()
 		await _wait_frames(2)
 	Engine.time_scale = 1.0
 	await _capture("10_combat_end.png")
 	get_tree().quit()
 
 
-## Attend que des boutons soient proposés (menu d'action) ou que le combat soit terminé.
-func _wait_for_menu(main: Control) -> void:
-	while main.battle_view.visible and (main.choices_box.get_child_count() == 0 or main.dice_tray.is_playing()):
+## Attend que le héros puisse agir (ou que le combat soit terminé).
+func _wait_for_hero(view: CombatView) -> void:
+	while view.visible and (not view._hero_turn or view._busy):
 		await get_tree().process_frame
 
 

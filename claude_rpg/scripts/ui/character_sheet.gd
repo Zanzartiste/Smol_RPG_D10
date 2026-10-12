@@ -16,10 +16,7 @@ static func bbcode(ch: Character) -> String:
 	t += "[color=%s]PV[/color] %d / %d    [color=%s]CA[/color] %d    [color=%s]%s[/color] %d po\n" % [
 		gold, ch.hp, ch.max_hp, gold, ch.armor_class(), gold, Loc.ui("Or"), ch.gold]
 	t += "[color=%s]%s[/color] %d    [color=%s]XP[/color] %d\n" % [gold, Loc.ui("Niveau"), ch.level, gold, ch.xp]
-	for resource_id: String in ch.resources:
-		t += "[color=%s]%s[/color] %d / %d\n" % [
-			gold, Loc.ui("Emplacements de sort") if resource_id == "spell_slot" else resource_id,
-			int(ch.resources[resource_id]), ch.max_resource(resource_id)]
+	t += "[color=%s]%s[/color] %d %s\n" % [gold, Loc.ui("Deck"), ch.deck_size(), _deck_colors(ch)]
 	t += "\n"
 
 	t += "[table=3]"
@@ -65,6 +62,16 @@ static func companions_bbcode(life: LifeState) -> String:
 		t += "%s (%s %d) — %d / %d PV, CA %d\n" % [
 			c.name, DB.classes[c.class_id]["name"], c.level, c.hp, c.max_hp, c.armor_class()]
 	return t
+
+
+## Répartition des couleurs du deck, ex. « (Rouge 60 %, Blanc 35 %, Incolore 5 %) ».
+static func _deck_colors(ch: Character) -> String:
+	var shares := Mana.deck_shares(ch.deck)
+	var parts := PackedStringArray()
+	for color in Mana.color_ids() + [Mana.COLORLESS]:
+		if shares.has(color):
+			parts.append("%s %d %%" % [Mana.color_name(color), roundi(shares[color] * 100)])
+	return "(%s)" % ", ".join(parts) if not parts.is_empty() else ""
 
 
 static func signed(value: int) -> String:

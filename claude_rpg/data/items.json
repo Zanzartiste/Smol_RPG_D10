@@ -6,7 +6,29 @@
 		"value": 10,
 		"use": {"heal": "2d4+2", "target": "ally"}
 	},
-	{"id": "healing_herbs", "name": "Herbes médicinales", "description": "Sauge et achillée, prisées des guérisseurs.", "value": 2},
-	{"id": "wolf_pelt", "name": "Peau de loup", "description": "Rêche et odorante, mais les tanneurs l'achètent.", "value": 8},
-	{"id": "old_amulet", "name": "Amulette ancienne", "description": "Un bijou terni gravé de runes inconnues.", "value": 40}
+	{
+		"id": "antidote",
+		"name": "Antidote",
+		"description": "Un remède amer qui neutralise les poisons.",
+		"value": 8,
+		"use": {"cleanse": "poisoned", "target": "ally"}
+	},
+	{
+		"id": "healing_herbs",
+		"name": "Herbes médicinales",
+		"description": "Sauge et achillée, prisées des guérisseurs.",
+		"value": 2
+	},
+	{
+		"id": "wolf_pelt",
+		"name": "Peau de loup",
+		"description": "Rêche et odorante, mais les tanneurs l'achètent.",
+		"value": 8
+	},
+	{
+		"id": "old_amulet",
+		"name": "Amulette ancienne",
+		"description": "Un bijou terni gravé de runes inconnues.",
+		"value": 40
+	}
 ]
