@@ -9,7 +9,10 @@
 			{
 				"id": "sleep",
 				"text": "Dormir",
-				"outcome": {"text": "Vous dormez d'un sommeil réparateur.", "effects": [{"type": "heal_full"}]}
+				"outcome": {
+					"text": "Vous dormez d'un sommeil réparateur. Vos forces et votre magie sont restaurées.",
+					"effects": [{"type": "long_rest"}]
+				}
 			},
 			{
 				"id": "potion",
@@ -49,8 +52,14 @@
 				"id": "calm",
 				"text": "Reprendre ses esprits",
 				"check": {"ability": "wis", "dc": 12},
-				"success": {"text": "Vous chassez les images de votre esprit et vous rendormez.", "effects": [{"type": "xp", "amount": 25}]},
-				"failure": {"text": "Impossible de fermer l'œil de la nuit.", "effects": [{"type": "hp", "amount": -1}]}
+				"success": {
+					"text": "Vous chassez les images de votre esprit et vous rendormez.",
+					"effects": [{"type": "xp", "amount": 25}]
+				},
+				"failure": {
+					"text": "Impossible de fermer l'œil de la nuit.",
+					"effects": [{"type": "hp", "amount": -1}]
+				}
 			}
 		]
 	},
@@ -65,12 +74,54 @@
 			{
 				"id": "eat",
 				"text": "Accepter la soupe",
-				"outcome": {"text": "Une soupe au lard comme on n'en fait plus. Vous vous sentez revigoré.", "effects": [{"type": "hp", "amount": 3}]}
+				"outcome": {
+					"text": "Une soupe au lard comme on n'en fait plus. Vous vous sentez revigoré.",
+					"effects": [{"type": "hp", "amount": 3}]
+				}
 			},
 			{
 				"id": "decline",
 				"text": "Décliner poliment",
-				"outcome": {"text": "Berthe repart en marmonnant que la jeunesse ne sait plus vivre.", "effects": []}
+				"outcome": {
+					"text": "Berthe repart en marmonnant que la jeunesse ne sait plus vivre.",
+					"effects": []
+				}
+			}
+		]
+	},
+	{
+		"id": "home_rats",
+		"location": "home",
+		"weight": 3,
+		"cooldown_days": 4,
+		"title": "Des bruits à la cave",
+		"text": "Des grattements sinistres montent de la cave. Quelque chose a élu domicile parmi vos provisions.",
+		"choices": [
+			{
+				"id": "fight",
+				"text": "Descendre avec une lanterne",
+				"outcome": {
+					"text": "Deux rats énormes se retournent vers vous, les yeux luisants.",
+					"effects": [
+						{
+							"type": "combat",
+							"enemies": ["giant_rat", "giant_rat"],
+							"victory": {
+								"text": "La cave est de nouveau à vous. Il faudra racheter du fromage.",
+								"effects": []
+							},
+							"fled": {
+								"text": "Vous refermez la trappe à double tour. Les rats peuvent bien garder la cave.",
+								"effects": []
+							}
+						}
+					]
+				}
+			},
+			{
+				"id": "ignore",
+				"text": "Faire comme si de rien n'était",
+				"outcome": {"text": "Les grattements finissent par cesser. Pour l'instant.", "effects": []}
 			}
 		]
 	}

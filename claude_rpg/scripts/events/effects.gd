@@ -21,13 +21,19 @@ const SCHEMA := {
 	"goto": ["event"],
 	"pass_time": [],
 	"die": [],
+	"long_rest": [],
+	"recruit": ["companion"],
+	"combat": ["enemies"],
 }
 
 
-## Retourne {"lines": Array[String], "goto": String}.
+## Retourne {"lines": Array[String], "goto": String, "combat": Dictionary}.
+## Un effet "combat" interrompt la liste (il doit être le dernier) : le combat est joué par l'interface,
+## puis Game.finish_combat() applique les effets de l'issue (victory / defeat / fled).
 static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dictionary:
 	var lines: Array[String] = []
 	var goto := ""
+	var combat := {}
 	var ch := life.character
 	for e: Dictionary in effects:
 		if life.dead:
@@ -84,9 +90,26 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 				lines.append(Loc.ui("Le temps passe…"))
 			"die":
 				life.die(e.get("cause", Loc.ui("Mort mystérieuse")))
+			"long_rest":
+				for member in life.party():
+					member.long_rest()
+				lines.append(Loc.ui("PV et ressources restaurés."))
+			"recruit":
+				if life.has_companion(e["companion"]):
+					pass
+				elif life.companions.size() >= int(DB.rules.get("max_companions", 1)):
+					lines.append(Loc.ui("Votre groupe est déjà complet."))
+				else:
+					var companion := Character.create_companion(e["companion"])
+					life.companions.append(companion)
+					lines.append(Loc.ui("%s rejoint votre groupe !") % companion.name)
+			"combat":
+				combat = e
 			_:
 				push_warning("Effet inconnu : %s" % e)
-	return {"lines": lines, "goto": goto}
+		if not combat.is_empty():
+			break
+	return {"lines": lines, "goto": goto, "combat": combat}
 
 
 static func _signed(value: int) -> String:

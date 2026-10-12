@@ -19,7 +19,9 @@ const SKY := {
 
 # --- Portraits ---------------------------------------------------------------
 
-static func portrait(species_art: Dictionary, class_art: Dictionary, stage: String, seed_value: int) -> Image:
+## `with_background` = false : personnage détouré (sprites de combat).
+static func portrait(species_art: Dictionary, class_art: Dictionary, stage: String, seed_value: int,
+		with_background := true) -> Image:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
 	var s := PORTRAIT_SIZE
@@ -169,6 +171,8 @@ static func portrait(species_art: Dictionary, class_art: Dictionary, stage: Stri
 
 	# Contour puis fond.
 	var outlined := _outlined(fig)
+	if not with_background:
+		return outlined
 	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
 	var bg_top := outfit.darkened(0.8)
 	var bg_bottom := outfit.darkened(0.6)
@@ -200,6 +204,78 @@ static func _draw_ears(img: Image, kind: String, ey: int, hx: int, skin: Color) 
 					_sym(img, 16 - hx - i + 1, y, skin)
 				if h > 2:
 					_sym(img, 16 - hx - i + 1, top + 1, inner)
+
+
+# --- Créatures ---------------------------------------------------------------
+
+## Sprite de combat détouré (32×32) d'un ennemi, d'après son champ "art" (enemies.json).
+static func creature(art: Dictionary, seed_value: int) -> Image:
+	match art.get("type", ""):
+		"humanoid":
+			return portrait(art.get("species_art", {}), art.get("class_art", {}), "adult", seed_value, false)
+		"wolf":
+			return _wolf(art)
+		"rat":
+			return _rat(art)
+	var img := Image.create(PORTRAIT_SIZE, PORTRAIT_SIZE, false, Image.FORMAT_RGBA8)
+	_ellipse(img, 16.0, 18.0, 9.0, 9.0, Color(0.5, 0.3, 0.5))
+	return _outlined(img)
+
+
+## Loup vu de profil, tourné vers la gauche.
+@warning_ignore("integer_division")
+static func _wolf(art: Dictionary) -> Image:
+	var img := Image.create(PORTRAIT_SIZE, PORTRAIT_SIZE, false, Image.FORMAT_RGBA8)
+	var fur := Color(String(art.get("fur", "#8a8a90")))
+	var belly := Color(String(art.get("belly", "#b8b4ac")))
+	var eye := Color(String(art.get("eyes", "#e8c547")))
+	# Queue, pattes arrière (plus sombres), corps, pattes avant.
+	for i in 6:
+		_rect(img, 25 + i, 15 - i / 2, 2, 2, fur.darkened(0.1))
+	for x in [21, 24]:
+		_rect(img, x, 20, 2, 8, fur.darkened(0.25))
+	_ellipse(img, 18.0, 18.0, 9.0, 5.0, fur)
+	_ellipse(img, 18.0, 20.0, 7.0, 2.5, belly)
+	for x in [11, 14]:
+		_rect(img, x, 20, 2, 8, fur.darkened(0.1))
+	# Cou, tête, museau, oreilles, œil.
+	_ellipse(img, 11.0, 15.0, 4.0, 4.5, fur)
+	_ellipse(img, 7.5, 13.0, 4.0, 3.5, fur)
+	_rect(img, 1, 13, 5, 3, fur.lightened(0.05))
+	_rect(img, 1, 15, 4, 1, belly)
+	_px(img, 1, 13, Color(0.1, 0.08, 0.08))
+	for i in 3:
+		_hline(img, 6 + i / 2, 7, 9 + i, fur.darkened(0.15))
+		_hline(img, 9, 10 - i / 2, 9 + i, fur.darkened(0.15))
+	_px(img, 7, 12, eye)
+	_shade_rect(img, 10, 13, 18, 3, 0.15)
+	return _outlined(img)
+
+
+## Rat géant vu de profil, tourné vers la gauche.
+static func _rat(art: Dictionary) -> Image:
+	var img := Image.create(PORTRAIT_SIZE, PORTRAIT_SIZE, false, Image.FORMAT_RGBA8)
+	var fur := Color(String(art.get("fur", "#6a5a4a")))
+	var eye := Color(String(art.get("eyes", "#e0402a")))
+	var pink := Color(0.85, 0.6, 0.6)
+	for i in 10:
+		_px(img, 21 + i, 22 - int(sin(i * 0.5) * 3.0), pink)
+	_ellipse(img, 16.0, 21.0, 7.0, 4.5, fur)
+	_ellipse(img, 9.0, 20.0, 3.5, 3.0, fur)
+	_rect(img, 4, 20, 3, 2, fur.lightened(0.1))
+	_px(img, 4, 20, pink)
+	_ellipse(img, 10.0, 16.5, 1.6, 1.6, pink.darkened(0.2))
+	_px(img, 8, 19, eye)
+	for x in [11, 13, 18, 20]:
+		_rect(img, x, 25, 1, 2, pink.darkened(0.1))
+	_shade_rect(img, 10, 23, 14, 3, 0.2)
+	return _outlined(img)
+
+
+static func _shade_rect(img: Image, x: int, y: int, w: int, h: int, amount: float) -> void:
+	for yy in range(y, y + h):
+		for xx in range(x, x + w):
+			_shade(img, xx, yy, amount)
 
 
 # --- Décors ------------------------------------------------------------------

@@ -21,6 +21,7 @@ const SCHEMA := {
 	"age": [],
 	"gold": [],
 	"item": ["id"],
+	"companion": ["id"],
 	"time": ["in"],
 	"level": [],
 	"not": ["condition"],
@@ -68,6 +69,8 @@ static func check(c: Dictionary, life: LifeState, meta: MetaState) -> bool:
 			return _in_range(ch.gold, c)
 		"item":
 			return ch.item_count(c["id"]) >= int(c.get("min", 1))
+		"companion":
+			return life.has_companion(c["id"])
 		"time":
 			return life.slot_id() in c["in"]
 		"level":

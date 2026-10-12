@@ -33,10 +33,7 @@
 					"text": "Épuisé par votre éloquence, le marchand vous cède une vieille amulette pour une bouchée de pain.",
 					"effects": [{"type": "gold", "amount": -2}, {"type": "add_item", "id": "old_amulet"}]
 				},
-				"failure": {
-					"text": "Le marchand vous rit au nez et appelle le client suivant.",
-					"effects": []
-				}
+				"failure": {"text": "Le marchand vous rit au nez et appelle le client suivant.", "effects": []}
 			},
 			{
 				"id": "leave",
@@ -118,7 +115,10 @@
 				"text": "Accepter son présent",
 				"outcome": {
 					"text": "Elle glisse deux fioles dans vos mains et s'éloigne sans un mot de plus.",
-					"effects": [{"type": "add_item", "id": "potion_heal", "count": 2}, {"type": "xp", "amount": 50}]
+					"effects": [
+						{"type": "add_item", "id": "potion_heal", "count": 2},
+						{"type": "xp", "amount": 50}
+					]
 				}
 			}
 		]
@@ -135,14 +135,27 @@
 			{
 				"id": "fight",
 				"text": "Lui apprendre la politesse",
-				"check": {"skill": "athletics", "dc": 13},
-				"success": {
-					"text": "Le colosse finit la tête la première dans le tonneau de cidre. La salle vous offre une tournée et quelques pièces.",
-					"effects": [{"type": "gold", "amount": 5}, {"type": "xp", "amount": 50}]
-				},
-				"failure": {
-					"text": "Vous faites connaissance avec le plancher. Intimement.",
-					"effects": [{"type": "hp", "amount": -4, "cause": "Rossé à mort dans une taverne"}]
+				"outcome": {
+					"text": "Le colosse fait craquer ses jointures. La salle recule pour faire de la place.",
+					"effects": [
+						{
+							"type": "combat",
+							"enemies": ["brute"],
+							"on_defeat": "knockout",
+							"victory": {
+								"text": "Le colosse finit la tête la première dans le tonneau de cidre. La salle vous offre une tournée et quelques pièces.",
+								"effects": [{"type": "gold", "amount": 5}]
+							},
+							"defeat": {
+								"text": "Vous vous réveillez dans le caniveau, la bourse plus légère et la mâchoire endolorie.",
+								"effects": [{"type": "gold", "amount": -5}]
+							},
+							"fled": {
+								"text": "Vous sortez en courant sous les huées de la salle.",
+								"effects": []
+							}
+						}
+					]
 				}
 			},
 			{
@@ -161,7 +174,10 @@
 			{
 				"id": "apologize",
 				"text": "S'excuser platement",
-				"outcome": {"text": "Votre fierté en prend un coup, mais vos dents restent en place.", "effects": []}
+				"outcome": {
+					"text": "Votre fierté en prend un coup, mais vos dents restent en place.",
+					"effects": []
+				}
 			}
 		]
 	},
@@ -273,6 +289,44 @@
 				"id": "leave",
 				"text": "Passer votre chemin",
 				"outcome": {"text": "L'honnêteté a du bon. Parfois.", "effects": []}
+			}
+		]
+	},
+	{
+		"id": "town_mercenary",
+		"location": "town",
+		"weight": 7,
+		"repeat": "once_per_life",
+		"conditions": [{"type": "not", "condition": {"type": "companion", "id": "mira"}}],
+		"title": "Une lame à louer",
+		"text": "Au fond de la taverne, une femme aux cheveux courts aiguise une dague. « Mira. Chasseuse de primes. Vous avez l'air de {g:quelqu'un|quelqu'une|quelqu'un} qui va avoir besoin d'aide, {name}. Vingt pièces, et je vous suis. »",
+		"choices": [
+			{
+				"id": "hire",
+				"text": "L'engager (20 po)",
+				"conditions": [{"type": "gold", "min": 20}],
+				"outcome": {
+					"text": "Mira empoche les pièces et range sa dague. « Allons-y. »",
+					"effects": [{"type": "gold", "amount": -20}, {"type": "recruit", "companion": "mira"}]
+				}
+			},
+			{
+				"id": "convince",
+				"text": "La convaincre de vous suivre pour la gloire",
+				"check": {"skill": "persuasion", "dc": 15},
+				"success": {
+					"text": "Mira éclate de rire. « La gloire, hein ? Pourquoi pas. Ça change de l'or. »",
+					"effects": [{"type": "recruit", "companion": "mira"}]
+				},
+				"failure": {
+					"text": "« La gloire ne paie pas les repas. » Elle retourne à sa dague.",
+					"effects": []
+				}
+			},
+			{
+				"id": "leave",
+				"text": "Décliner",
+				"outcome": {"text": "Mira hausse les épaules. « Comme vous voudrez. »", "effects": []}
 			}
 		]
 	}

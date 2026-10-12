@@ -6,10 +6,12 @@ extends RefCounted
 ##   portraits : res://assets/portraits/<species>_<classe>_<étape>.png   (ex. goblin_wizard_adult.png)
 ##   événements : res://assets/events/<id_événement>.png
 ##   lieux      : res://assets/locations/<id_lieu>.png
+##   ennemis    : res://assets/enemies/<id_ennemi>.png
 
 const PORTRAIT_DIR := "res://assets/portraits/"
 const EVENT_DIR := "res://assets/events/"
 const LOCATION_DIR := "res://assets/locations/"
+const ENEMY_DIR := "res://assets/enemies/"
 
 static var _cache: Dictionary = {}
 
@@ -24,6 +26,20 @@ static func portrait(ch: Character) -> Texture2D:
 		var species_art: Dictionary = DB.species[ch.species_id].get("art", {})
 		var class_art: Dictionary = DB.classes[ch.class_id].get("art", {})
 		_cache[key] = ImageTexture.create_from_image(PixelArt.portrait(species_art, class_art, stage, ch.art_seed))
+	return _cache[key]
+
+
+## Image d'un combattant : portrait pour un membre du groupe, sprite pour un ennemi
+## (res://assets/enemies/<id>.png s'il existe).
+static func combatant(c: Combatant) -> Texture2D:
+	if c.character != null:
+		return portrait(c.character)
+	var file: String = ENEMY_DIR + c.enemy["id"] + ".png"
+	if ResourceLoader.exists(file):
+		return load(file)
+	var key: String = "enemy:" + c.enemy["id"]
+	if not _cache.has(key):
+		_cache[key] = ImageTexture.create_from_image(PixelArt.creature(c.enemy.get("art", {}), hash(c.enemy["id"])))
 	return _cache[key]
 
 

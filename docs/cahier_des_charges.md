@@ -131,7 +131,7 @@ le jeu est amusant avant de produire du contenu en masse.
 - [ ] **1 ville + 1 zone sauvage** (forêt).
 - [ ] Moteur d'événements data-driven : conditions, choix, effets, flags, tests de stats.
 - [ ] **~30 événements**, dont 1 petite chaîne de quête et 1 événement de recrutement de compagnon.
-- [ ] Combat tour par tour : équipe de **2 maximum** (héros + 1 compagnon), 4 ou 5 types d'ennemis, 1 boss.
+- [x] Combat tour par tour : équipe de **2 maximum** (héros + 1 compagnon), 5 types d'ennemis, 1 boss (l'Alpha).
 - [ ] Inventaire simple (consommables et équipement basique).
 - [ ] Mort → écran de bilan → nouveau perso.
 - [ ] Méta : **1 déblocage** (une espèce ou classe) et **1 flag monde persistant**.
@@ -219,11 +219,11 @@ Claude ne génère pas d'images lui-même. Il peut en revanche écrire le **guid
 
 1. ~~Répondre aux questions ouvertes du §9.~~
 2. ~~Passer le renderer en Compatibility et initialiser git.~~
-3. ~~Définir le modèle de données~~ : voir [modele_donnees.md](modele_donnees.md). Les ennemis restent à définir, avec le combat.
+3. ~~Définir le modèle de données~~ : voir [modele_donnees.md](modele_donnees.md). Ennemis, actions de combat et compagnons ajoutés avec le combat.
 4. ~~Coder le moteur d'événements et un écran minimal~~ : 18 événements, placeholders pixel art, tests automatisés.
 5. ~~Écran de création de personnage~~ (espèce, genre, classe, passé, achat de points, nom, apparence), ~~lancers de
    dés animés~~ et ~~règles de vieillissement~~.
-6. Ajouter le combat.
+6. ~~Ajouter le combat~~ : initiative, attaques contre la CA, critiques, sorts et emplacements, objets, fuite, compagnon contrôlé par le joueur, issues victoire / fuite / défaite (mortelle ou K.-O.), banc d'équilibrage.
 7. Ajouter sauvegarde et méta.
 8. Produire le contenu du MVP, puis faire tester.
 
@@ -233,7 +233,12 @@ Claude ne génère pas d'images lui-même. Il peut en revanche écrire le **guid
   s'installant comme forgeron. Sans lui, la vieillesse n'arrive presque jamais avec l'échelle de temps actuelle
   (10 jours par an).
 
+- **Combat — suite** : effets de statut (poison, étourdissement…), IA ennemie plus fine (cibler les blessés,
+  se soigner), bouton « combat automatique », équipement (armes et armures trouvables).
+- **Compagnons** : relations, dialogues, gestion de l'équipement, plus d'un compagnon.
+
 ## 12. Outils de développement
 
+- **Banc d'équilibrage** : `tools/combat_bench.tscn` (taux de victoire par classe et par rencontre).
 - **Mode debug** : F12 en jeu, ou lancer avec `-- --debug`. Il affiche les choix verrouillés (grisés, avec la raison),
   qui sont cachés en jeu normal.

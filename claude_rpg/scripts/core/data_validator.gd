@@ -10,6 +10,7 @@ static func validate(db: Node) -> void:
 	_validate_species(db, errors)
 	_validate_classes(db, errors)
 	_validate_backgrounds(db, errors)
+	_validate_combat_data(db, errors)
 	for id: String in db.events:
 		_validate_event(db, db.events[id], errors)
 
@@ -69,6 +70,67 @@ static func _validate_backgrounds(db: Node, errors: Array[String]) -> void:
 		if background.get("skills", []).is_empty():
 			errors.append(ctx + " : aucune compétence maîtrisée")
 		_validate_skills_and_items(db, background, ctx, errors)
+
+
+const ACTION_TYPES := ["attack", "auto", "heal"]
+const ACTION_TARGETS := ["enemy", "ally", "self"]
+
+
+static func _validate_combat_data(db: Node, errors: Array[String]) -> void:
+	for action: Dictionary in db.actions.values():
+		var ctx := "actions.json › %s" % action["id"]
+		if action.get("type") not in ACTION_TYPES:
+			errors.append(ctx + " : type inconnu « %s » (attendu %s)" % [action.get("type"), ACTION_TYPES])
+		if action.get("target", "enemy") not in ACTION_TARGETS:
+			errors.append(ctx + " : cible inconnue « %s »" % action.get("target"))
+		for key in ["damage", "extra_damage"]:
+			if action.has(key) and action[key] != "weapon" and not Dice.is_valid_expr(action[key]):
+				errors.append(ctx + " : expression de dés invalide « %s »" % action[key])
+		if action.has("heal") and not Dice.is_valid_expr(String(action["heal"]).replace("level", "1")):
+			errors.append(ctx + " : expression de soins invalide « %s »" % action["heal"])
+		if action.get("type") in ["attack", "auto"] and not action.has("damage"):
+			errors.append(ctx + " : dégâts (damage) manquants")
+
+	for cls: Dictionary in db.classes.values():
+		var ctx := "classes.json › %s" % cls["id"]
+		for action_id: String in cls.get("actions", []):
+			_expect_ref(db.actions, action_id, "action", ctx, errors)
+			var cost: String = db.actions.get(action_id, {}).get("cost", "")
+			if cost != "" and not cls.get("resources", {}).has(cost):
+				errors.append(ctx + " : l'action « %s » coûte « %s », absent des resources de la classe" % [action_id, cost])
+		if cls.has("weapon") and not Dice.is_valid_expr(cls["weapon"].get("damage", "")):
+			errors.append(ctx + " : dégâts de l'arme invalides")
+		if cls.get("actions", []).is_empty():
+			errors.append(ctx + " : aucune action de combat")
+
+	var size_ids := _ids(db.rules.get("sizes", []))
+	for enemy: Dictionary in db.enemies.values():
+		var ctx := "enemies.json › %s" % enemy["id"]
+		for key in ["name", "ac", "hp", "attacks"]:
+			if not enemy.has(key):
+				errors.append(ctx + " : champ « %s » manquant" % key)
+		if not Dice.is_valid_expr(str(enemy.get("hp", ""))):
+			errors.append(ctx + " : PV invalides « %s »" % enemy.get("hp"))
+		if enemy.has("gold") and not Dice.is_valid_expr(enemy["gold"]):
+			errors.append(ctx + " : or invalide « %s »" % enemy["gold"])
+		if enemy.get("size", "medium") not in size_ids:
+			errors.append(ctx + " : taille inconnue « %s »" % enemy.get("size"))
+		for attack: Dictionary in enemy.get("attacks", []):
+			if not attack.has("to_hit") or not Dice.is_valid_expr(attack.get("damage", "")):
+				errors.append(ctx + " : attaque « %s » invalide (to_hit et damage requis)" % attack.get("name", "?"))
+		for loot: Dictionary in enemy.get("loot", []):
+			_expect_ref(db.items, loot.get("item"), "objet", ctx, errors)
+
+	for companion: Dictionary in db.companions.values():
+		var ctx := "companions.json › %s" % companion["id"]
+		_expect_ref(db.species, companion.get("species"), "espèce", ctx, errors)
+		_expect_ref(db.classes, companion.get("class"), "classe", ctx, errors)
+		if companion.get("background", "") != "":
+			_expect_ref(db.backgrounds, companion["background"], "passé", ctx, errors)
+
+	for item: Dictionary in db.items.values():
+		if item.has("use") and not Dice.is_valid_expr(item["use"].get("heal", "")):
+			errors.append("items.json › %s : use.heal invalide" % item["id"])
 
 
 static func _validate_skills_and_items(db: Node, entry: Dictionary, ctx: String, errors: Array[String]) -> void:
@@ -178,6 +240,8 @@ static func _validate_conditions(db: Node, conditions: Variant, ctx: String, err
 				_expect_ref(db.items, c["id"], "objet", ctx, errors)
 			"seen":
 				_expect_ref(db.events, c["event"], "événement", ctx, errors)
+			"companion":
+				_expect_ref(db.companions, c["id"], "compagnon", ctx, errors)
 			"unlocked":
 				_validate_unlock_id(db, c["id"], ctx, errors)
 			"time":
@@ -203,7 +267,19 @@ static func _validate_effects(db: Node, effects: Variant, ctx: String, errors: A
 		if not missing.is_empty():
 			errors.append(ctx + " : effet « %s » sans %s" % [type, missing])
 			continue
+		if type == "combat" and e != effects.back():
+			errors.append(ctx + " : l'effet « combat » doit être le dernier de la liste")
 		match type:
+			"combat":
+				for enemy_id in e["enemies"]:
+					_expect_ref(db.enemies, enemy_id, "ennemi", ctx, errors)
+				if e.get("on_defeat", "death") not in ["death", "knockout"]:
+					errors.append(ctx + " : on_defeat doit valoir « death » ou « knockout »")
+				for key in ["victory", "defeat", "fled"]:
+					if e.has(key):
+						_validate_effects(db, e[key].get("effects", []), "%s › %s" % [ctx, key], errors)
+			"recruit":
+				_expect_ref(db.companions, e["companion"], "compagnon", ctx, errors)
 			"add_item", "remove_item":
 				_expect_ref(db.items, e["id"], "objet", ctx, errors)
 			"ability":

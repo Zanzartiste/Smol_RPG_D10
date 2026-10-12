@@ -10,7 +10,10 @@ dans la console Godot. Les tests automatisés le signalent aussi.
 | `species.json` | Espèces : taille, âges, vieillissement, noms, apparence des portraits |
 | `classes.json` | Classes : dé de vie, modèle d'attributs, compétences maîtrisées, objets de départ |
 | `backgrounds.json` | Passés : compétences maîtrisées, or et objets de départ éventuels |
-| `items.json` | Objets |
+| `items.json` | Objets (`use` : utilisable en combat, ex. `{"heal": "2d4+2"}`) |
+| `enemies.json` | Ennemis : CA, PV, attaques, XP, butin, apparence |
+| `actions.json` | Actions de combat des classes (attaques, sorts, soins) |
+| `companions.json` | Compagnons recrutables |
 | `locations.json` | Lieux proposés au joueur (l'ordre du fichier est l'ordre d'affichage) |
 | `events/*.json` | Événements, un fichier par lieu ou par thème (tous les `.json` du dossier sont chargés) |
 
@@ -98,6 +101,7 @@ Chaque condition est un objet avec un champ `type`. Une liste de conditions est 
 | `life_stage` | `in` (liste) | L'étape de vie (`child`, `teen`, `adult`, `elder`, `venerable`) fait partie de la liste |
 | `age` / `gold` / `level` | `min`?, `max`? | La valeur est dans l'intervalle |
 | `item` | `id`, `min`? (1) | Le personnage possède au moins `min` exemplaires de l'objet |
+| `companion` | `id` | Le compagnon (`companions.json`) fait partie du groupe |
 | `time` | `in` (liste) | Le moment de la journée (`morning`, `afternoon`, `evening`) fait partie de la liste |
 | `not` | `condition` | La sous-condition est fausse |
 | `any` | `conditions` (liste) | Au moins une des sous-conditions est vraie (OU) |
@@ -118,6 +122,75 @@ Chaque condition est un objet avec un champ `type`. Une liste de conditions est 
 | `goto` | `event` | Enchaîne directement sur un autre événement, après le bouton « Continuer » |
 | `pass_time` | `slots`?, `days`? | Fait passer du temps en plus |
 | `die` | `cause`? | Tue le personnage |
+| `long_rest` | — | Repos long : PV et ressources (emplacements de sort) du groupe au maximum |
+| `recruit` | `companion` | Le compagnon rejoint le groupe (dans la limite de `max_companions`) |
+| `combat` | `enemies`, … | Lance un combat (voir plus bas). **Doit être le dernier effet de la liste** |
+
+## Combat
+
+Un combat se lance avec l'effet `combat` :
+
+```json
+{
+	"type": "combat",
+	"enemies": ["bandit", "bandit"],
+	"flee": true,
+	"flee_dc": 12,
+	"on_defeat": "death",
+	"victory": {"text": "Les brigands gisent dans la boue.", "effects": []},
+	"fled": {"text": "Vous les semez.", "effects": []},
+	"defeat": {"text": "…", "effects": []}
+}
+```
+
+| Champ | Description |
+|---|---|
+| `enemies` | Ids d'`enemies.json`. Les doublons sont numérotés (Brigand A, Brigand B) |
+| `flee` (true), `flee_dc` (12) | La fuite est-elle possible, et son DD (d20 + DEX) |
+| `on_defeat` | `death` (par défaut) : le héros à 0 PV meurt, les compagnons à 0 PV aussi. `knockout` : tout le monde se relève à 1 PV, comme pour une bagarre de taverne |
+| `victory` / `fled` / `defeat` | Texte et effets de chaque issue. `defeat` ne sert qu'en `knockout` |
+
+**Déroulement :**
+- **Initiative** : chacun lance d20 + DEX, puis le groupe et les ennemis agissent dans cet ordre.
+- **Attaque** : d20 + bonus contre la CA de la cible. Un 20 naturel est un critique (dés de dégâts doublés), un 1 naturel
+  rate toujours.
+- **Bonus d'attaque d'un allié** : le modificateur de l'attribut, plus la maîtrise.
+- **Récompenses à la victoire** : l'XP de tous les ennemis va à chaque membre du groupe encore debout, et l'or et le
+  butin s'ajoutent.
+
+**Équilibrage :** `tools/combat_bench.tscn` joue chaque rencontre des centaines de fois et affiche le taux de victoire,
+par classe, en solo et avec un compagnon.
+
+### Ennemis (`enemies.json`)
+
+| Champ | Description |
+|---|---|
+| `ac`, `hp` | Classe d'armure, et PV sous forme d'expression de dés (`2d6+2`), tirés à chaque combat |
+| `abilities` | Attributs (la DEX sert à l'initiative) |
+| `attacks` | `[{"name", "to_hit", "damage"}]` : l'ennemi en choisit une au hasard et vise un membre du groupe au hasard |
+| `size` | Taille (`small`, `medium`, `large`…), qui détermine la taille du sprite |
+| `xp`, `gold`?, `loot`? | Récompenses. `loot` : `[{"item", "chance", "count"?}]` |
+| `death_cause` | Texte de l'écran de mort si l'ennemi tue le héros |
+| `art` | Placeholder : `{"type": "wolf" \| "rat" \| "humanoid", …}` |
+
+### Actions de combat (`actions.json`)
+
+| Champ | Description |
+|---|---|
+| `type` | `attack` (jet contre la CA), `auto` (touche toujours) ou `heal` |
+| `target` | `enemy`, `ally` ou `self` |
+| `ability` | `weapon` (attribut de l'arme), `spell` (attribut d'incantation de la classe) ou un id d'attribut |
+| `damage` | Expression de dés, ou `weapon` pour les dégâts de l'arme. `add_mod` : ajoute le modificateur. `extra_damage` : dés en plus |
+| `heal` | Expression de soins (`level` = niveau du personnage) |
+| `per_combat` | Nombre d'utilisations par combat |
+| `cost` | Ressource consommée (ex. `spell_slot`), rechargée par `long_rest` |
+
+Les classes déclarent `weapon` (`name`, `damage`, `ability`), `armor` (`base`, `add_dex`), `actions`, et selon le cas
+`spellcasting` (attribut) et `resources` (ex. `{"spell_slot": 2}`).
+
+### Expressions de dés
+
+Elles s'écrivent `XdY+Z`, et les termes peuvent se combiner : `2d6+3`, `1d8+1d6-1`, `5`.
 
 ## Flags : conventions
 
@@ -196,6 +269,9 @@ Toutes les commandes se lancent depuis le dossier `claude_rpg/`, avec `godot` d�
 ```sh
 # Tests automatisés : validation des données, règles, simulation de 1500 actions
 godot --headless --path . res://tests/test_runner.tscn
+
+# Équilibrage des combats (taux de victoire par classe et par rencontre)
+godot --headless --path . res://tools/combat_bench.tscn
 
 # Planches PNG de tous les portraits et décors procéduraux
 godot --headless --path . res://tools/art_preview.tscn -- <dossier>

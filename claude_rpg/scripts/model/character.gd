@@ -17,6 +17,8 @@ var inventory: Dictionary = {}  # id d'objet -> quantité
 var start_age := 18
 var age_days := 0  # jours vécus depuis le début de la partie
 var art_seed := 0  # graine des variations du portrait procédural
+var template_id := ""  # pour un compagnon : son id dans companions.json
+var resources: Dictionary = {}  # ressources restantes (ex. spell_slot), rechargées par un repos long
 
 
 ## Options : "abilities" (scores finaux, sinon modèle de la classe), "background", "gender".
@@ -38,6 +40,7 @@ static func create(species: String, cls: String, char_name: String, options: Dic
 
 	c.max_hp = c.compute_max_hp()
 	c.hp = c.max_hp
+	c.resources = class_data.get("resources", {}).duplicate()
 	c.gold = int(DB.rules.get("start_gold", 0)) + int(background.get("gold", 0))
 	for source: Dictionary in [class_data, background]:
 		var start_items: Dictionary = source.get("start_items", {})
@@ -85,6 +88,55 @@ func is_proficient(skill_id: String) -> bool:
 func skill_mod(skill_id: String) -> int:
 	var ability: String = DB.skills[skill_id]["ability"]
 	return ability_mod(ability) + (proficiency_bonus() if is_proficient(skill_id) else 0)
+
+
+## Compagnon décrit dans companions.json.
+static func create_companion(template_id: String) -> Character:
+	var t: Dictionary = DB.companions[template_id]
+	var c := create(t["species"], t["class"], t["name"], {"background": t.get("background", ""), "gender": t.get("gender", "nonbinary")})
+	c.template_id = template_id
+	c.art_seed = int(t.get("art_seed", hash(template_id)))
+	c.level = int(t.get("level", 1))
+	c.xp = int(DB.rules["xp_by_level"][c.level - 1])
+	c.max_hp = c.compute_max_hp()
+	c.hp = c.max_hp
+	return c
+
+
+# --- Combat ------------------------------------------------------------------
+
+func weapon() -> Dictionary:
+	return DB.classes[class_id].get("weapon", {"name": "Poings", "damage": "1", "ability": "str"})
+
+
+## Classe d'armure : armure de la classe (+ DEX si l'armure le permet).
+func armor_class() -> int:
+	var armor: Dictionary = DB.classes[class_id].get("armor", {"base": 10, "add_dex": true})
+	return int(armor.get("base", 10)) + (ability_mod("dex") if armor.get("add_dex", true) else 0)
+
+
+## Attribut utilisé par une action : "weapon" (celui de l'arme), "spell" (celui de la classe) ou un id d'attribut.
+func action_ability(ability: String) -> String:
+	match ability:
+		"weapon":
+			return weapon().get("ability", "str")
+		"spell":
+			return DB.classes[class_id].get("spellcasting", "int")
+	return ability
+
+
+func attack_bonus(ability: String) -> int:
+	return ability_mod(action_ability(ability)) + proficiency_bonus()
+
+
+func max_resource(resource_id: String) -> int:
+	return int(DB.classes[class_id].get("resources", {}).get(resource_id, 0))
+
+
+## Repos long : PV et ressources (emplacements de sort...) au maximum.
+func long_rest() -> void:
+	hp = max_hp
+	resources = DB.classes[class_id].get("resources", {}).duplicate()
 
 
 ## Catégorie de taille, déterminée par l'espèce (tiny, small, medium, large).

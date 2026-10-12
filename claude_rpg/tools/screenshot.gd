@@ -43,7 +43,46 @@ func _ready() -> void:
 		while main.dice_tray.is_playing():
 			await get_tree().process_frame
 		await _capture("6_result.png")
+
+	# Combat avec Mira contre un groupe mixte.
+	Effects.apply_all([{"type": "recruit", "companion": "mira"}], Game.life, Meta)
+	Game.life.character.hp = Game.life.character.max_hp
+	main._refresh_sheet()
+	main.illustration.texture = ArtProvider.location_image("forest", Game.life)
+	main._run_combat({"enemies": ["dire_wolf", "bandit", "giant_rat"]})
+	await _wait_for_menu(main)
+	await _capture("7_combat_menu.png")
+	main.choices_box.get_child(0).pressed.emit()
+	await _wait_frames(4)
+	await _capture("8_combat_targets.png")
+	main.choices_box.get_child(0).pressed.emit()
+	await get_tree().create_timer(0.35).timeout
+	await _capture("9_combat_roll.png")
+	# On joue le reste du combat en accéléré, en prenant toujours la première option disponible.
+	Engine.time_scale = 4.0
+	while main.battle_view.visible:
+		await _wait_for_menu(main)
+		if not main.battle_view.visible:
+			break
+		for button: Button in main.choices_box.get_children():
+			if not button.disabled:
+				button.pressed.emit()
+				break
+		await _wait_frames(2)
+	Engine.time_scale = 1.0
+	await _capture("10_combat_end.png")
 	get_tree().quit()
+
+
+## Attend que des boutons soient proposés (menu d'action) ou que le combat soit terminé.
+func _wait_for_menu(main: Control) -> void:
+	while main.battle_view.visible and (main.choices_box.get_child_count() == 0 or main.dice_tray.is_playing()):
+		await get_tree().process_frame
+
+
+func _wait_frames(count: int) -> void:
+	for i in count:
+		await get_tree().process_frame
 
 
 func _capture(file: String) -> void:

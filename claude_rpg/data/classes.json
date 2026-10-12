@@ -6,6 +6,9 @@
 		"hit_die": 10,
 		"ability_priority": ["str", "con", "dex", "wis", "cha", "int"],
 		"skills": ["athletics", "perception", "survival"],
+		"weapon": {"name": "Épée longue", "damage": "1d8", "ability": "str"},
+		"armor": {"name": "Cotte de mailles", "base": 16, "add_dex": false},
+		"actions": ["weapon_attack", "second_wind"],
 		"start_items": {"potion_heal": 1},
 		"art": {"headgear": "helmet", "outfit": "#6e6e78", "accent": "#9a2f2f"}
 	},
@@ -16,6 +19,11 @@
 		"hit_die": 6,
 		"ability_priority": ["int", "con", "dex", "wis", "cha", "str"],
 		"skills": ["arcana", "investigation", "medicine"],
+		"spellcasting": "int",
+		"resources": {"spell_slot": 2},
+		"weapon": {"name": "Bâton", "damage": "1d6", "ability": "str"},
+		"armor": {"name": "Robe", "base": 10, "add_dex": true},
+		"actions": ["weapon_attack", "fire_bolt", "magic_missile"],
 		"start_items": {},
 		"art": {"headgear": "wizard_hat", "outfit": "#3b3a7a", "accent": "#d4b06a"}
 	},
@@ -28,6 +36,9 @@
 		"hit_die": 8,
 		"ability_priority": ["dex", "con", "cha", "wis", "int", "str"],
 		"skills": ["stealth", "sleight_of_hand", "acrobatics", "perception"],
+		"weapon": {"name": "Rapière", "damage": "1d8", "ability": "dex"},
+		"armor": {"name": "Armure de cuir", "base": 11, "add_dex": true},
+		"actions": ["weapon_attack", "sneak_attack"],
 		"start_items": {},
 		"art": {"headgear": "hood", "outfit": "#3a4a2e", "accent": "#6b4a2a"}
 	}

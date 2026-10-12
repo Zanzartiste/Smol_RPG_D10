@@ -1,0 +1,13 @@
+[
+	{
+		"id": "mira",
+		"name": "Mira",
+		"description": "Une chasseuse de primes au regard d'acier, plus à l'aise avec une dague qu'avec les mots.",
+		"species": "human",
+		"class": "rogue",
+		"background": "outlander",
+		"gender": "female",
+		"level": 1,
+		"art_seed": 4242
+	}
+]

@@ -54,6 +54,68 @@ func resolve_choice(choice: Dictionary, roll: Dictionary = {}) -> Dictionary:
 	return result
 
 
+## Combat en cours (null hors combat).
+var combat: Combat
+
+
+func start_combat(spec: Dictionary) -> Combat:
+	combat = Combat.new(spec, life)
+	return combat
+
+
+## Applique l'issue du combat : récompenses, compagnons tombés, K.-O., puis effets de l'issue
+## (victory / defeat / fled). Retourne un résultat au même format que resolve_choice().
+func finish_combat() -> Dictionary:
+	var c := combat
+	combat = null
+	var lines: Array[String] = []
+	var knockout: bool = c.spec.get("on_defeat", "death") == "knockout"
+
+	if c.outcome == "victory":
+		var xp := 0
+		for enemy in c.enemies():
+			xp += int(enemy.enemy.get("xp", 0))
+			if enemy.enemy.has("gold"):
+				var gold := maxi(0, int(Dice.roll_expr(enemy.enemy["gold"], life.rng)["total"]))
+				life.character.gold += gold
+				lines.append(Loc.ui("Butin : %d po") % gold)
+			for loot: Dictionary in enemy.enemy.get("loot", []):
+				if life.rng.randf() < float(loot.get("chance", 1.0)):
+					life.character.add_item(loot["item"], int(loot.get("count", 1)))
+					lines.append(Loc.ui("Butin : %s ×%d") % [DB.items[loot["item"]]["name"], int(loot.get("count", 1))])
+		# Chaque membre du groupe encore debout gagne toute l'XP.
+		for member in life.party():
+			if member.hp > 0 and xp > 0:
+				for new_level in member.add_xp(xp):
+					lines.append(Loc.ui("%s atteint le niveau %d !") % [member.name, new_level])
+		if xp > 0:
+			lines.push_front(Loc.ui("+%d XP") % xp)
+
+	# Compagnons à 0 PV : assommés si le combat n'était pas mortel, morts sinon.
+	for companion in life.companions.duplicate():
+		if companion.hp <= 0:
+			if knockout:
+				companion.hp = 1
+			else:
+				life.companions.erase(companion)
+				lines.append(Loc.ui("%s a péri au combat.") % companion.name)
+	if knockout and life.character.hp <= 0:
+		life.character.hp = 1
+
+	var key := c.outcome
+	var outcome: Dictionary = c.spec.get(key, {})
+	var default_texts := {
+		"victory": Loc.ui("Vous êtes {g:victorieux|victorieuse|victorieux·se}."),
+		"fled": Loc.ui("Vous parvenez à fuir."),
+		"defeat": Loc.ui("Vous êtes {g:vaincu|vaincue|vaincu·e}."),
+	}
+	var applied := Effects.apply_all(outcome.get("effects", []), life, Meta)
+	lines.append_array(applied["lines"])
+	_after_change()
+	return {"outcome": key, "text": outcome.get("text", default_texts.get(key, "")), "roll": {},
+		"lines": lines, "goto": applied["goto"], "combat": applied["combat"]}
+
+
 ## Fin d'une séquence d'événements (sans « goto ») : le temps avance d'un créneau.
 func end_event() -> void:
 	current_event = {}

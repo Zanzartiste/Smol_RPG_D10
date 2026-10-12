@@ -2,10 +2,11 @@ class_name DiceTray
 extends Control
 ## Plateau de lancer de dés animé : les dés sont jetés sur la table, glissent, tournent,
 ## rebondissent sur les bords et entre eux, puis s'immobilisent sur leur résultat.
-## Usage : `await dice_tray.play(roll)`. Un clic ou une touche accélère l'animation (voir skip()).
+## Usage : `await dice_tray.play(roll)`, ou `play(roll, true)` pour un lancer rapide (ennemis, dégâts).
+## Un clic ou une touche accélère l'animation (voir skip()).
 ##
 ## `roll` : {"dice": [{"sides": 20, "value": 14}, ...], "mod": 2, "stat": "Athlétisme",
-##           "dc": 13, "success": true}  (dc, success et stat sont facultatifs)
+##           "dc": 13, "dc_label": "CA", "success": true}  (dc, dc_label, success et stat sont facultatifs)
 
 signal finished
 
@@ -22,6 +23,8 @@ const INK := Color("#3a1d14")
 var _dice: Array[Dictionary] = []
 var _roll: Dictionary = {}
 var _phase := 0  # 0 inactif, 1 roulement, 2 verdict
+var _friction := FRICTION
+var _result_time := RESULT_TIME
 var _result_timer := 0.0
 var _rng := RandomNumberGenerator.new()
 
@@ -37,8 +40,10 @@ func is_playing() -> bool:
 	return _phase != 0
 
 
-func play(roll: Dictionary) -> void:
+func play(roll: Dictionary, fast := false) -> void:
 	_roll = roll
+	_friction = 0.02 if fast else FRICTION
+	_result_time = 0.6 if fast else RESULT_TIME
 	_dice.clear()
 	var specs: Array = roll.get("dice", [])
 	for i in specs.size():
@@ -97,7 +102,7 @@ func _process(delta: float) -> void:
 	_collide()
 	if _phase == 1 and _dice.all(func(d): return d["settled"]):
 		_phase = 2
-		_result_timer = RESULT_TIME
+		_result_timer = _result_time
 	elif _phase == 2:
 		_result_timer -= delta
 		if _result_timer <= 0.0:
@@ -126,7 +131,7 @@ func _step(d: Dictionary, delta: float) -> void:
 		vel.y = (absf(vel.y) if pos.y < area.position.y else -absf(vel.y)) * BOUNCE
 		pos.y = clampf(pos.y, area.position.y, area.end.y)
 		d["spin"] *= -0.7
-	var damp := pow(FRICTION, delta)
+	var damp := pow(_friction, delta)
 	d["pos"] = pos
 	d["vel"] = vel * damp
 	d["spin"] *= damp
@@ -180,7 +185,7 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0.05, 0.04, 0.03, 0.75))
 	draw_string(font, Vector2(16, 32), _notation(), HORIZONTAL_ALIGNMENT_LEFT, -1, 22, UITheme.GOLD)
 	if _roll.has("dc"):
-		draw_string(font, Vector2(0, 32), Loc.ui("DD %d") % _roll["dc"], HORIZONTAL_ALIGNMENT_RIGHT,
+		draw_string(font, Vector2(0, 32), "%s %d" % [_roll.get("dc_label", Loc.ui("DD")), _roll["dc"]], HORIZONTAL_ALIGNMENT_RIGHT,
 			size.x - 16, 22, UITheme.GOLD)
 	for d in _dice:
 		_draw_die(d, font)
@@ -237,10 +242,13 @@ func _draw_verdict(font: Font) -> void:
 	draw_string(font, Vector2(16, y), line, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, UITheme.TEXT)
 	if _roll.has("success"):
 		var ok: bool = _roll["success"]
+		var is_attack: bool = _roll.get("dc_label", "") == "CA"
 		var verdict := Loc.ui("RÉUSSITE") if ok else Loc.ui("ÉCHEC")
+		if is_attack:
+			verdict = Loc.ui("TOUCHÉ") if ok else Loc.ui("RATÉ")
 		var natural: int = _dice[0]["value"] if _dice.size() == 1 and _dice[0]["sides"] == 20 else 0
 		if natural == 20:
-			verdict = Loc.ui("20 NATUREL !")
+			verdict = Loc.ui("CRITIQUE !") if is_attack else Loc.ui("20 NATUREL !")
 		elif natural == 1:
 			verdict = Loc.ui("1 NATUREL…")
 		draw_string(font, Vector2(0, y), verdict, HORIZONTAL_ALIGNMENT_RIGHT, size.x - 16, 30,

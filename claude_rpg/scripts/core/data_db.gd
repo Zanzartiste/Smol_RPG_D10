@@ -10,6 +10,9 @@ var skills: Dictionary = {}  # id -> {id, name, ability}
 var species: Dictionary = {}
 var classes: Dictionary = {}
 var backgrounds: Dictionary = {}  # passés
+var enemies: Dictionary = {}
+var actions: Dictionary = {}  # actions de combat
+var companions: Dictionary = {}
 var items: Dictionary = {}
 var locations: Dictionary = {}
 var location_order: Array[String] = []
@@ -30,6 +33,9 @@ func load_all() -> void:
 	species = _index_by_id(_load_json("species.json", []), "species.json")
 	classes = _index_by_id(_load_json("classes.json", []), "classes.json")
 	backgrounds = _index_by_id(_load_json("backgrounds.json", []), "backgrounds.json")
+	enemies = _index_by_id(_load_json("enemies.json", []), "enemies.json")
+	actions = _index_by_id(_load_json("actions.json", []), "actions.json")
+	companions = _index_by_id(_load_json("companions.json", []), "companions.json")
 	items = _index_by_id(_load_json("items.json", []), "items.json")
 	locations = _index_by_id(_load_json("locations.json", []), "locations.json")
 	location_order.assign(locations.keys())

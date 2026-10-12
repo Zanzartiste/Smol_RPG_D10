@@ -1,0 +1,73 @@
+[
+	{
+		"id": "wolf",
+		"name": "Loup",
+		"size": "medium",
+		"ac": 13,
+		"hp": "2d6+2",
+		"abilities": {"str": 12, "dex": 15, "con": 12, "int": 3, "wis": 12, "cha": 6},
+		"attacks": [{"name": "Morsure", "to_hit": 4, "damage": "2d4"}],
+		"xp": 50,
+		"loot": [{"item": "wolf_pelt", "chance": 1.0}],
+		"death_cause": "Dévoré par un loup",
+		"art": {"type": "wolf", "fur": "#8a8a90", "belly": "#b8b4ac", "eyes": "#e8c547"}
+	},
+	{
+		"id": "dire_wolf",
+		"name": "Alpha des loups",
+		"size": "large",
+		"ac": 14,
+		"hp": "4d10+6",
+		"abilities": {"str": 17, "dex": 15, "con": 15, "int": 3, "wis": 12, "cha": 7},
+		"attacks": [{"name": "Morsure brutale", "to_hit": 5, "damage": "2d6+1"}],
+		"xp": 200,
+		"loot": [{"item": "wolf_pelt", "chance": 1.0, "count": 2}],
+		"death_cause": "Dévoré par l'alpha des loups",
+		"art": {"type": "wolf", "fur": "#3c3a40", "belly": "#6a6670", "eyes": "#e0402a"}
+	},
+	{
+		"id": "bandit",
+		"name": "Brigand",
+		"size": "medium",
+		"ac": 12,
+		"hp": "2d6+1",
+		"abilities": {"str": 11, "dex": 12, "con": 12, "int": 10, "wis": 10, "cha": 10},
+		"attacks": [{"name": "Cimeterre", "to_hit": 3, "damage": "1d6"}],
+		"xp": 25,
+		"gold": "1d6",
+		"death_cause": "Tué par des brigands",
+		"art": {
+			"type": "humanoid",
+			"species_art": {"ears": "round", "skin": ["#d9a57b", "#b07a50"], "hair": ["#2b1d14", "#5a3a1e"], "eyes": ["#3a2a1a"]},
+			"class_art": {"headgear": "hood", "outfit": "#5a4030", "accent": "#9a2f2f"}
+		}
+	},
+	{
+		"id": "brute",
+		"name": "Colosse tatoué",
+		"size": "medium",
+		"ac": 11,
+		"hp": "3d8+3",
+		"abilities": {"str": 16, "dex": 10, "con": 13, "int": 8, "wis": 9, "cha": 8},
+		"attacks": [{"name": "Coup de poing", "to_hit": 4, "damage": "1d4+3"}],
+		"xp": 25,
+		"death_cause": "Rossé à mort dans une taverne",
+		"art": {
+			"type": "humanoid",
+			"species_art": {"ears": "round", "skin": ["#c68f62"], "hair": ["#1d1d1d"], "eyes": ["#3a2a1a"]},
+			"class_art": {"headgear": "", "outfit": "#4a3a2a", "accent": "#2a4a6a"}
+		}
+	},
+	{
+		"id": "giant_rat",
+		"name": "Rat géant",
+		"size": "small",
+		"ac": 12,
+		"hp": "1d6+1",
+		"abilities": {"str": 7, "dex": 15, "con": 11, "int": 2, "wis": 10, "cha": 4},
+		"attacks": [{"name": "Morsure", "to_hit": 3, "damage": "1d4+1"}],
+		"xp": 10,
+		"death_cause": "Dévoré par des rats",
+		"art": {"type": "rat", "fur": "#6a5a4a", "eyes": "#e0402a"}
+	}
+]

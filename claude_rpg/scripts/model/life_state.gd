@@ -4,6 +4,7 @@ extends RefCounted
 ## Tout ce qui est ici disparaît à la mort (sauf ce que MetaState en retient).
 
 var character: Character
+var companions: Array[Character] = []
 var rng := RandomNumberGenerator.new()
 var day := 1
 var slot := 0  # index dans DB.time_slots()
@@ -26,6 +27,17 @@ func slot_name() -> String:
 
 func has_flag(id: String) -> bool:
 	return bool(flags.get(id, false))
+
+
+func has_companion(template_id: String) -> bool:
+	return companions.any(func(c): return c.template_id == template_id)
+
+
+## Le héros puis ses compagnons.
+func party() -> Array[Character]:
+	var result: Array[Character] = [character]
+	result.append_array(companions)
+	return result
 
 
 func mark_seen(event_id: String) -> void:

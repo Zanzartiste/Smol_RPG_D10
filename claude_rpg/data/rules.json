@@ -60,6 +60,7 @@
 		{"id": "venerable", "name": "Vénérable"}
 	],
 	"start_gold": 15,
+	"max_companions": 1,
 	"xp_by_level": [0, 300, 900, 2700, 6500],
 	"proficiency_by_level": [2, 2, 2, 2, 3]
 }

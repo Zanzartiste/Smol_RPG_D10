@@ -13,9 +13,14 @@ static func bbcode(ch: Character) -> String:
 		t += "[color=%s]%s[/color] %s   " % [gold, Loc.ui("Passé"), DB.backgrounds[ch.background_id]["name"]]
 	t += "[color=%s]%s[/color] %s\n" % [gold, Loc.ui("Taille"), DB.size_name(ch.size())]
 	t += Loc.ui("%d ans — %s") % [ch.age_years(), DB.life_stage_name(ch.life_stage())] + "\n\n"
-	t += "[color=%s]PV[/color] %d / %d    [color=%s]%s[/color] %d po\n" % [
-		gold, ch.hp, ch.max_hp, gold, Loc.ui("Or"), ch.gold]
-	t += "[color=%s]%s[/color] %d    [color=%s]XP[/color] %d\n\n" % [gold, Loc.ui("Niveau"), ch.level, gold, ch.xp]
+	t += "[color=%s]PV[/color] %d / %d    [color=%s]CA[/color] %d    [color=%s]%s[/color] %d po\n" % [
+		gold, ch.hp, ch.max_hp, gold, ch.armor_class(), gold, Loc.ui("Or"), ch.gold]
+	t += "[color=%s]%s[/color] %d    [color=%s]XP[/color] %d\n" % [gold, Loc.ui("Niveau"), ch.level, gold, ch.xp]
+	for resource_id: String in ch.resources:
+		t += "[color=%s]%s[/color] %d / %d\n" % [
+			gold, Loc.ui("Emplacements de sort") if resource_id == "spell_slot" else resource_id,
+			int(ch.resources[resource_id]), ch.max_resource(resource_id)]
+	t += "\n"
 
 	t += "[table=3]"
 	for ability: Dictionary in DB.rules["abilities"]:
@@ -36,6 +41,17 @@ static func bbcode(ch: Character) -> String:
 		t += "[color=%s]—[/color]\n" % dim
 	for item_id: String in ch.inventory:
 		t += "%s ×%d\n" % [DB.items[item_id]["name"], ch.inventory[item_id]]
+	return t
+
+
+## Lignes « Compagnons » (nom, classe, PV), vide s'il n'y en a pas.
+static func companions_bbcode(life: LifeState) -> String:
+	if life.companions.is_empty():
+		return ""
+	var t := "\n[color=%s]%s[/color]\n" % [UITheme.GOLD.to_html(false), Loc.ui("Compagnons")]
+	for c in life.companions:
+		t += "%s (%s %d) — %d / %d PV, CA %d\n" % [
+			c.name, DB.classes[c.class_id]["name"], c.level, c.hp, c.max_hp, c.armor_class()]
 	return t
 
 

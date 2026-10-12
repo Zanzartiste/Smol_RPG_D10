@@ -95,4 +95,5 @@ static func resolve_choice(ev: Dictionary, choice: Dictionary, life: LifeState, 
 		"roll": roll,
 		"lines": applied["lines"],
 		"goto": applied["goto"],
+		"combat": applied["combat"],
 	}

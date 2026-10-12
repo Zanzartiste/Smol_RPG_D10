@@ -15,6 +15,9 @@ const TESTS := [
 	"_test_effects",
 	"_test_aging",
 	"_test_engine",
+	"_test_dice_expressions",
+	"_test_combat",
+	"_test_companions",
 	"_test_creation",
 	"_test_dice_tray",
 	"_test_simulation",
@@ -216,6 +219,9 @@ func _test_engine() -> bool:
 		{"id": "a", "text": "A", "conditions": [{"type": "gold", "min": 1}], "outcome": {"text": "", "effects": []}}]}
 	DataValidator._validate_event(DB, trap, errors)
 	_expect(errors.any(func(e): return "sans condition" in e), "le validateur refuse un événement sans issue")
+	errors.clear()
+	DataValidator._validate_effects(DB, [{"type": "combat", "enemies": ["wolf"]}, {"type": "xp", "amount": 1}], "test", errors)
+	_expect(errors.any(func(e): return "dernier" in e), "le validateur exige que le combat soit le dernier effet")
 	meta.free()
 	return true
 
@@ -274,11 +280,150 @@ func _test_dice_tray() -> bool:
 	tray.free()
 	return true
 
+## Joue un combat entièrement en automatique et retourne le résultat de Game.finish_combat().
+func _auto_combat(spec: Dictionary) -> Dictionary:
+	var combat := Game.start_combat(spec)
+	var guard := 0
+	while not combat.is_over() and guard < 500:
+		guard += 1
+		var actor := combat.current()
+		var choice := combat.auto_choice(actor)
+		combat.perform(actor, choice["action"], choice["target"])
+		combat.end_turn()
+	_expect(guard < 500, "le combat se termine")
+	return Game.finish_combat()
+
+
+func _test_dice_expressions() -> bool:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 3
+	for expr in ["2d6+3", "1d10", "3d4+1d6-1", "5", "d20"]:
+		_expect(Dice.is_valid_expr(expr), "expression valide : " + expr)
+	for expr in ["", "2x6", "d", "+3", "1d6+"]:
+		_expect(not Dice.is_valid_expr(expr), "expression invalide : " + expr)
+	var ok := true
+	for i in 200:
+		var r := Dice.roll_expr("2d6+3", rng)
+		ok = ok and r["dice"].size() == 2 and r["bonus"] == 3 and r["total"] >= 5 and r["total"] <= 15
+	_expect(ok, "2d6+3 : deux dés, bonus 3, total entre 5 et 15")
+	_expect(Dice.roll_expr("1d8+2", rng, true)["dice"].size() == 2, "critique : dés doublés")
+	_expect(Dice.add_mod("1d8", 3) == "1d8+3" and Dice.add_mod("1d8", -1) == "1d8-1"
+		and Dice.add_mod("1d8", 0) == "1d8", "ajout de modificateur")
+	return true
+
+
+func _test_combat() -> bool:
+	# Guerrier humain au modèle : FOR 17 (+3), maîtrise +2, épée longue 1d8, cotte de mailles CA 16.
+	Game.start_life(Character.create("human", "fighter", "Testeur"), 99)
+	var life := Game.life
+	var fighter := Combatant.from_character(life.character, true)
+	var attack: Dictionary = DB.actions["weapon_attack"]
+	_expect(fighter.attack_bonus(attack) == 5 and fighter.damage_expr(attack) == "1d8+3", "attaque du guerrier : +5, 1d8+3")
+	_expect(life.character.armor_class() == 16, "CA du guerrier : 16")
+	var wizard := Combatant.from_character(Character.create("goblin", "wizard", "Mage"), true)
+	_expect(wizard.attack_bonus(DB.actions["fire_bolt"]) == 5, "trait de feu : INT +3 + maîtrise")
+	_expect(Character.create("goblin", "wizard", "Mage").armor_class() == 11, "CA du magicien : 10 + DEX")
+
+	var combat := Game.start_combat({"enemies": ["wolf", "wolf"]})
+	_expect(combat.combatants.size() == 3 and combat.order.size() == 3, "combat : héros + 2 loups")
+	_expect(combat.enemies()[0].name == "Loup A" and combat.enemies()[1].name == "Loup B", "ennemis identiques numérotés")
+	var hp := combat.enemies()[0].hp
+	_expect(hp >= 4 and hp <= 18, "PV du loup tirés selon 2d8+2")
+	var result := _finish_auto(combat)
+	_expect(result["outcome"] in ["victory", "defeat"], "le combat aboutit à une victoire ou une défaite")
+	if result["outcome"] == "victory":
+		_expect(life.character.item_count("wolf_pelt") == 2 and life.character.xp == 100, "victoire : XP et butin")
+	else:
+		_expect(life.dead and life.death_cause == "Dévoré par un loup", "défaite mortelle : cause de la mort")
+
+	# Ennemi de test imparable pour forcer les défaites.
+	DB.enemies["_ogre"] = {"id": "_ogre", "name": "Ogre", "ac": 30, "hp": "500", "abilities": {"dex": 30},
+		"attacks": [{"name": "Massue", "to_hit": 50, "damage": "100"}], "xp": 0}
+	Game.start_life(Character.create("human", "fighter", "Testeur"), 5)
+	result = _auto_combat({"enemies": ["_ogre"], "on_defeat": "knockout",
+		"defeat": {"text": "K.-O.", "effects": [{"type": "gold", "amount": -5}]}})
+	_expect(result["outcome"] == "defeat" and not Game.life.dead and Game.life.character.hp == 1,
+		"K.-O. : défaite non mortelle, 1 PV")
+	_expect(Game.life.character.gold == 10 and result["text"] == "K.-O.", "K.-O. : effets de l'issue « defeat »")
+	result = _auto_combat({"enemies": ["_ogre"]})
+	_expect(result["outcome"] == "defeat" and Game.life.dead and Game.life.death_cause == "Tué par Ogre",
+		"défaite mortelle")
+
+	Game.start_life(Character.create("human", "fighter", "Testeur"), 6)
+	combat = Game.start_combat({"enemies": ["_ogre"], "flee_dc": -100,
+		"fled": {"text": "Ouf", "effects": [{"type": "set_flag", "id": "ran"}]}})
+	var guard := 0
+	while not combat.is_over() and guard < 50:
+		guard += 1
+		if combat.current().is_ally():
+			combat.perform(combat.current(), {"id": Combat.ACTION_FLEE})
+		else:
+			combat.current().hp = combat.current().hp  # l'ogre ne joue pas : on passe son tour
+		combat.end_turn()
+	result = Game.finish_combat()
+	_expect(result["outcome"] == "fled" and Game.life.has_flag("ran"), "fuite : issue « fled » et ses effets")
+	DB.enemies.erase("_ogre")
+
+	# Sorts et repos.
+	Game.start_life(Character.create("goblin", "wizard", "Mage"), 7)
+	combat = Game.start_combat({"enemies": ["giant_rat"]})
+	var mage := combat.allies()[0]
+	var missile: Dictionary = DB.actions["magic_missile"]
+	var rat := combat.enemies()[0]
+	combat.perform(mage, missile, rat)
+	combat.perform(mage, missile, rat)
+	_expect(Game.life.character.resources["spell_slot"] == 0 and mage.unavailable_reason(missile) != "",
+		"projectile magique : emplacements épuisés")
+	_expect(not rat.is_alive() and combat.outcome == "victory", "projectile magique : touche toujours")
+	Game.finish_combat()
+	Effects.apply_all([{"type": "long_rest"}], Game.life, Meta)
+	_expect(Game.life.character.resources["spell_slot"] == 2, "repos long : emplacements restaurés")
+	return true
+
+
+func _finish_auto(combat: Combat) -> Dictionary:
+	var guard := 0
+	while not combat.is_over() and guard < 500:
+		guard += 1
+		var choice := combat.auto_choice(combat.current())
+		combat.perform(combat.current(), choice["action"], choice["target"])
+		combat.end_turn()
+	return Game.finish_combat()
+
+
+func _test_companions() -> bool:
+	Game.start_life(Character.create("human", "fighter", "Testeur"), 11)
+	var life := Game.life
+	var res := Effects.apply_all([{"type": "recruit", "companion": "mira"}], life, Meta)
+	_expect(life.companions.size() == 1 and life.has_companion("mira"), "recrutement de Mira")
+	_expect(res["lines"] == ["Mira rejoint votre groupe !"], "message de recrutement")
+	_expect(Conditions.check({"type": "companion", "id": "mira"}, life, Meta), "condition compagnon")
+	var mira := life.companions[0]
+	_expect(mira.class_id == "rogue" and mira.gender == "female" and mira.is_proficient("survival"),
+		"Mira : roublarde, passé Sauvageon")
+	Effects.apply_all([{"type": "recruit", "companion": "mira"}], life, Meta)
+	_expect(life.companions.size() == 1, "pas de doublon de compagnon")
+
+	var combat := Game.start_combat({"enemies": ["wolf"]})
+	_expect(combat.allies().size() == 2, "le compagnon participe au combat")
+	_expect(combat.allies()[1].actions().any(func(a): return a["id"] == "sneak_attack"), "actions de classe du compagnon")
+	# Le compagnon tombe pendant un combat mortel : il meurt pour de bon.
+	combat.allies()[1].hp = 0
+	combat.enemies()[0].hp = 0
+	combat.outcome = "victory"
+	var result := Game.finish_combat()
+	_expect(life.companions.is_empty() and result["lines"].has("Mira a péri au combat."), "mort définitive du compagnon")
+	_expect(not Conditions.check({"type": "companion", "id": "mira"}, life, Meta), "plus de compagnon")
+	return true
+
+
 ## Joue des centaines d'actions au hasard sur plusieurs vies pour débusquer les erreurs d'exécution.
 func _test_simulation() -> bool:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 1234
 	var deaths := 0
+	var combats := 0
+	var chronicle_start := Meta.chronicle.size()
 	Game.new_life(1)
 	for step in 1500:
 		if Game.life.dead:
@@ -296,16 +441,21 @@ func _test_simulation() -> bool:
 				_expect(false, "%s : aucun choix disponible" % ev["id"])
 				break
 			var result := Game.resolve_choice(options[rng.randi_range(0, options.size() - 1)]["choice"])
+			while not result["combat"].is_empty() and not Game.life.dead:
+				combats += 1
+				result = _auto_combat(result["combat"])
 			if Game.life.dead:
 				break
 			ev = DB.events[result["goto"]] if result["goto"] != "" else {}
 		if not Game.life.dead:
 			Game.end_event()
 	var unseen := DB.events.keys().filter(func(id): return not Meta.seen_events.has(id))
-	print("Simulation : %d morts, %d vies en chronique, événements jamais tirés : %s" % [
-		deaths, Meta.chronicle.size(), unseen])
+	print("Simulation : %d morts, %d combats, %d vies en chronique, événements jamais tirés : %s" % [
+		deaths, combats, Meta.chronicle.size(), unseen])
+	_expect(combats > 0, "la simulation a déclenché des combats")
 	_expect(deaths > 0, "la simulation produit des morts")
-	_expect(Meta.chronicle.size() == deaths + (1 if Game.life.dead else 0), "chaque mort est inscrite dans la chronique")
+	_expect(Meta.chronicle.size() - chronicle_start == deaths + (1 if Game.life.dead else 0),
+		"chaque mort est inscrite dans la chronique")
 	_expect(unseen.size() <= 2, "presque tous les événements sont atteignables")
 	return true
 

@@ -47,7 +47,10 @@
 			{
 				"id": "quick",
 				"text": "En arracher une poignée et repartir",
-				"outcome": {"text": "C'est toujours ça de pris.", "effects": [{"type": "add_item", "id": "healing_herbs"}]}
+				"outcome": {
+					"text": "C'est toujours ça de pris.",
+					"effects": [{"type": "add_item", "id": "healing_herbs"}]
+				}
 			}
 		]
 	},
@@ -61,14 +64,22 @@
 			{
 				"id": "fight",
 				"text": "L'affronter",
-				"check": {"skill": "athletics", "dc": 13},
-				"success": {
-					"text": "Après une lutte acharnée, la bête s'effondre. Sa peau vaudra quelques pièces.",
-					"effects": [{"type": "add_item", "id": "wolf_pelt"}, {"type": "xp", "amount": 100}]
-				},
-				"failure": {
-					"text": "Ses crocs se referment sur votre bras avant qu'il ne détale.",
-					"effects": [{"type": "hp", "amount": -6, "cause": "Dévoré par un loup"}]
+				"outcome": {
+					"text": "Le loup bondit, crocs en avant !",
+					"effects": [
+						{
+							"type": "combat",
+							"enemies": ["wolf"],
+							"victory": {
+								"text": "Le loup s'effondre dans les fougères. Sa peau vaudra quelques pièces.",
+								"effects": []
+							},
+							"fled": {
+								"text": "Vous détalez entre les arbres. Le loup ne vous suit pas.",
+								"effects": []
+							}
+						}
+					]
 				}
 			},
 			{
@@ -89,7 +100,10 @@
 				"id": "scare",
 				"text": "Hurler et agiter les bras",
 				"check": {"skill": "intimidation", "dc": 12},
-				"success": {"text": "Le loup recule, puis disparaît dans les fourrés.", "effects": [{"type": "xp", "amount": 25}]},
+				"success": {
+					"text": "Le loup recule, puis disparaît dans les fourrés.",
+					"effects": [{"type": "xp", "amount": 25}]
+				},
 				"failure": {
 					"text": "Le loup n'est pas impressionné. Pas du tout.",
 					"effects": [{"type": "hp", "amount": -4, "cause": "Dévoré par un loup"}]
@@ -112,25 +126,36 @@
 		"location": "forest",
 		"weight": 3,
 		"title": "Embuscade",
-		"text": "Trois brigands surgissent des fourrés, gourdins levés. « La bourse ou la vie ! »",
+		"text": "Deux brigands surgissent des fourrés, cimeterres au clair. « La bourse ou la vie ! »",
 		"choices": [
 			{
 				"id": "pay",
 				"text": "Donner 10 pièces d'or",
 				"conditions": [{"type": "gold", "min": 10}],
-				"outcome": {"text": "Ils empochent l'or et s'évanouissent dans les bois.", "effects": [{"type": "gold", "amount": -10}]}
+				"outcome": {
+					"text": "Ils empochent l'or et s'évanouissent dans les bois.",
+					"effects": [{"type": "gold", "amount": -10}]
+				}
 			},
 			{
 				"id": "fight",
 				"text": "Se battre",
-				"check": {"skill": "athletics", "dc": 15},
-				"success": {
-					"text": "Les brigands prennent la fuite en abandonnant leur butin.",
-					"effects": [{"type": "gold", "amount": 25}, {"type": "xp", "amount": 150}]
-				},
-				"failure": {
-					"text": "Les coups pleuvent de toutes parts.",
-					"effects": [{"type": "hp", "amount": -10, "cause": "Tué par des brigands"}]
+				"outcome": {
+					"text": "Vous dégainez. Les brigands ricanent et passent à l'attaque.",
+					"effects": [
+						{
+							"type": "combat",
+							"enemies": ["bandit", "bandit"],
+							"victory": {
+								"text": "Les brigands gisent dans la boue. Leur butin vous revient.",
+								"effects": []
+							},
+							"fled": {
+								"text": "Vous semez les brigands au prix d'une course effrénée.",
+								"effects": []
+							}
+						}
+					]
 				}
 			},
 			{
@@ -141,6 +166,57 @@
 				"failure": {
 					"text": "Un gourdin vous atteint dans le dos pendant votre fuite.",
 					"effects": [{"type": "hp", "amount": -5, "cause": "Tué par des brigands"}]
+				}
+			}
+		]
+	},
+	{
+		"id": "forest_alpha",
+		"location": "forest",
+		"weight": 4,
+		"repeat": "once_per_life",
+		"conditions": [
+			{"type": "level", "min": 2},
+			{"type": "not", "condition": {"type": "world_flag", "id": "alpha_slain"}}
+		],
+		"title": "L'alpha",
+		"text": "Un hurlement glace la forêt. Un loup gigantesque au pelage noir surgit, flanqué d'un loup gris. Ses yeux rougeoient dans la pénombre : c'est l'alpha qui terrorise la région.",
+		"choices": [
+			{
+				"id": "fight",
+				"text": "Affronter la meute",
+				"outcome": {
+					"text": "L'alpha montre les crocs. La meute charge !",
+					"effects": [
+						{
+							"type": "combat",
+							"enemies": ["dire_wolf", "wolf"],
+							"victory": {
+								"text": "L'alpha s'écroule. Les hurlements ne hanteront plus la Forêt des Murmures : on se souviendra de cet exploit à Brumeval.",
+								"effects": [
+									{"type": "set_world_flag", "id": "alpha_slain"},
+									{"type": "gold", "amount": 20}
+								]
+							},
+							"fled": {
+								"text": "Vous fuyez à travers les ronces, la meute sur les talons.",
+								"effects": []
+							}
+						}
+					]
+				}
+			},
+			{
+				"id": "hide",
+				"text": "Vous cacher et attendre qu'ils passent",
+				"check": {"skill": "stealth", "dc": 14},
+				"success": {
+					"text": "La meute passe à quelques pas de vous sans vous remarquer.",
+					"effects": []
+				},
+				"failure": {
+					"text": "L'alpha vous flaire et vous charge avant de disparaître dans les bois.",
+					"effects": [{"type": "hp", "amount": -8, "cause": "Dévoré par l'alpha des loups"}]
 				}
 			}
 		]
@@ -164,7 +240,11 @@
 				"check": {"skill": "arcana", "dc": 10},
 				"success": {
 					"text": "Les runes s'embrasent. Une voix ancienne murmure votre nom. Les elfes se souviendront de ce jour.",
-					"effects": [{"type": "unlock", "id": "species:elf"}, {"type": "set_world_flag", "id": "shrine_awakened"}, {"type": "xp", "amount": 200}]
+					"effects": [
+						{"type": "unlock", "id": "species:elf"},
+						{"type": "set_world_flag", "id": "shrine_awakened"},
+						{"type": "xp", "amount": 200}
+					]
 				},
 				"failure": {
 					"text": "Vous écorchez un mot. Une décharge vous projette hors du cercle.",
@@ -178,7 +258,11 @@
 				"check": {"skill": "religion", "dc": 13},
 				"success": {
 					"text": "Votre prière trouve un écho dans les pierres. Les runes s'embrasent doucement. Les elfes se souviendront de ce jour.",
-					"effects": [{"type": "unlock", "id": "species:elf"}, {"type": "set_world_flag", "id": "shrine_awakened"}, {"type": "xp", "amount": 200}]
+					"effects": [
+						{"type": "unlock", "id": "species:elf"},
+						{"type": "set_world_flag", "id": "shrine_awakened"},
+						{"type": "xp", "amount": 200}
+					]
 				},
 				"failure": {
 					"text": "Les pierres restent froides. Les dieux de ce lieu ne sont pas les vôtres.",
@@ -191,7 +275,11 @@
 				"check": {"skill": "arcana", "dc": 17},
 				"success": {
 					"text": "Contre toute attente, vous saisissez le sens des runes. Elles s'embrasent. Les elfes se souviendront de ce jour.",
-					"effects": [{"type": "unlock", "id": "species:elf"}, {"type": "set_world_flag", "id": "shrine_awakened"}, {"type": "xp", "amount": 200}]
+					"effects": [
+						{"type": "unlock", "id": "species:elf"},
+						{"type": "set_world_flag", "id": "shrine_awakened"},
+						{"type": "xp", "amount": 200}
+					]
 				},
 				"failure": {
 					"text": "Les runes restent muettes. Un picotement désagréable remonte le long de vos bras.",
@@ -215,12 +303,18 @@
 			{
 				"id": "follow",
 				"text": "Suivre la lueur",
-				"outcome": {"text": "Vous vous enfoncez dans la brume...", "effects": [{"type": "goto", "event": "forest_wisp"}]}
+				"outcome": {
+					"text": "Vous vous enfoncez dans la brume...",
+					"effects": [{"type": "goto", "event": "forest_wisp"}]
+				}
 			},
 			{
 				"id": "wait",
 				"text": "Attendre que la brume se lève",
-				"outcome": {"text": "Les heures s'étirent. Quand la brume se dissipe enfin, le jour a bien avancé.", "effects": [{"type": "pass_time", "slots": 1}]}
+				"outcome": {
+					"text": "Les heures s'étirent. Quand la brume se dissipe enfin, le jour a bien avancé.",
+					"effects": [{"type": "pass_time", "slots": 1}]
+				}
 			}
 		]
 	},

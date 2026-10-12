@@ -1,23 +1,29 @@
 extends Control
 ## Écran principal : fiche du personnage à gauche, scène courante à droite.
 ## La zone de droite affiche tour à tour le hub (choix du lieu), un événement, le lancer de dés,
-## son résultat ou la mort.
+## son résultat, un combat ou la mort.
 ## Raccourcis : touches 1 à 9 pour choisir une option ; n'importe quelle touche accélère les dés ;
 ## F12 active ou désactive le mode debug (choix verrouillés visibles).
 
 const CREATION_SCENE := "res://scenes/creation.tscn"
+const COMBAT_LOG_LINES := 9
+
+## Émis quand le joueur a choisi l'action (et la cible) d'un allié pendant un combat.
+signal _combat_choice_made(choice: Dictionary)
 
 @onready var portrait: TextureRect = %Portrait
 @onready var name_label: Label = %NameLabel
 @onready var sheet_text: RichTextLabel = %SheetText
 @onready var illustration: TextureRect = %Illustration
 @onready var dice_tray: DiceTray = %DiceTray
+@onready var battle_view: BattleView = %BattleView
 @onready var title_label: Label = %TitleLabel
 @onready var body_text: RichTextLabel = %BodyText
 @onready var choices_box: VBoxContainer = %Choices
 
 var _debug_badge := Label.new()
 var _event_on_screen: Dictionary = {}  # événement dont les choix sont affichés (pour les réafficher en debug)
+var _log_shown := 0  # nombre de lignes du journal de combat déjà révélées
 
 
 func _ready() -> void:
@@ -107,7 +113,10 @@ func _show_result(result: Dictionary) -> void:
 		text += "\n\n[color=%s]%s[/color]" % [UITheme.GOLD.to_html(false), "\n".join(PackedStringArray(result["lines"]))]
 	body_text.text = text
 	_clear_choices()
-	_add_choice(tr("Continuer"), _on_continue.bind(result["goto"]))
+	if not result.get("combat", {}).is_empty():
+		_add_choice(tr("Combattre !"), _run_combat.bind(result["combat"]))
+	else:
+		_add_choice(tr("Continuer"), _on_continue.bind(result["goto"]))
 
 
 func _show_death() -> void:
@@ -159,11 +168,131 @@ func _on_new_life() -> void:
 	get_tree().change_scene_to_file(CREATION_SCENE)
 
 
+# --- Combat ------------------------------------------------------------------
+
+## Boucle de combat : à chaque tour, le joueur choisit pour les alliés, les ennemis jouent seuls ;
+## chaque étape est animée (dés, PV, journal), puis l'issue est appliquée et affichée.
+func _run_combat(spec: Dictionary) -> void:
+	var combat := Game.start_combat(spec)
+	battle_view.show_combat(combat)
+	title_label.text = tr("Combat !")
+	_log_shown = combat.log.size()
+	while not combat.is_over():
+		var actor := combat.current()
+		battle_view.refresh()
+		_show_combat_log(combat)
+		var choice: Dictionary
+		if actor.is_ally():
+			_show_action_menu(combat, actor)
+			choice = await _combat_choice_made
+		else:
+			_clear_choices()
+			await get_tree().create_timer(0.5).timeout
+			choice = combat.auto_choice(actor)
+		_clear_choices()
+		var target: Combatant = choice.get("target")
+		var hp_before := target.hp if target != null else 0
+		for beat in combat.perform(actor, choice["action"], target):
+			if not beat["roll"].is_empty():
+				await dice_tray.play(beat["roll"], beat["fast"])
+			_log_shown += 1
+			_show_combat_log(combat)
+			battle_view.refresh()
+		if target != null and target.hp < hp_before:
+			battle_view.flash(target)
+		_refresh_sheet()
+		combat.end_turn()
+	_log_shown = combat.log.size()
+	_show_combat_log(combat)
+	battle_view.refresh()
+	await get_tree().create_timer(0.8).timeout
+	var result := Game.finish_combat()
+	battle_view.hide_combat()
+	title_label.text = {"victory": tr("Victoire"), "defeat": tr("Défaite"), "fled": tr("Fuite")}.get(result["outcome"], "")
+	_show_result(result)
+
+
+func _show_combat_log(combat: Combat) -> void:
+	var header := ""
+	if not combat.is_over():
+		header = "[color=%s]%s[/color]\n" % [UITheme.GOLD.to_html(false),
+			tr("Round %d — au tour de %s") % [combat.round_number, combat.current().name]]
+	var shown := combat.log.slice(0, _log_shown)
+	body_text.text = header + "\n".join(PackedStringArray(shown.slice(maxi(0, shown.size() - COMBAT_LOG_LINES))))
+
+
+func _show_action_menu(combat: Combat, actor: Combatant) -> void:
+	_clear_choices()
+	for action in actor.actions():
+		var reason := actor.unavailable_reason(action)
+		var label := _action_label(actor, action)
+		if reason != "":
+			label += "   (%s)" % reason
+		_add_choice(label, _on_action_picked.bind(combat, actor, action), reason == "")
+	if not combat.usable_items().is_empty():
+		_add_choice(tr("Objets…"), _show_item_menu.bind(combat, actor))
+	if combat.can_flee():
+		var chance := clampf((21 - (combat.flee_dc() - actor.ability_mod("dex"))) / 20.0, 0.05, 0.95)
+		_add_choice(tr("Fuir   [Dextérité DD %d — %d %%]") % [combat.flee_dc(), roundi(chance * 100)],
+			_combat_choice_made.emit.bind({"action": {"id": Combat.ACTION_FLEE}}))
+
+
+func _action_label(actor: Combatant, action: Dictionary) -> String:
+	var label: String = action["name"]
+	match action.get("type"):
+		"attack":
+			var weapon := " (%s)" % actor.character.weapon()["name"] if action.get("damage") == "weapon" else ""
+			label += "%s — %s, %s au toucher" % [weapon, actor.damage_expr(action), CharacterSheet.signed(actor.attack_bonus(action))]
+		"auto":
+			label += " — %s, touche toujours" % actor.damage_expr(action)
+		"heal":
+			label += " — soigne %s" % actor.heal_expr(action)
+	if action.has("cost"):
+		label += tr("   [emplacements : %d / %d]") % [
+			int(actor.character.resources.get(action["cost"], 0)), actor.character.max_resource(action["cost"])]
+	if action.has("per_combat"):
+		label += tr("   [%d / %d par combat]") % [int(actor.uses.get(action["id"], 0)), int(action["per_combat"])]
+	return label
+
+
+func _on_action_picked(combat: Combat, actor: Combatant, action: Dictionary) -> void:
+	var candidates := combat.targets(actor, action)
+	if candidates.size() == 1:
+		_combat_choice_made.emit({"action": action, "target": candidates[0]})
+		return
+	_show_target_menu(candidates, {"action": action}, _show_action_menu.bind(combat, actor))
+
+
+func _show_item_menu(combat: Combat, actor: Combatant) -> void:
+	_clear_choices()
+	for entry in combat.usable_items():
+		var item: Dictionary = entry["item"]
+		var action := {"id": Combat.ACTION_ITEM, "item": item["id"], "target": item["use"].get("target", "ally")}
+		var candidates := combat.targets(actor, action)
+		var pick := func():
+			if candidates.size() == 1:
+				_combat_choice_made.emit({"action": action, "target": candidates[0]})
+			else:
+				_show_target_menu(candidates, {"action": action}, _show_item_menu.bind(combat, actor))
+		_add_choice("%s ×%d — %s" % [item["name"], entry["count"], item.get("description", "")], pick)
+	_add_choice(tr("Retour"), _show_action_menu.bind(combat, actor))
+
+
+func _show_target_menu(candidates: Array[Combatant], choice: Dictionary, back: Callable) -> void:
+	_clear_choices()
+	for target in candidates:
+		var with_target := choice.duplicate()
+		with_target["target"] = target
+		_add_choice("%s — %d / %d PV, CA %d" % [target.name, target.hp, target.max_hp(), target.armor_class()],
+			_combat_choice_made.emit.bind(with_target))
+	_add_choice(tr("Retour"), back)
+
+
 func _refresh_sheet() -> void:
 	var ch := Game.life.character
 	portrait.texture = ArtProvider.portrait(ch)
 	name_label.text = ch.name
-	sheet_text.text = CharacterSheet.bbcode(ch)
+	sheet_text.text = CharacterSheet.bbcode(ch) + CharacterSheet.companions_bbcode(Game.life)
 
 
 # --- Utilitaires -------------------------------------------------------------
