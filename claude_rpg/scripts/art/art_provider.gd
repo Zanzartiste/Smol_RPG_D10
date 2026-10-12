@@ -1,0 +1,51 @@
+class_name ArtProvider
+extends RefCounted
+## Point d'accès unique aux images du jeu.
+## Si une image définitive existe dans res://assets/, elle est utilisée ; sinon on génère
+## un placeholder pixel art (PixelArt). Pour remplacer un placeholder, il suffit de déposer le fichier :
+##   portraits : res://assets/portraits/<race>_<classe>_<étape>.png   (ex. goblin_wizard_adult.png)
+##   événements : res://assets/events/<id_événement>.png
+##   lieux      : res://assets/locations/<id_lieu>.png
+
+const PORTRAIT_DIR := "res://assets/portraits/"
+const EVENT_DIR := "res://assets/events/"
+const LOCATION_DIR := "res://assets/locations/"
+
+static var _cache: Dictionary = {}
+
+
+static func portrait(ch: Character) -> Texture2D:
+	var stage := ch.life_stage()
+	var file := "%s%s_%s_%s.png" % [PORTRAIT_DIR, ch.race_id, ch.class_id, stage]
+	if ResourceLoader.exists(file):
+		return load(file)
+	var key := "portrait:%s:%s:%s:%d" % [ch.race_id, ch.class_id, stage, ch.art_seed]
+	if not _cache.has(key):
+		var race_art: Dictionary = DB.races[ch.race_id].get("art", {})
+		var class_art: Dictionary = DB.classes[ch.class_id].get("art", {})
+		_cache[key] = ImageTexture.create_from_image(PixelArt.portrait(race_art, class_art, stage, ch.art_seed))
+	return _cache[key]
+
+
+static func event_image(ev: Dictionary, life: LifeState) -> Texture2D:
+	var file: String = EVENT_DIR + ev["id"] + ".png"
+	if ResourceLoader.exists(file):
+		return load(file)
+	var location: Variant = ev.get("location")
+	var kind: String = ev.get("art", DB.locations.get(location, {}).get("art", "forest" if location == null else ""))
+	return _scene(kind, life.slot_id(), hash(ev["id"]))
+
+
+static func location_image(location_id: String, life: LifeState) -> Texture2D:
+	var file := LOCATION_DIR + location_id + ".png"
+	if ResourceLoader.exists(file):
+		return load(file)
+	var kind: String = DB.locations.get(location_id, {}).get("art", "")
+	return _scene(kind, life.slot_id(), hash(location_id))
+
+
+static func _scene(kind: String, slot_id: String, seed_value: int) -> Texture2D:
+	var key := "scene:%s:%s:%d" % [kind, slot_id, seed_value]
+	if not _cache.has(key):
+		_cache[key] = ImageTexture.create_from_image(PixelArt.scene(kind, slot_id, seed_value))
+	return _cache[key]

@@ -1,0 +1,270 @@
+[
+	{
+		"id": "town_market",
+		"location": "town",
+		"weight": 6,
+		"title": "Jour de marché",
+		"text": "Les étals de Brumeval débordent de choux, de poteries ébréchées et de colifichets douteux. Un apothicaire bedonnant vante ses fioles rouges à qui veut l'entendre.",
+		"choices": [
+			{
+				"id": "buy_potion",
+				"text": "Acheter une potion de soins (10 po)",
+				"conditions": [{"type": "gold", "min": 10}],
+				"outcome": {
+					"text": "L'apothicaire vous tend la fiole avec un clin d'œil. « Ne la buvez pas d'un coup, ça pique. »",
+					"effects": [{"type": "gold", "amount": -10}, {"type": "add_item", "id": "potion_heal"}]
+				}
+			},
+			{
+				"id": "sell_pelt",
+				"text": "Vendre une peau de loup",
+				"conditions": [{"type": "item", "id": "wolf_pelt"}],
+				"outcome": {
+					"text": "Un tanneur renifle la peau, grimace, puis vous en offre un prix honnête.",
+					"effects": [{"type": "remove_item", "id": "wolf_pelt"}, {"type": "gold", "amount": 8}]
+				}
+			},
+			{
+				"id": "haggle",
+				"text": "Marchander une babiole pour le plaisir",
+				"conditions": [{"type": "gold", "min": 2}],
+				"check": {"skill": "persuasion", "dc": 13},
+				"success": {
+					"text": "Épuisé par votre éloquence, le marchand vous cède une vieille amulette pour une bouchée de pain.",
+					"effects": [{"type": "gold", "amount": -2}, {"type": "add_item", "id": "old_amulet"}]
+				},
+				"failure": {
+					"text": "Le marchand vous rit au nez et appelle le client suivant.",
+					"effects": []
+				}
+			},
+			{
+				"id": "leave",
+				"text": "Flâner puis repartir",
+				"outcome": {"text": "Vous profitez de l'agitation sans rien acheter.", "effects": []}
+			}
+		]
+	},
+	{
+		"id": "town_merchant_meet",
+		"location": "town",
+		"weight": 8,
+		"repeat": "once_per_life",
+		"title": "Ysolde la marchande",
+		"text": "Une marchande au chapeau à plumes vous interpelle. « Vous avez l'air de quelqu'un qui n'a pas peur des bois, {name}. Rapportez-moi trois brins d'herbes médicinales de la forêt et je saurai me montrer généreuse. »",
+		"choices": [
+			{
+				"id": "accept",
+				"text": "« Marché conclu. »",
+				"outcome": {
+					"text": "Ysolde sourit. « Je tiens boutique près de la fontaine. Ne traînez pas trop. »",
+					"effects": [{"type": "set_flag", "id": "quest_herbs_accepted"}]
+				}
+			},
+			{
+				"id": "refuse",
+				"text": "« Cueillez-les vous-même. »",
+				"outcome": {"text": "Elle hausse les épaules et retourne à ses affaires.", "effects": []}
+			}
+		]
+	},
+	{
+		"id": "town_merchant_return",
+		"location": "town",
+		"weight": 30,
+		"conditions": [
+			{"type": "flag", "id": "quest_herbs_accepted"},
+			{"type": "not", "condition": {"type": "flag", "id": "quest_herbs_done"}},
+			{"type": "item", "id": "healing_herbs", "min": 3}
+		],
+		"title": "Retour chez Ysolde",
+		"text": "Ysolde vous repère de loin et lorgne votre besace. « Alors, ces herbes ? »",
+		"choices": [
+			{
+				"id": "give",
+				"text": "Lui remettre trois brins d'herbes",
+				"outcome": {
+					"text": "Elle les hume avec gourmandise. « Parfait ! Vous avez ma gratitude, et celle de ma bourse. Je ne vous oublierai pas. »",
+					"effects": [
+						{"type": "remove_item", "id": "healing_herbs", "count": 3},
+						{"type": "gold", "amount": 30},
+						{"type": "xp", "amount": 150},
+						{"type": "set_flag", "id": "quest_herbs_done"},
+						{"type": "set_world_flag", "id": "ysolde_friend"}
+					]
+				}
+			},
+			{
+				"id": "later",
+				"text": "« Pas encore, je repasserai. »",
+				"outcome": {"text": "« Ne tardez pas trop, elles fanent vite ! »", "effects": []}
+			}
+		]
+	},
+	{
+		"id": "town_ysolde_legacy",
+		"location": "town",
+		"weight": 15,
+		"repeat": "once_per_life",
+		"conditions": [
+			{"type": "world_flag", "id": "ysolde_friend"},
+			{"type": "not", "condition": {"type": "flag", "id": "quest_herbs_done"}}
+		],
+		"title": "Un visage familier",
+		"text": "Une vieille marchande au chapeau à plumes fanées plisse les yeux en vous voyant. « Vous me rappelez quelqu'un qui m'a rendu service, autrefois... Tenez. En mémoire de cette personne. »",
+		"choices": [
+			{
+				"id": "accept",
+				"text": "Accepter son présent",
+				"outcome": {
+					"text": "Elle glisse deux fioles dans vos mains et s'éloigne sans un mot de plus.",
+					"effects": [{"type": "add_item", "id": "potion_heal", "count": 2}, {"type": "xp", "amount": 50}]
+				}
+			}
+		]
+	},
+	{
+		"id": "town_tavern_brawl",
+		"location": "town",
+		"weight": 6,
+		"cooldown_days": 2,
+		"conditions": [{"type": "time", "in": ["evening"]}],
+		"title": "Le Sanglier Borgne",
+		"text": "À la taverne, un colosse aux bras tatoués renverse votre chope d'un coup de coude, puis exige des excuses. La salle retient son souffle.",
+		"choices": [
+			{
+				"id": "fight",
+				"text": "Lui apprendre la politesse",
+				"check": {"skill": "athletics", "dc": 13},
+				"success": {
+					"text": "Le colosse finit la tête la première dans le tonneau de cidre. La salle vous offre une tournée et quelques pièces.",
+					"effects": [{"type": "gold", "amount": 5}, {"type": "xp", "amount": 50}]
+				},
+				"failure": {
+					"text": "Vous faites connaissance avec le plancher. Intimement.",
+					"effects": [{"type": "hp", "amount": -4, "cause": "Rossé à mort dans une taverne"}]
+				}
+			},
+			{
+				"id": "intimidate",
+				"text": "Le fixer droit dans les yeux",
+				"check": {"skill": "intimidation", "dc": 14},
+				"success": {
+					"text": "Il blêmit, bredouille une excuse et vous paie une chope.",
+					"effects": [{"type": "xp", "amount": 50}]
+				},
+				"failure": {
+					"text": "Il éclate de rire et vous colle une gifle monumentale.",
+					"effects": [{"type": "hp", "amount": -2, "cause": "Une gifle de trop"}]
+				}
+			},
+			{
+				"id": "apologize",
+				"text": "S'excuser platement",
+				"outcome": {"text": "Votre fierté en prend un coup, mais vos dents restent en place.", "effects": []}
+			}
+		]
+	},
+	{
+		"id": "town_guards_goblin",
+		"location": "town",
+		"weight": 8,
+		"cooldown_days": 3,
+		"conditions": [{"type": "race", "in": ["goblin"]}],
+		"title": "Contrôle de routine",
+		"text": "Deux gardes vous barrent la route. « Un gobelin en ville ? Vide tes poches, l'avorton. »",
+		"choices": [
+			{
+				"id": "talk",
+				"text": "Les convaincre que vous êtes un honnête citoyen",
+				"check": {"skill": "persuasion", "dc": 13},
+				"success": {
+					"text": "Les gardes échangent un regard perplexe, puis vous laissent passer en grommelant.",
+					"effects": [{"type": "xp", "amount": 25}]
+				},
+				"failure": {
+					"text": "« C'est ça. » Ils confisquent quelques pièces « pour l'enquête ».",
+					"effects": [{"type": "gold", "amount": -5}]
+				}
+			},
+			{
+				"id": "sneak",
+				"text": "Filer entre leurs jambes",
+				"check": {"skill": "stealth", "dc": 12},
+				"success": {
+					"text": "Le temps qu'ils se retournent, vous êtes déjà trois ruelles plus loin.",
+					"effects": [{"type": "xp", "amount": 25}]
+				},
+				"failure": {
+					"text": "Une main gantée vous rattrape par le col. Les coups de bâton pleuvent.",
+					"effects": [{"type": "hp", "amount": -3, "cause": "Bastonné par la garde"}]
+				}
+			},
+			{
+				"id": "comply",
+				"text": "Obéir",
+				"outcome": {
+					"text": "Ils vous délestent de quelques pièces et vous laissent partir.",
+					"effects": [{"type": "gold", "amount": -3}]
+				}
+			}
+		]
+	},
+	{
+		"id": "town_old_library",
+		"location": "town",
+		"weight": 4,
+		"repeat": "once_per_life",
+		"title": "L'arrière-boutique du relieur",
+		"text": "Parmi les piles de vieux livres d'un relieur, un grimoire couvert de runes elfiques attire votre regard.",
+		"choices": [
+			{
+				"id": "read",
+				"text": "Tenter de déchiffrer les runes",
+				"conditions": [{"type": "ability", "id": "int", "min": 12}],
+				"check": {"skill": "arcana", "dc": 13},
+				"success": {
+					"text": "Les runes décrivent un sanctuaire caché au cœur de la Forêt des Murmures, et la formule pour l'éveiller.",
+					"effects": [{"type": "xp", "amount": 100}, {"type": "set_flag", "id": "knows_shrine_rune"}]
+				},
+				"failure": {
+					"text": "Les symboles se mettent à danser devant vos yeux. Une migraine atroce vous saisit.",
+					"effects": [{"type": "hp", "amount": -2, "cause": "Terrassé par un savoir interdit"}]
+				}
+			},
+			{
+				"id": "leave",
+				"text": "Reposer le livre",
+				"outcome": {"text": "Le relieur vous regarde partir sans un mot.", "effects": []}
+			}
+		]
+	},
+	{
+		"id": "town_pickpocket",
+		"location": "town",
+		"weight": 5,
+		"repeat": "once_per_life",
+		"title": "Une bourse tentante",
+		"text": "Un notable ventripotent discute bruyamment près de la fontaine. Une bourse rebondie pend à sa ceinture.",
+		"choices": [
+			{
+				"id": "steal",
+				"text": "Subtiliser la bourse",
+				"check": {"skill": "stealth", "dc": 14},
+				"success": {
+					"text": "La bourse change de propriétaire sans que personne ne remarque rien. Vous avez un don.",
+					"effects": [{"type": "gold", "amount": 20}, {"type": "unlock", "id": "class:rogue"}]
+				},
+				"failure": {
+					"text": "« Au voleur ! » La garde vous tombe dessus.",
+					"effects": [{"type": "hp", "amount": -5, "cause": "Lynché pour un larcin raté"}]
+				}
+			},
+			{
+				"id": "leave",
+				"text": "Passer votre chemin",
+				"outcome": {"text": "L'honnêteté a du bon. Parfois.", "effects": []}
+			}
+		]
+	}
+]

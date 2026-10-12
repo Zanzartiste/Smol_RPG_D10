@@ -1,0 +1,5 @@
+[
+	{"id": "town", "name": "Brumeval", "description": "Le bourg, son marché et sa taverne.", "art": "town"},
+	{"id": "forest", "name": "Forêt des Murmures", "description": "Des bois profonds où rôdent loups et secrets.", "art": "forest"},
+	{"id": "home", "name": "Chez soi", "description": "Se reposer et panser ses plaies.", "art": "home"}
+]

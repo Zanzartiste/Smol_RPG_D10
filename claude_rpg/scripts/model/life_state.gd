@@ -1,0 +1,75 @@
+class_name LifeState
+extends RefCounted
+## État d'une vie en cours : le personnage, le temps, les flags et l'historique des événements.
+## Tout ce qui est ici disparaît à la mort (sauf ce que MetaState en retient).
+
+var character: Character
+var rng := RandomNumberGenerator.new()
+var day := 1
+var slot := 0  # index dans DB.time_slots()
+var flags: Dictionary = {}
+var seen: Dictionary = {}  # id d'événement -> nombre de fois vu
+var last_seen_day: Dictionary = {}  # id d'événement -> dernier jour où il a été vu
+var dead := false
+var death_cause := ""
+var recorded := false  # déjà inscrite dans la chronique
+var notices: Array[String] = []  # messages à afficher au prochain retour au hub
+
+
+func slot_id() -> String:
+	return DB.time_slots()[slot]["id"]
+
+
+func slot_name() -> String:
+	return DB.time_slots()[slot]["name"]
+
+
+func has_flag(id: String) -> bool:
+	return bool(flags.get(id, false))
+
+
+func mark_seen(event_id: String) -> void:
+	seen[event_id] = int(seen.get(event_id, 0)) + 1
+	last_seen_day[event_id] = day
+
+
+func die(cause: String) -> void:
+	if dead:
+		return
+	dead = true
+	death_cause = cause
+	character.hp = 0
+
+
+func advance_time(slots: int) -> void:
+	for i in slots:
+		if dead:
+			return
+		slot += 1
+		if slot >= DB.slots_per_day():
+			slot = 0
+			_new_day()
+
+
+func take_notices() -> Array[String]:
+	var result: Array[String] = notices.duplicate()
+	notices.clear()
+	return result
+
+
+func _new_day() -> void:
+	var old_age := character.age_years()
+	var old_stage := character.life_stage()
+	day += 1
+	character.age_days += 1
+	if character.age_years() != old_age:
+		notices.append(Loc.ui("Vous avez maintenant %d ans.") % character.age_years())
+		var stage := character.life_stage()
+		if stage != old_stage:
+			notices.append(Loc.ui("Nouvelle étape de vie : %s.") % DB.life_stage_name(stage))
+		_check_old_age()
+
+
+## Mort de vieillesse : règles à définir (le joueur a déjà des règles en tête).
+func _check_old_age() -> void:
+	pass

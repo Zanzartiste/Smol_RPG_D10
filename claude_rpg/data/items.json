@@ -1,0 +1,6 @@
+[
+	{"id": "potion_heal", "name": "Potion de soins", "description": "Une fiole rouge qui referme les plaies.", "value": 10},
+	{"id": "healing_herbs", "name": "Herbes médicinales", "description": "Sauge et achillée, prisées des guérisseurs.", "value": 2},
+	{"id": "wolf_pelt", "name": "Peau de loup", "description": "Rêche et odorante, mais les tanneurs l'achètent.", "value": 8},
+	{"id": "old_amulet", "name": "Amulette ancienne", "description": "Un bijou terni gravé de runes inconnues.", "value": 40}
+]

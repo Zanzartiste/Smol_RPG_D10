@@ -1,0 +1,49 @@
+[
+	{
+		"id": "human",
+		"name": "Humain",
+		"description": "Polyvalents et ambitieux, les humains sont partout.",
+		"ability_bonus": {"str": 1, "dex": 1, "con": 1, "int": 1, "wis": 1, "cha": 1},
+		"start_age": 18,
+		"age_stages": {"child": 0, "teen": 12, "adult": 18, "elder": 60, "venerable": 80},
+		"names": ["Aldric", "Brenna", "Cédric", "Daria", "Edwin", "Fiora", "Gareth", "Helna", "Ivo", "Jessa"],
+		"art": {
+			"ears": "round",
+			"skin": ["#f1c9a5", "#d9a57b", "#b07a50", "#7a4e30"],
+			"hair": ["#2b1d14", "#5a3a1e", "#a0652a", "#d9b56a", "#7a2a1a"],
+			"eyes": ["#3b5d8a", "#4f6b3a", "#5a3a1e"]
+		}
+	},
+	{
+		"id": "goblin",
+		"name": "Gobelin",
+		"description": "Petits, vifs et rusés. On les dit voleurs ; ils préfèrent « opportunistes ».",
+		"ability_bonus": {"dex": 2, "con": 1},
+		"start_age": 12,
+		"age_stages": {"child": 0, "teen": 6, "adult": 10, "elder": 40, "venerable": 55},
+		"names": ["Grik", "Zigzag", "Nibblet", "Grishka", "Pustule", "Rikkit", "Vorna", "Skarn", "Mibz", "Torgnole"],
+		"art": {
+			"ears": "goblin",
+			"skin": ["#7fa650", "#6b8f3e", "#8fb36a", "#5c7d3a"],
+			"hair": ["#1d1d1d", "#3a2b1a", "#5c5c5c"],
+			"eyes": ["#e8c547", "#d94a2b", "#f0f0a0"]
+		}
+	},
+	{
+		"id": "elf",
+		"name": "Elfe",
+		"description": "Gracieux et d'une longévité prodigieuse, les elfes se tiennent à l'écart des affaires des mortels.",
+		"locked": true,
+		"unlock_hint": "Percer le secret d'un sanctuaire oublié.",
+		"ability_bonus": {"dex": 2, "int": 1},
+		"start_age": 100,
+		"age_stages": {"child": 0, "teen": 20, "adult": 100, "elder": 500, "venerable": 650},
+		"names": ["Aelar", "Lia", "Thamior", "Naivara", "Erevan", "Sariel"],
+		"art": {
+			"ears": "elf",
+			"skin": ["#f3dcc4", "#e0c3a3", "#c9a688"],
+			"hair": ["#e8e0b0", "#c0c0c8", "#2a2a3a", "#8a4a2a"],
+			"eyes": ["#3aa08a", "#7a5ac0", "#c0a040"]
+		}
+	}
+]

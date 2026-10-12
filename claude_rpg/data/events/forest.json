@@ -1,0 +1,240 @@
+[
+	{
+		"id": "forest_walk",
+		"location": "forest",
+		"weight": 6,
+		"title": "Sous les frondaisons",
+		"text": "Les arbres murmurent au-dessus de vous. Le sentier se perd entre les fougères.",
+		"choices": [
+			{
+				"id": "forage",
+				"text": "Chercher des plantes utiles",
+				"check": {"skill": "survival", "dc": 10},
+				"success": {
+					"text": "Au pied d'un chêne, vous dénichez quelques brins d'herbes médicinales.",
+					"effects": [{"type": "add_item", "id": "healing_herbs"}]
+				},
+				"failure": {"text": "Rien que des orties. Beaucoup d'orties.", "effects": []}
+			},
+			{
+				"id": "wander",
+				"text": "Profiter de la promenade",
+				"outcome": {"text": "L'air frais vous fait du bien.", "effects": [{"type": "hp", "amount": 1}]}
+			}
+		]
+	},
+	{
+		"id": "forest_herb_patch",
+		"location": "forest",
+		"weight": 5,
+		"cooldown_days": 2,
+		"title": "Une clairière fleurie",
+		"text": "Une clairière tapissée de sauge sauvage et d'achillée s'ouvre devant vous.",
+		"choices": [
+			{
+				"id": "careful",
+				"text": "Cueillir avec soin",
+				"check": {"skill": "medicine", "dc": 12},
+				"success": {
+					"text": "Vous prélevez les meilleures tiges sans abîmer les racines.",
+					"effects": [{"type": "add_item", "id": "healing_herbs", "count": 2}]
+				},
+				"failure": {
+					"text": "Vous en écrasez la moitié, mais sauvez quelques brins.",
+					"effects": [{"type": "add_item", "id": "healing_herbs"}]
+				}
+			},
+			{
+				"id": "quick",
+				"text": "En arracher une poignée et repartir",
+				"outcome": {"text": "C'est toujours ça de pris.", "effects": [{"type": "add_item", "id": "healing_herbs"}]}
+			}
+		]
+	},
+	{
+		"id": "forest_wolf",
+		"location": "forest",
+		"weight": 5,
+		"title": "Un loup gris",
+		"text": "Un grognement sourd. Entre deux troncs, un loup efflanqué vous fixe, babines retroussées.",
+		"choices": [
+			{
+				"id": "fight",
+				"text": "L'affronter",
+				"check": {"skill": "athletics", "dc": 13},
+				"success": {
+					"text": "Après une lutte acharnée, la bête s'effondre. Sa peau vaudra quelques pièces.",
+					"effects": [{"type": "add_item", "id": "wolf_pelt"}, {"type": "xp", "amount": 100}]
+				},
+				"failure": {
+					"text": "Ses crocs se referment sur votre bras avant qu'il ne détale.",
+					"effects": [{"type": "hp", "amount": -6, "cause": "Dévoré par un loup"}]
+				}
+			},
+			{
+				"id": "spell",
+				"text": "Lancer un trait de feu",
+				"conditions": [{"type": "class", "in": ["wizard"]}],
+				"check": {"skill": "arcana", "dc": 11},
+				"success": {
+					"text": "Le trait de feu atteint le loup en plein flanc. Il ne se relève pas.",
+					"effects": [{"type": "add_item", "id": "wolf_pelt"}, {"type": "xp", "amount": 100}]
+				},
+				"failure": {
+					"text": "Le sort vous claque entre les doigts. Le loup en profite.",
+					"effects": [{"type": "hp", "amount": -4, "cause": "Dévoré par un loup"}]
+				}
+			},
+			{
+				"id": "scare",
+				"text": "Hurler et agiter les bras",
+				"check": {"skill": "intimidation", "dc": 12},
+				"success": {"text": "Le loup recule, puis disparaît dans les fourrés.", "effects": [{"type": "xp", "amount": 25}]},
+				"failure": {
+					"text": "Le loup n'est pas impressionné. Pas du tout.",
+					"effects": [{"type": "hp", "amount": -4, "cause": "Dévoré par un loup"}]
+				}
+			},
+			{
+				"id": "sneak",
+				"text": "Reculer lentement",
+				"check": {"skill": "stealth", "dc": 12},
+				"success": {"text": "Vous vous éclipsez sans un bruit.", "effects": []},
+				"failure": {
+					"text": "Une branche craque sous votre pied. Le loup bondit.",
+					"effects": [{"type": "hp", "amount": -4, "cause": "Dévoré par un loup"}]
+				}
+			}
+		]
+	},
+	{
+		"id": "forest_bandits",
+		"location": "forest",
+		"weight": 3,
+		"title": "Embuscade",
+		"text": "Trois brigands surgissent des fourrés, gourdins levés. « La bourse ou la vie ! »",
+		"choices": [
+			{
+				"id": "pay",
+				"text": "Donner 10 pièces d'or",
+				"conditions": [{"type": "gold", "min": 10}],
+				"outcome": {"text": "Ils empochent l'or et s'évanouissent dans les bois.", "effects": [{"type": "gold", "amount": -10}]}
+			},
+			{
+				"id": "fight",
+				"text": "Se battre",
+				"check": {"skill": "athletics", "dc": 15},
+				"success": {
+					"text": "Les brigands prennent la fuite en abandonnant leur butin.",
+					"effects": [{"type": "gold", "amount": 25}, {"type": "xp", "amount": 150}]
+				},
+				"failure": {
+					"text": "Les coups pleuvent de toutes parts.",
+					"effects": [{"type": "hp", "amount": -10, "cause": "Tué par des brigands"}]
+				}
+			},
+			{
+				"id": "flee",
+				"text": "Prendre ses jambes à son cou",
+				"check": {"ability": "dex", "dc": 13},
+				"success": {"text": "Vous semez vos poursuivants entre les arbres.", "effects": []},
+				"failure": {
+					"text": "Un gourdin vous atteint dans le dos pendant votre fuite.",
+					"effects": [{"type": "hp", "amount": -5, "cause": "Tué par des brigands"}]
+				}
+			}
+		]
+	},
+	{
+		"id": "forest_shrine",
+		"location": "forest",
+		"weight": 3,
+		"repeat": "once_per_life",
+		"conditions": [
+			{"type": "not", "condition": {"type": "unlocked", "id": "race:elf"}},
+			{"type": "life_stage", "in": ["adult", "elder", "venerable"]}
+		],
+		"title": "Le cercle de pierres",
+		"text": "Au cœur des bois, des pierres blanches couvertes de mousse forment un cercle parfait. Des runes elfiques y luisent faiblement.",
+		"choices": [
+			{
+				"id": "decipher_known",
+				"text": "Prononcer la formule lue dans le grimoire",
+				"conditions": [{"type": "flag", "id": "knows_shrine_rune"}],
+				"hide_if_locked": true,
+				"check": {"skill": "arcana", "dc": 10},
+				"success": {
+					"text": "Les runes s'embrasent. Une voix ancienne murmure votre nom. Les elfes se souviendront de ce jour.",
+					"effects": [{"type": "unlock", "id": "race:elf"}, {"type": "set_world_flag", "id": "shrine_awakened"}, {"type": "xp", "amount": 200}]
+				},
+				"failure": {
+					"text": "Vous écorchez un mot. Une décharge vous projette hors du cercle.",
+					"effects": [{"type": "hp", "amount": -3, "cause": "Foudroyé par une magie ancienne"}]
+				}
+			},
+			{
+				"id": "decipher",
+				"text": "Tenter de comprendre les runes",
+				"check": {"skill": "arcana", "dc": 17},
+				"success": {
+					"text": "Contre toute attente, vous saisissez le sens des runes. Elles s'embrasent. Les elfes se souviendront de ce jour.",
+					"effects": [{"type": "unlock", "id": "race:elf"}, {"type": "set_world_flag", "id": "shrine_awakened"}, {"type": "xp", "amount": 200}]
+				},
+				"failure": {
+					"text": "Les runes restent muettes. Un picotement désagréable remonte le long de vos bras.",
+					"effects": [{"type": "hp", "amount": -3, "cause": "Foudroyé par une magie ancienne"}]
+				}
+			},
+			{
+				"id": "leave",
+				"text": "Ne pas déranger ce lieu",
+				"outcome": {"text": "Certains mystères doivent le rester.", "effects": []}
+			}
+		]
+	},
+	{
+		"id": "forest_mist",
+		"location": "forest",
+		"weight": 3,
+		"title": "La brume",
+		"text": "Une brume épaisse tombe d'un coup. Au loin, une petite lueur bleutée danse entre les arbres.",
+		"choices": [
+			{
+				"id": "follow",
+				"text": "Suivre la lueur",
+				"outcome": {"text": "Vous vous enfoncez dans la brume...", "effects": [{"type": "goto", "event": "forest_wisp"}]}
+			},
+			{
+				"id": "wait",
+				"text": "Attendre que la brume se lève",
+				"outcome": {"text": "Les heures s'étirent. Quand la brume se dissipe enfin, le jour a bien avancé.", "effects": [{"type": "pass_time", "slots": 1}]}
+			}
+		]
+	},
+	{
+		"id": "forest_wisp",
+		"location": null,
+		"title": "Le feu follet",
+		"text": "La lueur s'immobilise au-dessus d'un tertre moussu. Quelque chose brille à demi enterré sous les racines.",
+		"choices": [
+			{
+				"id": "dig",
+				"text": "Fouiller prudemment",
+				"check": {"skill": "perception", "dc": 13},
+				"success": {
+					"text": "Vous déterrez une amulette ancienne. Le feu follet s'éteint, comme satisfait.",
+					"effects": [{"type": "add_item", "id": "old_amulet"}, {"type": "xp", "amount": 50}]
+				},
+				"failure": {
+					"text": "Le sol se dérobe : un terrier ! Vous vous tordez la cheville en tombant.",
+					"effects": [{"type": "hp", "amount": -4, "cause": "Égaré dans la brume"}]
+				}
+			},
+			{
+				"id": "back",
+				"text": "Rebrousser chemin",
+				"outcome": {"text": "La lueur s'éteint dès que vous tournez le dos.", "effects": []}
+			}
+		]
+	}
+]

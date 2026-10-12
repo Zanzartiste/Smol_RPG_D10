@@ -1,0 +1,77 @@
+[
+	{
+		"id": "home_rest",
+		"location": "home",
+		"weight": 10,
+		"title": "Chez soi",
+		"text": "Vous retrouvez votre paillasse, l'odeur du feu de bois et le calme de votre logis.",
+		"choices": [
+			{
+				"id": "sleep",
+				"text": "Dormir",
+				"outcome": {"text": "Vous dormez d'un sommeil réparateur.", "effects": [{"type": "heal_full"}]}
+			},
+			{
+				"id": "potion",
+				"text": "Boire une potion de soins",
+				"conditions": [{"type": "item", "id": "potion_heal"}],
+				"outcome": {
+					"text": "Le liquide rouge pique la gorge, mais vos plaies se referment à vue d'œil.",
+					"effects": [{"type": "remove_item", "id": "potion_heal"}, {"type": "hp", "amount": 7}]
+				}
+			},
+			{
+				"id": "poultice",
+				"text": "Préparer un cataplasme d'herbes",
+				"conditions": [{"type": "item", "id": "healing_herbs"}],
+				"check": {"skill": "medicine", "dc": 10},
+				"success": {
+					"text": "Le cataplasme apaise vos blessures.",
+					"effects": [{"type": "remove_item", "id": "healing_herbs"}, {"type": "hp", "amount": 5}]
+				},
+				"failure": {
+					"text": "Le mélange tourne en une bouillie inutilisable.",
+					"effects": [{"type": "remove_item", "id": "healing_herbs"}]
+				}
+			}
+		]
+	},
+	{
+		"id": "home_nightmare",
+		"location": "home",
+		"weight": 3,
+		"cooldown_days": 5,
+		"conditions": [{"type": "time", "in": ["evening"]}],
+		"title": "Cauchemar",
+		"text": "Vous vous réveillez en sursaut, le cœur battant. Des yeux luisants vous fixaient dans le noir... ou était-ce un rêve ?",
+		"choices": [
+			{
+				"id": "calm",
+				"text": "Reprendre ses esprits",
+				"check": {"ability": "wis", "dc": 12},
+				"success": {"text": "Vous chassez les images de votre esprit et vous rendormez.", "effects": [{"type": "xp", "amount": 25}]},
+				"failure": {"text": "Impossible de fermer l'œil de la nuit.", "effects": [{"type": "hp", "amount": -1}]}
+			}
+		]
+	},
+	{
+		"id": "home_neighbor",
+		"location": "home",
+		"weight": 3,
+		"repeat": "once_per_life",
+		"title": "La voisine",
+		"text": "La vieille Berthe frappe à votre porte, une marmite fumante entre les mains. « Vous avez une mine de déterré, {name}. Mangez donc. »",
+		"choices": [
+			{
+				"id": "eat",
+				"text": "Accepter la soupe",
+				"outcome": {"text": "Une soupe au lard comme on n'en fait plus. Vous vous sentez revigoré.", "effects": [{"type": "hp", "amount": 3}]}
+			},
+			{
+				"id": "decline",
+				"text": "Décliner poliment",
+				"outcome": {"text": "Berthe repart en marmonnant que la jeunesse ne sait plus vivre.", "effects": []}
+			}
+		]
+	}
+]

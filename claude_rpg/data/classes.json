@@ -1,0 +1,34 @@
+[
+	{
+		"id": "fighter",
+		"name": "Guerrier",
+		"description": "Maître des armes et des armures, il règle les problèmes de front.",
+		"hit_die": 10,
+		"ability_priority": ["str", "con", "dex", "wis", "cha", "int"],
+		"skills": ["athletics", "intimidation", "survival"],
+		"start_items": {"potion_heal": 1},
+		"art": {"headgear": "helmet", "outfit": "#6e6e78", "accent": "#9a2f2f"}
+	},
+	{
+		"id": "wizard",
+		"name": "Magicien",
+		"description": "Érudit des arcanes, fragile mais redoutable.",
+		"hit_die": 6,
+		"ability_priority": ["int", "con", "dex", "wis", "cha", "str"],
+		"skills": ["arcana", "medicine", "perception"],
+		"start_items": {},
+		"art": {"headgear": "wizard_hat", "outfit": "#3b3a7a", "accent": "#d4b06a"}
+	},
+	{
+		"id": "rogue",
+		"name": "Roublard",
+		"description": "Discret, agile et beau parleur. Les serrures n'ont pas de secret pour lui.",
+		"locked": true,
+		"unlock_hint": "Réussir un larcin audacieux à Brumeval.",
+		"hit_die": 8,
+		"ability_priority": ["dex", "con", "cha", "wis", "int", "str"],
+		"skills": ["stealth", "perception", "persuasion"],
+		"start_items": {},
+		"art": {"headgear": "hood", "outfit": "#3a4a2e", "accent": "#6b4a2a"}
+	}
+]

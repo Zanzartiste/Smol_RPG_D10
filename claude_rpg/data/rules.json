@@ -1,0 +1,37 @@
+{
+	"abilities": [
+		{"id": "str", "name": "Force", "short": "FOR"},
+		{"id": "dex", "name": "Dextérité", "short": "DEX"},
+		{"id": "con", "name": "Constitution", "short": "CON"},
+		{"id": "int", "name": "Intelligence", "short": "INT"},
+		{"id": "wis", "name": "Sagesse", "short": "SAG"},
+		{"id": "cha", "name": "Charisme", "short": "CHA"}
+	],
+	"skills": [
+		{"id": "athletics", "name": "Athlétisme", "ability": "str"},
+		{"id": "stealth", "name": "Discrétion", "ability": "dex"},
+		{"id": "arcana", "name": "Arcanes", "ability": "int"},
+		{"id": "perception", "name": "Perception", "ability": "wis"},
+		{"id": "survival", "name": "Survie", "ability": "wis"},
+		{"id": "medicine", "name": "Médecine", "ability": "wis"},
+		{"id": "persuasion", "name": "Persuasion", "ability": "cha"},
+		{"id": "intimidation", "name": "Intimidation", "ability": "cha"}
+	],
+	"standard_array": [15, 14, 13, 12, 10, 8],
+	"time_slots": [
+		{"id": "morning", "name": "Matin"},
+		{"id": "afternoon", "name": "Après-midi"},
+		{"id": "evening", "name": "Soir"}
+	],
+	"days_per_year": 10,
+	"life_stages": [
+		{"id": "child", "name": "Enfant"},
+		{"id": "teen", "name": "Adolescent"},
+		{"id": "adult", "name": "Adulte"},
+		{"id": "elder", "name": "Âgé"},
+		{"id": "venerable", "name": "Vénérable"}
+	],
+	"start_gold": 15,
+	"xp_by_level": [0, 300, 900, 2700, 6500],
+	"proficiency_by_level": [2, 2, 2, 2, 3]
+}
