@@ -162,7 +162,7 @@ func _test_feats() -> bool:
 	_expect(Conditions.check({"type": "has_feat", "id": "alert"}, life, Meta), "condition has_feat")
 	_expect(not c.add_feat("alert"), "pas de don en double")
 
-	# Chaque passé accorde un don ; les dons de niveau se choisissent aux niveaux de rules.json › feat_levels.
+	# Chaque passé accorde un don ; tous les 4 niveaux : +1 attribut au choix et un don.
 	for bg_id: String in DB.backgrounds:
 		_expect(Feats.has(Feats.for_background(bg_id)), "le passé %s accorde un don" % bg_id)
 	var soldier := Character.create("human", "fighter", "Soldat", {"background": "soldier"})
@@ -170,13 +170,19 @@ func _test_feats() -> bool:
 	_expect(sword.damage_expr(DB.actions["weapon_attack"]) == "1d10+4", "Frappe brutale : +1 aux dégâts d'arme")
 	var hero := Character.create("human", "fighter", "Héros")
 	hero.add_xp(300)
-	_expect(hero.level == 2 and hero.pending_feats == 1 and hero.can_choose_feat(), "niveau 2 : un don à choisir")
+	_expect(hero.level == 2 and not hero.has_pending_advancement(), "niveau 2 : pas d'amélioration")
+	hero.add_xp(2700 - 300)
+	_expect(hero.level == 4 and hero.pending_feats == 1 and hero.pending_ability_points == 1, "niveau 4 : attribut + don")
+	_expect(hero.increase_ability("str") and hero.abilities["str"] == 18, "+1 FOR (17 -> 18)")
+	_expect(hero.pending_ability_points == 0 and not hero.increase_ability("dex"), "un seul point à placer")
 	_expect("alert" in hero.available_feats() and "elemental_adept" not in hero.available_feats(),
 		"dons disponibles selon les prérequis")
 	_expect(not hero.choose_feat("elemental_adept"), "impossible de choisir un don sans les prérequis")
 	_expect(hero.choose_feat("alert") and hero.pending_feats == 0 and hero.has_feat("alert"), "choix d'un don")
-	hero.add_xp(600)
-	_expect(hero.level == 3 and hero.pending_feats == 0, "niveau 3 : pas de don")
+	hero.add_xp(355000)
+	_expect(hero.level == Progression.max_level() and Progression.max_level() == 20, "niveau maximum 20")
+	_expect(hero.pending_feats == 4 and hero.pending_ability_points == 4, "améliorations aux niveaux 8, 12, 16 et 20")
+	_expect(hero.proficiency_bonus() == 6, "maîtrise +6 au niveau 20")
 	var clumsy := Character.create("human", "wizard", "x",
 		{"abilities": {"str": 8, "dex": 10, "con": 14, "int": 15, "wis": 12, "cha": 13}})
 	_expect(not Feats.meets_prerequisites("defensive_duelist", clumsy),

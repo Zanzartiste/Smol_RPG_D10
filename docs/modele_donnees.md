@@ -241,8 +241,10 @@ Les prérequis s'écrivent comme les conditions des événements. `category` vau
 
 **Obtention d'un don :**
 - **Passé** : chaque passé accorde un don dès la création (`backgrounds.json › feat`, obligatoire).
-- **Niveau** : aux niveaux de `rules.json › feat_levels` (par défaut [2, 4]), le personnage, héros ou compagnon, choisit
-  un don parmi ceux dont il remplit les prérequis. L'écran de choix s'ouvre avant le retour au hub.
+- **Niveau** : aux niveaux d'amélioration (`rules.json › advancement_levels`, par défaut 4, 8, 12, 16 et 20), le
+  personnage, héros ou compagnon, place +1 dans un attribut au choix (20 au maximum) puis choisit un don parmi ceux
+  dont il remplit les prérequis. Le contenu d'une amélioration se règle dans `advancement`, et l'API correspondante est
+  `Progression`. L'écran de choix s'ouvre avant le retour au hub.
 - **Événement** : l'effet `add_feat`.
 - **Compagnon** : il peut en avoir d'office dans `companions.json` (`feats`).
 

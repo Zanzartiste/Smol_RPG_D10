@@ -1,6 +1,6 @@
 # Cahier des charges — Lifantasy (titre provisoire)
 
-> Version 0.2 — 2026-10-12 — document vivant, à mettre à jour au fil des décisions.
+> Version 0.3 — 2026-10-12 — document vivant, à mettre à jour au fil des décisions.
 
 ---
 
@@ -174,13 +174,13 @@ l'architecture dès le départ, voir §9).
 | **Format des données** | **JSON** | Godot le lit nativement (`JSON.parse_string`), alors que le YAML demanderait un addon. Un fichier par type de contenu ou par lieu (`data/events/forest.json`, `data/species.json`…). |
 | **Univers et ton** | Fantasy **inspirée de D&D** | ⚠️ Licence : le **SRD 5.1** (CC-BY 4.0) est réutilisable librement (attributs, compétences, sorts et monstres qu'il contient). En revanche, il ne faut pas utiliser la marque « D&D », les Royaumes Oubliés ni les créatures absentes du SRD (tyrannoeils, flagelleurs mentaux…). |
 | **Statistiques** | Inspirées de D&D 5e | Voir le détail du MVP ci-dessous. |
-| **Temps** | **Plusieurs actions par jour** | Proposition : 3 créneaux (matin, après-midi, soir), et le jour avance quand ils sont tous utilisés. |
+| **Temps** | **Plusieurs actions par jour**, **une année = 365 jours** | 3 créneaux par jour (matin, après-midi, soir). Pour faire passer le temps, on s'appuie sur les trajets, les voyages et les attentes de durée choisie. |
 | **Vieillissement** | **Oui, dès le MVP** | Au-delà de l'âge limite de l'espèce, chaque année retire 1 à un attribut tiré au hasard. Un attribut à 0 tue le personnage. |
 | **Vocabulaire** | **Espèce**, pas « race » | Utilisé partout : données, code, interface. |
 | **Espèce** | Taille et âges, **aucun effet sur les attributs** | La taille (Petite, Moyenne…) est une variable du personnage, utilisable dans les conditions. |
 | **Passé** | Choisi à la création | Il donne 2 compétences maîtrisées (et parfois de l'or ou des objets). Il est utilisable dans les conditions d'événements. |
 | **Genre** | Femme, homme ou non-binaire | Aucun effet sur l'apparence ni sur les règles. Il sert aux accords dans les textes, avec la syntaxe `{g:masculin\|féminin\|neutre}`. |
-| **Combat** | Tour par tour, **sans positionnement** | Initiative, actions, sorts, objets ; les jets s'inspirent de D&D (d20 + modificateur contre la classe d'armure). |
+| **Combat** | Tour par tour, **sans positionnement**, **4 contre 4** au maximum | Taille des groupes réglable (`rules.json › max_companions`, `max_enemies`), invocations comprises. Les sprites suivent la taille : environ 50 % pour une petite créature, 200 % pour une grande. **Système de decks à concevoir** (§9.3). |
 | **Langue** | Français d'abord, **localisation FR/EN prévue** | Les textes d'interface passent par `tr()` dès le départ. Les textes des JSON sont écrits en français ; leurs clés de traduction sont dérivées des ids (ex. `evt.<id>.text`), et un script générera le CSV de traduction le moment venu. |
 | **Direction artistique** | Inspirée de **Baldur's Gate 3**, produite par **IA générative** | Images 2D fixes uniquement : portraits, illustrations d'événements, icônes. L'**interface** a l'ambiance BG3 (sombre, bordures dorées, police serif, fonds parchemin). Voir §9.2 pour le pipeline. |
 
@@ -193,12 +193,13 @@ l'architecture dès le départ, voir §9).
   modèle.
 - **Compétences** : les **18 compétences** de D&D. La classe et le passé déterminent celles qui sont maîtrisées. Elles
   servent aux tests des événements (d20 + modificateur contre un DD).
-- **Dons** : chaque passé accorde un don d'origine. On en choisit un nouveau aux niveaux 2 et 4 (réglable dans
-  `rules.json › feat_levels`), et les événements peuvent en donner (`add_feat`).
+- **Dons** : chaque passé accorde un don d'origine. Les événements peuvent aussi en donner (`add_feat`).
+- **Améliorations** : tous les 4 niveaux (4, 8, 12, 16, 20), +1 à un attribut au choix (20 au maximum) **et** un don.
+  Réglable dans `rules.json › advancement_levels` et `advancement`.
 - **Équipement, types de dégâts et défenses** : un catalogue centralisé (`equipment.json`) et les 13 types de dégâts
   du SRD. Résistances, immunités et vulnérabilités sont gérées pour les personnages comme pour les ennemis. Voir
   [modele_donnees.md](modele_donnees.md) › Règles centralisées.
-- **Niveaux** : de 1 à 5 maximum pour le MVP.
+- **Niveaux** : de 1 à **20**, avec les tables d'XP et de maîtrise de D&D 5e.
 
 ### 9.2 Pipeline des images (IA générative)
 
@@ -219,6 +220,23 @@ Claude ne génère pas d'images lui-même. Il peut en revanche écrire le **guid
 - **Licence et publication** : vérifier les conditions d'utilisation commerciale de l'outil ou du modèle choisi.
   **Steam exige de déclarer l'usage d'IA générative**, et itch.io propose une mention dédiée.
 
+### 9.3 Décisions de la v0.3 (réponses aux questions du 2026-10-12)
+
+| Sujet | Décision |
+|---|---|
+| **Sauvegarde** | Méta **et** vie en cours (on peut quitter et reprendre). |
+| **Méta-progression** | Des **Creator Points** gagnés à chaque vie, dépensés à la création : meilleures stats, espèce « meilleure », niveau de départ plus élevé… |
+| **Social** | Des PNJ à rencontrer, avec des interactions sociales à la façon des Sims : confiance, amitié, mariage, enfants, divorce… Un conjoint ou un enfant pourra devenir le personnage suivant (non prioritaire). |
+| **Monde vivant** | Les PNJ vivent indépendamment du joueur, et les lieux changent avec le temps. |
+| **Voyages** | Ils passent par des événements. On peut quitter une ville définitivement et ne jamais y revenir. |
+| **Métiers** | Une suite d'activités, comme « être aventurier » ne se résume pas à un bouton Combat. Certaines classes s'y prêtent mieux (Artificier pour l'artisanat, Alchimiste pour l'alchimie et la cuisine…). |
+| **Contenu** | Les événements sont générés au besoin. L'utilisateur fournira plus tard des campagnes, des suites de quêtes et son **lore**, déjà bien avancé. |
+| **Combat** | Chaque combattant a un **deck** façon MTG (sorts, manœuvres…), dans lequel il pioche les actions disponibles. Avec de vrais effets de statut. Conception en cours. |
+| **Équipement** | Il s'obtient par le butin, l'achat et la forge. |
+| **Difficulté** | La mortalité dépend des risques pris par le joueur. |
+| **Présentation** | Le style pixel art actuel convient, et le son viendra plus tard. |
+| **Tests** | Des testeurs sont disponibles facilement. |
+
 ## 10. Prochaines étapes proposées
 
 1. ~~Répondre aux questions ouvertes du §9.~~
@@ -228,18 +246,28 @@ Claude ne génère pas d'images lui-même. Il peut en revanche écrire le **guid
 5. ~~Écran de création de personnage~~ (espèce, genre, classe, passé, achat de points, nom, apparence), ~~lancers de
    dés animés~~ et ~~règles de vieillissement~~.
 6. ~~Ajouter le combat~~ : initiative, attaques contre la CA, critiques, sorts et emplacements, objets, fuite, compagnon contrôlé par le joueur, issues victoire / fuite / défaite (mortelle ou K.-O.), banc d'équilibrage.
-7. Ajouter sauvegarde et méta.
-8. Produire le contenu du MVP, puis faire tester.
+7. **Combat avec decks** (conception en cours), effets de statut, groupes de 4 contre 4 et sprites à l'échelle de la taille.
+8. Sauvegarde (vie en cours et méta) et écran titre.
+9. Creator Points et chronique.
+10. Contenu du MVP, puis première version pour les testeurs.
 
 ## 11. Backlog (idées validées, non prioritaires)
 
-- **Passer des années** : un bouton (ou une action) pour faire passer plusieurs années d'un coup, par exemple en
-  s'installant comme forgeron. Sans lui, la vieillesse n'arrive presque jamais avec l'échelle de temps actuelle
-  (10 jours par an).
+- **Passer des années** : trajets, voyages et attentes de durée choisie (ex. « attendre le printemps », « s'installer
+  5 ans comme forgeron »). Avec une année de 365 jours, c'est le seul moyen de vieillir réellement.
+- **Social et monde vivant** : PNJ autonomes, relations (confiance, amitié, amour), mariage, enfants, divorce,
+  conjoint ou enfant comme personnage suivant, lieux qui évoluent.
+- **Voyages** : quitter une ville pour toujours, découvrir de nouveaux lieux par des événements.
+- **Métiers** : chaînes d'activités (artisanat, commerce, alchimie, cuisine…), et classes associées (Artificier,
+  Alchimiste…).
+- **Économie** : boutiques, forge, butin d'équipement, inventaire pour équiper ses compagnons.
+- **Creator Points** : leur gain et leur barème restent à définir.
+- **Multiclassage** : les améliorations sont « tous les 4 niveaux dans une classe ». Si le multiclassage arrive, elles
+  se compteront par classe.
 
 - **Combat — suite** : effets de statut (poison, étourdissement…), IA ennemie plus fine (cibler les blessés,
   se soigner), bouton « combat automatique », équipement (armes et armures trouvables).
-- **Compagnons** : relations, dialogues, gestion de l'équipement, plus d'un compagnon.
+- **Compagnons** : relations, dialogues, gestion de l'équipement (le groupe peut déjà compter 3 compagnons).
 
 ## 12. Outils de développement
 

@@ -15,7 +15,7 @@
 		{"id": "large", "name": "Grande"}
 	],
 	"time_slots": [{"id": "morning", "name": "Matin"}, {"id": "afternoon", "name": "Après-midi"}, {"id": "evening", "name": "Soir"}],
-	"days_per_year": 10,
+	"days_per_year": 365,
 	"life_stages": [
 		{"id": "child", "name": "Enfant"},
 		{"id": "teen", "name": "Adolescent"},
@@ -24,8 +24,11 @@
 		{"id": "venerable", "name": "Vénérable"}
 	],
 	"start_gold": 15,
-	"max_companions": 1,
-	"xp_by_level": [0, 300, 900, 2700, 6500],
-	"proficiency_by_level": [2, 2, 2, 2, 3],
-	"feat_levels": [2, 4]
+	"max_companions": 3,
+	"max_enemies": 4,
+	"xp_by_level": [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000],
+	"proficiency_by_level": [2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6],
+	"advancement_levels": [4, 8, 12, 16, 20],
+	"advancement": {"ability_points": 1, "feats": 1},
+	"max_ability_score": 20
 }

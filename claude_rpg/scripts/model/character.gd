@@ -12,6 +12,7 @@ var gender := ""  # sans effet sur l'apparence ; sert aux accords dans les texte
 var abilities: Dictionary = {}  # valeurs de base (achat de points, vieillesse…) ; voir ability_score()
 var feats: Array[String] = []  # dons
 var pending_feats := 0  # dons à choisir (gagnés en montant de niveau)
+var pending_ability_points := 0  # points d'attribut à répartir (gagnés en montant de niveau)
 var equipment: Dictionary = {}  # emplacement (Equipment.SLOTS) -> id d'équipement
 var defenses := Defenses.new()  # défenses propres au personnage (accordées par des événements)
 var level := 1
@@ -86,7 +87,7 @@ static func create_companion(companion_id: String) -> Character:
 	for feat_id: String in t.get("feats", []):
 		c.feats.append(feat_id)
 	c.level = int(t.get("level", 1))
-	c.xp = int(DB.rules["xp_by_level"][c.level - 1])
+	c.xp = Progression.xp_for(c.level)
 	c.max_hp = c.compute_max_hp()
 	c.hp = c.max_hp
 	return c
@@ -128,8 +129,7 @@ func ability_mod(ability_id: String) -> int:
 
 
 func proficiency_bonus() -> int:
-	var table: Array = DB.rules.get("proficiency_by_level", [2])
-	return int(table[clampi(level - 1, 0, table.size() - 1)])
+	return Progression.proficiency_bonus(level)
 
 
 ## Compétences maîtrisées : classe, passé et modificateurs (dons…).
@@ -170,6 +170,30 @@ func available_feats() -> Array[String]:
 ## Le personnage a-t-il un don à choisir (et au moins un don disponible) ?
 func can_choose_feat() -> bool:
 	return pending_feats > 0 and not available_feats().is_empty()
+
+
+## Le personnage a-t-il un point d'attribut à placer (et un attribut sous le plafond) ?
+func can_increase_ability() -> bool:
+	return pending_ability_points > 0 and Abilities.ids().any(func(id): return can_raise(id))
+
+
+## Une amélioration (attribut ou don) attend-elle un choix du joueur ?
+func has_pending_advancement() -> bool:
+	return can_increase_ability() or can_choose_feat()
+
+
+func can_raise(ability_id: String) -> bool:
+	return int(abilities.get(ability_id, 10)) < Progression.max_ability_score()
+
+
+## Dépense un point d'attribut gagné en montant de niveau.
+func increase_ability(ability_id: String) -> bool:
+	if pending_ability_points <= 0 or not can_raise(ability_id):
+		return false
+	pending_ability_points -= 1
+	abilities[ability_id] = int(abilities[ability_id]) + 1
+	refresh_max_hp()
+	return true
 
 
 ## Choisit un des dons gagnés en montant de niveau.
@@ -290,16 +314,16 @@ func refresh_max_hp() -> void:
 
 
 ## Ajoute de l'XP et retourne la liste des niveaux atteints.
-## Atteindre un niveau de Feats.levels() donne un don à choisir (pending_feats).
+## Un niveau d'amélioration (Progression) donne des points d'attribut et des dons à choisir.
 func add_xp(amount: int) -> Array[int]:
 	xp += amount
 	var reached: Array[int] = []
-	var table: Array = DB.rules.get("xp_by_level", [0])
-	while level < table.size() and xp >= int(table[level]):
+	while level < Progression.max_level() and xp >= Progression.xp_for(level + 1):
 		level += 1
 		refresh_max_hp()
-		if level in Feats.levels():
-			pending_feats += 1
+		if Progression.is_advancement_level(level):
+			pending_ability_points += Progression.ability_points_per_advancement()
+			pending_feats += Progression.feats_per_advancement()
 		reached.append(level)
 	return reached
 

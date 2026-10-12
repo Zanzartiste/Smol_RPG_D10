@@ -22,6 +22,12 @@ static func _validate_rules(db: Node, errors: Array[String]) -> void:
 			errors.append("rules.json : champ « %s » manquant" % key)
 	if db.rules.get("standard_array", []).size() != db.abilities.size():
 		errors.append("rules.json : standard_array doit avoir une valeur par attribut")
+	var xp_table: Array = db.rules.get("xp_by_level", [])
+	if db.rules.get("proficiency_by_level", []).size() != xp_table.size():
+		errors.append("rules.json : proficiency_by_level doit avoir autant d'entrées que xp_by_level")
+	for level in db.rules.get("advancement_levels", []):
+		if int(level) < 2 or int(level) > xp_table.size():
+			errors.append("rules.json : niveau d'amélioration hors limites : %s" % level)
 	var point_buy: Dictionary = db.rules.get("point_buy", {})
 	var costs: Dictionary = point_buy.get("costs", {})
 	for value in range(int(point_buy.get("min", 8)), int(point_buy.get("max", 15)) + 1):
@@ -389,6 +395,8 @@ static func _validate_effects(db: Node, effects: Variant, ctx: String, errors: A
 			"combat":
 				for enemy_id in e["enemies"]:
 					_expect_ref(db.enemies, enemy_id, "ennemi", ctx, errors)
+				if e["enemies"].size() > int(db.rules.get("max_enemies", 4)):
+					errors.append(ctx + " : trop d'ennemis (maximum rules.json › max_enemies = %d)" % int(db.rules.get("max_enemies", 4)))
 				if e.get("on_defeat", "death") not in ["death", "knockout"]:
 					errors.append(ctx + " : on_defeat doit valoir « death » ou « knockout »")
 				for key in ["victory", "defeat", "fled"]:

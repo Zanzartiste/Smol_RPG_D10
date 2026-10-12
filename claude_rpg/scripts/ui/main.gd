@@ -65,8 +65,11 @@ func _unhandled_key_input(event: InputEvent) -> void:
 # --- Écrans ------------------------------------------------------------------
 
 func _show_hub() -> void:
-	# Un membre du groupe a gagné un don en montant de niveau : on le lui fait choisir d'abord.
+	# Un membre du groupe a gagné une amélioration en montant de niveau : on la lui fait choisir d'abord.
 	for member in Game.life.party():
+		if member.can_increase_ability():
+			_show_ability_choice(member)
+			return
 		if member.can_choose_feat():
 			_show_feat_choice(member)
 			return
@@ -141,6 +144,18 @@ func _show_death() -> void:
 	_add_choice(tr("Commencer une nouvelle vie"), _on_new_life)
 
 
+func _show_ability_choice(member: Character) -> void:
+	title_label.text = tr("Amélioration — %s") % member.name
+	body_text.text = tr("%s a atteint le niveau %d : choisissez l'attribut à augmenter de 1 (maximum %d).") % [
+		member.name, member.level, Progression.max_ability_score()]
+	_clear_choices()
+	for id in Abilities.ids():
+		var score := int(member.abilities[id])
+		var button := _add_choice("%s : %d → %d" % [Abilities.name_of(id), score, score + 1],
+			_on_ability_chosen.bind(member, id), member.can_raise(id))
+		button.tooltip_text = Abilities.description_of(id)
+
+
 func _show_feat_choice(member: Character) -> void:
 	title_label.text = tr("Nouveau don — %s") % member.name
 	body_text.text = tr("%s a atteint le niveau %d et peut choisir un nouveau don.") % [member.name, member.level]
@@ -154,6 +169,12 @@ func _show_feat_choice(member: Character) -> void:
 
 
 # --- Actions -----------------------------------------------------------------
+
+func _on_ability_chosen(member: Character, ability_id: String) -> void:
+	member.increase_ability(ability_id)
+	_refresh_sheet()
+	_show_hub()
+
 
 func _on_feat_chosen(member: Character, feat_id: String) -> void:
 	member.choose_feat(feat_id)
