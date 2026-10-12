@@ -82,14 +82,12 @@ func _new_day() -> void:
 		_check_old_age()
 
 
-## Modifie un attribut. Un attribut qui tombe à 0 tue le personnage.
-## Un changement de Constitution recalcule les PV (et peut aussi tuer si les PV tombent à 0).
+## Modifie la valeur de base d'un attribut. Un attribut qui tombe à 0 tue le personnage.
+## Les PV sont recalculés (la CON en dépend) : s'ils tombent à 0, le personnage meurt aussi.
 func change_ability(ability_id: String, amount: int, cause: String) -> void:
-	var value := clampi(int(character.abilities.get(ability_id, 10)) + amount, 0, 30)
-	character.abilities[ability_id] = value
-	if ability_id == "con":
-		character.refresh_max_hp()
-	if value <= 0 or character.hp <= 0:
+	character.abilities[ability_id] = clampi(int(character.abilities.get(ability_id, 10)) + amount, 0, 30)
+	character.refresh_max_hp()
+	if character.ability_score(ability_id) <= 0 or character.hp <= 0:
 		die(cause)
 
 
@@ -99,7 +97,7 @@ func _check_old_age() -> void:
 	var limit := int(DB.species[character.species_id].get("aging_age", 0))
 	if limit <= 0 or character.age_years() <= limit:
 		return
-	var ids: Array = DB.abilities.keys()
+	var ids := Abilities.ids()
 	var id: String = ids[rng.randi_range(0, ids.size() - 1)]
-	notices.append(Loc.ui("Le poids des ans : %s −1.") % DB.abilities[id]["name"])
+	notices.append(Loc.ui("Le poids des ans : %s −1.") % Abilities.name_of(id))
 	change_ability(id, -1, Loc.ui("Mort de vieillesse"))

@@ -68,12 +68,12 @@ static func modifier(ch: Character, check: Dictionary) -> int:
 
 
 static func label(check: Dictionary) -> String:
-	var stat_name: String
-	if check.has("skill"):
-		stat_name = DB.skills[check["skill"]]["name"]
-	else:
-		stat_name = DB.abilities[check["ability"]]["name"]
-	return Loc.ui("%s DD %d") % [stat_name, int(check["dc"])]
+	return Loc.ui("%s DD %d") % [stat_name(check), int(check["dc"])]
+
+
+## Nom de la compétence ou de l'attribut testé.
+static func stat_name(check: Dictionary) -> String:
+	return Skills.name_of(check["skill"]) if check.has("skill") else Abilities.name_of(check.get("ability", "str"))
 
 
 static func success_chance(ch: Character, check: Dictionary) -> float:
@@ -94,5 +94,5 @@ static func roll_check(ch: Character, check: Dictionary, rng: RandomNumberGenera
 		"dc": dc,
 		"success": success,
 		"label": label(check),
-		"stat": DB.skills[check["skill"]]["name"] if check.has("skill") else DB.abilities[check["ability"]]["name"],
+		"stat": stat_name(check),
 	}

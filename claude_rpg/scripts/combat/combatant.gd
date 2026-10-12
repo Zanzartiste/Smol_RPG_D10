@@ -63,7 +63,16 @@ func armor_class() -> int:
 func ability_mod(ability_id: String) -> int:
 	if character != null:
 		return character.ability_mod(ability_id)
-	return floori((int(enemy.get("abilities", {}).get(ability_id, 10)) - 10) / 2.0)
+	return Abilities.modifier(int(enemy.get("abilities", {}).get(ability_id, 10)))
+
+
+func initiative_bonus() -> int:
+	return character.initiative_bonus() if character != null else ability_mod("dex")
+
+
+## Résistances, immunités et vulnérabilités (voir Defenses).
+func defenses() -> Defenses:
+	return character.all_defenses() if character != null else Defenses.from_dict(enemy.get("defenses", {}))
 
 
 ## Taille (pour l'affichage) : espèce du personnage ou taille de l'ennemi.
@@ -81,9 +90,15 @@ func actions() -> Array[Dictionary]:
 		var attacks: Array = enemy.get("attacks", [])
 		for i in attacks.size():
 			var attack: Dictionary = attacks[i]
+			# Une attaque peut citer une arme du catalogue (Equipment) au lieu de dégâts explicites.
+			var weapon: String = attack.get("weapon", "")
+			var damage: String = attack.get("damage", Equipment.weapon_damage(weapon) if weapon != "" else "1")
+			if attack.has("damage_bonus"):
+				damage = Dice.add_mod(damage, int(attack["damage_bonus"]))
 			result.append({
 				"id": "enemy_attack_%d" % i, "name": attack["name"], "type": "attack", "target": "enemy",
-				"to_hit": int(attack["to_hit"]), "damage": attack["damage"],
+				"to_hit": int(attack["to_hit"]), "damage": damage,
+				"damage_type": attack.get("damage_type", Equipment.damage_type_of(weapon) if weapon != "" else "bludgeoning"),
 			})
 	return result
 
@@ -102,12 +117,20 @@ func damage_expr(action: Dictionary) -> String:
 		return expr
 	var ability := character.action_ability(action.get("ability", "weapon"))
 	if expr == "weapon":
-		expr = character.weapon()["damage"]
+		expr = character.weapon_damage()
 	if action.get("add_mod", false):
 		expr = Dice.add_mod(expr, character.ability_mod(ability))
 	if action.has("extra_damage"):
 		expr += "+" + action["extra_damage"]
 	return expr
+
+
+## Type de dégâts d'une action ("weapon" = celui de l'arme en main).
+func damage_type(action: Dictionary) -> String:
+	var type: String = action.get("damage_type", "")
+	if type == "weapon" and character != null:
+		return character.weapon_damage_type()
+	return type
 
 
 ## Expression de soins, « level » étant remplacé par le niveau du personnage.

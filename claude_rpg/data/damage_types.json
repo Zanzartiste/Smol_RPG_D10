@@ -1,0 +1,15 @@
+[
+	{"id": "acid", "name": "Acide"},
+	{"id": "bludgeoning", "name": "Contondant", "physical": true},
+	{"id": "cold", "name": "Froid"},
+	{"id": "fire", "name": "Feu"},
+	{"id": "force", "name": "Force"},
+	{"id": "lightning", "name": "Foudre"},
+	{"id": "necrotic", "name": "Nécrotique"},
+	{"id": "piercing", "name": "Perforant", "physical": true},
+	{"id": "poison", "name": "Poison"},
+	{"id": "psychic", "name": "Psychique"},
+	{"id": "radiant", "name": "Radiant"},
+	{"id": "slashing", "name": "Tranchant", "physical": true},
+	{"id": "thunder", "name": "Tonnerre"}
+]

@@ -6,7 +6,13 @@ dans la console Godot. Les tests automatisés le signalent aussi.
 
 | Fichier | Contenu |
 |---|---|
-| `rules.json` | Attributs, 18 compétences, achat de points, genres, tailles, moments de la journée, étapes de vie, progression |
+| `rules.json` | Achat de points, genres, tailles, moments de la journée, étapes de vie, progression |
+| `abilities.json` | Attributs (API `Abilities`) |
+| `skills.json` | Compétences (API `Skills`) |
+| `feats.json` | Dons (API `Feats`) |
+| `equipment.json` | Armes, armures, boucliers (API `Equipment`) |
+| `damage_types.json` | Types de dégâts (API `DamageTypes`) |
+| `status_effects.json` | États : empoisonné, charmé… (API `StatusEffects`) |
 | `species.json` | Espèces : taille, âges, vieillissement, noms, apparence des portraits |
 | `classes.json` | Classes : dé de vie, modèle d'attributs, compétences maîtrisées, objets de départ |
 | `backgrounds.json` | Passés : compétences maîtrisées, or et objets de départ éventuels |
@@ -102,6 +108,9 @@ Chaque condition est un objet avec un champ `type`. Une liste de conditions est 
 | `age` / `gold` / `level` | `min`?, `max`? | La valeur est dans l'intervalle |
 | `item` | `id`, `min`? (1) | Le personnage possède au moins `min` exemplaires de l'objet |
 | `companion` | `id` | Le compagnon (`companions.json`) fait partie du groupe |
+| `has_feat` | `id` | Le personnage possède le don |
+| `equipped` | `id` | Le personnage porte cet équipement |
+| `defense` | `kind`, `id` | Le personnage a cette défense (ex. `{"kind": "resistance", "id": "fire"}`) |
 | `time` | `in` (liste) | Le moment de la journée (`morning`, `afternoon`, `evening`) fait partie de la liste |
 | `not` | `condition` | La sous-condition est fausse |
 | `any` | `conditions` (liste) | Au moins une des sous-conditions est vraie (OU) |
@@ -114,7 +123,7 @@ Chaque condition est un objet avec un champ `type`. Une liste de conditions est 
 | `set_world_flag` / `clear_world_flag` | `id` | Pose ou retire un flag du monde, **conservé après la mort** |
 | `unlock` | `id` | Débloque une espèce ou une classe pour les vies suivantes (`species:elf`, `class:rogue`) |
 | `gold` | `amount` | Ajoute ou retire de l'or (jamais sous 0) |
-| `hp` | `amount`, `cause`? | Soigne ou blesse. À 0 PV, le personnage meurt, et `cause` s'affiche sur l'écran de mort |
+| `hp` | `amount`, `cause`?, `damage_type`? | Soigne ou blesse. Avec `damage_type`, les défenses du personnage s'appliquent. À 0 PV, le personnage meurt, et `cause` s'affiche sur l'écran de mort |
 | `heal_full` | — | Rend tous les PV |
 | `xp` | `amount` | Donne de l'XP. Les montées de niveau sont automatiques |
 | `ability` | `id`, `amount`, `cause`? | Modifie un attribut. Un attribut à 0 tue le personnage |
@@ -125,6 +134,9 @@ Chaque condition est un objet avec un champ `type`. Une liste de conditions est 
 | `long_rest` | — | Repos long : PV et ressources (emplacements de sort) du groupe au maximum |
 | `recruit` | `companion` | Le compagnon rejoint le groupe (dans la limite de `max_companions`) |
 | `combat` | `enemies`, … | Lance un combat (voir plus bas). **Doit être le dernier effet de la liste** |
+| `add_feat` | `id` | Le personnage obtient un don |
+| `equip` | `id` | Équipe une arme, une armure ou un bouclier à son emplacement |
+| `add_defense` / `remove_defense` | `kind`, `id` | Ajoute ou retire une défense propre au personnage (`resistance`, `immunity`, `vulnerability` + type de dégâts, ou `status_immunity` + état) |
 
 ## Combat
 
@@ -167,7 +179,8 @@ par classe, en solo et avec un compagnon.
 |---|---|
 | `ac`, `hp` | Classe d'armure, et PV sous forme d'expression de dés (`2d6+2`), tirés à chaque combat |
 | `abilities` | Attributs (la DEX sert à l'initiative) |
-| `attacks` | `[{"name", "to_hit", "damage"}]` : l'ennemi en choisit une au hasard et vise un membre du groupe au hasard |
+| `attacks` | `[{"name", "to_hit", "damage", "damage_type"}]`, ou `[{"name", "to_hit", "weapon": "scimitar", "damage_bonus"?}]` pour reprendre une arme du catalogue. L'ennemi choisit une attaque au hasard et vise un membre du groupe au hasard |
+| `defenses` | Résistances, immunités et vulnérabilités : `{"resistances": ["slashing"], "immunities": [], "vulnerabilities": [], "status_immunities": []}` |
 | `size` | Taille (`small`, `medium`, `large`…), qui détermine la taille du sprite |
 | `xp`, `gold`?, `loot`? | Récompenses. `loot` : `[{"item", "chance", "count"?}]` |
 | `death_cause` | Texte de l'écran de mort si l'ennemi tue le héros |
@@ -181,16 +194,93 @@ par classe, en solo et avec un compagnon.
 | `target` | `enemy`, `ally` ou `self` |
 | `ability` | `weapon` (attribut de l'arme), `spell` (attribut d'incantation de la classe) ou un id d'attribut |
 | `damage` | Expression de dés, ou `weapon` pour les dégâts de l'arme. `add_mod` : ajoute le modificateur. `extra_damage` : dés en plus |
+| `damage_type` | Type de dégâts (`fire`, `force`…), ou `weapon` pour celui de l'arme |
 | `heal` | Expression de soins (`level` = niveau du personnage) |
 | `per_combat` | Nombre d'utilisations par combat |
 | `cost` | Ressource consommée (ex. `spell_slot`), rechargée par `long_rest` |
 
-Les classes déclarent `weapon` (`name`, `damage`, `ability`), `armor` (`base`, `add_dex`), `actions`, et selon le cas
+Les classes déclarent `equipment` (`{"main_hand": "longsword", "armor": "chain_mail", "off_hand": "shield"}`, ids de
+`equipment.json`), `actions`, et selon le cas
 `spellcasting` (attribut) et `resources` (ex. `{"spell_slot": 2}`).
 
 ### Expressions de dés
 
 Elles s'écrivent `XdY+Z`, et les termes peuvent se combiner : `2d6+3`, `1d8+1d6-1`, `5`.
+
+## Règles centralisées (scripts/rules/)
+
+Chaque notion de règle a **un fichier de données** et **un script d'API**. Le reste du code ne lit jamais les données
+directement : il passe par l'API. Pour modifier un attribut, une compétence, un don, une arme ou un type de dégâts, il
+suffit donc de modifier son JSON. La fiche, l'écran de création, les tests d'événements, le combat et la validation
+suivent automatiquement.
+
+| API | Données | Fonctions principales |
+|---|---|---|
+| `Abilities` | `abilities.json` | `ids()`, `name_of(id)`, `short_of(id)`, `description_of(id)`, `modifier(valeur)` |
+| `Skills` | `skills.json` | `ids()`, `name_of(id)`, `ability_of(id)`, `names_of(liste)` |
+| `Feats` | `feats.json` | `ids()`, `name_of(id)`, `modifiers_of(id)`, `meets_prerequisites(id, personnage)` |
+| `Equipment` | `equipment.json` | `name_of(id)`, `slot_for(id)`, `weapon_damage(id, deux_mains)`, `damage_type_of(id)`, `attack_ability(id, mod_FOR, mod_DEX)`, `armor_class(armure, bouclier, mod_DEX)`, `describe(id)` |
+| `DamageTypes` | `damage_types.json` | `ids()`, `name_of(id)`, `is_physical(id)`, `apply(dégâts, type, défenses)` |
+| `StatusEffects` | `status_effects.json` | `ids()`, `name_of(id)` |
+| `Modifiers` | — | `sum(...)`, `grants(...)`, `defenses(...)`, `describe(...)` : interprète les modificateurs |
+| `Defenses` | — | `from_dict()`, `to_dict()`, `add()`, `remove()`, `has()`, `merge()`, `describe()` |
+
+### Dons (`feats.json`)
+
+```json
+{
+	"id": "athlete",
+	"name": "Athlète",
+	"description": "…",
+	"prerequisites": [{"type": "ability", "id": "dex", "min": 13}],
+	"modifiers": [{"type": "ability", "id": "str", "amount": 1}, {"type": "skill_proficiency", "id": "athletics"}]
+}
+```
+
+Les prérequis s'écrivent comme les conditions des événements. Un personnage obtient un don avec l'effet `add_feat`, et
+un compagnon peut en avoir dans `companions.json` (`feats`).
+
+### Modificateurs
+
+Les dons, les espèces et les équipements peuvent porter des `modifiers`. Ils s'appliquent automatiquement au personnage.
+
+| type | Champs | Effet |
+|---|---|---|
+| `ability` | `id`, `amount` | Bonus d'attribut. **Interdit pour une espèce** |
+| `skill_proficiency` | `id` | Maîtrise d'une compétence |
+| `hp_per_level` | `amount` | PV max en plus, à chaque niveau |
+| `initiative` | `amount` | Bonus d'initiative |
+| `ac` | `amount` | Bonus de CA |
+| `resistance` / `immunity` / `vulnerability` | `damage_type` | Défense contre un type de dégâts |
+| `status_immunity` | `status` | Immunité à un état |
+
+### Équipement (`equipment.json`)
+
+| Catégorie | Champs |
+|---|---|
+| `weapon` | `damage`, `damage_type`, `properties` (`finesse`, `light`, `thrown`, `versatile`, `heavy`, `two_handed`, `ranged`), `versatile_damage` pour une arme polyvalente |
+| `armor` | `armor_type` (`light` : base + DEX, `medium` : base + DEX max 2, `heavy` : base seule), `base_ac` |
+| `shield` | `ac_bonus` |
+
+Tout équipement peut aussi porter des `modifiers`, par exemple une cape qui donne une résistance au feu.
+
+**Règles appliquées :**
+- Une arme de finesse utilise le meilleur de FOR et DEX, une arme à distance utilise la DEX.
+- Une arme polyvalente tenue sans bouclier fait ses dégâts à deux mains.
+- Une arme à deux mains et un bouclier s'excluent.
+- L'entrée `unarmed` (mains nues) est obligatoire.
+
+### Défenses
+
+Chaque personnage a ses défenses propres, accordées par des événements (`add_defense`). S'y ajoutent celles de
+l'espèce, des dons et de l'équipement : `Character.all_defenses()` les réunit. Les ennemis déclarent les leurs dans
+`defenses`.
+
+Calcul des dégâts subis :
+- immunité : 0 ;
+- résistance : moitié, arrondie à l'inférieur ;
+- vulnérabilité : double ;
+- résistance et vulnérabilité au même type s'annulent.
 
 ## Flags : conventions
 

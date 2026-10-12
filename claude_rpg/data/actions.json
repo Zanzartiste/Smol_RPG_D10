@@ -7,7 +7,8 @@
 		"target": "enemy",
 		"ability": "weapon",
 		"damage": "weapon",
-		"add_mod": true
+		"add_mod": true,
+		"damage_type": "weapon"
 	},
 	{
 		"id": "sneak_attack",
@@ -19,7 +20,8 @@
 		"damage": "weapon",
 		"add_mod": true,
 		"extra_damage": "1d6",
-		"per_combat": 2
+		"per_combat": 2,
+		"damage_type": "weapon"
 	},
 	{
 		"id": "second_wind",
@@ -38,7 +40,8 @@
 		"target": "enemy",
 		"ability": "spell",
 		"damage": "1d10",
-		"add_mod": false
+		"add_mod": false,
+		"damage_type": "fire"
 	},
 	{
 		"id": "magic_missile",
@@ -47,6 +50,7 @@
 		"type": "auto",
 		"target": "enemy",
 		"damage": "3d4+3",
-		"cost": "spell_slot"
+		"cost": "spell_slot",
+		"damage_type": "force"
 	}
 ]

@@ -12,6 +12,10 @@ const TESTS := [
 	"_test_character",
 	"_test_conditions",
 	"_test_point_buy",
+	"_test_rule_apis",
+	"_test_equipment",
+	"_test_feats",
+	"_test_defenses",
 	"_test_effects",
 	"_test_aging",
 	"_test_engine",
@@ -89,6 +93,123 @@ func _test_character() -> bool:
 	_expect(levels == [2] and c.level == 2, "300 XP => niveau 2")
 	c.age_days = DB.days_per_year() * 30
 	_expect(c.life_stage() == "elder", "gobelin de 42 ans âgé")
+	return true
+
+
+func _test_rule_apis() -> bool:
+	_expect(Abilities.ids() == ["str", "dex", "con", "int", "wis", "cha"], "attributs dans l'ordre du JSON")
+	_expect(Abilities.name_of("wis") == "Sagesse" and Abilities.short_of("wis") == "SAG", "noms d'attributs")
+	_expect(Abilities.modifier(8) == -1 and Abilities.modifier(15) == 2 and Abilities.modifier(1) == -5, "modificateurs")
+	_expect(Skills.ids().size() == 18 and Skills.ability_of("stealth") == "dex", "compétences")
+	_expect(Skills.names_of(["arcana", "history"]) == "Arcanes, Histoire", "noms de compétences")
+	_expect(DamageTypes.ids().size() == 13 and DamageTypes.name_of("fire") == "Feu", "types de dégâts")
+	_expect(DamageTypes.is_physical("slashing") and not DamageTypes.is_physical("fire"), "dégâts physiques")
+	_expect(StatusEffects.name_of("poisoned") == "Empoisonné", "états")
+
+	# Ajouter un attribut ou une compétence dans les données se répercute partout.
+	DB.skills["_cooking"] = {"id": "_cooking", "name": "Cuisine", "ability": "wis"}
+	var c := Character.create("human", "fighter", "Chef")
+	_expect(c.skill_mod("_cooking") == c.ability_mod("wis") and "Cuisine" in CharacterSheet.bbcode(c),
+		"une nouvelle compétence est utilisable et affichée sans autre modification")
+	DB.skills.erase("_cooking")
+	return true
+
+
+func _test_equipment() -> bool:
+	_expect(Equipment.armor_class("", "", 2) == 12, "sans armure : 10 + DEX")
+	_expect(Equipment.armor_class("leather", "", 3) == 14, "armure légère : base + DEX")
+	_expect(Equipment.armor_class("breastplate", "", 3) == 16, "armure intermédiaire : DEX plafonnée à 2")
+	_expect(Equipment.armor_class("chain_mail", "shield", 3) == 18, "armure lourde + bouclier : DEX ignorée")
+	_expect(Equipment.attack_ability("rapier", 3, 1) == "str" and Equipment.attack_ability("rapier", 1, 3) == "dex",
+		"finesse : meilleur de FOR et DEX")
+	_expect(Equipment.attack_ability("shortbow", 5, 0) == "dex", "arme à distance : DEX")
+	_expect(Equipment.weapon_damage("longsword") == "1d8" and Equipment.weapon_damage("longsword", true) == "1d10",
+		"arme polyvalente")
+	_expect(Equipment.describe("longsword") == "Épée longue — 1d8 tranchant (polyvalente 1d10)", "description d'arme")
+
+	var c := Character.create("human", "fighter", "Testeur")
+	_expect(c.weapon_id() == "longsword" and c.armor_class() == 16, "équipement de départ de la classe")
+	c.equip("shield")
+	_expect(c.armor_class() == 18 and c.weapon_damage() == "1d8", "bouclier : +2 CA, épée à une main")
+	c.equip("greataxe")
+	_expect(not c.equipment.has("off_hand") and c.weapon_damage() == "1d12", "arme à deux mains : le bouclier est retiré")
+	c.equip("shield")
+	_expect(c.weapon_id() == Equipment.UNARMED, "bouclier : l'arme à deux mains est rangée")
+
+	var life := _new_life("human", "fighter")
+	Effects.apply_all([{"type": "equip", "id": "rapier"}], life, Meta)
+	_expect(Conditions.check({"type": "equipped", "id": "rapier"}, life, Meta), "effet equip et condition equipped")
+	return true
+
+
+func _test_feats() -> bool:
+	var life := _new_life("human", "wizard")
+	var c := life.character
+	var hp := c.max_hp
+	var init := c.initiative_bonus()
+	Effects.apply_all([{"type": "add_feat", "id": "tough"}, {"type": "add_feat", "id": "alert"}], life, Meta)
+	_expect(c.max_hp == hp + 2 and c.hp == c.max_hp, "Robuste : +2 PV par niveau")
+	_expect(c.initiative_bonus() == init + 5, "Vigilant : +5 à l'initiative")
+	c.add_xp(300)
+	_expect(c.max_hp == hp + 2 + 4 + 2 + 2, "Robuste suit les niveaux")
+	var str_before := c.ability_score("str")
+	c.add_feat("athlete")
+	_expect(c.ability_score("str") == str_before + 1 and c.abilities["str"] == str_before, "Athlète : +1 FOR (bonus, base inchangée)")
+	_expect(c.is_proficient("athletics"), "Athlète : maîtrise d'Athlétisme")
+	_expect(Conditions.check({"type": "has_feat", "id": "alert"}, life, Meta), "condition has_feat")
+	_expect(not c.add_feat("alert"), "pas de don en double")
+	var clumsy := Character.create("human", "wizard", "x",
+		{"abilities": {"str": 8, "dex": 10, "con": 14, "int": 15, "wis": 12, "cha": 13}})
+	_expect(not Feats.meets_prerequisites("defensive_duelist", clumsy),
+		"prérequis non remplis (DEX 13)")
+	_expect(Feats.meets_prerequisites("defensive_duelist", Character.create("human", "rogue", "x")),
+		"prérequis remplis")
+	return true
+
+
+func _test_defenses() -> bool:
+	var d := Defenses.from_dict({"resistances": ["fire"], "immunities": ["poison"], "vulnerabilities": ["cold"],
+		"status_immunities": ["poisoned"]})
+	_expect(DamageTypes.apply(9, "fire", d)["amount"] == 4, "résistance : moitié, arrondie à l'inférieur")
+	_expect(DamageTypes.apply(9, "poison", d)["amount"] == 0, "immunité : 0")
+	_expect(DamageTypes.apply(9, "cold", d)["amount"] == 18, "vulnérabilité : double")
+	_expect(DamageTypes.apply(9, "slashing", d) == {"amount": 9, "note": ""}, "pas de défense : inchangé")
+	d.add(Defenses.VULNERABILITY, "fire")
+	_expect(DamageTypes.apply(9, "fire", d)["amount"] == 9, "résistance et vulnérabilité s'annulent")
+	_expect(d.is_immune_to_status("poisoned") and Defenses.from_dict(d.to_dict()).to_dict() == d.to_dict(),
+		"immunité d'état et aller-retour JSON")
+	_expect(d.describe().begins_with("Résistances : Feu"), "description des défenses")
+
+	# Défenses de l'espèce (elfe : immunisé au sommeil magique) et défenses propres au personnage.
+	var elf := Character.create("elf", "wizard", "Lia")
+	_expect(elf.all_defenses().is_immune_to_status("asleep"), "elfe : immunité à l'état Endormi")
+	var life := _new_life("human", "fighter")
+	Effects.apply_all([{"type": "add_defense", "kind": "resistance", "id": "fire"}], life, Meta)
+	_expect(life.character.all_defenses().has(Defenses.RESISTANCE, "fire"), "effet add_defense")
+	_expect(Conditions.check({"type": "defense", "kind": "resistance", "id": "fire"}, life, Meta), "condition defense")
+	var hp := life.character.hp
+	var res := Effects.apply_all([{"type": "hp", "amount": -6, "damage_type": "fire"}], life, Meta)
+	_expect(life.character.hp == hp - 3 and res["lines"][0] == "-3 PV (résistance)", "dégâts d'événement typés et résistance")
+
+	# En combat : un ennemi résistant aux dégâts tranchants encaisse la moitié.
+	DB.enemies["_golem"] = {"id": "_golem", "name": "Golem", "ac": 1, "hp": "100", "abilities": {},
+		"attacks": [{"name": "Poing", "to_hit": 0, "damage": "1", "damage_type": "bludgeoning"}],
+		"defenses": {"resistances": ["slashing"]}}
+	Game.start_life(Character.create("human", "fighter", "Testeur"), 3)
+	var combat := Game.start_combat({"enemies": ["_golem"]})
+	var golem := combat.enemies()[0]
+	var hero := combat.allies()[0]
+	var beats := combat.perform(hero, DB.actions["weapon_attack"], golem)
+	if beats.size() == 2:
+		var dealt := 100 - golem.hp
+		_expect(dealt <= floori((10 + 3) * 2 / 2.0) and "résistance" in beats[1]["text"], "combat : résistance appliquée")
+	DB.enemies.erase("_golem")
+	Game.combat = null
+
+	# Validation : une espèce ne peut pas modifier les attributs.
+	var errors: Array[String] = []
+	DataValidator._validate_modifiers(DB, [{"type": "ability", "id": "str", "amount": 2}], "test", errors, false)
+	_expect(errors.any(func(e): return "espèce" in e), "le validateur refuse un bonus d'attribut d'espèce")
 	return true
 
 
@@ -318,7 +439,9 @@ func _test_combat() -> bool:
 	var life := Game.life
 	var fighter := Combatant.from_character(life.character, true)
 	var attack: Dictionary = DB.actions["weapon_attack"]
-	_expect(fighter.attack_bonus(attack) == 5 and fighter.damage_expr(attack) == "1d8+3", "attaque du guerrier : +5, 1d8+3")
+	_expect(fighter.attack_bonus(attack) == 5 and fighter.damage_expr(attack) == "1d10+3",
+		"attaque du guerrier : +5, épée longue à deux mains 1d10+3")
+	_expect(fighter.damage_type(attack) == "slashing", "épée longue : dégâts tranchants")
 	_expect(life.character.armor_class() == 16, "CA du guerrier : 16")
 	var wizard := Combatant.from_character(Character.create("goblin", "wizard", "Mage"), true)
 	_expect(wizard.attack_bonus(DB.actions["fire_bolt"]) == 5, "trait de feu : INT +3 + maîtrise")

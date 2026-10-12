@@ -1,0 +1,27 @@
+[
+	{
+		"id": "alert",
+		"name": "Vigilant",
+		"description": "Toujours sur le qui-vive, vous êtes difficile à prendre au dépourvu.",
+		"modifiers": [{"type": "initiative", "amount": 5}]
+	},
+	{
+		"id": "tough",
+		"name": "Robuste",
+		"description": "Votre endurance est hors du commun.",
+		"modifiers": [{"type": "hp_per_level", "amount": 2}]
+	},
+	{
+		"id": "athlete",
+		"name": "Athlète",
+		"description": "Un entraînement physique rigoureux a forgé votre corps.",
+		"modifiers": [{"type": "ability", "id": "str", "amount": 1}, {"type": "skill_proficiency", "id": "athletics"}]
+	},
+	{
+		"id": "defensive_duelist",
+		"name": "Duelliste défensif",
+		"description": "Vous savez parer les coups avec une arme de finesse.",
+		"prerequisites": [{"type": "ability", "id": "dex", "min": 13}],
+		"modifiers": [{"type": "ac", "amount": 1}]
+	}
+]

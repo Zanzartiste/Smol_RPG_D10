@@ -241,10 +241,11 @@ func _action_label(actor: Combatant, action: Dictionary) -> String:
 	var label: String = action["name"]
 	match action.get("type"):
 		"attack":
-			var weapon := " (%s)" % actor.character.weapon()["name"] if action.get("damage") == "weapon" else ""
-			label += "%s — %s, %s au toucher" % [weapon, actor.damage_expr(action), CharacterSheet.signed(actor.attack_bonus(action))]
+			var weapon := " (%s)" % Equipment.name_of(actor.character.weapon_id()) if action.get("damage") == "weapon" else ""
+			label += "%s — %s %s, %s au toucher" % [weapon, actor.damage_expr(action),
+				DamageTypes.name_of(actor.damage_type(action)).to_lower(), CharacterSheet.signed(actor.attack_bonus(action))]
 		"auto":
-			label += " — %s, touche toujours" % actor.damage_expr(action)
+			label += " — %s %s, touche toujours" % [actor.damage_expr(action), DamageTypes.name_of(actor.damage_type(action)).to_lower()]
 		"heal":
 			label += " — soigne %s" % actor.heal_expr(action)
 	if action.has("cost"):

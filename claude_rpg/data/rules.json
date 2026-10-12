@@ -1,32 +1,4 @@
 {
-	"abilities": [
-		{"id": "str", "name": "Force", "short": "FOR"},
-		{"id": "dex", "name": "Dextérité", "short": "DEX"},
-		{"id": "con", "name": "Constitution", "short": "CON"},
-		{"id": "int", "name": "Intelligence", "short": "INT"},
-		{"id": "wis", "name": "Sagesse", "short": "SAG"},
-		{"id": "cha", "name": "Charisme", "short": "CHA"}
-	],
-	"skills": [
-		{"id": "acrobatics", "name": "Acrobaties", "ability": "dex"},
-		{"id": "arcana", "name": "Arcanes", "ability": "int"},
-		{"id": "athletics", "name": "Athlétisme", "ability": "str"},
-		{"id": "stealth", "name": "Discrétion", "ability": "dex"},
-		{"id": "animal_handling", "name": "Dressage", "ability": "wis"},
-		{"id": "sleight_of_hand", "name": "Escamotage", "ability": "dex"},
-		{"id": "history", "name": "Histoire", "ability": "int"},
-		{"id": "intimidation", "name": "Intimidation", "ability": "cha"},
-		{"id": "investigation", "name": "Investigation", "ability": "int"},
-		{"id": "medicine", "name": "Médecine", "ability": "wis"},
-		{"id": "nature", "name": "Nature", "ability": "int"},
-		{"id": "perception", "name": "Perception", "ability": "wis"},
-		{"id": "insight", "name": "Perspicacité", "ability": "wis"},
-		{"id": "persuasion", "name": "Persuasion", "ability": "cha"},
-		{"id": "religion", "name": "Religion", "ability": "int"},
-		{"id": "performance", "name": "Représentation", "ability": "cha"},
-		{"id": "survival", "name": "Survie", "ability": "wis"},
-		{"id": "deception", "name": "Tromperie", "ability": "cha"}
-	],
 	"standard_array": [15, 14, 13, 12, 10, 8],
 	"point_buy": {
 		"budget": 27,
@@ -35,22 +7,14 @@
 		"costs": {"8": 0, "9": 1, "10": 2, "11": 3, "12": 4, "13": 5, "14": 7, "15": 9},
 		"bonuses": [2, 1]
 	},
-	"genders": [
-		{"id": "female", "name": "Femme"},
-		{"id": "male", "name": "Homme"},
-		{"id": "nonbinary", "name": "Non-binaire"}
-	],
+	"genders": [{"id": "female", "name": "Femme"}, {"id": "male", "name": "Homme"}, {"id": "nonbinary", "name": "Non-binaire"}],
 	"sizes": [
 		{"id": "tiny", "name": "Très petite"},
 		{"id": "small", "name": "Petite"},
 		{"id": "medium", "name": "Moyenne"},
 		{"id": "large", "name": "Grande"}
 	],
-	"time_slots": [
-		{"id": "morning", "name": "Matin"},
-		{"id": "afternoon", "name": "Après-midi"},
-		{"id": "evening", "name": "Soir"}
-	],
+	"time_slots": [{"id": "morning", "name": "Matin"}, {"id": "afternoon", "name": "Après-midi"}, {"id": "evening", "name": "Soir"}],
 	"days_per_year": 10,
 	"life_stages": [
 		{"id": "child", "name": "Enfant"},

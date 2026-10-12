@@ -124,11 +124,12 @@ func _build_ability_grid() -> void:
 	var bonus_groups := []
 	for i in amounts.size():
 		bonus_groups.append(ButtonGroup.new())
-	for ability: Dictionary in DB.rules["abilities"]:
-		var id: String = ability["id"]
+	for id in Abilities.ids():
 		var row := {"bonus_buttons": []}
 		var name_label := Label.new()
-		name_label.text = ability["name"]
+		name_label.text = Abilities.name_of(id)
+		name_label.tooltip_text = Abilities.description_of(id)
+		name_label.mouse_filter = Control.MOUSE_FILTER_PASS
 		name_label.custom_minimum_size = Vector2(130, 0)
 		ability_grid.add_child(name_label)
 		row["minus"] = _small_button("−", _on_decrease.bind(id))
@@ -263,18 +264,27 @@ func _refresh_abilities() -> void:
 
 func _species_info(species: Dictionary) -> String:
 	var stages: Dictionary = species.get("age_stages", {})
-	return "[i]%s[/i]\n%s   %s   %s" % [
+	var text := "[i]%s[/i]\n%s   %s   %s" % [
 		species.get("description", ""),
 		_field(tr("Taille :"), DB.size_name(species.get("size", "medium"))),
 		_field(tr("Adulte à :"), tr("%d ans") % int(stages.get("adult", 0))),
 		_field(tr("Vieillit dès :"), tr("%d ans") % int(species.get("aging_age", 0)))]
+	if not species.get("modifiers", []).is_empty():
+		text += "\n" + _field(tr("Traits :"), Modifiers.describe_all(species["modifiers"]))
+	return text
 
 
 func _class_info(cls: Dictionary) -> String:
-	return "[i]%s[/i]\n%s   %s" % [
+	var gear := PackedStringArray()
+	var equipment: Dictionary = cls.get("equipment", {})
+	for slot in Equipment.SLOTS:
+		if equipment.has(slot):
+			gear.append(Equipment.describe(equipment[slot]))
+	return "[i]%s[/i]\n%s   %s\n%s" % [
 		cls.get("description", ""),
 		_field(tr("Dé de vie :"), "d%d" % int(cls["hit_die"])),
-		_field(tr("Maîtrises :"), _skill_names(cls.get("skills", [])))]
+		_field(tr("Maîtrises :"), _skill_names(cls.get("skills", []))),
+		_field(tr("Équipement :"), " · ".join(gear))]
 
 
 func _background_info(background: Dictionary) -> String:
@@ -290,7 +300,7 @@ func _field(label: String, value: String) -> String:
 
 
 func _skill_names(ids: Array) -> String:
-	return ", ".join(PackedStringArray(ids.map(func(id): return DB.skills[id]["name"])))
+	return Skills.names_of(ids)
 
 
 ## Indices de déblocage et souvenir de la vie précédente.

@@ -191,15 +191,21 @@ func _damage(actor: Combatant, action: Dictionary, target: Combatant, critical: 
 		beats: Array[Dictionary], fast: bool, intro: String) -> void:
 	var expr := actor.damage_expr(action)
 	var roll := Dice.roll_expr(expr, rng, critical)
-	var amount := maxi(1, int(roll["total"]))
+	var type := actor.damage_type(action)
+	var applied := DamageTypes.apply(maxi(1, int(roll["total"])), type, target.defenses())
+	var amount: int = applied["amount"]
 	target.hp = maxi(0, target.hp - amount)
-	var text := Loc.ui("%s subit %d dégâts.") % [target.name, amount]
+	var text := Loc.ui("%s subit %d dégâts") % [target.name, amount]
+	if type != "":
+		text += " " + DamageTypes.name_of(type).to_lower()
+	text += (" (%s)." % applied["note"]) if applied["note"] != "" else "."
 	if intro != "":
 		text = intro + " " + text
 	if not target.is_alive():
 		text += " " + _on_down(target, actor)
 	beats.append({"text": text, "fast": true, "roll": {
-		"dice": roll["dice"], "mod": roll["bonus"], "stat": Loc.ui("Dégâts (%s)") % expr}})
+		"dice": roll["dice"], "mod": roll["bonus"],
+		"stat": Loc.ui("Dégâts (%s %s)") % [expr, DamageTypes.name_of(type).to_lower()] if type != "" else Loc.ui("Dégâts (%s)") % expr}})
 
 
 func _heal(actor: Combatant, target: Combatant, expr: String, source: String,
@@ -257,7 +263,7 @@ func _check_end() -> void:
 func _roll_initiative() -> void:
 	var parts := PackedStringArray()
 	for c in combatants:
-		c.initiative = rng.randi_range(1, 20) + c.ability_mod("dex")
+		c.initiative = rng.randi_range(1, 20) + c.initiative_bonus()
 	order = combatants.duplicate()
 	order.sort_custom(func(a, b): return a.initiative > b.initiative \
 		or (a.initiative == b.initiative and a.ability_mod("dex") > b.ability_mod("dex")))

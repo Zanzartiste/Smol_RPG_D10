@@ -5,8 +5,14 @@ extends Node
 const DATA_DIR := "res://data/"
 
 var rules: Dictionary = {}
-var abilities: Dictionary = {}  # id -> {id, name, short}
-var skills: Dictionary = {}  # id -> {id, name, ability}
+# Tables brutes : le reste du code passe par les API de scripts/rules/ (Abilities, Skills, Feats,
+# Equipment, DamageTypes, StatusEffects), jamais directement par ces dictionnaires.
+var abilities: Dictionary = {}
+var skills: Dictionary = {}
+var feats: Dictionary = {}
+var equipment: Dictionary = {}
+var damage_types: Dictionary = {}
+var status_effects: Dictionary = {}
 var species: Dictionary = {}
 var classes: Dictionary = {}
 var backgrounds: Dictionary = {}  # passés
@@ -28,8 +34,12 @@ func _ready() -> void:
 func load_all() -> void:
 	errors.clear()
 	rules = _load_json("rules.json", {})
-	abilities = _index_by_id(rules.get("abilities", []), "rules.json (abilities)")
-	skills = _index_by_id(rules.get("skills", []), "rules.json (skills)")
+	abilities = _index_by_id(_load_json("abilities.json", []), "abilities.json")
+	skills = _index_by_id(_load_json("skills.json", []), "skills.json")
+	feats = _index_by_id(_load_json("feats.json", []), "feats.json")
+	equipment = _index_by_id(_load_json("equipment.json", []), "equipment.json")
+	damage_types = _index_by_id(_load_json("damage_types.json", []), "damage_types.json")
+	status_effects = _index_by_id(_load_json("status_effects.json", []), "status_effects.json")
 	species = _index_by_id(_load_json("species.json", []), "species.json")
 	classes = _index_by_id(_load_json("classes.json", []), "classes.json")
 	backgrounds = _index_by_id(_load_json("backgrounds.json", []), "backgrounds.json")

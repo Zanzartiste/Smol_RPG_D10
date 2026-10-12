@@ -23,17 +23,29 @@ static func bbcode(ch: Character) -> String:
 	t += "\n"
 
 	t += "[table=3]"
-	for ability: Dictionary in DB.rules["abilities"]:
-		var id: String = ability["id"]
+	for id in Abilities.ids():
 		t += "[cell][color=%s]%s[/color] %d (%s)  [/cell]" % [
-			gold, ability["short"], ch.abilities[id], signed(ch.ability_mod(id))]
+			gold, Abilities.short_of(id), ch.ability_score(id), signed(ch.ability_mod(id))]
 	t += "[/table]\n\n"
+
+	# Équipement, dons, défenses.
+	t += "[color=%s]%s[/color]\n" % [gold, Loc.ui("Équipement")]
+	for slot in Equipment.SLOTS:
+		if ch.equipment.has(slot):
+			t += Equipment.describe(ch.equipment[slot]) + "\n"
+	if not ch.feats.is_empty():
+		t += "[color=%s]%s[/color] %s\n" % [gold, Loc.ui("Dons"),
+			", ".join(PackedStringArray(ch.feats.map(func(id): return Feats.name_of(id))))]
+	var defenses := ch.all_defenses()
+	if not defenses.is_empty():
+		t += defenses.describe() + "\n"
+	t += "\n"
 
 	# Compétences : maîtrisées en clair, les autres grisées.
 	t += "[color=%s]%s[/color]\n[table=2]" % [gold, Loc.ui("Compétences")]
-	for skill: Dictionary in DB.rules["skills"]:
-		var line := "%s %s" % [skill["name"], signed(ch.skill_mod(skill["id"]))]
-		t += "[cell]%s  [/cell]" % (line if ch.is_proficient(skill["id"]) else "[color=%s]%s[/color]" % [dim, line])
+	for id in Skills.ids():
+		var line := "%s %s" % [Skills.name_of(id), signed(ch.skill_mod(id))]
+		t += "[cell]%s  [/cell]" % (line if ch.is_proficient(id) else "[color=%s]%s[/color]" % [dim, line])
 	t += "[/table]\n\n"
 
 	t += "[color=%s]%s[/color]\n" % [gold, Loc.ui("Inventaire")]

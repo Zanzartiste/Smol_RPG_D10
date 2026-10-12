@@ -41,6 +41,7 @@
 		"start_age": 100,
 		"age_stages": {"child": 0, "teen": 20, "adult": 100, "elder": 500, "venerable": 650},
 		"aging_age": 500,
+		"modifiers": [{"type": "status_immunity", "status": "asleep"}],
 		"names": ["Aelar", "Lia", "Thamior", "Naivara", "Erevan", "Sariel"],
 		"art": {
 			"ears": "elf",

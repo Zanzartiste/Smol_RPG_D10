@@ -24,6 +24,10 @@ const SCHEMA := {
 	"long_rest": [],
 	"recruit": ["companion"],
 	"combat": ["enemies"],
+	"add_feat": ["id"],
+	"equip": ["id"],
+	"add_defense": ["kind", "id"],
+	"remove_defense": ["kind", "id"],
 }
 
 
@@ -56,10 +60,17 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 				if ch.gold != before:
 					lines.append(Loc.ui("%s po") % _signed(ch.gold - before))
 			"hp":
+				# Dégâts typés (facultatif) : les défenses du personnage s'appliquent.
+				var amount := int(e["amount"])
+				var note := ""
+				if amount < 0 and e.has("damage_type"):
+					var applied := DamageTypes.apply(-amount, e["damage_type"], ch.all_defenses())
+					amount = -int(applied["amount"])
+					note = applied["note"]
 				var before := ch.hp
-				ch.hp = clampi(ch.hp + int(e["amount"]), 0, ch.max_hp)
-				if ch.hp != before:
-					lines.append(Loc.ui("%s PV") % _signed(ch.hp - before))
+				ch.hp = clampi(ch.hp + amount, 0, ch.max_hp)
+				if ch.hp != before or note != "":
+					lines.append(Loc.ui("%s PV") % _signed(ch.hp - before) + (" (%s)" % note if note != "" else ""))
 				if ch.hp <= 0:
 					life.die(e.get("cause", Loc.ui("Mort de ses blessures")))
 			"heal_full":
@@ -73,7 +84,7 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 					lines.append(Loc.ui("Niveau %d atteint !") % new_level)
 			"ability":
 				var id: String = e["id"]
-				lines.append("%s %s" % [_signed(int(e["amount"])), DB.abilities[id]["short"]])
+				lines.append("%s %s" % [_signed(int(e["amount"])), Abilities.short_of(id)])
 				life.change_ability(id, int(e["amount"]), e.get("cause", Loc.ui("Vidé de toute force")))
 			"add_item":
 				var count := int(e.get("count", 1))
@@ -105,6 +116,17 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 					lines.append(Loc.ui("%s rejoint votre groupe !") % companion.name)
 			"combat":
 				combat = e
+			"add_feat":
+				if ch.add_feat(e["id"]):
+					lines.append(Loc.ui("Nouveau don : %s !") % Feats.name_of(e["id"]))
+			"equip":
+				ch.equip(e["id"])
+				lines.append(Loc.ui("Équipé : %s") % Equipment.name_of(e["id"]))
+			"add_defense":
+				ch.defenses.add(e["kind"], e["id"])
+				lines.append(Modifiers.describe({"type": e["kind"], "damage_type": e["id"], "status": e["id"]}))
+			"remove_defense":
+				ch.defenses.remove(e["kind"], e["id"])
 			_:
 				push_warning("Effet inconnu : %s" % e)
 		if not combat.is_empty():

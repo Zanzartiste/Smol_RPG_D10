@@ -1,0 +1,8 @@
+[
+	{"id": "str", "name": "Force", "short": "FOR", "description": "Puissance physique, athlétisme, attaques au corps à corps."},
+	{"id": "dex", "name": "Dextérité", "short": "DEX", "description": "Agilité, réflexes, initiative, armes de finesse et à distance."},
+	{"id": "con", "name": "Constitution", "short": "CON", "description": "Endurance et santé : chaque point de modificateur ajoute des PV par niveau."},
+	{"id": "int", "name": "Intelligence", "short": "INT", "description": "Mémoire, raisonnement, magie des magiciens."},
+	{"id": "wis", "name": "Sagesse", "short": "SAG", "description": "Perception, intuition, volonté."},
+	{"id": "cha", "name": "Charisme", "short": "CHA", "description": "Force de personnalité, persuasion, présence."}
+]

@@ -22,6 +22,9 @@ const SCHEMA := {
 	"gold": [],
 	"item": ["id"],
 	"companion": ["id"],
+	"has_feat": ["id"],
+	"equipped": ["id"],
+	"defense": ["kind", "id"],
 	"time": ["in"],
 	"level": [],
 	"not": ["condition"],
@@ -48,7 +51,7 @@ static func check(c: Dictionary, life: LifeState, meta: MetaState) -> bool:
 		"seen":
 			return life.seen.has(c["event"])
 		"ability":
-			return _in_range(int(ch.abilities.get(c["id"], 10)), c)
+			return _in_range(ch.ability_score(c["id"]), c)
 		"skill_proficient":
 			return ch.is_proficient(c["id"])
 		"species":
@@ -71,6 +74,12 @@ static func check(c: Dictionary, life: LifeState, meta: MetaState) -> bool:
 			return ch.item_count(c["id"]) >= int(c.get("min", 1))
 		"companion":
 			return life.has_companion(c["id"])
+		"has_feat":
+			return ch.has_feat(c["id"])
+		"equipped":
+			return c["id"] in ch.equipment.values()
+		"defense":
+			return ch.all_defenses().has(c["kind"], c["id"])
 		"time":
 			return life.slot_id() in c["in"]
 		"level":
@@ -91,9 +100,13 @@ static func check(c: Dictionary, life: LifeState, meta: MetaState) -> bool:
 static func describe(c: Dictionary) -> String:
 	match String(c.get("type", "")):
 		"ability":
-			return _range_text(DB.abilities[c["id"]]["short"], c)
+			return _range_text(Abilities.short_of(c["id"]), c)
 		"skill_proficient":
-			return Loc.ui("Maîtrise : %s") % DB.skills[c["id"]]["name"]
+			return Loc.ui("Maîtrise : %s") % Skills.name_of(c["id"])
+		"has_feat":
+			return Loc.ui("Don : %s") % Feats.name_of(c["id"])
+		"equipped":
+			return Loc.ui("Équipé : %s") % Equipment.name_of(c["id"])
 		"species":
 			return " / ".join(PackedStringArray(c["in"].map(func(id): return DB.species[id]["name"])))
 		"class":

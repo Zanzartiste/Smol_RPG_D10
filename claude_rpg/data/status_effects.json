@@ -1,0 +1,10 @@
+[
+	{"id": "asleep", "name": "Endormi", "description": "Inconscient jusqu'à ce qu'on le réveille ou qu'il subisse des dégâts."},
+	{"id": "blinded", "name": "Aveuglé", "description": "Ne voit plus rien."},
+	{"id": "charmed", "name": "Charmé", "description": "Ne peut pas attaquer celui qui l'a charmé."},
+	{"id": "frightened", "name": "Effrayé", "description": "Terrorisé par la source de sa peur."},
+	{"id": "paralyzed", "name": "Paralysé", "description": "Incapable de bouger ou d'agir."},
+	{"id": "poisoned", "name": "Empoisonné", "description": "Affaibli par un poison."},
+	{"id": "prone", "name": "À terre", "description": "Renversé au sol."},
+	{"id": "stunned", "name": "Étourdi", "description": "Sonné, incapable d'agir."}
+]

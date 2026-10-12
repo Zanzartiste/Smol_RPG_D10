@@ -1,0 +1,20 @@
+[
+	{"id": "acrobatics", "name": "Acrobaties", "ability": "dex"},
+	{"id": "arcana", "name": "Arcanes", "ability": "int"},
+	{"id": "athletics", "name": "Athlétisme", "ability": "str"},
+	{"id": "stealth", "name": "Discrétion", "ability": "dex"},
+	{"id": "animal_handling", "name": "Dressage", "ability": "wis"},
+	{"id": "sleight_of_hand", "name": "Escamotage", "ability": "dex"},
+	{"id": "history", "name": "Histoire", "ability": "int"},
+	{"id": "intimidation", "name": "Intimidation", "ability": "cha"},
+	{"id": "investigation", "name": "Investigation", "ability": "int"},
+	{"id": "medicine", "name": "Médecine", "ability": "wis"},
+	{"id": "nature", "name": "Nature", "ability": "int"},
+	{"id": "perception", "name": "Perception", "ability": "wis"},
+	{"id": "insight", "name": "Perspicacité", "ability": "wis"},
+	{"id": "persuasion", "name": "Persuasion", "ability": "cha"},
+	{"id": "religion", "name": "Religion", "ability": "int"},
+	{"id": "performance", "name": "Représentation", "ability": "cha"},
+	{"id": "survival", "name": "Survie", "ability": "wis"},
+	{"id": "deception", "name": "Tromperie", "ability": "cha"}
+]
