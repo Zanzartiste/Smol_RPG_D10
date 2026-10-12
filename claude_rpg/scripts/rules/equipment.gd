@@ -14,6 +14,8 @@ extends RefCounted
 ## Bouclier : {"category": "shield", "ac_bonus": 2}
 ## Accessoire : {"category": "accessory", "slot": "cloak" | "amulet" | "ring"}
 ## Facultatif pour tous : "modifiers" (voir Modifiers), "rarity", "value", "description" (voir Items).
+## Facultatif pour une arme : "bonus_damage": [{"damage": "2d6", "damage_type": "fire"}], dégâts d'autres
+## types ajoutés à chaque coup (une épée enflammée : tranchant + feu).
 ## Un objet magique est un équipement avec des modificateurs, ex. une épée +1 :
 ##   "modifiers": [{"type": "weapon_attack", "amount": 1}, {"type": "weapon_damage", "amount": 1}]
 
@@ -153,6 +155,8 @@ static func describe(id: String) -> String:
 		"weapon":
 			var text := "%s — %s %s" % [item["name"], item.get("damage", "1"),
 				DamageTypes.name_of(damage_type_of(id)).to_lower()]
+			for part: Dictionary in item.get("bonus_damage", []):
+				text += " + %s %s" % [part["damage"], DamageTypes.name_of(part["damage_type"]).to_lower()]
 			var props := PackedStringArray()
 			for prop: String in item.get("properties", []):
 				var label: String = PROPERTY_NAMES.get(prop, prop)

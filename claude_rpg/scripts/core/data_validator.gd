@@ -13,6 +13,7 @@ static func validate(db: Node) -> void:
 	_validate_backgrounds(db, errors)
 	_validate_combat_data(db, errors)
 	_validate_items(db, errors)
+	_validate_damage_types(db, errors)
 	for id: String in db.events:
 		_validate_event(db, db.events[id], errors)
 
@@ -77,6 +78,7 @@ static func _validate_rule_tables(db: Node, errors: Array[String]) -> void:
 						errors.append(ctx + " : propriété inconnue « %s »" % prop)
 				if "versatile" in item.get("properties", []) and not Dice.is_valid_expr(item.get("versatile_damage", "")):
 					errors.append(ctx + " : arme polyvalente sans versatile_damage valide")
+				_validate_bonus_damage(db, item.get("bonus_damage", []), ctx, errors)
 			"armor":
 				if item.get("armor_type") not in Equipment.ARMOR_TYPE_NAMES:
 					errors.append(ctx + " : armor_type doit valoir clothing, light, medium ou heavy")
@@ -311,6 +313,7 @@ static func _validate_combat_effects(db: Node, effects: Variant, ctx: String, er
 			var save: Variant = e["save"]
 			if typeof(save) != TYPE_DICTIONARY or not db.abilities.has(save.get("ability", "")):
 				errors.append(ctx + " : save doit valoir {\"ability\": <attribut>, \"half\"?, \"dc\"?}")
+		_validate_bonus_damage(db, e.get("bonus_damage", []), ctx, errors)
 		if e.has("upcast") and not Dice.is_valid_expr(e["upcast"]):
 			errors.append(ctx + " : upcast invalide « %s »" % e["upcast"])
 		if e.has("scaling"):
@@ -546,6 +549,29 @@ static func _validate_unlock_id(db: Node, id: String, ctx: String, errors: Array
 		_expect_ref(db.species, parts[1], "espèce", ctx, errors)
 	else:
 		_expect_ref(db.classes, parts[1], "classe", ctx, errors)
+
+
+## "bonus_damage" : [{"damage": "1d4", "damage_type": "fire"}, ...]
+static func _validate_bonus_damage(db: Node, parts: Variant, ctx: String, errors: Array[String]) -> void:
+	if typeof(parts) != TYPE_ARRAY:
+		errors.append(ctx + " : bonus_damage doit être une liste")
+		return
+	for part: Variant in parts:
+		if typeof(part) != TYPE_DICTIONARY or not Dice.is_valid_expr(String(part.get("damage", ""))):
+			errors.append(ctx + " : bonus_damage invalide %s (attendu {\"damage\", \"damage_type\"})" % str(part))
+		else:
+			_expect_ref(db.damage_types, part.get("damage_type"), "type de dégâts", ctx, errors)
+
+
+static func _validate_damage_types(db: Node, errors: Array[String]) -> void:
+	for type: Dictionary in db.damage_types.values():
+		var status: Dictionary = type.get("status", {})
+		if not status.is_empty():
+			var ctx := "damage_types.json › %s" % type["id"]
+			_expect_ref(db.status_effects, status.get("id"), "état", ctx, errors)
+			var chance := float(status.get("chance", -1))
+			if chance < 0.0 or chance > 1.0:
+				errors.append(ctx + " : status.chance doit être entre 0 et 1")
 
 
 ## Un objet du sac : id de items.json ou de equipment.json.

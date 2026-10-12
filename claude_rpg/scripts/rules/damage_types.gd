@@ -4,6 +4,8 @@ extends RefCounted
 ## Le calcul des dégâts subis tient compte des défenses de la cible (voir Defenses) :
 ## immunité -> 0, résistance -> moitié (arrondie à l'inférieur), vulnérabilité -> double.
 ## Résistance et vulnérabilité au même type s'annulent.
+## Un type peut infliger un état quand il blesse : "status": {"id": "burning", "chance": 0.25, "stacks": 1}
+## (le feu enflamme une fois sur quatre). Les dégâts des états eux-mêmes ne le déclenchent pas.
 
 
 static func ids() -> Array[String]:
@@ -18,6 +20,11 @@ static func has(id: String) -> bool:
 
 static func name_of(id: String) -> String:
 	return DB.damage_types.get(id, {}).get("name", id)
+
+
+## État que ce type peut infliger : {"id", "chance", "stacks"}, ou {} si aucun.
+static func status_of(id: String) -> Dictionary:
+	return DB.damage_types.get(id, {}).get("status", {})
 
 
 ## Dégâts physiques (contondant, perforant, tranchant).

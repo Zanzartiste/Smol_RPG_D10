@@ -244,6 +244,16 @@ func damage_expr(effect: Dictionary) -> String:
 	return expr
 
 
+## Dégâts d'autres types ajoutés à un effet : ceux de l'effet, plus ceux de l'arme s'il l'utilise.
+func bonus_damage(effect: Dictionary) -> Array:
+	var result: Array = effect.get("bonus_damage", []).duplicate()
+	if _uses_own_weapon(effect):
+		result.append_array(Equipment.def(character.weapon_id()).get("bonus_damage", []))
+	elif effect.get("weapon") is String:
+		result.append_array(Equipment.def(effect["weapon"]).get("bonus_damage", []))
+	return result
+
+
 func damage_type(effect: Dictionary) -> String:
 	if _uses_own_weapon(effect):
 		return character.weapon_damage_type()

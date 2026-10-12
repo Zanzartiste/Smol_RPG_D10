@@ -18,6 +18,8 @@ extends RefCounted
 ##   "scaling": {"table": "cantrip", "field"?: "damage" | "extra_damage"}  nombre de dés selon le niveau
 ##        (rules.json › dice_scaling).
 ##   "upcast": "1d6"   dégâts en plus par niveau d'emplacement au-delà du niveau du sort (Spellcasting).
+##   "bonus_damage": [{"damage": "1d4", "damage_type": "fire"}]  dégâts d'autres types ajoutés (attack, damage) ;
+##        une arme peut aussi en porter (Equipment).
 
 ## type -> champs obligatoires (utilisé par DataValidator)
 const SCHEMA := {
@@ -105,4 +107,6 @@ static func _damage_text(e: Dictionary) -> String:
 	var text: String = e.get("damage", "?")
 	if type != "":
 		text += " " + DamageTypes.name_of(type).to_lower()
+	for part: Dictionary in e.get("bonus_damage", []):
+		text += " + %s %s" % [part["damage"], DamageTypes.name_of(part["damage_type"]).to_lower()]
 	return text

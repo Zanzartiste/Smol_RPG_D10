@@ -124,6 +124,8 @@ func _action_label(actor: Combatant, action: Dictionary) -> String:
 				label += " (%s)" % Equipment.name_of(actor.character.weapon_id())
 			var type := actor.damage_type(e)
 			label += " — %s%s" % [actor.damage_expr(e), (" " + DamageTypes.name_of(type).to_lower()) if type != "" else ""]
+			for part: Dictionary in actor.bonus_damage(e):
+				label += " + %s %s" % [part["damage"], DamageTypes.name_of(part["damage_type"]).to_lower()]
 			if e.get("type") == "attack":
 				label += ", %s" % CharacterSheet.signed(actor.attack_bonus(e))
 			break

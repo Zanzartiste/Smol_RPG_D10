@@ -26,6 +26,7 @@ const TESTS := [
 	"_test_inventory",
 	"_test_armor_strength",
 	"_test_new_species",
+	"_test_damage_types",
 	"_test_combat",
 	"_test_combat_turns",
 	"_test_companions",
@@ -851,6 +852,46 @@ func _test_new_species() -> bool:
 	for species_id in ["dwarf", "orc", "tiefling"]:
 		var img := PixelArt.portrait(DB.species[species_id]["art"], DB.classes["fighter"]["art"], "adult", 3)
 		_expect(img.get_width() > 0, "portrait : %s" % species_id)
+	return true
+
+
+func _test_damage_types() -> bool:
+	DB.creatures["_target"] = {"id": "_target", "name": "Cible", "ac": 1, "hp": "200",
+		"actions": [{"name": "Rien", "weight": 1, "target": "self", "effects": [{"type": "status", "status": "shielded", "stacks": 0}]}]}
+	_expect(Equipment.describe("flame_tongue").begins_with("Langue de feu — 1d8 tranchant + 2d6 feu"), "arme à deux types de dégâts")
+
+	# Une attaque peut infliger plusieurs types de dégâts, lancés séparément.
+	var hero_ch := Character.create("human", "fighter", "Ardent")
+	hero_ch.equipment["main_hand"] = "flame_tongue"
+	Game.start_life(hero_ch, 91)
+	var combat := Game.start_combat({"enemies": ["_target"]})
+	var target := combat.enemies()[0]
+	target.creature["defenses"] = {"immunities": ["fire"]}
+	var before := combat.log.size()
+	var beats: Array[Dictionary] = []
+	combat._apply(combat.hero, {"type": "attack", "weapon": true, "to_hit": 100}, target, true)
+	var lines := combat.log.slice(before)
+	_expect(lines.any(func(l): return "tranchant" in l) and lines.any(func(l): return "feu (immunité)" in l),
+		"tranchant puis feu, chacun avec ses défenses")
+
+	# Le feu peut enflammer (chance réglée dans damage_types.json).
+	target.creature["defenses"] = {}
+	var backup: Dictionary = DB.damage_types["fire"]["status"]
+	DB.damage_types["fire"]["status"] = {"id": "burning", "chance": 1.0, "stacks": 1}
+	combat._roll_damage(combat.hero, target, "5", "fire", false, beats)
+	_expect(target.stacks("burning") == 1, "dégât de feu : la cible s'enflamme")
+	DB.damage_types["fire"]["status"] = backup
+
+	# Le poison est un vrai type : la résistance le réduit, même pour l'état Poison.
+	target.creature["defenses"] = {"resistances": ["poison"]}
+	target.statuses.clear()
+	target.add_status("poisoned", 4)
+	var hp := target.hp
+	combat.turn = combat.order.find(target)
+	combat.start_turn()
+	_expect(hp - target.hp == 2, "état Poison : dégâts de poison, divisés par la résistance")
+	Game.combat = null
+	DB.creatures.erase("_target")
 	return true
 
 

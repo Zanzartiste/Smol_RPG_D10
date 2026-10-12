@@ -359,7 +359,10 @@ func _action_score(actor: Combatant, action: Dictionary) -> float:
 		match e.get("type"):
 			"attack":
 				var chance := clampf((21.0 - (12 - actor.attack_bonus(e))) / 20.0, 0.05, 0.95)
-				score += Dice.average(actor.damage_expr(e)) * chance * spread * attacks
+				var average := Dice.average(actor.damage_expr(e))
+				for part: Dictionary in actor.bonus_damage(e):
+					average += Dice.average(part["damage"])
+				score += average * chance * spread * attacks
 			"damage":
 				score += Dice.average(actor.damage_expr(e)) * spread * (0.75 if e.has("save") else 1.0)
 			"extra_action":
@@ -452,8 +455,10 @@ func _apply(actor: Combatant, e: Dictionary, target: Combatant, fast: bool) -> D
 				"success": hit, "stat": "%s → %s" % [actor.name, target.name]}, fast)
 			if hit:
 				_roll_damage(actor, target, actor.damage_expr(e), actor.damage_type(e), critical, beats, 1.0, true)
+				_roll_bonus_damage(actor, target, e, critical, beats, 1.0)
 		"damage":
 			_roll_damage(actor, target, actor.damage_expr(e), actor.damage_type(e), false, beats, multiplier)
+			_roll_bonus_damage(actor, target, e, false, beats, multiplier)
 		"heal":
 			var expr := actor.heal_expr(String(e["amount"]))
 			var roll := Dice.roll_expr(expr, rng)
@@ -495,7 +500,9 @@ func _apply(actor: Combatant, e: Dictionary, target: Combatant, fast: bool) -> D
 ## Lance et inflige des dégâts. `multiplier` : 0.5 pour une sauvegarde réussie (moitié, arrondie à
 ## l'inférieur). `from_attack` : dégâts d'une attaque, que l'Esquive instinctive peut diviser par deux.
 func _roll_damage(actor: Combatant, target: Combatant, expr: String, type: String, critical: bool,
-		beats: Array[Dictionary], multiplier := 1.0, from_attack := false) -> void:
+		beats: Array[Dictionary], multiplier := 1.0, from_attack := false, main := true) -> void:
+	if not target.is_alive():
+		return
 	var roll := Dice.roll_expr(expr, rng, critical)
 	var notes := PackedStringArray()
 	if multiplier < 1.0:
@@ -504,17 +511,36 @@ func _roll_damage(actor: Combatant, target: Combatant, expr: String, type: Strin
 		target.reaction_used = true
 		multiplier *= 0.5
 		notes.append(Loc.ui("esquive instinctive"))
-	var amount := maxi(1, int(roll["total"]) + actor.damage_modifier())
+	var amount := maxi(1, int(roll["total"]) + (actor.damage_modifier() if main else 0))
 	amount = maxi(1 if multiplier >= 1.0 else 0, int(floor(amount * multiplier)))
 	var dealt := _deal_damage(actor, target, amount, type, false, "")
+	var inflicted := _status_from_damage(target, type, dealt["amount"])
 	var text := Loc.ui("%s subit %d dégâts") % [target.name, dealt["amount"]]
 	if not notes.is_empty():
 		text += " (%s)" % ", ".join(notes)
 	if type != "":
 		text += " " + DamageTypes.name_of(type).to_lower()
-	text += dealt["suffix"]
+	text += dealt["suffix"] + inflicted
 	var label := Loc.ui("Dégâts (%s %s)") % [expr, DamageTypes.name_of(type).to_lower()] if type != "" else Loc.ui("Dégâts (%s)") % expr
 	_beat(beats, text, {"dice": roll["dice"], "mod": roll["bonus"], "stat": label}, true)
+
+
+## Dégâts d'autres types d'un effet (et de l'arme) : lancés séparément, chacun avec ses défenses.
+func _roll_bonus_damage(actor: Combatant, target: Combatant, e: Dictionary, critical: bool,
+		beats: Array[Dictionary], multiplier: float) -> void:
+	for part: Dictionary in actor.bonus_damage(e):
+		_roll_damage(actor, target, part["damage"], part["damage_type"], critical, beats, multiplier, false, false)
+
+
+## Un type de dégâts peut infliger un état quand il blesse (le feu enflamme…). Retourne le texte ajouté.
+func _status_from_damage(target: Combatant, type: String, dealt: int) -> String:
+	var status := DamageTypes.status_of(type)
+	if status.is_empty() or dealt <= 0 or not target.is_alive() or rng.randf() >= float(status.get("chance", 0.0)):
+		return ""
+	if target.defenses().is_immune_to_status(status["id"]):
+		return ""
+	target.add_status(status["id"], int(status.get("stacks", 1)))
+	return " " + Loc.ui("%s : +%d %s.") % [target.name, int(status.get("stacks", 1)), StatusEffects.name_of(status["id"])]
 
 
 ## Jet de sauvegarde de la cible contre le DD de l'acteur (ou "dc"). Inflexible relance un échec.

@@ -276,6 +276,9 @@ Champs facultatifs, valables pour tout effet :
   (`rules.json › dice_scaling` : `cantrip` 1/2/3/4 dés aux niveaux 1/5/11/17, `sneak_attack` +1d6 tous les deux
   niveaux).
 - `upcast` : dégâts ajoutés par niveau d'emplacement au-delà du niveau du sort.
+- `bonus_damage` : `[{"damage": "1d4", "damage_type": "fire"}]`, dégâts d'autres types ajoutés à une attaque ou à des
+  dégâts. Chaque partie est lancée séparément avec les défenses de son type. Une arme peut aussi en porter
+  (`equipment.json`, ex. la Langue de feu).
 
 ### États (`status_effects.json`)
 
@@ -283,7 +286,7 @@ Les états se cumulent en charges. Leur mécanique est entièrement décrite dan
 
 | Champ | Effet |
 |---|---|
-| `tick_damage_per_stack` | Dégâts **bruts** par charge au début du tour (ignorent défenses et Protection), comme le Poison |
+| `tick_damage_per_stack` | Dégâts par charge au début du tour. Sans `tick_damage_type`, ils sont **bruts** (ils ignorent défenses et Protection) ; le Poison inflige des dégâts de poison |
 | `tick_max_hp_percent_per_stack` | Dégâts en % des PV max par charge (au moins 1 par charge), comme la Brûlure |
 | `tick_damage_type` | Type des dégâts de tick (les défenses s'appliquent alors) |
 | `skip_turn` | Passe son tour (Étourdi) |
@@ -431,6 +434,10 @@ la couleur du nom), `value` (prix en po), `description`.
 Chaque personnage a ses défenses propres, accordées par des événements (`add_defense`). S'y ajoutent celles de
 l'espèce, des dons et de l'équipement : `Character.all_defenses()` les réunit. Les ennemis déclarent les leurs dans
 `defenses`.
+
+**État associé à un type** : `damage_types.json › status` (`{"id": "burning", "chance": 0.25, "stacks": 1}` pour
+le feu). À chaque fois que ce type blesse, la cible a cette chance de recevoir l'état, sauf immunité. Les dégâts des
+états eux-mêmes ne le déclenchent pas.
 
 Calcul des dégâts subis :
 - immunité : 0 ;

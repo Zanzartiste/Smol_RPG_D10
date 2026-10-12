@@ -44,7 +44,8 @@
 ### Poison (`poisoned`)
 
 - **Négatif** : oui.
-- **Effet** : au début de son tour, subit 1 dégât **brut** par charge (qui ignore résistances et Protection).
+- **Effet** : au début de son tour, subit 1 dégât de **poison** par charge (réduit par la résistance au poison et par
+  la Protection, comme les autres dégâts).
 - **Charges** : −1 au début de chaque tour.
 - **Fin** : charges à 0, ou Antidote.
 - **Sources** : Lame empoisonnée (Roublard, 3 charges), brigand, rat géant.
@@ -56,7 +57,8 @@
 - **Négatif** : oui.
 - **Effet** : au début de son tour, subit 5 % de ses PV max par charge (au moins 1 par charge), en dégâts de feu.
 - **Charges** : −1 au début de chaque tour.
-- **Sources** : Mains brûlantes (1 charge, si la cible rate sa sauvegarde).
+- **Sources** : Mains brûlantes (1 charge, si la cible rate sa sauvegarde) ; tout dégât de feu (25 % de chances,
+  1 charge).
 - **Remèdes / immunités** : résistance ou immunité au feu (elles réduisent les dégâts).
 - **Couleur** : orange.
 

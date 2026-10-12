@@ -6,7 +6,12 @@
 
 ## Règles actuelles
 
-- Chaque attaque, sort ou état qui blesse a **un** type de dégâts.
+- Chaque attaque, sort ou état qui blesse a **un** type de dégâts. (Exemple, un coup d'épée enflammée pourrait infliger 1d6 tranchant + 1D4 feu)
+  → **Implémenté** : une attaque ou une arme peut ajouter des dégâts d'autres types (`bonus_damage`). Chaque partie
+  est lancée séparément et subit les défenses de son type. Exemple en jeu : la **Langue de feu** (épée longue,
+  1d8 tranchant + 2d6 feu).
+- Un type peut avoir un **état associé**, avec une chance de l'infliger à chaque fois qu'il blesse
+  (`damage_types.json › status`). Les dégâts infligés par les états eux-mêmes ne le déclenchent pas.
 - Une créature ou un personnage peut être, pour chaque type :
   - **résistant** : dégâts divisés par deux (arrondi à l'inférieur) ;
   - **immunisé** : aucun dégât ;
@@ -41,7 +46,7 @@
 
 - **Physique** : oui.
 - **Description** : coups, chocs, chutes, écrasement.
-- **Sources** : mains nues, gourdin, bâton, masse d'armes ; le Colosse tatoué.
+- **Sources** : mains nues, gourdin, bâton, masse d'armes...
 - **État associé** : le Coup de pommeau du Guerrier étourdit (il passe par l'arme, pas par le type).
 - **Qui y résiste…** : personne pour l'instant.
 
@@ -49,24 +54,26 @@
 
 - **Physique** : oui.
 - **Description** : pointes, crocs, flèches.
-- **Sources** : dague, épée courte, rapière, arcs ; morsures du loup, de l'Alpha, du rat géant et du familier.
+- **Sources** : dague, épée courte, rapière, arcs 
 - **Qui y résiste…** : personne pour l'instant.
 
 ### Tranchant (`slashing`)
 
 - **Physique** : oui.
 - **Description** : lames et griffes.
-- **Sources** : hachette, cimeterre, épée longue (et +1), hache à deux mains ; le cimeterre du brigand.
+- **Sources** : hachette, cimeterre, épée longue, hache... ; la Langue de feu (avec du feu en plus).
 - **Qui y résiste…** : personne pour l'instant.
 
 ### Feu (`fire`)
 
 - **Physique** : non.
 - **Description** : flammes, chaleur, explosions.
-- **Sources** : Trait de feu, Mains brûlantes, Rayons ardents, Boule de feu ; l'état Brûlure (dégâts de feu à chaque
-  tour).
-- **État associé** : Brûlure (Mains brûlantes l'inflige).
-- **Qui y résiste…** : le don Adepte élémentaire (magicien), l'Anneau de résistance au feu.
+- **Sources** : Trait de feu, Mains brûlantes, Rayons ardents, Boule de feu ; l'état Brûlure (dégâts de feu à chaque tour) ; la Langue de feu.
+- **État associé** : Brûlure (tout dégât de feu a des chances d'infliger l'état).
+  → **Implémenté** : 25 % de chances d'infliger 1 charge de Brûlure (valeur provisoire, réglable dans
+  `damage_types.json`). Mains brûlantes l'inflige en plus à coup sûr si la cible rate sa sauvegarde.
+- **Qui y résiste…** : tieffelins, don Adepte élémentaire, Anneau de résistance au feu.
+
 
 ### Froid (`cold`)
 
@@ -87,13 +94,13 @@
 
 - **Physique** : non.
 - **Description** : venins et toxines.
-- **Sources** : aucune attaque ne fait de dégâts de poison pour l'instant. L'état Poison inflige des dégâts **bruts**,
-  qui ignorent les défenses.
+- **Sources** : l'état Poison, qui inflige désormais de **vrais dégâts de poison** (décision du 2026-10-13) : la
+  résistance les divise par deux, l'immunité les annule, et la Protection les absorbe.
 - **État associé** : Poison.
-- **Qui y résiste…** : le don Résistant (qui immunise aussi contre l'état Poison).
+- **Qui y résiste…** : nains ; le don Résistant (qui immunise aussi contre l'état Poison).
 
 ### Acide (`acid`)
-
+éventuellement à omettre si peu intéressant (il peut être mis dans Poison)
 - **Physique** : non.
 - **Description** : corrosion.
 - **Sources** : aucune pour l'instant.
@@ -133,16 +140,24 @@
 ## Questions ouvertes
 
 1. **Liste des types** : on garde les 13 types du SRD, ou ton univers en demande d'autres (ex. ombre, arcane,
-   sang…), ou moins (fusionner foudre et tonnerre…) ?
+   sang…), ou moins (fusionner foudre et tonnerre…) ? => potentiellement en supprimer / ajouter certains oui.
 2. **Réactions élémentaires à la Genshin** : faut-il que les types interagissent ? Par exemple feu + froid = « fonte »
    (dégâts bonus), foudre sur une cible mouillée, feu qui retire Gelé… Ce serait une vraie signature du jeu, mais
    cela demande des états « élément appliqué ».
+=> Je ne pense pas qu'on le fasse au point de Genshin, mais c'est probable sinon.
 3. **Magique ou non** : dans D&D, beaucoup de monstres résistent aux dégâts physiques **non magiques**. On le gère ?
    Les armes +1 deviendraient alors importantes contre certains ennemis.
+   => Possible oui.
+   → Noté pour plus tard : il faudra marquer les armes magiques et ajouter une défense « physique non magique ».
 4. **Environnement** : pièges, chutes, météo, surfaces à la BG3 (huile qui s'enflamme, eau qui conduit la foudre) ?
    Sans positionnement, cela passerait plutôt par les événements et des états de terrain.
 5. **Dégâts du poison** : on garde le Poison en dégâts bruts (qui ignorent les défenses), ou il devient un vrai type
-   poison, bloqué par la résistance ?
+   poison, bloqué par la résistance ? Un vrai type poison, bloqué par la résistance.
+   → **Fait.**
 6. **Lien type → état** : chaque type doit-il avoir une chance d'infliger un état par défaut (feu → Brûlure,
-   froid → Ralenti, foudre → Étourdi…), ou seulement certaines actions comme aujourd'hui ?
+   froid → Ralenti, foudre → Étourdi…), ou seulement certaines actions comme aujourd'hui ? => Probable que je me dirige vers une altération par type à peu de choses près.
+   → Le mécanisme existe (feu → Brûlure). Pour les autres, il suffira d'ajouter une ligne `status` dans
+   `damage_types.json` une fois les états choisis. Propositions : froid → Ralenti, foudre → Étourdi, tonnerre → À
+   terre, acide → Corrodé (CA réduite), nécrotique → soins réduits, radiant → Aveuglé, psychique → Effrayé,
+   poison → Poison, tranchant → Saignement. Il faudra créer les états manquants (voir [etats.md](etats.md)).
 7. **Interface** : une couleur ou une icône par type, dans le journal de combat et sur les fiches ?

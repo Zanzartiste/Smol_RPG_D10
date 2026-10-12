@@ -2,7 +2,7 @@
 	{"id": "acid", "name": "Acide"},
 	{"id": "bludgeoning", "name": "Contondant", "physical": true},
 	{"id": "cold", "name": "Froid"},
-	{"id": "fire", "name": "Feu"},
+	{"id": "fire", "name": "Feu", "status": {"id": "burning", "chance": 0.25, "stacks": 1}},
 	{"id": "force", "name": "Force"},
 	{"id": "lightning", "name": "Foudre"},
 	{"id": "necrotic", "name": "Nécrotique"},

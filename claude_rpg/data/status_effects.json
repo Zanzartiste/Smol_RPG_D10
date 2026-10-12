@@ -3,8 +3,9 @@
 		"id": "poisoned",
 		"name": "Poison",
 		"negative": true,
-		"description": "Au début de son tour, subit 1 dégât brut par charge, puis perd 1 charge.",
+		"description": "Au début de son tour, subit 1 dégât de poison par charge, puis perd 1 charge.",
 		"tick_damage_per_stack": 1,
+		"tick_damage_type": "poison",
 		"decay": 1,
 		"color": "#7ac943",
 		"death_cause": "Emporté par le poison"
