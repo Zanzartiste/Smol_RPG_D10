@@ -216,8 +216,8 @@ Claude ne génère pas d'images lui-même. Il peut en revanche écrire le **guid
 2. ~~Passer le renderer en Compatibility et initialiser git.~~
 3. ~~Définir le modèle de données~~ : voir [modele_donnees.md](modele_donnees.md). Les ennemis restent à définir, avec le combat.
 4. ~~Coder le moteur d'événements et un écran minimal~~ : 18 événements, placeholders pixel art, tests automatisés.
-5. Ajouter l'**écran de création de personnage**. La boucle mort → nouveau personnage existe déjà, mais le personnage
-   est pour l'instant tiré au hasard. Ensuite, les règles de vieillissement.
+5. ~~Écran de création de personnage~~ (race, classe, nom, apparence, indices de déblocage) et ~~lancers de dés
+   animés~~. Reste : les **règles de vieillissement**.
 6. Ajouter le combat.
 7. Ajouter sauvegarde et méta.
 8. Produire le contenu du MVP, puis faire tester.

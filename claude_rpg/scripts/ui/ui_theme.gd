@@ -25,6 +25,8 @@ static func build() -> Theme:
 	t.set_stylebox("normal", "Button", _box(Color("#2b241e"), Color("#6b5532"), 1, 10))
 	t.set_stylebox("hover", "Button", _box(Color("#3a3027"), BORDER_HOVER, 1, 10))
 	t.set_stylebox("pressed", "Button", _box(Color("#4a3c2e"), BORDER_HOVER, 1, 10))
+	t.set_stylebox("hover_pressed", "Button", _box(Color("#55452f"), BORDER_HOVER, 1, 10))
+	t.set_color("font_hover_pressed_color", "Button", GOLD)
 	t.set_stylebox("disabled", "Button", _box(Color("#1c1815"), Color("#3a3128"), 1, 10))
 	t.set_stylebox("focus", "Button", StyleBoxEmpty.new())
 	t.set_color("font_color", "Button", TEXT)
@@ -35,6 +37,16 @@ static func build() -> Theme:
 
 	t.set_color("font_color", "Label", TEXT)
 	t.set_color("default_color", "RichTextLabel", TEXT)
+
+	t.set_stylebox("normal", "LineEdit", _box(Color("#16120f"), Color("#6b5532"), 1, 8))
+	t.set_stylebox("focus", "LineEdit", _box(Color("#16120f"), BORDER_HOVER, 1, 8))
+	t.set_color("font_color", "LineEdit", TEXT)
+	t.set_color("font_placeholder_color", "LineEdit", TEXT_DIM)
+	t.set_color("caret_color", "LineEdit", GOLD)
+
+	t.set_type_variation("SectionLabel", "Label")
+	t.set_color("font_color", "SectionLabel", GOLD)
+	t.set_font_size("font_size", "SectionLabel", 20)
 
 	t.set_type_variation("TitleLabel", "Label")
 	t.set_color("font_color", "TitleLabel", GOLD)

@@ -1,12 +1,16 @@
 extends Control
 ## Écran principal : fiche du personnage à gauche, scène courante à droite.
-## La zone de droite affiche tour à tour le hub (choix du lieu), un événement, son résultat ou la mort.
-## Raccourcis : touches 1 à 9 pour choisir une option.
+## La zone de droite affiche tour à tour le hub (choix du lieu), un événement, le lancer de dés,
+## son résultat ou la mort.
+## Raccourcis : touches 1 à 9 pour choisir une option ; n'importe quelle touche accélère les dés.
+
+const CREATION_SCENE := "res://scenes/creation.tscn"
 
 @onready var portrait: TextureRect = %Portrait
 @onready var name_label: Label = %NameLabel
 @onready var sheet_text: RichTextLabel = %SheetText
 @onready var illustration: TextureRect = %Illustration
+@onready var dice_tray: DiceTray = %DiceTray
 @onready var title_label: Label = %TitleLabel
 @onready var body_text: RichTextLabel = %BodyText
 @onready var choices_box: VBoxContainer = %Choices
@@ -15,7 +19,9 @@ extends Control
 func _ready() -> void:
 	theme = UITheme.build()
 	Game.life_changed.connect(_refresh_sheet)
-	Game.new_life()
+	if Game.life == null or Game.life.dead:
+		Game.new_life()  # scène lancée directement, sans passer par la création
+	_refresh_sheet()
 	_show_hub()
 	if not DB.errors.is_empty():
 		body_text.text += "\n\n[color=%s]%s\n%s[/color]" % [
@@ -25,6 +31,10 @@ func _ready() -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
 	if key == null or not key.pressed or key.echo:
+		return
+	if dice_tray.is_playing():
+		dice_tray.skip()
+		accept_event()
 		return
 	var index: int = key.keycode - KEY_1
 	if index >= 0 and index < choices_box.get_child_count():
@@ -102,8 +112,15 @@ func _on_location_chosen(location_id: String) -> void:
 	_show_event(Game.draw_event(location_id))
 
 
+## Pour un choix avec test, on lance et on anime les dés avant d'appliquer les effets,
+## pour ne rien dévoiler (PV, or...) avant que les dés ne s'arrêtent.
 func _on_choice(choice: Dictionary) -> void:
-	_show_result(Game.resolve_choice(choice))
+	var roll := {}
+	if choice.has("check"):
+		roll = Game.roll_check(choice)
+		_clear_choices()
+		await dice_tray.play(roll)
+	_show_result(Game.resolve_choice(choice, roll))
 
 
 func _on_continue(goto: String) -> void:
@@ -120,43 +137,14 @@ func _on_continue(goto: String) -> void:
 
 
 func _on_new_life() -> void:
-	Game.new_life()
-	_show_hub()
+	get_tree().change_scene_to_file(CREATION_SCENE)
 
-
-# --- Fiche du personnage -----------------------------------------------------
 
 func _refresh_sheet() -> void:
 	var ch := Game.life.character
-	var gold := UITheme.GOLD.to_html(false)
-	var dim := UITheme.TEXT_DIM.to_html(false)
 	portrait.texture = ArtProvider.portrait(ch)
 	name_label.text = ch.name
-
-	var t := "%s %s\n" % [DB.races[ch.race_id]["name"], DB.classes[ch.class_id]["name"]]
-	t += tr("%d ans — %s") % [ch.age_years(), DB.life_stage_name(ch.life_stage())] + "\n\n"
-	t += "[color=%s]PV[/color] %d / %d    [color=%s]%s[/color] %d po\n" % [
-		gold, ch.hp, ch.max_hp, gold, tr("Or"), ch.gold]
-	t += "[color=%s]%s[/color] %d    [color=%s]XP[/color] %d\n\n" % [gold, tr("Niveau"), ch.level, gold, ch.xp]
-
-	t += "[table=2]"
-	for ability: Dictionary in DB.rules["abilities"]:
-		var id: String = ability["id"]
-		t += "[cell][color=%s]%s[/color] %d (%s)   [/cell]" % [
-			gold, ability["short"], ch.abilities[id], _signed(ch.ability_mod(id))]
-	t += "[/table]\n\n"
-
-	t += "[color=%s]%s[/color]\n" % [gold, tr("Compétences")]
-	for skill: Dictionary in DB.rules["skills"]:
-		var line := "%s %s" % [skill["name"], _signed(ch.skill_mod(skill["id"]))]
-		t += (line if ch.is_proficient(skill["id"]) else "[color=%s]%s[/color]" % [dim, line]) + "\n"
-
-	t += "\n[color=%s]%s[/color]\n" % [gold, tr("Inventaire")]
-	if ch.inventory.is_empty():
-		t += "[color=%s]—[/color]\n" % dim
-	for item_id: String in ch.inventory:
-		t += "%s ×%d\n" % [DB.items[item_id]["name"], ch.inventory[item_id]]
-	sheet_text.text = t
+	sheet_text.text = CharacterSheet.bbcode(ch)
 
 
 # --- Utilitaires -------------------------------------------------------------
@@ -175,7 +163,3 @@ func _add_choice(text: String, callback: Callable, enabled := true) -> void:
 	button.disabled = not enabled
 	button.pressed.connect(callback, CONNECT_DEFERRED)
 	choices_box.add_child(button)
-
-
-func _signed(value: int) -> String:
-	return ("+%d" % value) if value >= 0 else str(value)

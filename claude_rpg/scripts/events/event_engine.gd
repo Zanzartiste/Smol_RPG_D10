@@ -74,12 +74,14 @@ static func visible_choices(ev: Dictionary, life: LifeState, meta: MetaState) ->
 
 
 ## Résout un choix : jet éventuel, puis effets du résultat.
+## `roll` permet de fournir un jet déjà effectué (pour l'animer avant d'appliquer les effets).
 ## Retourne {"outcome": "outcome"|"success"|"failure", "text", "roll", "lines", "goto"}.
-static func resolve_choice(ev: Dictionary, choice: Dictionary, life: LifeState, meta: MetaState) -> Dictionary:
+static func resolve_choice(ev: Dictionary, choice: Dictionary, life: LifeState, meta: MetaState,
+		roll: Dictionary = {}) -> Dictionary:
 	var outcome_key := "outcome"
-	var roll := {}
 	if choice.has("check"):
-		roll = Dice.roll_check(life.character, choice["check"], life.rng)
+		if roll.is_empty():
+			roll = Dice.roll_check(life.character, choice["check"], life.rng)
 		outcome_key = "success" if roll["success"] else "failure"
 	var outcome: Dictionary = choice.get(outcome_key, {})
 	var key := "evt.%s.%s.%s" % [ev["id"], choice["id"], outcome_key]

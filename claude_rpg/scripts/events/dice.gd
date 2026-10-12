@@ -30,4 +30,13 @@ static func roll_check(ch: Character, check: Dictionary, rng: RandomNumberGenera
 	var mod := modifier(ch, check)
 	var dc := int(check["dc"])
 	var success := die == 20 or (die != 1 and die + mod >= dc)
-	return {"die": die, "mod": mod, "total": die + mod, "dc": dc, "success": success, "label": label(check)}
+	return {
+		"dice": [{"sides": 20, "value": die}],
+		"die": die,
+		"mod": mod,
+		"total": die + mod,
+		"dc": dc,
+		"success": success,
+		"label": label(check),
+		"stat": DB.skills[check["skill"]]["name"] if check.has("skill") else DB.abilities[check["ability"]]["name"],
+	}

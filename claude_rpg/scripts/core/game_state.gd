@@ -9,12 +9,20 @@ var life: LifeState
 var current_event: Dictionary = {}
 
 
-func new_life(seed_value: int = 0) -> void:
+## Commence une vie avec un personnage créé (écran de création).
+func start_life(character: Character, seed_value: int = 0) -> void:
 	life = LifeState.new()
 	life.rng.seed = seed_value if seed_value != 0 else randi()
-	life.character = Character.create_random(life.rng, Meta)
+	life.character = character
 	current_event = {}
 	life_changed.emit()
+
+
+## Commence une vie avec un personnage aléatoire (tests, lancement direct de la scène principale).
+func new_life(seed_value: int = 0) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value if seed_value != 0 else randi()
+	start_life(Character.create_random(rng, Meta), rng.seed)
 
 
 func draw_event(location_id: String) -> Dictionary:
@@ -27,8 +35,13 @@ func begin_event(ev: Dictionary) -> void:
 	Meta.mark_event_seen(ev["id"])
 
 
-func resolve_choice(choice: Dictionary) -> Dictionary:
-	var result := EventEngine.resolve_choice(current_event, choice, life, Meta)
+## Lance les dés d'un choix avec test, sans appliquer ses effets.
+func roll_check(choice: Dictionary) -> Dictionary:
+	return Dice.roll_check(life.character, choice["check"], life.rng)
+
+
+func resolve_choice(choice: Dictionary, roll: Dictionary = {}) -> Dictionary:
+	var result := EventEngine.resolve_choice(current_event, choice, life, Meta, roll)
 	_after_change()
 	return result
 

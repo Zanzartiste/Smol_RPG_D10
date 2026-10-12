@@ -7,14 +7,23 @@ var _checks := 0
 var _failures := 0
 
 
+const TESTS := [
+	"_test_data",
+	"_test_character",
+	"_test_conditions",
+	"_test_effects",
+	"_test_engine",
+	"_test_creation",
+	"_test_dice_tray",
+	"_test_simulation",
+	"_test_art",
+]
+
+
 func _ready() -> void:
-	_test_data()
-	_test_character()
-	_test_conditions()
-	_test_effects()
-	_test_engine()
-	_test_simulation()
-	_test_art()
+	for test: String in TESTS:
+		# Une erreur de script interrompt la fonction, qui retourne alors null au lieu de true.
+		_expect(call(test) == true, "%s s'exécute jusqu'au bout (voir les erreurs ci-dessus)" % test)
 	print("\n%d vérifications, %d échec(s)" % [_checks, _failures])
 	get_tree().quit(1 if _failures > 0 else 0)
 
@@ -33,16 +42,16 @@ func _new_life(race := "goblin", cls := "wizard") -> LifeState:
 	return life
 
 
-func _test_data() -> void:
+func _test_data() -> bool:
 	for e in DB.errors:
 		printerr("  " + e)
 	_expect(DB.errors.is_empty(), "les données JSON sont valides")
 	_expect(DB.events.size() >= 15, "au moins 15 événements chargés")
 	for loc_id in DB.location_order:
 		_expect(not DB.events_for(loc_id).is_empty(), "le lieu %s a des événements" % loc_id)
+	return true
 
-
-func _test_character() -> void:
+func _test_character() -> bool:
 	var c := Character.create("goblin", "wizard", "Grik")
 	_expect(c.abilities["int"] == 15, "magicien : INT 15")
 	_expect(c.abilities["dex"] == 15, "gobelin : DEX 13 + 2")
@@ -56,9 +65,9 @@ func _test_character() -> void:
 	_expect(levels == [2] and c.level == 2, "300 XP => niveau 2")
 	c.age_days = DB.days_per_year() * 30
 	_expect(c.life_stage() == "elder", "gobelin de 42 ans âgé")
+	return true
 
-
-func _test_conditions() -> void:
+func _test_conditions() -> bool:
 	var life := _new_life()
 	var meta := MetaState.new()
 	_expect(Conditions.check({"type": "race", "in": ["goblin"]}, life, meta), "condition race")
@@ -73,9 +82,9 @@ func _test_conditions() -> void:
 	_expect(Conditions.check({"type": "time", "in": ["morning"]}, life, meta), "matin au départ")
 	_expect(Conditions.describe({"type": "ability", "id": "int", "min": 12}) == "INT 12+", "description de condition")
 	meta.free()
+	return true
 
-
-func _test_effects() -> void:
+func _test_effects() -> bool:
 	var life := _new_life()
 	var meta := MetaState.new()
 	var ch := life.character
@@ -96,9 +105,9 @@ func _test_effects() -> void:
 	Effects.apply_all([{"type": "hp", "amount": -99, "cause": "Test"}], life, meta)
 	_expect(life.dead and life.death_cause == "Test" and ch.hp == 0, "mort par PV à 0")
 	meta.free()
+	return true
 
-
-func _test_engine() -> void:
+func _test_engine() -> bool:
 	var life := _new_life("human", "fighter")
 	var meta := MetaState.new()
 	var ev: Dictionary = DB.events["town_merchant_meet"]
@@ -122,10 +131,52 @@ func _test_engine() -> void:
 	var shrine: Dictionary = DB.events["forest_shrine"]
 	_expect(EventEngine.visible_choices(shrine, life, meta).size() == 2, "choix masqué sans le flag")
 	meta.free()
+	return true
 
+func _test_creation() -> bool:
+	var screen: Control = load("res://scenes/creation.tscn").instantiate()
+	add_child(screen)
+	var ch: Character = screen.build_character()
+	_expect(ch.name != "", "création : un nom est proposé")
+	_expect(Meta.is_race_available(ch.race_id) and Meta.is_class_available(ch.class_id),
+		"création : race et classe de départ disponibles")
+	var locked := 0
+	for button: Button in screen.race_buttons.get_children() + screen.class_buttons.get_children():
+		if button.disabled:
+			locked += 1
+	_expect(locked == 2, "création : Elfe et Roublard verrouillés au départ")
+	screen._on_class_selected("fighter")
+	screen.name_edit.text = "Bob"
+	screen._on_name_typed("Bob")
+	screen._on_race_selected("goblin")
+	ch = screen.build_character()
+	_expect(ch.name == "Bob" and ch.class_id == "fighter" and ch.race_id == "goblin",
+		"création : le nom tapé est conservé au changement de race")
+	screen.free()
+	return true
+
+func _test_dice_tray() -> bool:
+	var tray := DiceTray.new()
+	tray.size = Vector2(800, 240)
+	add_child(tray)
+	tray.play({"dice": [{"sides": 20, "value": 17}, {"sides": 6, "value": 3}, {"sides": 8, "value": 8}],
+		"mod": 2, "dc": 12, "success": true, "stat": "Test"})
+	_expect(tray.is_playing() and tray._notation() == "Test : 1d20 + 1d6 + 1d8 + 2", "dés : notation")
+	var elapsed := 0.0
+	var on_tray := true
+	while tray.is_playing() and elapsed < 10.0:
+		tray._process(1.0 / 60.0)
+		for d in tray._dice:
+			on_tray = on_tray and Rect2(Vector2.ZERO, tray.size).grow(1.0).has_point(d["pos"])
+		elapsed += 1.0 / 60.0
+	_expect(on_tray, "dés : restent sur le plateau")
+	_expect(not tray.is_playing() and elapsed < 5.0, "dés : l'animation se termine (%.1f s)" % elapsed)
+	_expect(tray._dice.map(func(d): return d["shown"]) == [17, 3, 8], "dés : affichent les valeurs tirées")
+	tray.free()
+	return true
 
 ## Joue des centaines d'actions au hasard sur plusieurs vies pour débusquer les erreurs d'exécution.
-func _test_simulation() -> void:
+func _test_simulation() -> bool:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 1234
 	var deaths := 0
@@ -157,9 +208,9 @@ func _test_simulation() -> void:
 	_expect(deaths > 0, "la simulation produit des morts")
 	_expect(Meta.chronicle.size() == deaths + (1 if Game.life.dead else 0), "chaque mort est inscrite dans la chronique")
 	_expect(unseen.size() <= 2, "presque tous les événements sont atteignables")
+	return true
 
-
-func _test_art() -> void:
+func _test_art() -> bool:
 	var c := Character.create("goblin", "wizard", "Grik")
 	var img := PixelArt.portrait(DB.races["goblin"]["art"], DB.classes["wizard"]["art"], "adult", 7)
 	_expect(img.get_width() == PixelArt.PORTRAIT_SIZE, "portrait généré")
@@ -168,3 +219,4 @@ func _test_art() -> void:
 	_expect(ArtProvider.portrait(c) != null, "ArtProvider fournit un portrait")
 	for kind in ["forest", "town", "home", "unknown"]:
 		_expect(PixelArt.scene(kind, "evening", 3).get_width() == PixelArt.SCENE_W, "décor %s généré" % kind)
+	return true
