@@ -147,6 +147,9 @@ static func _validate_species(db: Node, errors: Array[String]) -> void:
 		if species.has("ability_bonus"):
 			errors.append(ctx + " : une espèce ne doit pas modifier les attributs (ability_bonus)")
 		_validate_modifiers(db, species.get("modifiers", []), ctx, errors, false)
+		var majority := int(db.rules.get("majority_age", 18))
+		if int(species.get("start_age", 18)) < majority or int(species.get("age_stages", {}).get("adult", majority)) < majority:
+			errors.append(ctx + " : start_age et l'étape adult doivent valoir au moins %d (rules.json › majority_age)" % majority)
 		for stage: String in species.get("age_stages", {}):
 			if stage not in stage_ids:
 				errors.append(ctx + " : étape de vie inconnue « %s »" % stage)

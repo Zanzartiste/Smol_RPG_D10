@@ -83,7 +83,7 @@ func _test_character() -> bool:
 	_expect(c.max_hp == 6 + 2, "PV : d6 + CON")
 	_expect(c.size() == "small" and Character.create("human", "wizard", "H").size() == "medium",
 		"la taille dépend de l'espèce")
-	_expect(c.age_years() == 12 and c.life_stage() == "adult", "gobelin de 12 ans adulte")
+	_expect(c.age_years() == 18 and c.life_stage() == "adult", "gobelin de 18 ans adulte (majorité)")
 	_expect(Character.create("human", "fighter", "N", {"background": "noble"}).gold == 15 + 25, "or du passé Noble")
 
 	# PV : d10 + CON (+2) au niveau 1 pour un guerrier au modèle (CON 15).

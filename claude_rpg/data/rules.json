@@ -16,6 +16,7 @@
 	],
 	"time_slots": [{"id": "morning", "name": "Matin"}, {"id": "afternoon", "name": "Après-midi"}, {"id": "evening", "name": "Soir"}],
 	"days_per_year": 365,
+	"majority_age": 18,
 	"life_stages": [
 		{"id": "child", "name": "Enfant"},
 		{"id": "teen", "name": "Adolescent"},

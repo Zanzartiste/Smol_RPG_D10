@@ -20,8 +20,8 @@
 		"name": "Gobelin",
 		"description": "Petits, vifs et rusés. On les dit voleurs ; ils préfèrent « opportunistes ».",
 		"size": "small",
-		"start_age": 12,
-		"age_stages": {"child": 0, "teen": 6, "adult": 10, "elder": 40, "venerable": 55},
+		"start_age": 18,
+		"age_stages": {"child": 0, "teen": 10, "adult": 18, "elder": 40, "venerable": 55},
 		"aging_age": 40,
 		"names": ["Grik", "Zigzag", "Nibblet", "Grishka", "Pustule", "Rikkit", "Vorna", "Skarn", "Mibz", "Torgnole"],
 		"art": {

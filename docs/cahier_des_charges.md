@@ -1,6 +1,6 @@
 # Cahier des charges — Lifantasy (titre provisoire)
 
-> Version 0.3 — 2026-10-12 — document vivant, à mettre à jour au fil des décisions.
+> Version 0.4 — 2026-10-12 — document vivant, à mettre à jour au fil des décisions.
 
 ---
 
@@ -123,6 +123,10 @@ Ce sont les règles qui servent à trancher quand on hésite sur une fonctionnal
 
 ## 6. MVP : première version jouable
 
+> **Note v0.4** : le projet **ne se limite pas au MVP**. Le MVP n'est qu'une première tranche jouable pour les testeurs ;
+> le développement continue ensuite par jalons de systèmes (voir §10). La priorité actuelle est de **peaufiner les
+> systèmes de jeu**, le lore et l'univers viendront plus tard.
+
 L'objectif du MVP est d'avoir **une boucle complète, de bout en bout**, avec peu de contenu. Le MVP sert à vérifier que
 le jeu est amusant avant de produire du contenu en masse.
 
@@ -237,6 +241,27 @@ Claude ne génère pas d'images lui-même. Il peut en revanche écrire le **guid
 | **Présentation** | Le style pixel art actuel convient, et le son viendra plus tard. |
 | **Tests** | Des testeurs sont disponibles facilement. |
 
+### 9.4 Décisions de la v0.4 (réponses aux questions du 2026-10-12)
+
+| Sujet | Décision |
+|---|---|
+| **Priorité** | Les **systèmes** d'abord ; l'univers et le lore plus tard. Pas de limite au MVP. |
+| **Ton** | Proche de D&D, Genshin, Xenoblade Chronicles, Magic : de l'humour dans les moments calmes, du sérieux dans les moments sombres. |
+| **Structure** | **Monde ouvert**, avec des **amorces de campagnes** : des suites de quêtes reliées par un fil conducteur. |
+| **Voyages** | Un événement « voyage » dont la durée dépend de la destination et du **moyen de transport** ; selon la durée, il déclenche au hasard un ou plusieurs **événements en route** (embuscade, rencontre, se perdre…). |
+| **Passer du temps** | Des activités longues (« travailler un an », « s'installer »…) par tranches de **1, 2, 5 ou 10 ans**. |
+| **Âge et majorité** | Majorité à **18 ans pour toutes les espèces** : aucun personnage jouable en dessous, et les événements adultes (couple…) l'exigent. Le gobelin commence donc à 18 ans. Enfance jouable : non pour l'instant. |
+| **PNJ** | Génération **progressive**, comme un MJ de JdR papier : un PNJ apparaît avec un rôle, un nom et une histoire « de surface ». Plus le joueur s'intéresse à lui, plus on lui génère un passé, des proches et du lore ; ses réponses deviennent des **faits** enregistrés. Quelques PNJ restent écrits à la main. |
+| **Mariage et enfants** | Condition d'âge ; **aucune restriction entre espèces**, la descendance est décrite dans [especes.md](especes.md). Enfants non jouables pour l'instant. |
+| **Monde vivant** | Le monde évolue sans le joueur. |
+| **Métiers** | Accessibles selon les compétences, la classe et les choix. Chaque métier est une suite d'activités, presque un **mini-jeu**, au même titre que le combat et l'exploration pour l'aventurier : artisanat, cuisine… sont des **sous-systèmes**. |
+| **Classes et espèces** | Listées par l'auteur dans [classes.md](classes.md) et [especes.md](especes.md). |
+| **Économie** | Des **boutiques** (achat et revente). La forge permet de **fabriquer** à partir de matériaux **et** d'**améliorer** contre de l'or. Des **objets magiques** à effets spéciaux. |
+| **Progression** | Emplacements de sorts et aptitudes par niveau selon les **tables du SRD 5.1** (pour l'instant). **Multiclassage** prévu. |
+| **Compagnons** | Système proche de **Baldur's Gate 3** : recrutement, approbation, dialogues, équipement, départ possible. |
+| **Interface** | Un bouton **Inventaire** dans la fiche, qui ouvre un menu (équiper, utiliser, jeter). Un **journal** de la vie en cours. Des **options** (vitesse et désactivation des dés, taille du texte, langue). |
+| **Tests** | Versions **Windows et Web**. Le recueil des retours et le calendrier des tests sont gérés par l'auteur. |
+
 ## 10. Prochaines étapes proposées
 
 1. ~~Répondre aux questions ouvertes du §9.~~
@@ -252,25 +277,35 @@ Claude ne génère pas d'images lui-même. Il peut en revanche écrire le **guid
    chronique des vies sur l'écran titre.
 9. ~~Creator Points et chronique~~ : gain selon l'XP de la vie, bonus de départ (attributs, niveau, or), déblocages
    achetables. Valeurs provisoires, à ajuster avec les testeurs.
-10. Contenu du MVP, puis première version pour les testeurs.
+10. ~~Règle de majorité (18 ans), catalogues [classes.md](classes.md) et [especes.md](especes.md).~~
+
+**Feuille de route des systèmes (v0.4)**, dans l'ordre proposé :
+
+11. **Progression D&D** : emplacements de sorts par niveau (table SRD), aptitudes par niveau (Attaque
+    supplémentaire, Fougue, Attaque sournoise, sorts mineurs qui montent…), jets de sauvegarde maîtrisés.
+12. **Inventaire et équipement** : écran Inventaire depuis la fiche, équipement des compagnons, butin d'équipement,
+    objets magiques.
+13. **Économie** : boutiques (achat, revente, stock), forge (fabrication et amélioration).
+14. **Temps long** : événement voyage (durée, transport, événements en route, se perdre), activités de 1, 2, 5 ou
+    10 ans, journal de la vie.
+15. **PNJ générés progressivement** et relations : faits enregistrés, jauges, interactions sociales.
+16. **Mariage et enfants**, puis **monde autonome** (PNJ qui vieillissent, lieux qui changent).
+17. **Compagnons à la BG3** : approbation, dialogues, départ.
+18. **Métiers en sous-systèmes**, en commençant par la forge.
+19. **Multiclassage**.
+20. **Options** (dés, texte, langue) et **exports** Windows et Web dès qu'une version de test est voulue.
 
 ## 11. Backlog (idées validées, non prioritaires)
 
-- **Passer des années** : trajets, voyages et attentes de durée choisie (ex. « attendre le printemps », « s'installer
-  5 ans comme forgeron »). Avec une année de 365 jours, c'est le seul moyen de vieillir réellement.
-- **Social et monde vivant** : PNJ autonomes, relations (confiance, amitié, amour), mariage, enfants, divorce,
-  conjoint ou enfant comme personnage suivant, lieux qui évoluent.
-- **Voyages** : quitter une ville pour toujours, découvrir de nouveaux lieux par des événements.
-- **Métiers** : chaînes d'activités (artisanat, commerce, alchimie, cuisine…), et classes associées (Artificier,
-  Alchimiste…).
-- **Économie** : boutiques, forge, butin d'équipement, inventaire pour équiper ses compagnons.
-- **Creator Points** : leur gain et leur barème restent à définir.
-- **Multiclassage** : les améliorations sont « tous les 4 niveaux dans une classe ». Si le multiclassage arrive, elles
-  se compteront par classe.
+Les grands chantiers (temps long, social, monde vivant, voyages, métiers, économie, multiclassage, compagnons) sont
+désormais dans la feuille de route du §10. Restent ici :
 
-- **Combat — suite** : effets de statut (poison, étourdissement…), IA ennemie plus fine (cibler les blessés,
-  se soigner), bouton « combat automatique », équipement (armes et armures trouvables).
-- **Compagnons** : relations, dialogues, gestion de l'équipement (le groupe peut déjà compter 3 compagnons).
+- **Conjoint ou enfant comme personnage suivant**, et enfance jouable.
+- **Creator Points** : barème à ajuster avec les testeurs ; autres bonus possibles.
+- **Combat** : réactions, mécaniques des autres états (endormi, charmé…), IA ennemie plus fine (cibler les blessés,
+  se soigner), bouton « combat automatique ».
+- **Lore et univers** : fournis par l'auteur, à intégrer (noms de lieux, factions, campagnes).
+- **Son et musique**, **pipeline d'images IA**, **traduction anglaise**.
 
 ## 12. Outils de développement
 

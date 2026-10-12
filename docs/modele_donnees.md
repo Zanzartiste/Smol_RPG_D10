@@ -365,7 +365,7 @@ Calcul des dégâts subis :
   `unlock_hint` est l'indice affiché à l'écran de création.
 - **Espèce** : elle n'a **aucune influence sur les attributs**. Elle définit les champs suivants :
   - `size` : la catégorie de taille (`tiny`, `small`, `medium`, `large`), utilisable dans les conditions ;
-  - `start_age` : l'âge au début de la partie ;
+  - `start_age` : l'âge au début de la partie, au moins `rules.json › majority_age` (18), comme l'étape `adult` ;
   - `age_stages` : l'âge de début de chaque étape de vie (conditions `life_stage`, portrait) ;
   - `aging_age` : l'âge limite au-delà duquel le personnage vieillit (voir plus bas).
 - **Classe** : `hit_die` (dé de vie) et `skills` (compétences maîtrisées). `ability_priority` donne le **modèle
