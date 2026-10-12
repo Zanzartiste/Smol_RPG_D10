@@ -123,14 +123,12 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 				if ch.add_feat(e["id"]):
 					lines.append(Loc.ui("Nouveau don : %s !") % Feats.name_of(e["id"]))
 			"equip":
-				if not ch.can_wear(e["id"]):
-					ch.add_item(e["id"])  # trop lourd : il reste dans le sac
-					lines.append(Loc.ui("Obtenu : %s (%s)") % [Items.name_of(e["id"]), ch.wear_problem(e["id"])])
-				else:
-					for removed in ch.equip(e["id"]):
-						if removed != Equipment.UNARMED:
-							ch.add_item(removed)  # l'objet remplacé retourne dans le sac
-					lines.append(Loc.ui("Équipé : %s") % Equipment.name_of(e["id"]))
+				for removed in ch.equip(e["id"]):
+					if removed != Equipment.UNARMED:
+						ch.add_item(removed)  # l'objet remplacé retourne dans le sac
+				lines.append(Loc.ui("Équipé : %s") % Equipment.name_of(e["id"]))
+				if ch.encumbrance_reason(e["id"]) != "":
+					lines.append(ch.encumbrance_reason(e["id"]))
 			"add_defense":
 				ch.defenses.add(e["kind"], e["id"])
 				lines.append(Modifiers.describe({"type": e["kind"], "damage_type": e["id"], "status": e["id"]}))

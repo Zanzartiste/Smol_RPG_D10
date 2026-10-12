@@ -25,6 +25,7 @@ const SCHEMA := {
 	"uncanny_dodge": [],  # une fois par round, dégâts d'une attaque divisés par deux
 	"evasion": [],  # sauvegarde de DEX pour moitié : 0 si réussie, moitié si ratée
 	"reliable_talent": [],  # test d'une compétence maîtrisée : un d20 sous 10 compte comme 10
+	"relentless_endurance": [],  # tombe à 1 PV au lieu de 0 (ressource relentless_endurance, repos long)
 }
 
 ## Types de modificateurs qui deviennent des défenses (type -> sorte de Defenses).
@@ -99,6 +100,8 @@ static func describe(m: Dictionary) -> String:
 			return Loc.ui("Dérobade")
 		"reliable_talent":
 			return Loc.ui("Talent fiable")
+		"relentless_endurance":
+			return Loc.ui("Endurance implacable")
 	return str(m)
 
 

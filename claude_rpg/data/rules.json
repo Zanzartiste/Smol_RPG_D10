@@ -77,8 +77,9 @@
 		{"id": "venerable", "name": "Vénérable"}
 	],
 	"start_gold": 15,
+	"encumbered_modifiers": [],
 	"armor_strength": {
-		"_doc": "Force minimale pour porter une armure, selon son type (un objet peut la redéfinir avec \"strength\").",
+		"_doc": "Force conseillée pour une armure, selon son type (un objet peut la redéfinir avec \"strength\"). En dessous, l'armure reste portable mais le personnage est encombré (encumbered_modifiers).",
 		"clothing": 0,
 		"light": 10,
 		"medium": 12,

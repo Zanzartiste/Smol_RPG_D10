@@ -47,14 +47,8 @@ static func create(species: String, cls: String, char_name: String, options: Dic
 	var background_feat := Feats.for_background(c.background_id)
 	if background_feat != "":
 		c.feats.append(background_feat)
-	# Équipement de la classe : ce que le personnage n'a pas la force de porter reste dans le sac.
-	var class_equipment: Dictionary = class_data.get("equipment", {})
-	for slot: String in class_equipment:
-		var item_id: String = class_equipment[slot]
-		if c.wear_problem(item_id) == "":
-			c.equipment[slot] = item_id
-		else:
-			c.add_item(item_id)
+	c.equipment = class_data.get("equipment", {}).duplicate()
+	c.pending_feats += int(DB.species[species].get("bonus_feats", 0))  # ex. don en plus des humains
 
 
 	c.max_hp = c.compute_max_hp()
@@ -118,6 +112,8 @@ func modifiers() -> Array:
 		result.append_array(Feats.modifiers_of(feat_id))
 	for slot: String in equipment:
 		result.append_array(Equipment.modifiers_of(equipment[slot]))
+	if is_encumbered():
+		result.append_array(DB.rules.get("encumbered_modifiers", []))
 	return result
 
 
@@ -240,17 +236,33 @@ func choose_feat(feat_id: String) -> bool:
 
 # --- Équipement --------------------------------------------------------------
 
-## Raison pour laquelle le personnage ne peut pas porter un équipement ("" s'il le peut).
-func wear_problem(item_id: String) -> String:
+## Pourquoi un équipement encombrerait le personnage ("" s'il le porte sans malus).
+## La Force est lue sans les modificateurs d'encombrement eux-mêmes.
+func encumbrance_reason(item_id: String) -> String:
 	var required := Equipment.strength_required(item_id)
-	var strength := ability_score("str")
+	var strength := int(abilities.get("str", 10)) + _modifier_sum_without_encumbrance("ability", "str")
 	if strength < required:
-		return Loc.ui("Force %d requise (vous avez %d)") % [required, strength]
+		return Loc.ui("Force %d conseillée (vous avez %d) : encombré") % [required, strength]
 	return ""
 
 
-func can_wear(item_id: String) -> bool:
-	return wear_problem(item_id) == ""
+## Une pièce d'équipement portée demande plus de Force que le personnage n'en a.
+func is_encumbered() -> bool:
+	for slot: String in equipment:
+		if encumbrance_reason(equipment[slot]) != "":
+			return true
+	return false
+
+
+func _modifier_sum_without_encumbrance(type: String, id: String) -> int:
+	var mods: Array = DB.species[species_id].get("modifiers", []).duplicate()
+	for feature: Dictionary in features():
+		mods.append_array(feature.get("modifiers", []))
+	for feat_id in feats:
+		mods.append_array(Feats.modifiers_of(feat_id))
+	for slot: String in equipment:
+		mods.append_array(Equipment.modifiers_of(equipment[slot]))
+	return Modifiers.sum(mods, type, id)
 
 
 func weapon_id() -> String:
@@ -329,9 +341,12 @@ func features() -> Array:
 	return ClassFeatures.up_to(class_id, class_level())
 
 
-## Ressources maximales : celles de la classe et des aptitudes, plus les emplacements de sort.
+## Ressources maximales : celles de l'espèce, de la classe et des aptitudes, plus les emplacements de sort.
 func max_resources() -> Dictionary:
 	var result: Dictionary = DB.classes[class_id].get("resources", {}).duplicate()
+	var species_resources: Dictionary = DB.species[species_id].get("resources", {})
+	for id: String in species_resources:
+		result[id] = int(result.get(id, 0)) + int(species_resources[id])
 	for feature: Dictionary in features():
 		var granted: Dictionary = feature.get("resources", {})
 		for id: String in granted:

@@ -55,6 +55,8 @@ static func bbcode(ch: Character) -> String:
 	var defenses := ch.all_defenses()
 	if not defenses.is_empty():
 		t += defenses.describe() + "\n"
+	if ch.is_encumbered():
+		t += "[color=%s]%s[/color]\n" % [UITheme.BAD.to_html(false), Loc.ui("Encombré : armure trop lourde pour sa Force")]
 	t += "\n"
 
 	# Compétences : maîtrisées en clair, les autres grisées.

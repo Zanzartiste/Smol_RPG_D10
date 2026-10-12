@@ -7,6 +7,7 @@
 		"start_age": 18,
 		"age_stages": {"child": 0, "teen": 12, "adult": 18, "elder": 60, "venerable": 80},
 		"aging_age": 60,
+		"bonus_feats": 1,
 		"names": ["Aldric", "Brenna", "Cédric", "Daria", "Edwin", "Fiora", "Gareth", "Helna", "Ivo", "Jessa"],
 		"art": {
 			"ears": "round",
@@ -49,6 +50,64 @@
 			"skin": ["#f3dcc4", "#e0c3a3", "#c9a688"],
 			"hair": ["#e8e0b0", "#c0c0c8", "#2a2a3a", "#8a4a2a"],
 			"eyes": ["#3aa08a", "#7a5ac0", "#c0a040"]
+		}
+	},
+	{
+		"id": "dwarf",
+		"name": "Nain",
+		"description": "Petits, robustes et barbus. Mineurs, forgerons et bâtisseurs, ils ont la rancune aussi tenace que la peau.",
+		"size": "medium",
+		"start_age": 50,
+		"age_stages": {"child": 0, "teen": 20, "adult": 50, "elder": 250, "venerable": 330},
+		"aging_age": 250,
+		"modifiers": [{"type": "resistance", "damage_type": "poison"}],
+		"names": ["Thorgrim", "Dagna", "Brakka", "Orsik", "Helga", "Durnak", "Vistra", "Kildrak", "Runa", "Barek"],
+		"art": {
+			"ears": "round",
+			"beard_chance": 0.9,
+			"skin": ["#e8c0a0", "#c9956b", "#a0704a"],
+			"hair": ["#2b1d14", "#7a2a1a", "#a0652a", "#4a4a4a"],
+			"eyes": ["#3b5d8a", "#5a3a1e", "#4f6b3a"]
+		}
+	},
+	{
+		"id": "orc",
+		"name": "Orc",
+		"description": "Grands, puissants et fiers, les orcs vivent intensément et tiennent debout là où d'autres tombent.",
+		"size": "medium",
+		"start_age": 18,
+		"age_stages": {"child": 0, "teen": 12, "adult": 18, "elder": 50, "venerable": 65},
+		"aging_age": 50,
+		"modifiers": [{"type": "relentless_endurance"}],
+		"resources": {"relentless_endurance": 1},
+		"names": ["Grosh", "Ukra", "Murzag", "Thokk", "Yrsa", "Bolgra", "Kharn", "Shagra", "Durza", "Rokh"],
+		"art": {
+			"ears": "round",
+			"tusks": true,
+			"beard_chance": 0.1,
+			"skin": ["#7a9a5a", "#8a8a6a", "#6a7a5a", "#9a8a7a"],
+			"hair": ["#1d1d1d", "#3a2b1a", "#4a4a4a"],
+			"eyes": ["#c03a2a", "#d9a030", "#5a3a1e"]
+		}
+	},
+	{
+		"id": "tiefling",
+		"name": "Tieffelin",
+		"description": "Une ascendance infernale marque leur corps de cornes et de flammes ; beaucoup s'en méfient.",
+		"size": "medium",
+		"start_age": 18,
+		"age_stages": {"child": 0, "teen": 12, "adult": 18, "elder": 70, "venerable": 90},
+		"aging_age": 70,
+		"modifiers": [{"type": "resistance", "damage_type": "fire"}],
+		"names": ["Méphara", "Ilzac", "Vhorn", "Saelith", "Akzar", "Nyx", "Espérance", "Tourment", "Audace", "Chant"],
+		"art": {
+			"ears": "elf",
+			"horns": true,
+			"beard_chance": 0.1,
+			"horn_color": "#3a2a2a",
+			"skin": ["#b04a4a", "#8a3a5a", "#c07a6a", "#6a4a8a"],
+			"hair": ["#1d1d1d", "#3a1a3a", "#7a1a1a", "#d9d0c0"],
+			"eyes": ["#e8c547", "#f0f0f0", "#d94a2b"]
 		}
 	}
 ]

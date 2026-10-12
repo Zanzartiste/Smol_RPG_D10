@@ -118,7 +118,7 @@ func inventory() -> Dictionary:
 
 ## Équipe un membre du groupe avec un objet du sac ; les objets retirés retournent dans le sac.
 func equip(member: Character, item_id: String) -> bool:
-	if not Items.is_equipment(item_id) or character.item_count(item_id) <= 0 or not member.can_wear(item_id):
+	if not Items.is_equipment(item_id) or character.item_count(item_id) <= 0:
 		return false
 	character.remove_item(item_id)
 	for removed in member.equip(item_id):

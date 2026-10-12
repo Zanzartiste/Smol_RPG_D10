@@ -151,6 +151,9 @@ static func _validate_species(db: Node, errors: Array[String]) -> void:
 			errors.append(ctx + " : taille inconnue « %s » (voir rules.json › sizes)" % species.get("size"))
 		if not species.has("aging_age"):
 			errors.append(ctx + " : aging_age (âge à partir duquel on vieillit) manquant")
+		for resource_id: String in species.get("resources", {}):
+			if typeof(species["resources"][resource_id]) not in [TYPE_INT, TYPE_FLOAT]:
+				errors.append(ctx + " : la ressource « %s » doit être un nombre" % resource_id)
 		if species.has("ability_bonus"):
 			errors.append(ctx + " : une espèce ne doit pas modifier les attributs (ability_bonus)")
 		_validate_modifiers(db, species.get("modifiers", []), ctx, errors, false)

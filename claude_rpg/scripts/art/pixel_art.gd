@@ -37,7 +37,7 @@ static func portrait(species_art: Dictionary, class_art: Dictionary, stage: Stri
 	var hair_style := rng.randi_range(0, 2)  # 0 courts, 1 longs, 2 chauve
 	if ears == "goblin" and rng.randf() < 0.4:
 		hair_style = 2
-	var bearded := ears == "round" and rng.randf() < 0.35
+	var bearded := rng.randf() < float(species_art.get("beard_chance", 0.35 if ears == "round" else 0.0))
 	match stage:
 		"elder":
 			hair = hair.lerp(Color(0.6, 0.6, 0.6), 0.65)
@@ -131,6 +131,15 @@ static func portrait(species_art: Dictionary, class_art: Dictionary, stage: Stri
 				if _inside(x, y, 16.0, cy, rx + 0.3, ry + 1.0):
 					fig.set_pixel(x, y, hair)
 		_hline(fig, 14, 17, mouth_y, hair.darkened(0.45))
+
+	# Défenses (orcs) et cornes (tieffelins).
+	if species_art.get("tusks", false):
+		_sym(fig, 14, mouth_y - 1, Color(0.94, 0.92, 0.84))
+	if species_art.get("horns", false) and headgear not in ["helmet", "wizard_hat"]:
+		var horn := Color(String(species_art.get("horn_color", "#3a2a2a")))
+		for i in 4:
+			_sym(fig, 12 - int(i / 2.0), head_top - i, horn)
+			_sym(fig, 13 - int(i / 2.0), head_top - i, horn.lightened(0.15))
 
 	# Rides.
 	if stage in ["elder", "venerable"]:

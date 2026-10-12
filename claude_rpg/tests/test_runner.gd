@@ -25,6 +25,7 @@ const TESTS := [
 	"_test_class_features",
 	"_test_inventory",
 	"_test_armor_strength",
+	"_test_new_species",
 	"_test_combat",
 	"_test_combat_turns",
 	"_test_companions",
@@ -180,7 +181,7 @@ func _test_feats() -> bool:
 	var soldier := Character.create("human", "fighter", "Soldat", {"background": "soldier"})
 	var sword := Combatant.from_character(soldier, true)
 	_expect(sword.damage_expr({"type": "attack", "weapon": true}) == "1d10+4", "Frappe brutale : +1 aux dégâts d'arme")
-	var hero := Character.create("human", "fighter", "Héros")
+	var hero := Character.create("goblin", "fighter", "Héros")  # pas d'humain : il a un don en plus dès le départ
 	hero.add_xp(300)
 	_expect(hero.level == 2 and not hero.has_pending_advancement(), "niveau 2 : pas d'amélioration")
 	hero.add_xp(2700 - 300)
@@ -806,24 +807,50 @@ func _test_inventory() -> bool:
 func _test_armor_strength() -> bool:
 	_expect(Equipment.strength_required("robe") == 0 and Equipment.strength_required("leather") == 10
 		and Equipment.strength_required("chain_shirt") == 12 and Equipment.strength_required("plate") == 14
-		and Equipment.strength_required("longsword") == 0, "Force requise : vêtements 0, légère 10, intermédiaire 12, lourde 14")
-	_expect(Equipment.describe("chain_mail").ends_with("FOR 14 requise"), "description : Force requise")
+		and Equipment.strength_required("longsword") == 0, "Force conseillée : vêtements 0, légère 10, intermédiaire 12, lourde 14")
+	_expect(Equipment.describe("chain_mail").ends_with("FOR 14"), "description : Force conseillée")
 
 	var weak := {"str": 8, "dex": 15, "con": 14, "int": 10, "wis": 12, "cha": 13}
-	var fighter := Character.create("human", "fighter", "Fluet", {"abilities": weak})
-	_expect(not fighter.equipment.has("armor") and fighter.item_count("chain_mail") == 1,
-		"création : l'armure trop lourde reste dans le sac")
-	_expect(fighter.wear_problem("chain_mail") == "Force 14 requise (vous avez 8)" and fighter.can_wear("robe"), "raison affichée")
-	var strong := Character.create("human", "fighter", "Costaud")
-	_expect(strong.equipment["armor"] == "chain_mail", "guerrier au modèle (FOR 17) : cotte de mailles portée")
+	var fighter := Character.create("goblin", "fighter", "Fluet", {"abilities": weak})
+	_expect(fighter.equipment["armor"] == "chain_mail" and fighter.is_encumbered(),
+		"armure trop lourde : portée quand même, mais encombré")
+	_expect(fighter.encumbrance_reason("chain_mail") == "Force 14 conseillée (vous avez 8) : encombré"
+		and fighter.encumbrance_reason("robe") == "", "raison de l'encombrement")
+	_expect(not Character.create("goblin", "fighter", "Costaud").is_encumbered(), "guerrier au modèle (FOR 17) : pas encombré")
 
+	# Les malus viennent de rules.json › encumbered_modifiers (vides pour l'instant).
+	var backup: Array = DB.rules["encumbered_modifiers"]
+	DB.rules["encumbered_modifiers"] = [{"type": "ac", "amount": -2}, {"type": "initiative", "amount": -1}]
+	var ac := fighter.armor_class()
 	Game.start_life(fighter, 71)
-	_expect(not Game.life.equip(fighter, "chain_mail") and fighter.item_count("chain_mail") == 1, "équiper : refusé sans la Force")
-	fighter.abilities["str"] = 14
-	_expect(Game.life.equip(fighter, "chain_mail") and fighter.equipment["armor"] == "chain_mail", "équiper : accepté avec FOR 14")
-	fighter.abilities["str"] = 8
-	Effects.apply_all([{"type": "equip", "id": "plate"}], Game.life, Meta)
-	_expect(fighter.equipment["armor"] == "chain_mail" and fighter.item_count("plate") == 1, "effet equip : trop lourd, rangé dans le sac")
+	Game.life.unequip(fighter, "armor")
+	_expect(not fighter.is_encumbered() and fighter.armor_class() == 10 + fighter.ability_mod("dex"), "sans armure : plus de malus")
+	_expect(Game.life.equip(fighter, "chain_mail") and fighter.armor_class() == ac and fighter.initiative_bonus() == fighter.ability_mod("dex") - 1,
+		"malus d'encombrement appliqués")
+	DB.rules["encumbered_modifiers"] = backup
+	return true
+
+
+func _test_new_species() -> bool:
+	var human := Character.create("human", "wizard", "H")
+	_expect(human.pending_feats == 1 and human.can_choose_feat(), "humain : un don en plus à choisir")
+	var dwarf := Character.create("dwarf", "fighter", "N")
+	_expect(dwarf.age_years() == 50 and dwarf.all_defenses().has(Defenses.RESISTANCE, "poison"), "nain : 50 ans, résistance au poison")
+	_expect(Character.create("tiefling", "wizard", "T").all_defenses().has(Defenses.RESISTANCE, "fire"), "tieffelin : résistance au feu")
+
+	var orc := Character.create("orc", "fighter", "O")
+	_expect(orc.resources.get("relentless_endurance", 0) == 1, "orc : Endurance implacable (1 par repos long)")
+	Game.start_life(orc, 81)
+	var combat := Game.start_combat({"enemies": ["wolf"]})
+	combat._deal_damage(combat.enemies()[0], combat.hero, 999, "piercing", false, "")
+	_expect(combat.hero.hp == 1 and not Game.life.dead and orc.resources["relentless_endurance"] == 0, "Endurance implacable : reste à 1 PV")
+	combat._deal_damage(combat.enemies()[0], combat.hero, 999, "piercing", false, "")
+	_expect(Game.life.dead, "la deuxième fois, il tombe")
+	Game.combat = null
+
+	for species_id in ["dwarf", "orc", "tiefling"]:
+		var img := PixelArt.portrait(DB.species[species_id]["art"], DB.classes["fighter"]["art"], "adult", 3)
+		_expect(img.get_width() > 0, "portrait : %s" % species_id)
 	return true
 
 

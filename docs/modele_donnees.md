@@ -383,6 +383,7 @@ Les dons, les espèces et les équipements peuvent porter des `modifiers`. Ils s
 | `uncanny_dodge` | — | Une fois par round, les dégâts d'une attaque reçue sont divisés par deux |
 | `evasion` | — | Sauvegarde de DEX pour moitié : rien si elle réussit, moitié si elle échoue |
 | `reliable_talent` | — | Test d'une compétence maîtrisée : un d20 de 9 ou moins compte comme 10 |
+| `relentless_endurance` | — | Tombe à 1 PV au lieu de 0, tant qu'il reste la ressource `relentless_endurance` |
 
 ### Équipement (`equipment.json`)
 
@@ -419,10 +420,11 @@ la couleur du nom), `value` (prix en po), `description`.
 - Une arme polyvalente tenue sans bouclier fait ses dégâts à deux mains.
 - Une arme à deux mains et un bouclier s'excluent.
 - L'entrée `unarmed` (mains nues) est obligatoire.
-- **Force requise** pour porter une armure, selon son type (`rules.json › armor_strength`) : vêtements 0, légère 10,
-  intermédiaire 12, lourde 14. Un objet peut la redéfinir avec `strength`. Sans la Force, on ne peut pas l'équiper
-  (bouton grisé avec la raison) ; à la création, l'armure de la classe reste alors dans le sac, et l'effet `equip`
-  d'un événement la range aussi dans le sac. Une armure déjà portée reste portée si la Force baisse ensuite.
+- **Force et encombrement** : toute armure peut être portée. Chaque type a une Force conseillée
+  (`rules.json › armor_strength`) : vêtements 0, légère 10, intermédiaire 12, lourde 14 ; un objet peut la redéfinir
+  avec `strength`. En dessous, le personnage est **encombré** et reçoit les modificateurs de
+  `rules.json › encumbered_modifiers` (liste vide pour l'instant : les malus restent à décider), par exemple
+  `[{"type": "ac", "amount": -1}, {"type": "initiative", "amount": -2}]`. La fiche et l'inventaire le signalent.
 
 ### Défenses
 
@@ -452,14 +454,18 @@ Calcul des dégâts subis :
   - `size` : la catégorie de taille (`tiny`, `small`, `medium`, `large`), utilisable dans les conditions ;
   - `start_age` : l'âge au début de la partie, au moins `rules.json › majority_age` (18), comme l'étape `adult` ;
   - `age_stages` : l'âge de début de chaque étape de vie (conditions `life_stage`, portrait) ;
-  - `aging_age` : l'âge limite au-delà duquel le personnage vieillit (voir plus bas).
+  - `aging_age` : l'âge limite au-delà duquel le personnage vieillit (voir plus bas) ;
+  - `modifiers`? : ses traits (résistances, immunités, `relentless_endurance`…) ;
+  - `resources`? : ressources rechargées par un repos long (ex. `{"relentless_endurance": 1}` pour l'orc) ;
+  - `bonus_feats`? : dons en plus à choisir au début de la partie (1 pour l'humain).
 - **Classe** : `hit_die` (dé de vie) et `skills` (compétences maîtrisées). `ability_priority` donne le **modèle
   d'attributs** proposé : la répartition standard (15, 14, 13, 12, 10, 8) dans cet ordre, puis +2 sur le premier
   attribut et +1 sur le second.
 - **Passé** : `skills`, soit 2 compétences maîtrisées qui s'ajoutent à celles de la classe, et `feat`, le don accordé.
   Champs facultatifs : `gold` (or en plus au départ) et `start_items`.
-- `art` : les paramètres du portrait procédural. Pour une espèce : `ears` (`round`, `goblin`, `elf`) et des listes de
-  couleurs `skin`, `hair` et `eyes`. Pour une classe : `headgear` (`helmet`, `wizard_hat`, `hood`), `outfit` et
+- `art` : les paramètres du portrait procédural. Pour une espèce : `ears` (`round`, `goblin`, `elf`), des listes de
+  couleurs `skin`, `hair` et `eyes`, et en option `beard_chance` (probabilité d'une barbe), `tusks` (défenses),
+  `horns` et `horn_color` (cornes). Pour une classe : `headgear` (`helmet`, `wizard_hat`, `hood`), `outfit` et
   `accent`.
 
 ## Attributs : achat de points

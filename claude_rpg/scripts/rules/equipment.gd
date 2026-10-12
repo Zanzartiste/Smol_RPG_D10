@@ -8,8 +8,9 @@ extends RefCounted
 ##          "properties": ["finesse", "light", "thrown", "versatile", "heavy", "two_handed", "ranged"],
 ##          "versatile_damage": "1d10"}
 ## Armure : {"category": "armor", "armor_type": "clothing" | "light" | "medium" | "heavy", "base_ac": 11,
-##           "strength"?: N}  Force minimale pour la porter ; par défaut celle de son type
+##           "strength"?: N}  Force nécessaire pour la porter sans malus ; par défaut celle de son type
 ##           (rules.json › armor_strength : vêtements 0, légère 10, intermédiaire 12, lourde 14).
+##           En dessous, elle reste portable mais encombre (rules.json › encumbered_modifiers).
 ## Bouclier : {"category": "shield", "ac_bonus": 2}
 ## Accessoire : {"category": "accessory", "slot": "cloak" | "amulet" | "ring"}
 ## Facultatif pour tous : "modifiers" (voir Modifiers), "rarity", "value", "description" (voir Items).
@@ -111,7 +112,7 @@ static func attack_ability(id: String, str_mod: int, dex_mod: int) -> String:
 	return "str"
 
 
-## Force minimale pour porter un équipement (0 si aucune) : "strength" de l'objet, sinon celle de son
+## Force nécessaire pour porter un équipement sans malus (0 si aucune) : "strength" de l'objet, sinon celle de son
 ## type d'armure (rules.json › armor_strength).
 static func strength_required(id: String) -> int:
 	var item := def(id)
@@ -163,7 +164,7 @@ static func describe(id: String) -> String:
 			var text := "%s — CA %d (%s)" % [item["name"], int(item.get("base_ac", 10)),
 				ARMOR_TYPE_NAMES.get(item.get("armor_type", "light"), "")]
 			if strength_required(id) > 0:
-				text += Loc.ui(", FOR %d requise") % strength_required(id)
+				text += Loc.ui(", FOR %d") % strength_required(id)
 			return text
 		"shield":
 			return "%s — CA +%d" % [item["name"], int(item.get("ac_bonus", 2))]

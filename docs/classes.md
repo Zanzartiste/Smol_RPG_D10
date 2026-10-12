@@ -11,8 +11,9 @@
 - Améliorations aux niveaux 4, 8, 12, 16 et 20 : +1 à un attribut **et** un don (`rules.json › advancement`).
 - Chaque classe maîtrise **deux jets de sauvegarde**.
 - **Multiclassage** prévu : les niveaux d'amélioration et d'aptitudes se compteront par classe.
-- **Armures** : aucune restriction par classe. Seule compte la Force (vêtements 0, légère 10, intermédiaire 12,
-  lourde 14). Si le personnage n'a pas la Force de porter l'armure de départ de sa classe, elle reste dans son sac.
+- **Armures** : aucune restriction par classe ; toute armure peut être portée. Chaque type a une Force conseillée
+  (vêtements 0, légère 10, intermédiaire 12, lourde 14) : en dessous, le personnage est encombré et subit des malus
+  (à définir).
 - Une classe **n'impose aucun métier**, mais certaines s'y prêtent mieux (bonus ou actions spéciales dans les
   sous-systèmes d'artisanat, de cuisine…).
 - ⚠️ Licence : les classes du SRD 5.1 sont réutilisables (CC-BY 4.0). Les autres (Artificier, Alchimiste…) doivent
@@ -112,8 +113,8 @@ le SRD), sorts des niveaux 4 à 9, choix des sorts appris.
 - **Priorité des attributs** : DEX > CON > CHA > SAG > INT > FOR.
 - **Jets de sauvegarde maîtrisés** : Dextérité, Intelligence.
 - **Compétences maîtrisées** : Discrétion, Escamotage, Acrobaties, Perception.
-- **Équipement de départ** : rapière, armure de cuir (Force 10 requise : avec le modèle de la classe, FOR 8, elle reste
-  dans le sac).
+- **Équipement de départ** : rapière, armure de cuir (Force 10 conseillée : avec le modèle de la classe, FOR 8, il est
+  encombré).
 - **Lanceur de sorts** : non.
 - **Actions de départ** : Attaque, Attaque sournoise, Lame empoisonnée.
 

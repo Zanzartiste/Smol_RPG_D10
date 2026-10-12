@@ -48,7 +48,7 @@
 ### Humain (`human`)
 
 - **Concept** : polyvalents et ambitieux, les humains sont partout.
-- **Statut** : disponible.
+- **Statut** : disponible par défaut.
 - **Taille** : Moyenne.
 - **Âge de départ** : 18.
 - **Adolescent à** : 12.
@@ -56,7 +56,7 @@
 - **Âgé à** : 60.
 - **Vénérable à** : 80.
 - **Vieillit à partir de** : 60.
-- **Traits** : aucun.
+- **Traits** : Vous obtenez un don supplémentaire au choix (implémenté : le choix s'ouvre au début de la partie).
 - **Noms** : Aldric, Brenna, Cédric, Daria, Edwin, Fiora, Gareth, Helna, Ivo, Jessa.
 - **Descendance** : *à définir.*
 
@@ -89,15 +89,66 @@
 - **Traits** : immunisé contre le sommeil magique.
 - **Descendance** : *à définir* (le SRD prévoit le demi-elfe avec un humain).
 
+### Nain (`dwarf`)
+
+- **Concept** : petits, robustes et barbus. Mineurs, forgerons et bâtisseurs, ils ont la rancune aussi tenace que la peau.
+- **Statut** : disponible.
+- **Taille** : Moyenne (trapus plutôt que petits, comme dans le SRD).
+- **Âge de départ** : 50.
+- **Adolescent à** : 20.
+- **Adulte à** : 50.
+- **Âgé à** : 250.
+- **Vénérable à** : 330.
+- **Vieillit à partir de** : 250.
+- **Traits** : résistance au poison (implémentée).
+- **Traits possibles plus tard** : vision dans le noir, avantage aux sauvegardes contre le poison (il faudra le
+  système d'avantage), bonus en forge ou en connaissance de la pierre.
+- **Noms** : Thorgrim, Dagna, Brakka, Orsik, Helga, Durnak, Vistra, Kildrak, Runa, Barek. Plus tard : un nom de clan.
+- **Apparence** : peau claire à bronzée, cheveux bruns, roux ou gris ; barbe très fréquente (90 %).
+- **Descendance** : *à définir.*
+
+### Orc (`orc`)
+
+- **Concept** : grands, puissants et fiers, les orcs vivent intensément et tiennent debout là où d'autres tombent.
+- **Statut** : disponible.
+- **Taille** : Moyenne.
+- **Âge de départ** : 18.
+- **Adolescent à** : 12.
+- **Adulte à** : 18.
+- **Âgé à** : 50.
+- **Vénérable à** : 65.
+- **Vieillit à partir de** : 50 (vie courte, comme le demi-orc du SRD).
+- **Traits** : Endurance implacable : une fois par repos long, l'orc tombe à 1 PV au lieu de 0 (implémentée).
+- **Traits possibles plus tard** : vision dans le noir ; Attaques sauvages (critiques plus violents) ; bonus
+  d'Intimidation.
+- **Noms** : Grosh, Ukra, Murzag, Thokk, Yrsa, Bolgra, Kharn, Shagra, Durza, Rokh.
+- **Apparence** : peau verte, olive ou grise ; défenses ; yeux rouges ou ambrés.
+- **Descendance** : *à définir* (le SRD prévoit le demi-orc avec un humain).
+
+### Tieffelin (`tiefling`)
+
+- **Concept** : une ascendance infernale marque leur corps de cornes et de flammes ; beaucoup s'en méfient.
+- **Statut** : disponible.
+- **Taille** : Moyenne.
+- **Âge de départ** : 18.
+- **Adolescent à** : 12.
+- **Adulte à** : 18.
+- **Âgé à** : 70.
+- **Vénérable à** : 90.
+- **Vieillit à partir de** : 70.
+- **Traits** : résistance au feu (implémentée).
+- **Idée de trait** : (ou dépendant d'un choix basé sur un démon majeur). Piste : une **ascendance** choisie à la
+  création, chacune avec sa résistance et un petit sort (feu, froid, nécrotique…). Il faudrait alors un choix
+  supplémentaire dans l'écran de création, à l'image des sous-classes.
+- **Noms** : Méphara, Ilzac, Vhorn, Saelith, Akzar, Nyx, et des noms de vertu : Espérance, Tourment, Audace, Chant.
+- **Apparence** : peau rouge, prune, rosée ou violette ; cornes ; yeux dorés, blancs ou rouges.
+- **Descendance** : *à définir* (le sang infernal peut-il ressurgir chez un enfant de parents non tieffelins ?).
+
 ---
 
 ## Espèces candidates (à compléter)
 
-### Nain (SRD)
 
-- **Taille** : Moyenne.
-- **Idée de trait** : résistance au poison.
-- **Priorité** : ?
 
 ### Halfelin (SRD)
 
@@ -111,26 +162,10 @@
 - **Idée de trait** : avantage aux sauvegardes mentales contre la magie.
 - **Priorité** : ?
 
-### Demi-orc (SRD)
-
-- **Taille** : Moyenne.
-- **Idée de trait** : Endurance acharnée (tombe à 1 PV au lieu de 0, une fois).
-- **Priorité** : ?
-
-### Demi-elfe (SRD)
-
-- **Taille** : Moyenne.
-- **Idée de trait** : Polyvalence (compétences en plus).
-- **Priorité** : ?
-
 ### Drakéide (SRD)
 
 - **Taille** : Moyenne.
 - **Idée de trait** : souffle et résistance selon l'ascendance draconique.
 - **Priorité** : ?
 
-### Tieffelin (SRD)
 
-- **Taille** : Moyenne.
-- **Idée de trait** : résistance au feu.
-- **Priorité** : ?

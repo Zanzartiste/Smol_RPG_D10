@@ -145,6 +145,8 @@ func _fill_equipment() -> void:
 			Items.bbcode_name(item_id) if item_id != "" else "[color=%s]—[/color]" % dim]
 		if item_id != "":
 			label.tooltip_text = Items.summary(item_id)
+			if _member.encumbrance_reason(item_id) != "":
+				label.text += " [color=%s](%s)[/color]" % [UITheme.BAD.to_html(false), tr("encombrant")]
 		row.add_child(label)
 		if item_id != "" and item_id != Equipment.UNARMED:
 			row.add_child(_small_button(tr("Retirer"), _on_unequip.bind(slot)))
@@ -179,11 +181,8 @@ func _fill_bag() -> void:
 		label.tooltip_text = Items.description_of(item_id)
 		row.add_child(label)
 		if Items.is_equipment(item_id):
-			var equip := _small_button(tr("Équiper"), _on_equip.bind(item_id))
-			var problem := _member.wear_problem(item_id)
-			equip.disabled = problem != ""
-			equip.tooltip_text = problem
-			row.add_child(equip)
+			row.add_child(_small_button(tr("Équiper"), _on_equip.bind(item_id)))
+			var problem := _member.encumbrance_reason(item_id)
 			if problem != "":
 				label.text += "\n[font_size=14][color=%s]%s : %s[/color][/font_size]" % [UITheme.BAD.to_html(false),
 					_member.name, problem]

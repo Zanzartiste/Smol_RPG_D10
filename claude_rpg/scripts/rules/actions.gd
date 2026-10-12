@@ -41,4 +41,5 @@ static func text_of(id: String) -> String:
 static func resource_name(resource_id: String) -> String:
 	if Spellcasting.is_slot(resource_id):
 		return Loc.ui("emplacement de sort de niveau %d") % Spellcasting.slot_level(resource_id)
-	return {"spell_slot": Loc.ui("emplacement de sort"), "indomitable": Loc.ui("Inflexible")}.get(resource_id, resource_id)
+	return {"spell_slot": Loc.ui("emplacement de sort"), "indomitable": Loc.ui("Inflexible"),
+		"relentless_endurance": Loc.ui("Endurance implacable")}.get(resource_id, resource_id)

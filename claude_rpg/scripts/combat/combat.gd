@@ -559,6 +559,11 @@ func _deal_damage(source: Combatant, target: Combatant, amount: int, type: Strin
 				amount -= absorbed
 				notes.append(Loc.ui("%d absorbé(s)") % absorbed)
 	target.hp = maxi(0, target.hp - amount)
+	if target.hp == 0 and target.has_modifier("relentless_endurance") \
+			and int(target.character.resources.get("relentless_endurance", 0)) > 0:
+		target.character.resources["relentless_endurance"] = int(target.character.resources["relentless_endurance"]) - 1
+		target.hp = 1
+		notes.append(Loc.ui("endurance implacable : reste à 1 PV"))
 	var suffix := (" (%s)." % ", ".join(notes)) if not notes.is_empty() else "."
 	if not target.is_alive():
 		suffix += " " + _on_down(target, source, death_cause)
