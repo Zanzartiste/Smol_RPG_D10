@@ -3,6 +3,9 @@ extends RefCounted
 ## API des dons (Vigilant, Robuste…). Définitions : data/feats.json.
 ## Un don a des prérequis (mêmes conditions que les événements, évaluées sur le personnage)
 ## et des modificateurs (voir Modifiers) appliqués automatiquement au personnage qui le possède.
+## On obtient un don : par son passé (backgrounds.json › feat), aux niveaux de rules.json › feat_levels
+## (au choix du joueur), ou par un événement (effet add_feat).
+## Catégories : "origin" (dons d'origine, ceux des passés) et "general".
 
 
 static func ids() -> Array[String]:
@@ -27,6 +30,29 @@ static func name_of(id: String) -> String:
 
 static func description_of(id: String) -> String:
 	return DB.feats.get(id, {}).get("description", "")
+
+
+static func category_of(id: String) -> String:
+	return DB.feats.get(id, {}).get("category", "general")
+
+
+## Description complète : texte + effets, ex. « Votre endurance… (+2 PV par niveau) ».
+static func summary_of(id: String) -> String:
+	var mods := Modifiers.describe_all(modifiers_of(id))
+	return description_of(id) + (" (%s)" % mods if mods != "" else "")
+
+
+## Don accordé par un passé ("" si aucun).
+static func for_background(background_id: String) -> String:
+	return DB.backgrounds.get(background_id, {}).get("feat", "")
+
+
+## Niveaux auxquels on choisit un nouveau don.
+static func levels() -> Array[int]:
+	var result: Array[int] = []
+	for level in DB.rules.get("feat_levels", []):
+		result.append(int(level))  # le JSON donne des décimaux (2.0) : `2 in [2.0]` serait faux
+	return result
 
 
 static func modifiers_of(id: String) -> Array:

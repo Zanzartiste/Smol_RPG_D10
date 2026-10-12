@@ -116,10 +116,13 @@ func damage_expr(action: Dictionary) -> String:
 	if character == null:
 		return expr
 	var ability := character.action_ability(action.get("ability", "weapon"))
+	var bonus := 0
 	if expr == "weapon":
 		expr = character.weapon_damage()
+		bonus += Modifiers.sum(character.modifiers(), "weapon_damage")
 	if action.get("add_mod", false):
-		expr = Dice.add_mod(expr, character.ability_mod(ability))
+		bonus += character.ability_mod(ability)
+	expr = Dice.add_mod(expr, bonus)
 	if action.has("extra_damage"):
 		expr += "+" + action["extra_damage"]
 	return expr

@@ -7,6 +7,7 @@ extends Control
 
 const CREATION_SCENE := "res://scenes/creation.tscn"
 const COMBAT_LOG_LINES := 9
+const MAX_CHOICES_HEIGHT := 330  # au-delà, la liste de choix défile
 
 ## Émis quand le joueur a choisi l'action (et la cible) d'un allié pendant un combat.
 signal _combat_choice_made(choice: Dictionary)
@@ -20,6 +21,7 @@ signal _combat_choice_made(choice: Dictionary)
 @onready var title_label: Label = %TitleLabel
 @onready var body_text: RichTextLabel = %BodyText
 @onready var choices_box: VBoxContainer = %Choices
+@onready var choices_scroll: ScrollContainer = %ChoicesScroll
 
 var _debug_badge := Label.new()
 var _event_on_screen: Dictionary = {}  # événement dont les choix sont affichés (pour les réafficher en debug)
@@ -63,6 +65,11 @@ func _unhandled_key_input(event: InputEvent) -> void:
 # --- Écrans ------------------------------------------------------------------
 
 func _show_hub() -> void:
+	# Un membre du groupe a gagné un don en montant de niveau : on le lui fait choisir d'abord.
+	for member in Game.life.party():
+		if member.can_choose_feat():
+			_show_feat_choice(member)
+			return
 	var life := Game.life
 	illustration.texture = ArtProvider.location_image("town", life)
 	title_label.text = tr("Jour %d — %s") % [life.day, life.slot_name()]
@@ -134,7 +141,26 @@ func _show_death() -> void:
 	_add_choice(tr("Commencer une nouvelle vie"), _on_new_life)
 
 
+func _show_feat_choice(member: Character) -> void:
+	title_label.text = tr("Nouveau don — %s") % member.name
+	body_text.text = tr("%s a atteint le niveau %d et peut choisir un nouveau don.") % [member.name, member.level]
+	if member.pending_feats > 1:
+		body_text.text += " " + tr("(%d dons à choisir)") % member.pending_feats
+	_clear_choices()
+	for feat_id in member.available_feats():
+		var button := _add_choice("%s — %s" % [Feats.name_of(feat_id), Modifiers.describe_all(Feats.modifiers_of(feat_id))],
+			_on_feat_chosen.bind(member, feat_id))
+		button.tooltip_text = Feats.description_of(feat_id)
+
+
 # --- Actions -----------------------------------------------------------------
+
+func _on_feat_chosen(member: Character, feat_id: String) -> void:
+	member.choose_feat(feat_id)
+	_refresh_sheet()
+	_show_hub()
+
+
 
 func _on_location_chosen(location_id: String) -> void:
 	_show_event(Game.draw_event(location_id))
@@ -305,7 +331,7 @@ func _clear_choices() -> void:
 		child.queue_free()
 
 
-func _add_choice(text: String, callback: Callable, enabled := true) -> void:
+func _add_choice(text: String, callback: Callable, enabled := true) -> Button:
 	var button := Button.new()
 	button.text = "%d. %s" % [choices_box.get_child_count() + 1, text]
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -313,6 +339,14 @@ func _add_choice(text: String, callback: Callable, enabled := true) -> void:
 	button.disabled = not enabled
 	button.pressed.connect(callback, CONNECT_DEFERRED)
 	choices_box.add_child(button)
+	_fit_choices.call_deferred()
+	return button
+
+
+## La zone des choix prend la hauteur de son contenu, sans dépasser MAX_CHOICES_HEIGHT (elle défile alors).
+func _fit_choices() -> void:
+	choices_scroll.custom_minimum_size.y = mini(int(choices_box.get_combined_minimum_size().y), MAX_CHOICES_HEIGHT)
+	choices_scroll.scroll_vertical = 0
 
 
 # --- Mode debug --------------------------------------------------------------

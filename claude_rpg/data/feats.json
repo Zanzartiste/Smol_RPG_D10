@@ -2,26 +2,118 @@
 	{
 		"id": "alert",
 		"name": "Vigilant",
+		"category": "origin",
 		"description": "Toujours sur le qui-vive, vous êtes difficile à prendre au dépourvu.",
 		"modifiers": [{"type": "initiative", "amount": 5}]
 	},
 	{
 		"id": "tough",
 		"name": "Robuste",
+		"category": "origin",
 		"description": "Votre endurance est hors du commun.",
 		"modifiers": [{"type": "hp_per_level", "amount": 2}]
 	},
 	{
+		"id": "healer",
+		"name": "Guérisseur",
+		"category": "origin",
+		"description": "Vous savez panser les plaies du corps comme celles de l'âme.",
+		"modifiers": [{"type": "ability", "id": "wis", "amount": 1}, {"type": "skill_proficiency", "id": "medicine"}]
+	},
+	{
+		"id": "crafter",
+		"name": "Artisan accompli",
+		"category": "origin",
+		"description": "Un œil exercé repère la moindre malfaçon… et le moindre détail suspect.",
+		"modifiers": [{"type": "skill_proficiency", "id": "investigation"}, {"type": "skill_proficiency", "id": "perception"}]
+	},
+	{
+		"id": "silver_tongue",
+		"name": "Langue d'argent",
+		"category": "origin",
+		"description": "Vous trouvez toujours les mots, surtout ceux qui ne sont pas vrais.",
+		"modifiers": [{"type": "ability", "id": "cha", "amount": 1}, {"type": "skill_proficiency", "id": "persuasion"}]
+	},
+	{
+		"id": "musician",
+		"name": "Musicien",
+		"category": "origin",
+		"description": "Votre talent apaise les foules et vous ouvre bien des portes.",
+		"modifiers": [{"type": "ability", "id": "cha", "amount": 1}, {"type": "skill_proficiency", "id": "insight"}]
+	},
+	{
+		"id": "skilled",
+		"name": "Doué",
+		"category": "origin",
+		"description": "Une éducation soignée vous a ouvert à de nombreux domaines.",
+		"modifiers": [
+			{"type": "skill_proficiency", "id": "insight"},
+			{"type": "skill_proficiency", "id": "intimidation"},
+			{"type": "skill_proficiency", "id": "religion"}
+		]
+	},
+	{
 		"id": "athlete",
 		"name": "Athlète",
+		"category": "origin",
 		"description": "Un entraînement physique rigoureux a forgé votre corps.",
 		"modifiers": [{"type": "ability", "id": "str", "amount": 1}, {"type": "skill_proficiency", "id": "athletics"}]
 	},
 	{
+		"id": "scholar",
+		"name": "Érudit des arcanes",
+		"category": "origin",
+		"description": "Des nuits entières passées sur les grimoires ont aiguisé votre esprit.",
+		"modifiers": [{"type": "ability", "id": "int", "amount": 1}, {"type": "skill_proficiency", "id": "nature"}]
+	},
+	{
+		"id": "savage_attacker",
+		"name": "Frappe brutale",
+		"category": "origin",
+		"description": "Vos coups d'arme portent avec une violence redoutable.",
+		"modifiers": [{"type": "weapon_damage", "amount": 1}]
+	},
+	{
+		"id": "nimble",
+		"name": "Agile",
+		"category": "origin",
+		"description": "Les ruelles vous ont appris à esquiver, sauter et filer.",
+		"modifiers": [{"type": "ability", "id": "dex", "amount": 1}, {"type": "skill_proficiency", "id": "acrobatics"}]
+	},
+	{
 		"id": "defensive_duelist",
 		"name": "Duelliste défensif",
-		"description": "Vous savez parer les coups avec une arme de finesse.",
+		"category": "general",
+		"description": "Vous savez parer les coups grâce à votre agilité.",
 		"prerequisites": [{"type": "ability", "id": "dex", "min": 13}],
 		"modifiers": [{"type": "ac", "amount": 1}]
+	},
+	{
+		"id": "resilient",
+		"name": "Résistant",
+		"category": "general",
+		"description": "Votre corps s'est endurci face aux poisons.",
+		"prerequisites": [{"type": "ability", "id": "con", "min": 13}],
+		"modifiers": [
+			{"type": "ability", "id": "con", "amount": 1},
+			{"type": "resistance", "damage_type": "poison"},
+			{"type": "status_immunity", "status": "poisoned"}
+		]
+	},
+	{
+		"id": "elemental_adept",
+		"name": "Adepte élémentaire",
+		"category": "general",
+		"description": "À force de manier le feu, vous avez appris à le dompter.",
+		"prerequisites": [{"type": "class", "in": ["wizard"]}],
+		"modifiers": [{"type": "ability", "id": "int", "amount": 1}, {"type": "resistance", "damage_type": "fire"}]
+	},
+	{
+		"id": "heavy_armor_training",
+		"name": "Entraînement aux armures lourdes",
+		"category": "general",
+		"description": "Vous encaissez mieux les coups sous le métal.",
+		"prerequisites": [{"type": "level", "min": 4}],
+		"modifiers": [{"type": "ability", "id": "str", "amount": 1}, {"type": "ac", "amount": 1}]
 	}
 ]

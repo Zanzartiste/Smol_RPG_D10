@@ -65,9 +65,12 @@ func _test_character() -> bool:
 	var c := Character.create("goblin", "wizard", "Grik", {"background": "sage", "gender": "female"})
 	_expect(c.abilities["int"] == 17 and c.abilities["con"] == 15, "modèle du magicien : INT 15+2, CON 14+1")
 	_expect(c.abilities["dex"] == 13 and c.abilities["str"] == 8, "l'espèce ne modifie pas les attributs")
-	_expect(c.ability_mod("int") == 3 and c.ability_mod("str") == -1, "modificateurs")
-	_expect(c.skill_mod("arcana") == 5, "Arcanes maîtrisé (classe) : +3 +2")
-	_expect(c.is_proficient("history") and c.skill_mod("history") == 5, "Histoire maîtrisée (passé Érudit)")
+	# Passé Érudit -> don « Érudit des arcanes » : +1 INT (17 -> 18) et maîtrise de Nature.
+	_expect(c.has_feat("scholar") and c.ability_score("int") == 18, "don du passé appliqué à la création")
+	_expect(c.ability_mod("int") == 4 and c.ability_mod("str") == -1, "modificateurs")
+	_expect(c.skill_mod("arcana") == 6, "Arcanes maîtrisé (classe) : +4 +2")
+	_expect(c.is_proficient("history") and c.skill_mod("history") == 6, "Histoire maîtrisée (passé Érudit)")
+	_expect(c.is_proficient("nature"), "Nature maîtrisée (don du passé)")
 	_expect(c.skill_mod("athletics") == -1, "Athlétisme non maîtrisé : -1")
 	_expect(c.max_hp == 6 + 2, "PV : d6 + CON")
 	_expect(c.size() == "small" and Character.create("human", "wizard", "H").size() == "medium",
@@ -158,6 +161,22 @@ func _test_feats() -> bool:
 	_expect(c.is_proficient("athletics"), "Athlète : maîtrise d'Athlétisme")
 	_expect(Conditions.check({"type": "has_feat", "id": "alert"}, life, Meta), "condition has_feat")
 	_expect(not c.add_feat("alert"), "pas de don en double")
+
+	# Chaque passé accorde un don ; les dons de niveau se choisissent aux niveaux de rules.json › feat_levels.
+	for bg_id: String in DB.backgrounds:
+		_expect(Feats.has(Feats.for_background(bg_id)), "le passé %s accorde un don" % bg_id)
+	var soldier := Character.create("human", "fighter", "Soldat", {"background": "soldier"})
+	var sword := Combatant.from_character(soldier, true)
+	_expect(sword.damage_expr(DB.actions["weapon_attack"]) == "1d10+4", "Frappe brutale : +1 aux dégâts d'arme")
+	var hero := Character.create("human", "fighter", "Héros")
+	hero.add_xp(300)
+	_expect(hero.level == 2 and hero.pending_feats == 1 and hero.can_choose_feat(), "niveau 2 : un don à choisir")
+	_expect("alert" in hero.available_feats() and "elemental_adept" not in hero.available_feats(),
+		"dons disponibles selon les prérequis")
+	_expect(not hero.choose_feat("elemental_adept"), "impossible de choisir un don sans les prérequis")
+	_expect(hero.choose_feat("alert") and hero.pending_feats == 0 and hero.has_feat("alert"), "choix d'un don")
+	hero.add_xp(600)
+	_expect(hero.level == 3 and hero.pending_feats == 0, "niveau 3 : pas de don")
 	var clumsy := Character.create("human", "wizard", "x",
 		{"abilities": {"str": 8, "dex": 10, "con": 14, "int": 15, "wis": 12, "cha": 13}})
 	_expect(not Feats.meets_prerequisites("defensive_duelist", clumsy),

@@ -290,6 +290,9 @@ func _class_info(cls: Dictionary) -> String:
 func _background_info(background: Dictionary) -> String:
 	var text := "[i]%s[/i]\n%s" % [
 		Loc.gendered(background.get("description", ""), _gender), _field(tr("Maîtrises :"), _skill_names(background.get("skills", [])))]
+	var feat_id := Feats.for_background(background["id"])
+	if feat_id != "":
+		text += "\n" + _field(tr("Don :"), "%s — %s" % [Feats.name_of(feat_id), Feats.summary_of(feat_id)])
 	if background.has("gold"):
 		text += "   " + _field(tr("Or :"), "+%d po" % int(background["gold"]))
 	return text

@@ -11,6 +11,7 @@ var background_id := ""  # passé ("" = aucun)
 var gender := ""  # sans effet sur l'apparence ; sert aux accords dans les textes
 var abilities: Dictionary = {}  # valeurs de base (achat de points, vieillesse…) ; voir ability_score()
 var feats: Array[String] = []  # dons
+var pending_feats := 0  # dons à choisir (gagnés en montant de niveau)
 var equipment: Dictionary = {}  # emplacement (Equipment.SLOTS) -> id d'équipement
 var defenses := Defenses.new()  # défenses propres au personnage (accordées par des événements)
 var level := 1
@@ -43,6 +44,9 @@ static func create(species: String, cls: String, char_name: String, options: Dic
 	for ability in Abilities.ids():
 		c.abilities[ability] = int(scores.get(ability, 10))
 	c.equipment = class_data.get("equipment", {}).duplicate()
+	var background_feat := Feats.for_background(c.background_id)
+	if background_feat != "":
+		c.feats.append(background_feat)
 
 	c.max_hp = c.compute_max_hp()
 	c.hp = c.max_hp
@@ -152,6 +156,28 @@ func add_feat(feat_id: String) -> bool:
 	feats.append(feat_id)
 	refresh_max_hp()  # le don peut changer la CON ou les PV par niveau
 	return true
+
+
+## Dons que le personnage peut choisir : prérequis remplis et pas encore possédés.
+func available_feats() -> Array[String]:
+	var result: Array[String] = []
+	for feat_id in Feats.ids():
+		if not has_feat(feat_id) and Feats.meets_prerequisites(feat_id, self):
+			result.append(feat_id)
+	return result
+
+
+## Le personnage a-t-il un don à choisir (et au moins un don disponible) ?
+func can_choose_feat() -> bool:
+	return pending_feats > 0 and not available_feats().is_empty()
+
+
+## Choisit un des dons gagnés en montant de niveau.
+func choose_feat(feat_id: String) -> bool:
+	if pending_feats <= 0 or feat_id not in available_feats():
+		return false
+	pending_feats -= 1
+	return add_feat(feat_id)
 
 
 # --- Équipement --------------------------------------------------------------
@@ -264,6 +290,7 @@ func refresh_max_hp() -> void:
 
 
 ## Ajoute de l'XP et retourne la liste des niveaux atteints.
+## Atteindre un niveau de Feats.levels() donne un don à choisir (pending_feats).
 func add_xp(amount: int) -> Array[int]:
 	xp += amount
 	var reached: Array[int] = []
@@ -271,6 +298,8 @@ func add_xp(amount: int) -> Array[int]:
 	while level < table.size() and xp >= int(table[level]):
 		level += 1
 		refresh_max_hp()
+		if level in Feats.levels():
+			pending_feats += 1
 		reached.append(level)
 	return reached
 

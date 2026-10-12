@@ -82,6 +82,8 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 				lines.append(Loc.ui("%s XP") % _signed(int(e["amount"])))
 				for new_level in ch.add_xp(int(e["amount"])):
 					lines.append(Loc.ui("Niveau %d atteint !") % new_level)
+					if new_level in Feats.levels():
+						lines.append(Loc.ui("Un nouveau don pourra être choisi."))
 			"ability":
 				var id: String = e["id"]
 				lines.append("%s %s" % [_signed(int(e["amount"])), Abilities.short_of(id)])

@@ -44,6 +44,15 @@ func _ready() -> void:
 			await get_tree().process_frame
 		await _capture("6_result.png")
 
+	# Montée au niveau 2 : choix d'un don.
+	if not Game.life.dead:
+		Game.life.character.add_xp(300)
+		main._refresh_sheet()
+		main._show_hub()
+		await _capture("6b_feat_choice.png")
+		main.choices_box.get_child(0).pressed.emit()
+		await _wait_frames(3)
+
 	# Combat avec Mira contre un groupe mixte.
 	Effects.apply_all([{"type": "recruit", "companion": "mira"}], Game.life, Meta)
 	Game.life.character.hp = Game.life.character.max_hp

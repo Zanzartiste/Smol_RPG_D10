@@ -193,8 +193,8 @@ l'architecture dès le départ, voir §9).
   modèle.
 - **Compétences** : les **18 compétences** de D&D. La classe et le passé déterminent celles qui sont maîtrisées. Elles
   servent aux tests des événements (d20 + modificateur contre un DD).
-- **Dons** : le système existe (`feats.json`, avec des modificateurs et des prérequis). Ils s'obtiennent pour l'instant
-  par des événements (`add_feat`). Le choix d'un don à la création ou aux montées de niveau reste à décider.
+- **Dons** : chaque passé accorde un don d'origine. On en choisit un nouveau aux niveaux 2 et 4 (réglable dans
+  `rules.json › feat_levels`), et les événements peuvent en donner (`add_feat`).
 - **Équipement, types de dégâts et défenses** : un catalogue centralisé (`equipment.json`) et les 13 types de dégâts
   du SRD. Résistances, immunités et vulnérabilités sont gérées pour les personnages comme pour les ennemis. Voir
   [modele_donnees.md](modele_donnees.md) › Règles centralisées.

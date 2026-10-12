@@ -12,6 +12,7 @@ const SCHEMA := {
 	"hp_per_level": ["amount"],  # PV max en plus, par niveau
 	"initiative": ["amount"],  # bonus d'initiative
 	"ac": ["amount"],  # bonus de CA
+	"weapon_damage": ["amount"],  # bonus aux dégâts des attaques d'arme
 	"resistance": ["damage_type"],
 	"immunity": ["damage_type"],
 	"vulnerability": ["damage_type"],
@@ -64,6 +65,8 @@ static func describe(m: Dictionary) -> String:
 			return Loc.ui("%s à l'initiative") % signed
 		"ac":
 			return Loc.ui("%s CA") % signed
+		"weapon_damage":
+			return Loc.ui("%s aux dégâts d'arme") % signed
 		"resistance":
 			return Loc.ui("Résistance : %s") % DamageTypes.name_of(m["damage_type"])
 		"immunity":

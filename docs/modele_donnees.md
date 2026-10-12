@@ -237,8 +237,14 @@ suivent automatiquement.
 }
 ```
 
-Les prérequis s'écrivent comme les conditions des événements. Un personnage obtient un don avec l'effet `add_feat`, et
-un compagnon peut en avoir dans `companions.json` (`feats`).
+Les prérequis s'écrivent comme les conditions des événements. `category` vaut `origin` (dons d'origine) ou `general`.
+
+**Obtention d'un don :**
+- **Passé** : chaque passé accorde un don dès la création (`backgrounds.json › feat`, obligatoire).
+- **Niveau** : aux niveaux de `rules.json › feat_levels` (par défaut [2, 4]), le personnage, héros ou compagnon, choisit
+  un don parmi ceux dont il remplit les prérequis. L'écran de choix s'ouvre avant le retour au hub.
+- **Événement** : l'effet `add_feat`.
+- **Compagnon** : il peut en avoir d'office dans `companions.json` (`feats`).
 
 ### Modificateurs
 
@@ -251,6 +257,7 @@ Les dons, les espèces et les équipements peuvent porter des `modifiers`. Ils s
 | `hp_per_level` | `amount` | PV max en plus, à chaque niveau |
 | `initiative` | `amount` | Bonus d'initiative |
 | `ac` | `amount` | Bonus de CA |
+| `weapon_damage` | `amount` | Bonus aux dégâts des attaques d'arme |
 | `resistance` / `immunity` / `vulnerability` | `damage_type` | Défense contre un type de dégâts |
 | `status_immunity` | `status` | Immunité à un état |
 
@@ -302,8 +309,8 @@ Calcul des dégâts subis :
 - **Classe** : `hit_die` (dé de vie) et `skills` (compétences maîtrisées). `ability_priority` donne le **modèle
   d'attributs** proposé : la répartition standard (15, 14, 13, 12, 10, 8) dans cet ordre, puis +2 sur le premier
   attribut et +1 sur le second.
-- **Passé** : `skills`, soit 2 compétences maîtrisées qui s'ajoutent à celles de la classe. Champs facultatifs : `gold`
-  (or en plus au départ) et `start_items`.
+- **Passé** : `skills`, soit 2 compétences maîtrisées qui s'ajoutent à celles de la classe, et `feat`, le don accordé.
+  Champs facultatifs : `gold` (or en plus au départ) et `start_items`.
 - `art` : les paramètres du portrait procédural. Pour une espèce : `ears` (`round`, `goblin`, `elf`) et des listes de
   couleurs `skin`, `hair` et `eyes`. Pour une classe : `headgear` (`helmet`, `wizard_hat`, `hood`), `outfit` et
   `accent`.

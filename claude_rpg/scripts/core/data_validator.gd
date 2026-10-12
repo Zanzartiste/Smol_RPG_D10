@@ -45,6 +45,8 @@ static func _validate_rule_tables(db: Node, errors: Array[String]) -> void:
 
 	for feat: Dictionary in db.feats.values():
 		var ctx := "feats.json › %s" % feat["id"]
+		if feat.get("category", "general") not in ["origin", "general"]:
+			errors.append(ctx + " : catégorie inconnue « %s » (origin ou general)" % feat.get("category"))
 		_validate_modifiers(db, feat.get("modifiers", []), ctx, errors, true)
 		_validate_conditions(db, feat.get("prerequisites", []), ctx + " › prerequisites", errors)
 
@@ -161,6 +163,10 @@ static func _validate_backgrounds(db: Node, errors: Array[String]) -> void:
 		var ctx := "backgrounds.json › %s" % background["id"]
 		if background.get("skills", []).is_empty():
 			errors.append(ctx + " : aucune compétence maîtrisée")
+		if background.has("feat"):
+			_expect_ref(db.feats, background["feat"], "don", ctx, errors)
+		else:
+			errors.append(ctx + " : chaque passé doit accorder un don (feat)")
 		_validate_skills_and_items(db, background, ctx, errors)
 
 

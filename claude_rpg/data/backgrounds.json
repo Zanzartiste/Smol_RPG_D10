@@ -3,67 +3,78 @@
 		"id": "acolyte",
 		"name": "Acolyte",
 		"description": "Vous avez grandi au service d'un temple, entre prières et rites.",
-		"skills": ["religion", "insight"]
+		"skills": ["religion", "insight"],
+		"feat": "healer"
 	},
 	{
 		"id": "artisan",
 		"name": "Artisan",
 		"description": "Membre d'une guilde, vous connaissez la valeur du travail bien fait et des contrats bien négociés.",
-		"skills": ["insight", "persuasion"]
+		"skills": ["insight", "persuasion"],
+		"feat": "crafter"
 	},
 	{
 		"id": "charlatan",
 		"name": "Charlatan",
 		"description": "Faux remèdes, fausses identités, vrais profits. Vous savez vendre n'importe quoi.",
-		"skills": ["deception", "sleight_of_hand"]
+		"skills": ["deception", "sleight_of_hand"],
+		"feat": "silver_tongue"
 	},
 	{
 		"id": "criminal",
 		"name": "Criminel",
 		"description": "Vous avez vécu de l'autre côté de la loi, et vous en connaissez encore les ficelles.",
-		"skills": ["deception", "stealth"]
+		"skills": ["deception", "stealth"],
+		"feat": "alert"
 	},
 	{
 		"id": "entertainer",
 		"name": "Saltimbanque",
 		"description": "Acrobate, musicien ou conteur, vous avez fait rire et pleurer bien des tavernes.",
-		"skills": ["acrobatics", "performance"]
+		"skills": ["acrobatics", "performance"],
+		"feat": "musician"
 	},
 	{
 		"id": "folk_hero",
 		"name": "Héros du peuple",
 		"description": "Simple {g:villageois|villageoise|villageois·e}, vous vous êtes un jour {g:dressé|dressée|dressé·e} contre l'injustice. On s'en souvient encore.",
-		"skills": ["animal_handling", "survival"]
+		"skills": ["animal_handling", "survival"],
+		"feat": "tough"
 	},
 	{
 		"id": "noble",
 		"name": "Noble",
 		"description": "{g:Né|Née|Né·e} dans la soie, vous connaissez l'étiquette, les lignées et le pouvoir d'un nom.",
 		"skills": ["history", "persuasion"],
+		"feat": "skilled",
 		"gold": 25
 	},
 	{
 		"id": "outlander",
 		"name": "Sauvageon",
 		"description": "Vous avez grandi loin des villes, au rythme des saisons et des bêtes sauvages.",
-		"skills": ["athletics", "survival"]
+		"skills": ["athletics", "survival"],
+		"feat": "athlete"
 	},
 	{
 		"id": "sage",
 		"name": "Érudit",
 		"description": "Des années passées dans les bibliothèques ont fait de vous un puits de savoir.",
-		"skills": ["arcana", "history"]
+		"skills": ["arcana", "history"],
+		"feat": "scholar"
 	},
 	{
 		"id": "soldier",
 		"name": "Soldat",
 		"description": "Vous avez servi dans une armée. La discipline et le fracas des armes vous sont familiers.",
-		"skills": ["athletics", "intimidation"]
+		"skills": ["athletics", "intimidation"],
+		"feat": "savage_attacker"
 	},
 	{
 		"id": "urchin",
 		"name": "Gamin des rues",
 		"description": "{g:Orphelin|Orpheline|Orphelin·e}, vous avez survécu dans les ruelles grâce à vos doigts agiles et à votre discrétion.",
-		"skills": ["sleight_of_hand", "stealth"]
+		"skills": ["sleight_of_hand", "stealth"],
+		"feat": "nimble"
 	}
 ]
