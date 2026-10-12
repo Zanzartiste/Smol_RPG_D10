@@ -98,8 +98,11 @@ func _show_death() -> void:
 	var life := Game.life
 	var ch := life.character
 	title_label.text = tr("Fin d'une vie")
-	body_text.text = tr("%s, %s %s, s'éteint à l'âge de %d ans, au %de jour de son aventure.") % [
-		ch.name, DB.races[ch.race_id]["name"], DB.classes[ch.class_id]["name"], ch.age_years(), life.day]
+	body_text.text = ""
+	for notice in life.take_notices():
+		body_text.text += "[color=%s]• %s[/color]\n" % [UITheme.GOLD.to_html(false), notice]
+	body_text.text += tr("%s, %s %s, s'éteint à l'âge de %d ans, au %de jour de son aventure.") % [
+		ch.name, DB.species[ch.species_id]["name"], DB.classes[ch.class_id]["name"], ch.age_years(), life.day]
 	body_text.text += "\n\n[color=%s]%s[/color]" % [UITheme.BAD.to_html(false), life.death_cause]
 	body_text.text += "\n\n" + tr("Vies vécues dans ce monde : %d") % Meta.chronicle.size()
 	_clear_choices()

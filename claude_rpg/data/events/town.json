@@ -170,7 +170,7 @@
 		"location": "town",
 		"weight": 8,
 		"cooldown_days": 3,
-		"conditions": [{"type": "race", "in": ["goblin"]}],
+		"conditions": [{"type": "species", "in": ["goblin"]}],
 		"title": "Contrôle de routine",
 		"text": "Deux gardes vous barrent la route. « Un gobelin en ville ? Vide tes poches, l'avorton. »",
 		"choices": [
@@ -219,6 +219,16 @@
 		"text": "Parmi les piles de vieux livres d'un relieur, un grimoire couvert de runes elfiques attire votre regard.",
 		"choices": [
 			{
+				"id": "read_sage",
+				"text": "Reconnaître l'écriture grâce à vos années d'étude",
+				"conditions": [{"type": "background", "in": ["sage"]}],
+				"hide_if_locked": true,
+				"outcome": {
+					"text": "Vous avez déjà croisé cet alphabet dans un traité poussiéreux. Les runes décrivent un sanctuaire caché au cœur de la Forêt des Murmures, et la formule pour l'éveiller.",
+					"effects": [{"type": "xp", "amount": 100}, {"type": "set_flag", "id": "knows_shrine_rune"}]
+				}
+			},
+			{
 				"id": "read",
 				"text": "Tenter de déchiffrer les runes",
 				"conditions": [{"type": "ability", "id": "int", "min": 12}],
@@ -250,7 +260,7 @@
 			{
 				"id": "steal",
 				"text": "Subtiliser la bourse",
-				"check": {"skill": "stealth", "dc": 14},
+				"check": {"skill": "sleight_of_hand", "dc": 14},
 				"success": {
 					"text": "La bourse change de propriétaire sans que personne ne remarque rien. Vous avez un don.",
 					"effects": [{"type": "gold", "amount": 20}, {"type": "unlock", "id": "class:rogue"}]

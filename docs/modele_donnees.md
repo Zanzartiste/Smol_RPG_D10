@@ -6,9 +6,10 @@ dans la console Godot. Les tests automatisés le signalent aussi.
 
 | Fichier | Contenu |
 |---|---|
-| `rules.json` | Attributs, compétences, moments de la journée, étapes de vie, progression (XP, maîtrise) |
-| `races.json` | Races : bonus, âges, noms, apparence des portraits |
-| `classes.json` | Classes : dé de vie, priorités d'attributs, compétences maîtrisées, objets de départ |
+| `rules.json` | Attributs, 18 compétences, achat de points, genres, tailles, moments de la journée, étapes de vie, progression |
+| `species.json` | Espèces : taille, âges, vieillissement, noms, apparence des portraits |
+| `classes.json` | Classes : dé de vie, modèle d'attributs, compétences maîtrisées, objets de départ |
+| `backgrounds.json` | Passés : compétences maîtrisées, or et objets de départ éventuels |
 | `items.json` | Objets |
 | `locations.json` | Lieux proposés au joueur (l'ordre du fichier est l'ordre d'affichage) |
 | `events/*.json` | Événements, un fichier par lieu ou par thème (tous les `.json` du dossier sont chargés) |
@@ -41,7 +42,7 @@ dans la console Godot. Les tests automatisés le signalent aussi.
 | `repeat` | non (`always`) | `always`, `once_per_life` (une fois par personnage) ou `once_per_world` (une seule fois, toutes vies confondues) |
 | `cooldown_days` | non (0) | Nombre de jours avant de pouvoir revoir l'événement |
 | `conditions` | non | Liste de conditions (ET logique) pour que l'événement soit tirable |
-| `title`, `text` | oui | Textes affichés. Variables disponibles : `{name}`, `{race}`, `{class}`. Le BBCode est accepté (`[i]`, `[b]`, `[color=…]`) |
+| `title`, `text` | oui | Textes affichés. Variables disponibles : `{name}`, `{species}`, `{class}`, `{background}`, et l'accord au genre (voir plus bas). Le BBCode est accepté (`[i]`, `[b]`, `[color=…]`) |
 | `art` | non | Type de décor du placeholder (`forest`, `town`, `home`). Par défaut, celui du lieu |
 | `choices` | oui | Au moins un choix |
 
@@ -89,11 +90,13 @@ Chaque condition est un objet avec un champ `type`. Une liste de conditions est 
 |---|---|---|
 | `flag` | `id` | Le flag de la vie en cours est posé |
 | `world_flag` | `id` | Le flag du monde (persistant entre les vies) est posé |
-| `unlocked` | `id` | Le déblocage existe (`race:elf`, `class:rogue`) |
+| `unlocked` | `id` | Le déblocage existe (`species:elf`, `class:rogue`) |
 | `seen` | `event` | L'événement a déjà été vu dans cette vie |
 | `ability` | `id`, `min`?, `max`? | La valeur d'attribut est dans l'intervalle |
 | `skill_proficient` | `id` | Le personnage maîtrise la compétence |
-| `race` / `class` | `in` (liste) | La race ou la classe fait partie de la liste |
+| `species` / `class` / `background` | `in` (liste) | L'espèce, la classe ou le passé fait partie de la liste |
+| `size` | `in` (liste) | La taille (`tiny`, `small`, `medium`, `large`) fait partie de la liste |
+| `gender` | `in` (liste) | Le genre (`female`, `male`, `nonbinary`) fait partie de la liste |
 | `life_stage` | `in` (liste) | L'étape de vie (`child`, `teen`, `adult`, `elder`, `venerable`) fait partie de la liste |
 | `age` / `gold` / `level` | `min`?, `max`? | La valeur est dans l'intervalle |
 | `item` | `id`, `min`? (1) | Le personnage possède au moins `min` exemplaires de l'objet |
@@ -107,12 +110,12 @@ Chaque condition est un objet avec un champ `type`. Une liste de conditions est 
 |---|---|---|
 | `set_flag` / `clear_flag` | `id` | Pose ou retire un flag de la vie en cours |
 | `set_world_flag` / `clear_world_flag` | `id` | Pose ou retire un flag du monde, **conservé après la mort** |
-| `unlock` | `id` | Débloque une race ou une classe pour les vies suivantes (`race:elf`, `class:rogue`) |
+| `unlock` | `id` | Débloque une espèce ou une classe pour les vies suivantes (`species:elf`, `class:rogue`) |
 | `gold` | `amount` | Ajoute ou retire de l'or (jamais sous 0) |
 | `hp` | `amount`, `cause`? | Soigne ou blesse. À 0 PV, le personnage meurt, et `cause` s'affiche sur l'écran de mort |
 | `heal_full` | — | Rend tous les PV |
 | `xp` | `amount` | Donne de l'XP. Les montées de niveau sont automatiques |
-| `ability` | `id`, `amount` | Modifie un attribut |
+| `ability` | `id`, `amount`, `cause`? | Modifie un attribut. Un attribut à 0 tue le personnage |
 | `add_item` / `remove_item` | `id`, `count`? (1) | Ajoute ou retire des objets |
 | `goto` | `event` | Enchaîne directement sur un autre événement, après le bouton « Continuer » |
 | `pass_time` | `slots`?, `days`? | Fait passer du temps en plus |
@@ -126,18 +129,45 @@ Chaque condition est un objet avec un champ `type`. Une liste de conditions est 
 - Pour une quête, on pose un flag `<quête>_accepted` au départ, puis `<quête>_done` à la fin. Les événements suivants
   utilisent `flag` et `not` → `flag`.
 
-## Races et classes
+## Espèces, classes et passés
 
-Les champs importants sont les suivants :
-
-- `locked: true` : la race ou la classe n'est pas jouable tant qu'un effet `unlock` ne l'a pas débloquée.
-  `unlock_hint` est l'indice qui sera affiché à l'écran de création.
-- `age_stages` (race) : l'âge de début de chaque étape de vie. Il sert aux conditions `life_stage`, au portrait et, plus
-  tard, aux règles de vieillesse.
-- `ability_priority` (classe) : l'ordre dans lequel la répartition standard (15, 14, 13, 12, 10, 8) est attribuée.
-- `art` : les paramètres du portrait procédural. Pour une race : `ears` (`round`, `goblin`, `elf`) et des listes de
+- `locked: true` : l'espèce ou la classe n'est pas jouable tant qu'un effet `unlock` ne l'a pas débloquée.
+  `unlock_hint` est l'indice affiché à l'écran de création.
+- **Espèce** : elle n'a **aucune influence sur les attributs**. Elle définit les champs suivants :
+  - `size` : la catégorie de taille (`tiny`, `small`, `medium`, `large`), utilisable dans les conditions ;
+  - `start_age` : l'âge au début de la partie ;
+  - `age_stages` : l'âge de début de chaque étape de vie (conditions `life_stage`, portrait) ;
+  - `aging_age` : l'âge limite au-delà duquel le personnage vieillit (voir plus bas).
+- **Classe** : `hit_die` (dé de vie) et `skills` (compétences maîtrisées). `ability_priority` donne le **modèle
+  d'attributs** proposé : la répartition standard (15, 14, 13, 12, 10, 8) dans cet ordre, puis +2 sur le premier
+  attribut et +1 sur le second.
+- **Passé** : `skills`, soit 2 compétences maîtrisées qui s'ajoutent à celles de la classe. Champs facultatifs : `gold`
+  (or en plus au départ) et `start_items`.
+- `art` : les paramètres du portrait procédural. Pour une espèce : `ears` (`round`, `goblin`, `elf`) et des listes de
   couleurs `skin`, `hair` et `eyes`. Pour une classe : `headgear` (`helmet`, `wizard_hat`, `hood`), `outfit` et
   `accent`.
+
+## Attributs : achat de points
+
+Le système est le même que dans Baldur's Gate 3. Il se règle dans `rules.json › point_buy` :
+
+- chaque attribut part de `min` (8) et peut monter jusqu'à `max` (15) ;
+- le joueur dispose de `budget` points (27), dépensés selon le barème `costs` : 9 → 1, … 13 → 5, 14 → 7, 15 → 9 ;
+- `bonuses` ([2, 1]) : un +2 et un +1 à placer sur deux attributs différents.
+
+## Vieillesse
+
+Au-delà de `aging_age` (l'âge limite de l'espèce), chaque nouvelle année retire 1 à un attribut tiré au hasard, et le
+joueur en est prévenu. Quand un attribut tombe à 0, quelle qu'en soit la raison, le personnage meurt.
+
+## Genre
+
+Le genre (`rules.json › genders`) n'a aucun effet sur l'apparence ni sur les règles. Il sert uniquement aux accords
+dans les textes, avec la syntaxe `{g:masculin|féminin|neutre}` :
+
+```
+"Vous êtes {g:prêt|prête|prêt·e} à partir."
+```
 
 ## Images
 
@@ -145,7 +175,7 @@ Les champs importants sont les suivants :
 
 | Image | Fichier attendu |
 |---|---|
-| Portrait | `res://assets/portraits/<race>_<classe>_<étape>.png` (ex. `goblin_wizard_adult.png`) |
+| Portrait | `res://assets/portraits/<espèce>_<classe>_<étape>.png` (ex. `goblin_wizard_adult.png`) |
 | Illustration d'événement | `res://assets/events/<id_événement>.png` |
 | Illustration de lieu | `res://assets/locations/<id_lieu>.png` |
 

@@ -21,6 +21,7 @@ static func build() -> Theme:
 	t.default_font_size = 18
 
 	t.set_stylebox("panel", "PanelContainer", _box(PANEL, BORDER, 2, 14))
+	t.set_stylebox("panel", "TabContainer", StyleBoxEmpty.new())
 
 	t.set_stylebox("normal", "Button", _box(Color("#2b241e"), Color("#6b5532"), 1, 10))
 	t.set_stylebox("hover", "Button", _box(Color("#3a3027"), BORDER_HOVER, 1, 10))

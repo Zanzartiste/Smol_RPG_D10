@@ -3,7 +3,7 @@ extends RefCounted
 ## Point d'accès unique aux images du jeu.
 ## Si une image définitive existe dans res://assets/, elle est utilisée ; sinon on génère
 ## un placeholder pixel art (PixelArt). Pour remplacer un placeholder, il suffit de déposer le fichier :
-##   portraits : res://assets/portraits/<race>_<classe>_<étape>.png   (ex. goblin_wizard_adult.png)
+##   portraits : res://assets/portraits/<species>_<classe>_<étape>.png   (ex. goblin_wizard_adult.png)
 ##   événements : res://assets/events/<id_événement>.png
 ##   lieux      : res://assets/locations/<id_lieu>.png
 
@@ -16,14 +16,14 @@ static var _cache: Dictionary = {}
 
 static func portrait(ch: Character) -> Texture2D:
 	var stage := ch.life_stage()
-	var file := "%s%s_%s_%s.png" % [PORTRAIT_DIR, ch.race_id, ch.class_id, stage]
+	var file := "%s%s_%s_%s.png" % [PORTRAIT_DIR, ch.species_id, ch.class_id, stage]
 	if ResourceLoader.exists(file):
 		return load(file)
-	var key := "portrait:%s:%s:%s:%d" % [ch.race_id, ch.class_id, stage, ch.art_seed]
+	var key := "portrait:%s:%s:%s:%d" % [ch.species_id, ch.class_id, stage, ch.art_seed]
 	if not _cache.has(key):
-		var race_art: Dictionary = DB.races[ch.race_id].get("art", {})
+		var species_art: Dictionary = DB.species[ch.species_id].get("art", {})
 		var class_art: Dictionary = DB.classes[ch.class_id].get("art", {})
-		_cache[key] = ImageTexture.create_from_image(PixelArt.portrait(race_art, class_art, stage, ch.art_seed))
+		_cache[key] = ImageTexture.create_from_image(PixelArt.portrait(species_art, class_art, stage, ch.art_seed))
 	return _cache[key]
 
 

@@ -151,7 +151,7 @@
 		"weight": 3,
 		"repeat": "once_per_life",
 		"conditions": [
-			{"type": "not", "condition": {"type": "unlocked", "id": "race:elf"}},
+			{"type": "not", "condition": {"type": "unlocked", "id": "species:elf"}},
 			{"type": "life_stage", "in": ["adult", "elder", "venerable"]}
 		],
 		"title": "Le cercle de pierres",
@@ -165,11 +165,26 @@
 				"check": {"skill": "arcana", "dc": 10},
 				"success": {
 					"text": "Les runes s'embrasent. Une voix ancienne murmure votre nom. Les elfes se souviendront de ce jour.",
-					"effects": [{"type": "unlock", "id": "race:elf"}, {"type": "set_world_flag", "id": "shrine_awakened"}, {"type": "xp", "amount": 200}]
+					"effects": [{"type": "unlock", "id": "species:elf"}, {"type": "set_world_flag", "id": "shrine_awakened"}, {"type": "xp", "amount": 200}]
 				},
 				"failure": {
 					"text": "Vous écorchez un mot. Une décharge vous projette hors du cercle.",
 					"effects": [{"type": "hp", "amount": -3, "cause": "Foudroyé par une magie ancienne"}]
+				}
+			},
+			{
+				"id": "pray",
+				"text": "Se recueillir comme on vous l'a appris au temple",
+				"conditions": [{"type": "background", "in": ["acolyte"]}],
+				"hide_if_locked": true,
+				"check": {"skill": "religion", "dc": 13},
+				"success": {
+					"text": "Votre prière trouve un écho dans les pierres. Les runes s'embrasent doucement. Les elfes se souviendront de ce jour.",
+					"effects": [{"type": "unlock", "id": "species:elf"}, {"type": "set_world_flag", "id": "shrine_awakened"}, {"type": "xp", "amount": 200}]
+				},
+				"failure": {
+					"text": "Les pierres restent froides. Les dieux de ce lieu ne sont pas les vôtres.",
+					"effects": []
 				}
 			},
 			{
@@ -178,7 +193,7 @@
 				"check": {"skill": "arcana", "dc": 17},
 				"success": {
 					"text": "Contre toute attente, vous saisissez le sens des runes. Elles s'embrasent. Les elfes se souviendront de ce jour.",
-					"effects": [{"type": "unlock", "id": "race:elf"}, {"type": "set_world_flag", "id": "shrine_awakened"}, {"type": "xp", "amount": 200}]
+					"effects": [{"type": "unlock", "id": "species:elf"}, {"type": "set_world_flag", "id": "shrine_awakened"}, {"type": "xp", "amount": 200}]
 				},
 				"failure": {
 					"text": "Les runes restent muettes. Un picotement désagréable remonte le long de vos bras.",
@@ -217,6 +232,15 @@
 		"title": "Le feu follet",
 		"text": "La lueur s'immobilise au-dessus d'un tertre moussu. Quelque chose brille à demi enterré sous les racines.",
 		"choices": [
+			{
+				"id": "burrow",
+				"text": "Vous glisser dans le terrier sous les racines",
+				"conditions": [{"type": "size", "in": ["tiny", "small"]}],
+				"outcome": {
+					"text": "Vous êtes juste assez {g:petit|petite|petit·e} pour vous faufiler sous les racines. Au fond du terrier, une amulette ancienne vous attend. Le feu follet s'éteint, comme satisfait.",
+					"effects": [{"type": "add_item", "id": "old_amulet"}, {"type": "xp", "amount": 50}]
+				}
+			},
 			{
 				"id": "dig",
 				"text": "Fouiller prudemment",

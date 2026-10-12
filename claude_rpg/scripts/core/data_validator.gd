@@ -7,14 +7,16 @@ extends RefCounted
 static func validate(db: Node) -> void:
 	var errors: Array[String] = db.errors
 	_validate_rules(db, errors)
-	_validate_races(db, errors)
+	_validate_species(db, errors)
 	_validate_classes(db, errors)
+	_validate_backgrounds(db, errors)
 	for id: String in db.events:
 		_validate_event(db, db.events[id], errors)
 
 
 static func _validate_rules(db: Node, errors: Array[String]) -> void:
-	for key in ["abilities", "skills", "standard_array", "time_slots", "life_stages", "days_per_year"]:
+	for key in ["abilities", "skills", "standard_array", "point_buy", "genders", "sizes", "time_slots",
+			"life_stages", "days_per_year"]:
 		if not db.rules.has(key):
 			errors.append("rules.json : champ « %s » manquant" % key)
 	if db.rules.get("standard_array", []).size() != db.abilities.size():
@@ -22,20 +24,31 @@ static func _validate_rules(db: Node, errors: Array[String]) -> void:
 	for skill: Dictionary in db.skills.values():
 		if not db.abilities.has(skill.get("ability")):
 			errors.append("rules.json : compétence « %s » liée à un attribut inconnu" % skill["id"])
+	var point_buy: Dictionary = db.rules.get("point_buy", {})
+	var costs: Dictionary = point_buy.get("costs", {})
+	for value in range(int(point_buy.get("min", 8)), int(point_buy.get("max", 15)) + 1):
+		if not costs.has(str(value)):
+			errors.append("rules.json : point_buy.costs ne donne pas le coût de %d" % value)
+	if point_buy.get("bonuses", []).size() > db.abilities.size():
+		errors.append("rules.json : trop de bonus d'attributs dans point_buy.bonuses")
 
 
-static func _validate_races(db: Node, errors: Array[String]) -> void:
-	var stage_ids: Array = db.rules.get("life_stages", []).map(func(s): return s["id"])
-	for race: Dictionary in db.races.values():
-		var ctx := "races.json › %s" % race["id"]
-		if race.get("names", []).is_empty():
+static func _validate_species(db: Node, errors: Array[String]) -> void:
+	var stage_ids := _ids(db.rules.get("life_stages", []))
+	var size_ids := _ids(db.rules.get("sizes", []))
+	for species: Dictionary in db.species.values():
+		var ctx := "species.json › %s" % species["id"]
+		if species.get("names", []).is_empty():
 			errors.append(ctx + " : liste de noms vide")
-		for stage: String in race.get("age_stages", {}):
+		if species.get("size") not in size_ids:
+			errors.append(ctx + " : taille inconnue « %s » (voir rules.json › sizes)" % species.get("size"))
+		if not species.has("aging_age"):
+			errors.append(ctx + " : aging_age (âge à partir duquel on vieillit) manquant")
+		if species.has("ability_bonus"):
+			errors.append(ctx + " : une espèce ne doit pas modifier les attributs (ability_bonus)")
+		for stage: String in species.get("age_stages", {}):
 			if stage not in stage_ids:
 				errors.append(ctx + " : étape de vie inconnue « %s »" % stage)
-		for ability: String in race.get("ability_bonus", {}):
-			if not db.abilities.has(ability):
-				errors.append(ctx + " : attribut inconnu « %s »" % ability)
 
 
 static func _validate_classes(db: Node, errors: Array[String]) -> void:
@@ -47,12 +60,28 @@ static func _validate_classes(db: Node, errors: Array[String]) -> void:
 		var priority: Array = cls.get("ability_priority", [])
 		if priority.size() != ability_ids.size() or ability_ids.any(func(a): return a not in priority):
 			errors.append(ctx + " : ability_priority doit contenir chaque attribut une fois")
-		for skill: String in cls.get("skills", []):
-			if not db.skills.has(skill):
-				errors.append(ctx + " : compétence inconnue « %s »" % skill)
-		for item: String in cls.get("start_items", {}):
-			if not db.items.has(item):
-				errors.append(ctx + " : objet inconnu « %s »" % item)
+		_validate_skills_and_items(db, cls, ctx, errors)
+
+
+static func _validate_backgrounds(db: Node, errors: Array[String]) -> void:
+	for background: Dictionary in db.backgrounds.values():
+		var ctx := "backgrounds.json › %s" % background["id"]
+		if background.get("skills", []).is_empty():
+			errors.append(ctx + " : aucune compétence maîtrisée")
+		_validate_skills_and_items(db, background, ctx, errors)
+
+
+static func _validate_skills_and_items(db: Node, entry: Dictionary, ctx: String, errors: Array[String]) -> void:
+	for skill: String in entry.get("skills", []):
+		if not db.skills.has(skill):
+			errors.append(ctx + " : compétence inconnue « %s »" % skill)
+	for item: String in entry.get("start_items", {}):
+		if not db.items.has(item):
+			errors.append(ctx + " : objet inconnu « %s »" % item)
+
+
+static func _ids(list: Array) -> Array:
+	return list.map(func(entry): return entry["id"])
 
 
 static func _validate_event(db: Node, ev: Dictionary, errors: Array[String]) -> void:
@@ -126,9 +155,17 @@ static func _validate_conditions(db: Node, conditions: Variant, ctx: String, err
 				_expect_ref(db.abilities, c["id"], "attribut", ctx, errors)
 			"skill_proficient":
 				_expect_ref(db.skills, c["id"], "compétence", ctx, errors)
-			"race":
+			"species":
 				for id in c["in"]:
-					_expect_ref(db.races, id, "race", ctx, errors)
+					_expect_ref(db.species, id, "espèce", ctx, errors)
+			"background":
+				for id in c["in"]:
+					_expect_ref(db.backgrounds, id, "passé", ctx, errors)
+			"size", "gender", "life_stage":
+				var list_key: String = {"size": "sizes", "gender": "genders", "life_stage": "life_stages"}[type]
+				for id in c["in"]:
+					if id not in _ids(db.rules.get(list_key, [])):
+						errors.append(ctx + " : valeur inconnue « %s » pour la condition « %s »" % [id, type])
 			"class":
 				for id in c["in"]:
 					_expect_ref(db.classes, id, "classe", ctx, errors)
@@ -174,10 +211,10 @@ static func _validate_effects(db: Node, effects: Variant, ctx: String, errors: A
 
 static func _validate_unlock_id(db: Node, id: String, ctx: String, errors: Array[String]) -> void:
 	var parts := id.split(":")
-	if parts.size() != 2 or parts[0] not in ["race", "class"]:
-		errors.append(ctx + " : déblocage invalide « %s » (attendu race:<id> ou class:<id>)" % id)
-	elif parts[0] == "race":
-		_expect_ref(db.races, parts[1], "race", ctx, errors)
+	if parts.size() != 2 or parts[0] not in ["species", "class"]:
+		errors.append(ctx + " : déblocage invalide « %s » (attendu species:<id> ou class:<id>)" % id)
+	elif parts[0] == "species":
+		_expect_ref(db.species, parts[1], "espèce", ctx, errors)
 	else:
 		_expect_ref(db.classes, parts[1], "classe", ctx, errors)
 

@@ -1,0 +1,69 @@
+[
+	{
+		"id": "acolyte",
+		"name": "Acolyte",
+		"description": "Vous avez grandi au service d'un temple, entre prières et rites.",
+		"skills": ["religion", "insight"]
+	},
+	{
+		"id": "artisan",
+		"name": "Artisan",
+		"description": "Membre d'une guilde, vous connaissez la valeur du travail bien fait et des contrats bien négociés.",
+		"skills": ["insight", "persuasion"]
+	},
+	{
+		"id": "charlatan",
+		"name": "Charlatan",
+		"description": "Faux remèdes, fausses identités, vrais profits. Vous savez vendre n'importe quoi.",
+		"skills": ["deception", "sleight_of_hand"]
+	},
+	{
+		"id": "criminal",
+		"name": "Criminel",
+		"description": "Vous avez vécu de l'autre côté de la loi, et vous en connaissez encore les ficelles.",
+		"skills": ["deception", "stealth"]
+	},
+	{
+		"id": "entertainer",
+		"name": "Saltimbanque",
+		"description": "Acrobate, musicien ou conteur, vous avez fait rire et pleurer bien des tavernes.",
+		"skills": ["acrobatics", "performance"]
+	},
+	{
+		"id": "folk_hero",
+		"name": "Héros du peuple",
+		"description": "Simple {g:villageois|villageoise|villageois·e}, vous vous êtes un jour {g:dressé|dressée|dressé·e} contre l'injustice. On s'en souvient encore.",
+		"skills": ["animal_handling", "survival"]
+	},
+	{
+		"id": "noble",
+		"name": "Noble",
+		"description": "{g:Né|Née|Né·e} dans la soie, vous connaissez l'étiquette, les lignées et le pouvoir d'un nom.",
+		"skills": ["history", "persuasion"],
+		"gold": 25
+	},
+	{
+		"id": "outlander",
+		"name": "Sauvageon",
+		"description": "Vous avez grandi loin des villes, au rythme des saisons et des bêtes sauvages.",
+		"skills": ["athletics", "survival"]
+	},
+	{
+		"id": "sage",
+		"name": "Érudit",
+		"description": "Des années passées dans les bibliothèques ont fait de vous un puits de savoir.",
+		"skills": ["arcana", "history"]
+	},
+	{
+		"id": "soldier",
+		"name": "Soldat",
+		"description": "Vous avez servi dans une armée. La discipline et le fracas des armes vous sont familiers.",
+		"skills": ["athletics", "intimidation"]
+	},
+	{
+		"id": "urchin",
+		"name": "Gamin des rues",
+		"description": "{g:Orphelin|Orpheline|Orphelin·e}, vous avez survécu dans les ruelles grâce à vos doigts agiles et à votre discrétion.",
+		"skills": ["sleight_of_hand", "stealth"]
+	}
+]

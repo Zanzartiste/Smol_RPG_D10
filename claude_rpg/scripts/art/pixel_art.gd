@@ -19,18 +19,18 @@ const SKY := {
 
 # --- Portraits ---------------------------------------------------------------
 
-static func portrait(race_art: Dictionary, class_art: Dictionary, stage: String, seed_value: int) -> Image:
+static func portrait(species_art: Dictionary, class_art: Dictionary, stage: String, seed_value: int) -> Image:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
 	var s := PORTRAIT_SIZE
 	var fig := Image.create(s, s, false, Image.FORMAT_RGBA8)
 
-	var skin := _pick(race_art.get("skin", ["#d9a57b"]), rng)
-	var hair := _pick(race_art.get("hair", ["#3a2b1a"]), rng)
-	var eye := _pick(race_art.get("eyes", ["#3b5d8a"]), rng)
+	var skin := _pick(species_art.get("skin", ["#d9a57b"]), rng)
+	var hair := _pick(species_art.get("hair", ["#3a2b1a"]), rng)
+	var eye := _pick(species_art.get("eyes", ["#3b5d8a"]), rng)
 	var outfit := Color(String(class_art.get("outfit", "#555560")))
 	var accent := Color(String(class_art.get("accent", "#b08d57")))
-	var ears: String = race_art.get("ears", "round")
+	var ears: String = species_art.get("ears", "round")
 	var headgear: String = class_art.get("headgear", "")
 	var hair_style := rng.randi_range(0, 2)  # 0 courts, 1 longs, 2 chauve
 	if ears == "goblin" and rng.randf() < 0.4:

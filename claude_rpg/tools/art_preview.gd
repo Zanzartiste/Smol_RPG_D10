@@ -12,15 +12,15 @@ func _ready() -> void:
 	var out_dir: String = args[0] if args.size() > 0 else ProjectSettings.globalize_path("user://art_preview")
 	DirAccess.make_dir_recursive_absolute(out_dir)
 
-	# Portraits : une ligne par race × classe, une colonne par étape de vie (2 graines).
+	# Portraits : une ligne par espèce × classe, une colonne par étape de vie (2 graines).
 	var stages: Array = DB.rules["life_stages"].map(func(s): return s["id"])
 	var rows: Array[Image] = []
-	for race: String in DB.races:
+	for species: String in DB.species:
 		for cls: String in DB.classes:
 			var row: Array[Image] = []
 			for seed_value in [11, 12]:
 				for stage: String in stages:
-					row.append(PixelArt.portrait(DB.races[race]["art"], DB.classes[cls]["art"], stage, hash(race + cls) + seed_value))
+					row.append(PixelArt.portrait(DB.species[species]["art"], DB.classes[cls]["art"], stage, hash(species + cls) + seed_value))
 			rows.append(_strip(row, true))
 	_save(_strip(rows, false), out_dir.path_join("portraits.png"))
 

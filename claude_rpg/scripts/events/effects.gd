@@ -67,8 +67,8 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 					lines.append(Loc.ui("Niveau %d atteint !") % new_level)
 			"ability":
 				var id: String = e["id"]
-				ch.abilities[id] = clampi(int(ch.abilities.get(id, 10)) + int(e["amount"]), 1, 30)
 				lines.append("%s %s" % [_signed(int(e["amount"])), DB.abilities[id]["short"]])
+				life.change_ability(id, int(e["amount"]), e.get("cause", Loc.ui("Vidé de toute force")))
 			"add_item":
 				var count := int(e.get("count", 1))
 				ch.add_item(e["id"], count)

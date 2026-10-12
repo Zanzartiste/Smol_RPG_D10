@@ -4,7 +4,7 @@ extends Node
 ## (état du monde, déblocages, chronique des vies). Sauvegarde sur disque : à venir.
 
 var world_flags: Dictionary = {}
-var unlocks: Dictionary = {}  # "race:elf", "class:rogue"... -> true
+var unlocks: Dictionary = {}  # "species:elf", "class:rogue"... -> true
 var seen_events: Dictionary = {}  # id d'événement -> nombre de fois vu, toutes vies confondues
 var chronicle: Array[Dictionary] = []
 
@@ -36,15 +36,15 @@ func unlock_name(id: String) -> String:
 	var parts := id.split(":")
 	if parts.size() == 2:
 		match parts[0]:
-			"race":
-				return DB.races.get(parts[1], {}).get("name", id)
+			"species":
+				return DB.species.get(parts[1], {}).get("name", id)
 			"class":
 				return DB.classes.get(parts[1], {}).get("name", id)
 	return id
 
 
-func is_race_available(race_id: String) -> bool:
-	return not DB.races[race_id].get("locked", false) or is_unlocked("race:" + race_id)
+func is_species_available(species_id: String) -> bool:
+	return not DB.species[species_id].get("locked", false) or is_unlocked("species:" + species_id)
 
 
 func is_class_available(class_id: String) -> bool:
@@ -59,7 +59,7 @@ func record_life(life: LifeState) -> void:
 	var ch := life.character
 	chronicle.append({
 		"name": ch.name,
-		"race": ch.race_id,
+		"species": ch.species_id,
 		"class": ch.class_id,
 		"age": ch.age_years(),
 		"days": life.day,

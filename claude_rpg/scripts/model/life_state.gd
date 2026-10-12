@@ -70,6 +70,21 @@ func _new_day() -> void:
 		_check_old_age()
 
 
-## Mort de vieillesse : règles à définir (le joueur a déjà des règles en tête).
+## Modifie un attribut. Un attribut qui tombe à 0 tue le personnage.
+func change_ability(ability_id: String, amount: int, cause: String) -> void:
+	var value := clampi(int(character.abilities.get(ability_id, 10)) + amount, 0, 30)
+	character.abilities[ability_id] = value
+	if value <= 0:
+		die(cause)
+
+
+## Vieillesse : passé l'âge limite de l'espèce (aging_age), chaque nouvelle année retire 1
+## à un attribut tiré au hasard. Le personnage finit par mourir quand l'un d'eux atteint 0.
 func _check_old_age() -> void:
-	pass
+	var limit := int(DB.species[character.species_id].get("aging_age", 0))
+	if limit <= 0 or character.age_years() <= limit:
+		return
+	var ids: Array = DB.abilities.keys()
+	var id: String = ids[rng.randi_range(0, ids.size() - 1)]
+	notices.append(Loc.ui("Le poids des ans : %s −1.") % DB.abilities[id]["name"])
+	change_ability(id, -1, Loc.ui("Mort de vieillesse"))

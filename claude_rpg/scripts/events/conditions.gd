@@ -12,8 +12,11 @@ const SCHEMA := {
 	"seen": ["event"],
 	"ability": ["id"],
 	"skill_proficient": ["id"],
-	"race": ["in"],
+	"species": ["in"],
 	"class": ["in"],
+	"background": ["in"],
+	"size": ["in"],
+	"gender": ["in"],
 	"life_stage": ["in"],
 	"age": [],
 	"gold": [],
@@ -47,10 +50,16 @@ static func check(c: Dictionary, life: LifeState, meta: MetaState) -> bool:
 			return _in_range(int(ch.abilities.get(c["id"], 10)), c)
 		"skill_proficient":
 			return ch.is_proficient(c["id"])
-		"race":
-			return ch.race_id in c["in"]
+		"species":
+			return ch.species_id in c["in"]
 		"class":
 			return ch.class_id in c["in"]
+		"background":
+			return ch.background_id in c["in"]
+		"size":
+			return ch.size() in c["in"]
+		"gender":
+			return ch.gender in c["in"]
 		"life_stage":
 			return ch.life_stage() in c["in"]
 		"age":
@@ -82,10 +91,17 @@ static func describe(c: Dictionary) -> String:
 			return _range_text(DB.abilities[c["id"]]["short"], c)
 		"skill_proficient":
 			return Loc.ui("Maîtrise : %s") % DB.skills[c["id"]]["name"]
-		"race":
-			return " / ".join(PackedStringArray(c["in"].map(func(id): return DB.races[id]["name"])))
+		"species":
+			return " / ".join(PackedStringArray(c["in"].map(func(id): return DB.species[id]["name"])))
 		"class":
 			return " / ".join(PackedStringArray(c["in"].map(func(id): return DB.classes[id]["name"])))
+		"background":
+			return Loc.ui("Passé : %s") % " / ".join(PackedStringArray(c["in"].map(
+				func(id): return DB.backgrounds[id]["name"])))
+		"size":
+			return Loc.ui("Taille : %s") % " / ".join(PackedStringArray(c["in"].map(DB.size_name)))
+		"gender":
+			return " / ".join(PackedStringArray(c["in"].map(DB.gender_name)))
 		"life_stage":
 			return " / ".join(PackedStringArray(c["in"].map(DB.life_stage_name)))
 		"age":

@@ -3,9 +3,11 @@ extends RefCounted
 ## Un personnage (le héros, et plus tard les compagnons). Règles inspirées du SRD 5e.
 
 var name := ""
-var race_id := ""
+var species_id := ""
 var class_id := ""
-var abilities: Dictionary = {}  # id d'attribut -> valeur (3-20)
+var background_id := ""  # passé ("" = aucun)
+var gender := ""  # sans effet sur l'apparence ; sert aux accords dans les textes
+var abilities: Dictionary = {}  # id d'attribut -> valeur ; 0 = mort
 var level := 1
 var xp := 0
 var hp := 1
@@ -17,43 +19,52 @@ var age_days := 0  # jours vécus depuis le début de la partie
 var art_seed := 0  # graine des variations du portrait procédural
 
 
-static func create(race: String, cls: String, char_name: String) -> Character:
+## Options : "abilities" (scores finaux, sinon modèle de la classe), "background", "gender".
+static func create(species: String, cls: String, char_name: String, options: Dictionary = {}) -> Character:
 	var c := Character.new()
-	c.race_id = race
+	c.species_id = species
 	c.class_id = cls
 	c.name = char_name
-	var race_data: Dictionary = DB.races[race]
+	c.background_id = options.get("background", "")
+	c.gender = options.get("gender", "nonbinary")
 	var class_data: Dictionary = DB.classes[cls]
+	var background: Dictionary = DB.backgrounds.get(c.background_id, {})
 
-	# Répartition standard (15, 14, 13...) selon les priorités de la classe, puis bonus raciaux.
-	var scores: Array = DB.rules["standard_array"]
-	var priority: Array = class_data["ability_priority"]
-	for i in priority.size():
-		c.abilities[priority[i]] = int(scores[i])
-	var bonus: Dictionary = race_data.get("ability_bonus", {})
-	for ability: String in bonus:
-		c.abilities[ability] = int(c.abilities.get(ability, 10)) + int(bonus[ability])
+	var scores: Dictionary = options.get("abilities", {})
+	if scores.is_empty():
+		scores = PointBuy.from_class(cls).final_scores()
+	for ability: String in DB.abilities:
+		c.abilities[ability] = int(scores.get(ability, 10))
 
 	c.max_hp = maxi(1, int(class_data["hit_die"]) + c.ability_mod("con"))
 	c.hp = c.max_hp
-	c.gold = int(DB.rules.get("start_gold", 0))
-	var start_items: Dictionary = class_data.get("start_items", {})
-	for item_id: String in start_items:
-		c.add_item(item_id, int(start_items[item_id]))
-	c.start_age = int(race_data.get("start_age", 18))
+	c.gold = int(DB.rules.get("start_gold", 0)) + int(background.get("gold", 0))
+	for source: Dictionary in [class_data, background]:
+		var start_items: Dictionary = source.get("start_items", {})
+		for item_id: String in start_items:
+			c.add_item(item_id, int(start_items[item_id]))
+	c.start_age = int(DB.species[species].get("start_age", 18))
 	return c
 
 
-## Personnage aléatoire parmi les races et classes débloquées.
+## Personnage aléatoire parmi les espèces et classes débloquées.
 static func create_random(rng: RandomNumberGenerator, meta: MetaState) -> Character:
-	var race_ids: Array = DB.races.keys().filter(meta.is_race_available)
+	var species_ids: Array = DB.species.keys().filter(meta.is_species_available)
 	var class_ids: Array = DB.classes.keys().filter(meta.is_class_available)
-	var race: String = race_ids[rng.randi_range(0, race_ids.size() - 1)]
-	var cls: String = class_ids[rng.randi_range(0, class_ids.size() - 1)]
-	var names: Array = DB.races[race].get("names", ["Sans-Nom"])
-	var c := create(race, cls, names[rng.randi_range(0, names.size() - 1)])
+	var background_ids: Array = DB.backgrounds.keys()
+	var genders: Array = DB.rules["genders"]
+	var species: String = _pick(species_ids, rng)
+	var names: Array = DB.species[species].get("names", ["Sans-Nom"])
+	var c := create(species, _pick(class_ids, rng), _pick(names, rng), {
+		"background": _pick(background_ids, rng) if not background_ids.is_empty() else "",
+		"gender": _pick(genders, rng)["id"],
+	})
 	c.art_seed = rng.randi()
 	return c
+
+
+static func _pick(list: Array, rng: RandomNumberGenerator) -> Variant:
+	return list[rng.randi_range(0, list.size() - 1)]
 
 
 func ability_mod(ability_id: String) -> int:
@@ -65,13 +76,20 @@ func proficiency_bonus() -> int:
 	return int(table[clampi(level - 1, 0, table.size() - 1)])
 
 
+## Compétences maîtrisées : celles de la classe et celles du passé.
 func is_proficient(skill_id: String) -> bool:
-	return skill_id in DB.classes[class_id].get("skills", [])
+	return skill_id in DB.classes[class_id].get("skills", []) \
+		or skill_id in DB.backgrounds.get(background_id, {}).get("skills", [])
 
 
 func skill_mod(skill_id: String) -> int:
 	var ability: String = DB.skills[skill_id]["ability"]
 	return ability_mod(ability) + (proficiency_bonus() if is_proficient(skill_id) else 0)
+
+
+## Catégorie de taille, déterminée par l'espèce (tiny, small, medium, large).
+func size() -> String:
+	return DB.species[species_id].get("size", "medium")
 
 
 @warning_ignore("integer_division")
@@ -80,7 +98,7 @@ func age_years() -> int:
 
 
 func life_stage() -> String:
-	var thresholds: Dictionary = DB.races[race_id].get("age_stages", {})
+	var thresholds: Dictionary = DB.species[species_id].get("age_stages", {})
 	var age := age_years()
 	var current := "adult"
 	for stage: Dictionary in DB.rules["life_stages"]:

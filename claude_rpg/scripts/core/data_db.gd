@@ -7,8 +7,9 @@ const DATA_DIR := "res://data/"
 var rules: Dictionary = {}
 var abilities: Dictionary = {}  # id -> {id, name, short}
 var skills: Dictionary = {}  # id -> {id, name, ability}
-var races: Dictionary = {}
+var species: Dictionary = {}
 var classes: Dictionary = {}
+var backgrounds: Dictionary = {}  # passés
 var items: Dictionary = {}
 var locations: Dictionary = {}
 var location_order: Array[String] = []
@@ -26,8 +27,9 @@ func load_all() -> void:
 	rules = _load_json("rules.json", {})
 	abilities = _index_by_id(rules.get("abilities", []), "rules.json (abilities)")
 	skills = _index_by_id(rules.get("skills", []), "rules.json (skills)")
-	races = _index_by_id(_load_json("races.json", []), "races.json")
+	species = _index_by_id(_load_json("species.json", []), "species.json")
 	classes = _index_by_id(_load_json("classes.json", []), "classes.json")
+	backgrounds = _index_by_id(_load_json("backgrounds.json", []), "backgrounds.json")
 	items = _index_by_id(_load_json("items.json", []), "items.json")
 	locations = _index_by_id(_load_json("locations.json", []), "locations.json")
 	location_order.assign(locations.keys())
@@ -62,10 +64,23 @@ func days_per_year() -> int:
 
 
 func life_stage_name(stage_id: String) -> String:
-	for stage: Dictionary in rules.get("life_stages", []):
-		if stage["id"] == stage_id:
-			return stage["name"]
-	return stage_id
+	return _name_in("life_stages", stage_id)
+
+
+func size_name(size_id: String) -> String:
+	return _name_in("sizes", size_id)
+
+
+func gender_name(gender_id: String) -> String:
+	return _name_in("genders", gender_id)
+
+
+## Nom affiché d'une entrée d'une liste de rules.json (life_stages, sizes, genders...).
+func _name_in(list_key: String, id: String) -> String:
+	for entry: Dictionary in rules.get(list_key, []):
+		if entry["id"] == id:
+			return entry["name"]
+	return id
 
 
 func _register_event(ev: Variant, file: String) -> void:

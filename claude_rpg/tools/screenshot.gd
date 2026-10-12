@@ -13,7 +13,10 @@ func _ready() -> void:
 
 	var creation: Control = load("res://scenes/creation.tscn").instantiate()
 	add_child(creation)
-	await _capture("1_creation.png")
+	for tab in creation.pages.get_tab_count():
+		creation.tab_buttons.get_child(tab).button_pressed = true
+		creation.pages.current_tab = tab
+		await _capture("1_creation_%d.png" % tab)
 	Game.start_life(creation.build_character(), 7)
 	creation.queue_free()
 
