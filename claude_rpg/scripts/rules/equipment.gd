@@ -9,9 +9,17 @@ extends RefCounted
 ##          "versatile_damage": "1d10"}
 ## Armure : {"category": "armor", "armor_type": "light" | "medium" | "heavy", "base_ac": 11}
 ## Bouclier : {"category": "shield", "ac_bonus": 2}
-## Facultatif pour tous : "modifiers" (voir Modifiers), ex. une cape qui donne une résistance.
+## Accessoire : {"category": "accessory", "slot": "cloak" | "amulet" | "ring"}
+## Facultatif pour tous : "modifiers" (voir Modifiers), "rarity", "value", "description" (voir Items).
+## Un objet magique est un équipement avec des modificateurs, ex. une épée +1 :
+##   "modifiers": [{"type": "weapon_attack", "amount": 1}, {"type": "weapon_damage", "amount": 1}]
 
-const SLOTS := ["main_hand", "off_hand", "armor"]
+const SLOTS := ["main_hand", "off_hand", "armor", "cloak", "amulet", "ring"]
+const ACCESSORY_SLOTS := ["cloak", "amulet", "ring"]
+const SLOT_NAMES := {
+	"main_hand": "Main principale", "off_hand": "Main secondaire", "armor": "Armure",
+	"cloak": "Cape", "amulet": "Amulette", "ring": "Anneau",
+}
 const UNARMED := "unarmed"
 const MEDIUM_ARMOR_DEX_CAP := 2
 
@@ -60,7 +68,8 @@ static func has_property(id: String, property: String) -> bool:
 	return property in def(id).get("properties", [])
 
 
-## Emplacement naturel d'un équipement : arme -> main_hand, bouclier -> off_hand, armure -> armor.
+## Emplacement naturel d'un équipement : arme -> main_hand, bouclier -> off_hand, armure -> armor,
+## accessoire -> son "slot".
 static func slot_for(id: String) -> String:
 	match category_of(id):
 		"weapon":
@@ -69,7 +78,13 @@ static func slot_for(id: String) -> String:
 			return "off_hand"
 		"armor":
 			return "armor"
+		"accessory":
+			return def(id).get("slot", "")
 	return ""
+
+
+static func slot_name(slot: String) -> String:
+	return Loc.ui(SLOT_NAMES.get(slot, slot))
 
 
 ## Dégâts d'une arme ; une arme polyvalente tenue à deux mains utilise ses dégâts « versatile ».
@@ -136,4 +151,6 @@ static func describe(id: String) -> String:
 				ARMOR_TYPE_NAMES.get(item.get("armor_type", "light"), "")]
 		"shield":
 			return "%s — CA +%d" % [item["name"], int(item.get("ac_bonus", 2))]
+		"accessory":
+			return "%s — %s" % [item["name"], slot_name(slot_for(id)).to_lower()]
 	return item.get("name", id)

@@ -89,7 +89,7 @@ func finish_combat() -> Dictionary:
 			for loot: Dictionary in creature.get("loot", []):
 				if life.rng.randf() < float(loot.get("chance", 1.0)):
 					life.character.add_item(loot["item"], int(loot.get("count", 1)))
-					lines.append(Loc.ui("Butin : %s ×%d") % [DB.items[loot["item"]]["name"], int(loot.get("count", 1))])
+					lines.append(Loc.ui("Butin : %s ×%d") % [Items.name_of(loot["item"]), int(loot.get("count", 1))])
 		# Chaque membre du groupe encore debout gagne toute l'XP.
 		for member in life.party():
 			if member.hp > 0 and xp > 0:

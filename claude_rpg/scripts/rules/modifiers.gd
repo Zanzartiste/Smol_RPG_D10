@@ -13,6 +13,8 @@ const SCHEMA := {
 	"initiative": ["amount"],  # bonus d'initiative
 	"ac": ["amount"],  # bonus de CA
 	"weapon_damage": ["amount"],  # bonus aux dégâts des attaques d'arme
+	"weapon_attack": ["amount"],  # bonus aux jets d'attaque avec une arme
+	"saving_throws": ["amount"],  # bonus à tous les jets de sauvegarde
 	"resistance": ["damage_type"],
 	"immunity": ["damage_type"],
 	"vulnerability": ["damage_type"],
@@ -73,6 +75,10 @@ static func describe(m: Dictionary) -> String:
 			return Loc.ui("%s CA") % signed
 		"weapon_damage":
 			return Loc.ui("%s aux dégâts d'arme") % signed
+		"weapon_attack":
+			return Loc.ui("%s au toucher avec une arme") % signed
+		"saving_throws":
+			return Loc.ui("%s aux jets de sauvegarde") % signed
 		"resistance":
 			return Loc.ui("Résistance : %s") % DamageTypes.name_of(m["damage_type"])
 		"immunity":

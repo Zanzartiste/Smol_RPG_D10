@@ -108,6 +108,52 @@ func _check_old_age() -> void:
 
 # --- Sauvegarde ----------------------------------------------------------------
 
+# --- Sac du groupe -------------------------------------------------------------
+# Le sac est celui du héros (character.inventory) : les compagnons s'équipent et se soignent en y
+# puisant, et ce qu'ils retirent y retourne.
+
+func inventory() -> Dictionary:
+	return character.inventory
+
+
+## Équipe un membre du groupe avec un objet du sac ; les objets retirés retournent dans le sac.
+func equip(member: Character, item_id: String) -> bool:
+	if not Items.is_equipment(item_id) or character.item_count(item_id) <= 0:
+		return false
+	character.remove_item(item_id)
+	for removed in member.equip(item_id):
+		if removed != Equipment.UNARMED:
+			character.add_item(removed)
+	return true
+
+
+## Retire l'objet d'un emplacement d'un membre du groupe et le range dans le sac.
+func unequip(member: Character, slot: String) -> bool:
+	var removed := member.unequip(slot)
+	if removed == "":
+		return false
+	if removed != Equipment.UNARMED:
+		character.add_item(removed)
+	return true
+
+
+## Utilise un objet du sac hors combat sur un membre du groupe. Retourne le texte du résultat
+## ("" si l'objet n'est pas utilisable).
+func use_item(item_id: String, member: Character) -> String:
+	if not Items.is_usable_outside_combat(item_id) or character.item_count(item_id) <= 0:
+		return ""
+	character.remove_item(item_id)
+	var before := member.hp
+	var roll := Dice.roll_expr(String(Items.def(item_id)["use"]["heal"]), rng)
+	member.hp = mini(member.max_hp, member.hp + maxi(1, int(roll["total"])))
+	return Loc.ui("%s : %s récupère %d PV.") % [Items.name_of(item_id), member.name, member.hp - before]
+
+
+## Jette des objets du sac ; retourne le nombre jeté.
+func drop_item(item_id: String, count := 1) -> int:
+	return character.remove_item(item_id, count)
+
+
 func to_dict() -> Dictionary:
 	return {
 		"character": character.to_dict(),

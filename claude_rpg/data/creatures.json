@@ -51,7 +51,7 @@
 			}
 		],
 		"xp": 200,
-		"loot": [{"item": "wolf_pelt", "chance": 1.0, "count": 2}],
+		"loot": [{"item": "wolf_pelt", "chance": 1.0, "count": 2}, {"item": "cloak_of_protection", "chance": 1.0}],
 		"death_cause": "Dévoré par l'alpha des loups",
 		"art": {"type": "wolf", "fur": "#3c3a40", "belly": "#6a6670", "eyes": "#e0402a"}
 	},
@@ -82,6 +82,7 @@
 		],
 		"xp": 25,
 		"gold": "1d6",
+		"loot": [{"item": "dagger", "chance": 0.3}, {"item": "shortsword", "chance": 0.15}, {"item": "studded_leather", "chance": 0.1}],
 		"death_cause": "Tué par des brigands",
 		"art": {
 			"type": "humanoid",
@@ -115,6 +116,7 @@
 			}
 		],
 		"xp": 25,
+		"loot": [{"item": "greataxe", "chance": 0.25}],
 		"death_cause": "Rossé à mort dans une taverne",
 		"art": {
 			"type": "humanoid",

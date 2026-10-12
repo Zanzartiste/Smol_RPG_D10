@@ -3,7 +3,8 @@ extends Control
 ## La zone de droite affiche tour à tour le hub (choix du lieu), un événement, le lancer de dés,
 ## son résultat, un combat ou la mort.
 ## Raccourcis : touches 1 à 9 pour choisir une option ; n'importe quelle touche accélère les dés ;
-## F12 active ou désactive le mode debug (choix verrouillés visibles) ; Échap sauvegarde et revient au menu.
+## F12 active ou désactive le mode debug (choix verrouillés visibles) ; Échap sauvegarde et revient au menu ;
+## I ouvre l'inventaire (bouton « Inventaire » sous la fiche, hors combat).
 ## La partie est sauvegardée automatiquement (voir Saves), et aussi à la fermeture de la fenêtre.
 
 const CREATION_SCENE := "res://scenes/creation.tscn"
@@ -24,6 +25,8 @@ const MAX_CHOICES_HEIGHT := 330  # au-delà, la liste de choix défile
 @onready var choices_scroll: ScrollContainer = %ChoicesScroll
 
 var _debug_badge := Label.new()
+var _inventory_button := Button.new()
+var _inventory: InventoryView  # fenêtre d'inventaire ouverte (null sinon)
 var _event_on_screen: Dictionary = {}  # événement dont les choix sont affichés (pour les réafficher en debug)
 
 
@@ -32,6 +35,9 @@ func _ready() -> void:
 	Game.life_changed.connect(_refresh_sheet)
 	Game.debug_changed.connect(_on_debug_changed)
 	_setup_debug_badge()
+	_inventory_button.text = tr("Inventaire (I)")
+	_inventory_button.pressed.connect(open_inventory, CONNECT_DEFERRED)
+	sheet_text.get_parent().add_child(_inventory_button)
 	if Game.life == null or Game.life.dead:
 		if not Saves.load_life():
 			Game.new_life()  # scène lancée directement, sans sauvegarde ni création
@@ -47,7 +53,11 @@ func _ready() -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
-	if key == null or not key.pressed or key.echo or combat_view.visible:
+	if key == null or not key.pressed or key.echo or combat_view.visible or _inventory != null:
+		return
+	if key.keycode == KEY_I and not dice_tray.is_playing():
+		open_inventory()
+		accept_event()
 		return
 	if key.keycode == KEY_F12:
 		Game.toggle_debug()
@@ -243,15 +253,36 @@ func _on_new_life() -> void:
 	get_tree().change_scene_to_file(CREATION_SCENE)
 
 
+# --- Inventaire ----------------------------------------------------------------
+
+## Ouvre la fenêtre d'inventaire par-dessus l'écran (pas pendant un combat).
+func open_inventory() -> void:
+	if _inventory != null or combat_view.visible or Game.life == null or Game.life.dead:
+		return
+	_inventory = InventoryView.new(Game.life)
+	_inventory.changed.connect(_refresh_sheet)
+	_inventory.closed.connect(_on_inventory_closed)
+	add_child(_inventory)
+
+
+func _on_inventory_closed() -> void:
+	_inventory = null
+	Saves.save_all()
+
+
 # --- Combat ------------------------------------------------------------------
 
 ## Le combat se joue dans l'écran dédié (CombatView), qui remplace le contenu le temps de la bataille.
 func _run_combat(spec: Dictionary) -> void:
+	if _inventory != null:
+		_inventory.close_view()
+	_inventory_button.disabled = true
 	content_box.visible = false
 	combat_view.visible = true
 	var result: Dictionary = await combat_view.run(spec, illustration.texture)
 	combat_view.visible = false
 	content_box.visible = true
+	_inventory_button.disabled = false
 	_refresh_sheet()
 	title_label.text = {"victory": tr("Victoire"), "defeat": tr("Défaite"), "fled": tr("Fuite")}.get(result["outcome"], "")
 	_show_result(result)

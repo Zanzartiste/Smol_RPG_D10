@@ -16,7 +16,7 @@ dans la console Godot. Les tests automatisés le signalent aussi.
 | `species.json` | Espèces : taille, âges, vieillissement, noms, apparence des portraits |
 | `classes.json` | Classes : dé de vie, modèle d'attributs, compétences maîtrisées, objets de départ |
 | `backgrounds.json` | Passés : compétences maîtrisées, or et objets de départ éventuels |
-| `items.json` | Objets (`use` : utilisable en combat, ex. `{"heal": "2d4+2"}`) |
+| `items.json` | Objets hors équipement : consommables (`use`, ex. `{"heal": "2d4+2"}`), matériaux, trésors. Les ids sont uniques entre `items.json` et `equipment.json` |
 | `creatures.json` | Bestiaire : ennemis et invocations (API `Creatures`) |
 | `actions.json` | Actions de combat des classes : attaques, sorts, capacités (API `Actions`) |
 | `companions.json` | Compagnons recrutables |
@@ -127,7 +127,7 @@ Chaque condition est un objet avec un champ `type`. Une liste de conditions est 
 | `heal_full` | — | Rend tous les PV |
 | `xp` | `amount` | Donne de l'XP. Les montées de niveau sont automatiques |
 | `ability` | `id`, `amount`, `cause`? | Modifie un attribut. Un attribut à 0 tue le personnage |
-| `add_item` / `remove_item` | `id`, `count`? (1) | Ajoute ou retire des objets |
+| `add_item` / `remove_item` | `id`, `count`? (1) | Ajoute ou retire des objets du sac (id de `items.json` ou de `equipment.json`) |
 | `goto` | `event` | Enchaîne directement sur un autre événement, après le bouton « Continuer » |
 | `pass_time` | `slots`?, `days`? | Fait passer du temps en plus |
 | `die` | `cause`? | Tue le personnage |
@@ -373,6 +373,8 @@ Les dons, les espèces et les équipements peuvent porter des `modifiers`. Ils s
 | `initiative` | `amount` | Bonus d'initiative |
 | `ac` | `amount` | Bonus de CA |
 | `weapon_damage` | `amount` | Bonus aux dégâts des attaques d'arme |
+| `weapon_attack` | `amount` | Bonus aux jets d'attaque avec une arme |
+| `saving_throws` | `amount` | Bonus à tous les jets de sauvegarde |
 | `resistance` / `immunity` / `vulnerability` | `damage_type` | Défense contre un type de dégâts |
 | `status_immunity` | `status` | Immunité à un état |
 | `skill_expertise` | `id` | Expertise : bonus de maîtrise doublé dans une compétence maîtrisée |
@@ -389,8 +391,28 @@ Les dons, les espèces et les équipements peuvent porter des `modifiers`. Ils s
 | `weapon` | `damage`, `damage_type`, `properties` (`finesse`, `light`, `thrown`, `versatile`, `heavy`, `two_handed`, `ranged`), `versatile_damage` pour une arme polyvalente |
 | `armor` | `armor_type` (`light` : base + DEX, `medium` : base + DEX max 2, `heavy` : base seule), `base_ac` |
 | `shield` | `ac_bonus` |
+| `accessory` | `slot` : `cloak` (cape), `amulet` (amulette) ou `ring` (anneau) |
 
-Tout équipement peut aussi porter des `modifiers`, par exemple une cape qui donne une résistance au feu.
+Champs communs facultatifs : `modifiers`, `rarity` (`common`, `uncommon`, `rare`, `very_rare`, `legendary`, qui donne
+la couleur du nom), `value` (prix en po), `description`.
+
+**Objets magiques** : ce sont des équipements avec des `modifiers`. Par exemple, une épée +1 porte
+`[{"type": "weapon_attack", "amount": 1}, {"type": "weapon_damage", "amount": 1}]`, et la Cape de protection
+`[{"type": "ac", "amount": 1}, {"type": "saving_throws", "amount": 1}]`.
+
+**Emplacements** : main principale, main secondaire, armure, cape, amulette, anneau (`Equipment.SLOTS`).
+
+### Sac et inventaire
+
+- Le **sac du groupe** est l'inventaire du héros (`character.inventory`, `{id: quantité}`). Il mélange objets et
+  équipement ; l'API `Items` donne nom, description, rareté, valeur et résumé de n'importe quel id.
+- Les compagnons s'équipent en y puisant, et ce qu'ils retirent y retourne (`LifeState.equip`, `unequip`,
+  `use_item`, `drop_item`). Il n'y a pas de restriction de maîtrise d'armure pour l'instant.
+- Hors combat, seuls les objets de soins sont utilisables. L'Antidote ne sert qu'en combat.
+- **Écran** : bouton « Inventaire (I) » sous la fiche (hors combat), avec l'équipement du membre choisi à gauche et le
+  sac à droite (Équiper, Retirer, Utiliser, Jeter).
+- **Butin** : les créatures peuvent lâcher de l'équipement (`loot`), comme le brigand (dague, épée courte, cuir
+  clouté) ou l'Alpha (Cape de protection). L'effet `equip` range l'objet remplacé dans le sac.
 
 **Règles appliquées :**
 - Une arme de finesse utilise le meilleur de FOR et DEX, une arme à distance utilise la DEX.

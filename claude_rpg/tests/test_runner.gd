@@ -23,6 +23,7 @@ const TESTS := [
 	"_test_actions",
 	"_test_spell_progression",
 	"_test_class_features",
+	"_test_inventory",
 	"_test_combat",
 	"_test_combat_turns",
 	"_test_companions",
@@ -720,6 +721,84 @@ func _test_class_features() -> bool:
 	_expect(hp - target.hp == 5 and target.stacks("burning") == 0, "sauvegarde réussie : moitié et pas d'état")
 	Game.combat = null
 	DB.creatures.erase("_target")
+	return true
+
+
+func _test_inventory() -> bool:
+	_expect(Items.name_of("potion_heal") == "Potion de soins" and Items.name_of("longsword_plus_1") == "Épée longue +1",
+		"Items : objets et équipement au même endroit")
+	_expect(Items.is_equipment("cloak_of_protection") and not Items.is_equipment("potion_heal")
+		and Items.is_usable_outside_combat("potion_heal") and not Items.is_usable_outside_combat("antidote"), "Items : catégories")
+	_expect(Equipment.slot_for("cloak_of_protection") == "cloak" and Equipment.slot_for("ring_fire_resistance") == "ring",
+		"accessoires : leur emplacement")
+
+	Game.start_life(Character.create("human", "fighter", "Porteur"), 61)
+	var life := Game.life
+	var hero := life.character
+	var combatant := Combatant.from_character(hero, true)
+	var weapon_effect: Dictionary = Actions.def("weapon_attack")["effects"][0]
+	var attack := combatant.attack_bonus(weapon_effect)
+	hero.add_item("longsword_plus_1")
+	_expect(life.equip(hero, "longsword_plus_1") and hero.weapon_id() == "longsword_plus_1"
+		and hero.item_count("longsword") == 1 and hero.item_count("longsword_plus_1") == 0,
+		"équiper depuis le sac : l'ancienne arme retourne dans le sac")
+	_expect(combatant.attack_bonus(weapon_effect) == attack + 1 and combatant.damage_expr(weapon_effect).ends_with("+4"),
+		"arme +1 : +1 au toucher et aux dégâts")
+
+	hero.add_item("shield")
+	hero.add_item("greataxe")
+	life.equip(hero, "shield")
+	life.equip(hero, "greataxe")
+	_expect(hero.item_count("shield") == 1 and hero.item_count("longsword_plus_1") == 1 and not hero.equipment.has("off_hand"),
+		"arme à deux mains : bouclier et ancienne arme retournent dans le sac")
+	_expect(not life.equip(hero, "plate"), "impossible d'équiper un objet absent du sac")
+
+	var ac := hero.armor_class()
+	var save := hero.save_mod("dex")
+	hero.add_item("cloak_of_protection")
+	life.equip(hero, "cloak_of_protection")
+	_expect(hero.armor_class() == ac + 1 and hero.save_mod("dex") == save + 1, "Cape de protection : +1 CA et sauvegardes")
+	_expect(life.unequip(hero, "cloak") and hero.armor_class() == ac and hero.item_count("cloak_of_protection") == 1,
+		"retirer : l'objet retourne dans le sac")
+	hero.add_item("ring_fire_resistance")
+	life.equip(hero, "ring_fire_resistance")
+	_expect(hero.all_defenses().has(Defenses.RESISTANCE, "fire"), "anneau : résistance au feu")
+	var hp := hero.max_hp
+	hero.add_item("amulet_vigor")
+	life.equip(hero, "amulet_vigor")
+	_expect(hero.max_hp == hp + 1, "amulette de vigueur : +1 PV par niveau")
+
+	# Compagnon : il puise dans le sac du héros.
+	var mira := Character.create_companion("mira")
+	life.companions.append(mira)
+	hero.add_item("dagger_plus_1")
+	_expect(life.equip(mira, "dagger_plus_1") and mira.weapon_id() == "dagger_plus_1" and hero.item_count("dagger_plus_1") == 0,
+		"un compagnon s'équipe depuis le sac du groupe")
+
+	# Utiliser et jeter.
+	hero.hp = 1
+	hero.add_item("potion_heal")
+	var potions := hero.item_count("potion_heal")
+	_expect(life.use_item("potion_heal", hero) != "" and hero.hp > 1 and hero.item_count("potion_heal") == potions - 1,
+		"potion bue hors combat")
+	_expect(life.use_item("antidote", hero) == "", "antidote : inutile hors combat")
+	_expect(life.drop_item("greataxe") == 0 and life.drop_item("shield") == 1 and hero.item_count("shield") == 0, "jeter")
+
+	# Fenêtre d'inventaire.
+	var view := InventoryView.new(life)
+	add_child(view)
+	_expect(view._bag_box.get_child_count() == hero.inventory.size(), "fenêtre : une ligne par objet du sac")
+	view.select_member(mira)
+	view._on_unequip("main_hand")
+	_expect(mira.weapon_id() == Equipment.UNARMED and hero.item_count("dagger_plus_1") == 1, "fenêtre : retirer l'arme de Mira")
+	view._on_equip("dagger_plus_1")
+	_expect(mira.weapon_id() == "dagger_plus_1", "fenêtre : rééquiper Mira")
+	view.close_view()
+
+	var saved := Character.from_dict(JSON.parse_string(JSON.stringify(hero.to_dict())))
+	_expect(saved.equipment.get("cloak", "") == "" and saved.equipment["ring"] == "ring_fire_resistance",
+		"sauvegarde : accessoires équipés")
+	Game.combat = null
 	return true
 
 

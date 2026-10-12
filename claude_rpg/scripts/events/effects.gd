@@ -92,11 +92,11 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 			"add_item":
 				var count := int(e.get("count", 1))
 				ch.add_item(e["id"], count)
-				lines.append(Loc.ui("Obtenu : %s ×%d") % [DB.items[e["id"]]["name"], count])
+				lines.append(Loc.ui("Obtenu : %s ×%d") % [Items.name_of(e["id"]), count])
 			"remove_item":
 				var removed := ch.remove_item(e["id"], int(e.get("count", 1)))
 				if removed > 0:
-					lines.append(Loc.ui("Perdu : %s ×%d") % [DB.items[e["id"]]["name"], removed])
+					lines.append(Loc.ui("Perdu : %s ×%d") % [Items.name_of(e["id"]), removed])
 			"goto":
 				goto = e["event"]
 			"pass_time":
@@ -123,7 +123,9 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 				if ch.add_feat(e["id"]):
 					lines.append(Loc.ui("Nouveau don : %s !") % Feats.name_of(e["id"]))
 			"equip":
-				ch.equip(e["id"])
+				for removed in ch.equip(e["id"]):
+					if removed != Equipment.UNARMED:
+						ch.add_item(removed)  # l'objet remplacé retourne dans le sac
 				lines.append(Loc.ui("Équipé : %s") % Equipment.name_of(e["id"]))
 			"add_defense":
 				ch.defenses.add(e["kind"], e["id"])

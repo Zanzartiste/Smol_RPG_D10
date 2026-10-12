@@ -125,7 +125,7 @@ static func describe(c: Dictionary) -> String:
 		"gold":
 			return _range_text(Loc.ui("Or"), c)
 		"item":
-			return "%s ×%d" % [DB.items[c["id"]]["name"], int(c.get("min", 1))]
+			return "%s ×%d" % [Items.name_of(c["id"]), int(c.get("min", 1))]
 		"time":
 			var names := []
 			for slot: Dictionary in DB.time_slots():

@@ -106,8 +106,8 @@ func can_add(side: String, size: String) -> bool:
 func usable_items() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	for item_id: String in life.character.inventory:
-		if DB.items[item_id].has("use"):
-			result.append({"item": DB.items[item_id], "count": life.character.item_count(item_id)})
+		if Items.is_usable(item_id):
+			result.append({"item": Items.def(item_id), "count": life.character.item_count(item_id)})
 	return result
 
 
@@ -233,7 +233,7 @@ func perform(actor: Combatant, action: Dictionary, target: Combatant = null) -> 
 
 ## Utilise un objet de l'inventaire du héros (soins, antidote…).
 func use_item(actor: Combatant, item_id: String, target: Combatant) -> Array[Dictionary]:
-	var item: Dictionary = DB.items[item_id]
+	var item: Dictionary = Items.def(item_id)
 	life.character.remove_item(item_id)
 	actions_left -= 1
 	var effects: Array = []

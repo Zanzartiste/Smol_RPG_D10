@@ -68,7 +68,7 @@ static func bbcode(ch: Character) -> String:
 	if ch.inventory.is_empty():
 		t += "[color=%s]—[/color]\n" % dim
 	for item_id: String in ch.inventory:
-		t += "%s ×%d\n" % [DB.items[item_id]["name"], ch.inventory[item_id]]
+		t += "%s ×%d\n" % [Items.bbcode_name(item_id), ch.inventory[item_id]]
 	return t
 
 

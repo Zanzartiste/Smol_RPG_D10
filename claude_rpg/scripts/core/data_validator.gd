@@ -12,6 +12,7 @@ static func validate(db: Node) -> void:
 	_validate_classes(db, errors)
 	_validate_backgrounds(db, errors)
 	_validate_combat_data(db, errors)
+	_validate_items(db, errors)
 	for id: String in db.events:
 		_validate_event(db, db.events[id], errors)
 
@@ -81,10 +82,10 @@ static func _validate_rule_tables(db: Node, errors: Array[String]) -> void:
 					errors.append(ctx + " : armor_type doit valoir light, medium ou heavy")
 				if not item.has("base_ac"):
 					errors.append(ctx + " : base_ac manquant")
-			"shield":
+			"shield", "accessory":
 				pass
 			_:
-				errors.append(ctx + " : catégorie inconnue « %s » (weapon, armor, shield)" % item.get("category"))
+				errors.append(ctx + " : catégorie inconnue « %s » (weapon, armor, shield, accessory)" % item.get("category"))
 		_validate_modifiers(db, item.get("modifiers", []), ctx, errors, true)
 	if not db.equipment.has(Equipment.UNARMED):
 		errors.append("equipment.json : l'entrée « %s » (mains nues) est obligatoire" % Equipment.UNARMED)
@@ -235,7 +236,7 @@ static func _validate_combat_data(db: Node, errors: Array[String]) -> void:
 		if creature.has("defenses"):
 			_validate_defenses(db, creature["defenses"], ctx, errors)
 		for loot: Dictionary in creature.get("loot", []):
-			_expect_ref(db.items, loot.get("item"), "objet", ctx, errors)
+			_expect_item(db, loot.get("item"), ctx, errors)
 
 	for cls: Dictionary in db.classes.values():
 		var ctx := "classes.json › %s" % cls["id"]
@@ -349,7 +350,7 @@ static func _validate_skills_and_items(db: Node, entry: Dictionary, ctx: String,
 		if not db.skills.has(skill):
 			errors.append(ctx + " : compétence inconnue « %s »" % skill)
 	for item: String in entry.get("start_items", {}):
-		if not db.items.has(item):
+		if not db.items.has(item) and not db.equipment.has(item):
 			errors.append(ctx + " : objet inconnu « %s »" % item)
 
 
@@ -450,7 +451,7 @@ static func _validate_conditions(db: Node, conditions: Variant, ctx: String, err
 				for id in c["in"]:
 					_expect_ref(db.classes, id, "classe", ctx, errors)
 			"item":
-				_expect_ref(db.items, c["id"], "objet", ctx, errors)
+				_expect_item(db, c["id"], ctx, errors)
 			"seen":
 				_expect_ref(db.events, c["event"], "événement", ctx, errors)
 			"companion":
@@ -514,7 +515,7 @@ static func _validate_effects(db: Node, effects: Variant, ctx: String, errors: A
 				if e.has("damage_type"):
 					_expect_ref(db.damage_types, e["damage_type"], "type de dégâts", ctx, errors)
 			"add_item", "remove_item":
-				_expect_ref(db.items, e["id"], "objet", ctx, errors)
+				_expect_item(db, e["id"], ctx, errors)
 			"ability":
 				_expect_ref(db.abilities, e["id"], "attribut", ctx, errors)
 			"goto":
@@ -540,6 +541,27 @@ static func _validate_unlock_id(db: Node, id: String, ctx: String, errors: Array
 		_expect_ref(db.species, parts[1], "espèce", ctx, errors)
 	else:
 		_expect_ref(db.classes, parts[1], "classe", ctx, errors)
+
+
+## Un objet du sac : id de items.json ou de equipment.json.
+static func _expect_item(db: Node, id: Variant, ctx: String, errors: Array[String]) -> void:
+	if not db.items.has(id) and not db.equipment.has(id):
+		errors.append(ctx + " : objet inconnu « %s » (ni dans items.json, ni dans equipment.json)" % id)
+
+
+static func _validate_items(db: Node, errors: Array[String]) -> void:
+	for id: String in db.items:
+		if db.equipment.has(id):
+			errors.append("items.json › %s : id déjà utilisé dans equipment.json (les ids doivent être uniques)" % id)
+	for table: Dictionary in [db.items, db.equipment]:
+		for item: Dictionary in table.values():
+			var ctx := "%s › %s" % ["items.json" if table == db.items else "equipment.json", item["id"]]
+			if item.get("rarity", "common") not in Items.RARITIES:
+				errors.append(ctx + " : rareté inconnue « %s » (%s)" % [item.get("rarity"), Items.RARITIES])
+			if item.get("category") == "accessory" and item.get("slot") not in Equipment.ACCESSORY_SLOTS:
+				errors.append(ctx + " : un accessoire doit avoir un slot parmi %s" % [Equipment.ACCESSORY_SLOTS])
+			if table == db.items:
+				_validate_modifiers(db, item.get("modifiers", []), ctx, errors, true)
 
 
 static func _expect_ref(table: Dictionary, id: Variant, kind: String, ctx: String, errors: Array[String]) -> void:

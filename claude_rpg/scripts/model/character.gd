@@ -166,7 +166,8 @@ func is_proficient_save(ability_id: String) -> bool:
 
 
 func save_mod(ability_id: String) -> int:
-	return ability_mod(ability_id) + (proficiency_bonus() if is_proficient_save(ability_id) else 0)
+	return ability_mod(ability_id) + (proficiency_bonus() if is_proficient_save(ability_id) else 0) \
+		+ Modifiers.sum(modifiers(), "saving_throws")
 
 
 # --- Dons --------------------------------------------------------------------
@@ -236,21 +237,31 @@ func weapon_id() -> String:
 	return equipment.get("main_hand", Equipment.UNARMED)
 
 
-## Équipe un objet à son emplacement naturel ; retourne l'id remplacé ("" si aucun).
-## Une arme à deux mains libère la main secondaire, un bouclier libère une arme à deux mains.
-func equip(item_id: String) -> String:
+## Équipe un objet à son emplacement naturel ; retourne les ids retirés pour lui faire de la place
+## (l'objet de l'emplacement, et la main secondaire libérée par une arme à deux mains, ou l'arme à
+## deux mains libérée par un bouclier).
+func equip(item_id: String) -> Array[String]:
+	var removed: Array[String] = []
 	var slot := Equipment.slot_for(item_id)
-	var previous: String = equipment.get(slot, "")
+	if equipment.has(slot):
+		removed.append(equipment[slot])
 	equipment[slot] = item_id
-	if slot == "main_hand" and Equipment.has_property(item_id, "two_handed"):
+	if slot == "main_hand" and Equipment.has_property(item_id, "two_handed") and equipment.has("off_hand"):
+		removed.append(equipment["off_hand"])
 		equipment.erase("off_hand")
 	if slot == "off_hand" and Equipment.has_property(weapon_id(), "two_handed"):
+		removed.append(equipment["main_hand"])
 		equipment.erase("main_hand")
-	return previous
+	refresh_max_hp()  # un objet peut changer la CON ou les PV par niveau
+	return removed
 
 
-func unequip(slot: String) -> void:
+## Retire l'objet d'un emplacement ; retourne son id ("" si l'emplacement était vide).
+func unequip(slot: String) -> String:
+	var previous: String = equipment.get(slot, "")
 	equipment.erase(slot)
+	refresh_max_hp()
+	return previous
 
 
 ## Dégâts de l'arme en main (polyvalente à deux mains si la main secondaire est libre).

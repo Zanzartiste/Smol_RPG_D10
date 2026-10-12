@@ -215,8 +215,9 @@ func attack_bonus(effect: Dictionary) -> int:
 		return int(effect["to_hit"])
 	if character == null:
 		return 0
-	var ability := "weapon" if _uses_own_weapon(effect) else String(effect.get("ability", "weapon"))
-	return character.attack_bonus(ability)
+	if _uses_own_weapon(effect):
+		return character.attack_bonus("weapon") + Modifiers.sum(character.modifiers(), "weapon_attack")
+	return character.attack_bonus(String(effect.get("ability", "weapon")))
 
 
 ## Expression de dégâts d'un effet "attack" ou "damage", ex. « 1d8+3+1d6 ».

@@ -286,8 +286,9 @@ Claude ne génère pas d'images lui-même. Il peut en revanche écrire le **guid
     instinctive, Dérobade, Talent fiable, tours de magie qui montent, Rayons ardents, Boule de feu), jets de
     sauvegarde maîtrisés (événements et combat). Détail dans [classes.md](classes.md). Restent pour plus tard :
     sous-classes, actions bonus, repos courts, choix des sorts.
-12. **Inventaire et équipement** : écran Inventaire depuis la fiche, équipement des compagnons, butin d'équipement,
-    objets magiques.
+12. ~~**Inventaire et équipement**~~ : écran Inventaire depuis la fiche (touche I), sac du groupe partagé,
+    équipement des compagnons, emplacements cape / amulette / anneau, butin d'équipement, premiers objets magiques.
+    Fiches de conception [types_de_degats.md](types_de_degats.md) et [etats.md](etats.md), avec leurs questions.
 13. **Économie** : boutiques (achat, revente, stock), forge (fabrication et amélioration).
 14. **Temps long** : événement voyage (durée, transport, événements en route, se perdre), activités de 1, 2, 5 ou
     10 ans, journal de la vie.
