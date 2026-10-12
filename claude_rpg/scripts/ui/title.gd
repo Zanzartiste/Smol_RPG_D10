@@ -71,6 +71,7 @@ func _on_reset() -> void:
 func _summary() -> String:
 	var gold := UITheme.GOLD.to_html(false)
 	var t := "[color=%s]%s[/color] %d\n" % [gold, tr("Vies vécues dans ce monde :"), Meta.chronicle.size()]
+	t += "[color=%s]%s[/color] %d\n" % [gold, tr("Creator Points :"), Meta.creator_points]
 	var unlocked := PackedStringArray()
 	for id: String in Meta.unlocks:
 		unlocked.append(Meta.unlock_name(id))
@@ -93,6 +94,7 @@ func _chronicle() -> String:
 		lines.append("[color=%s]%s[/color], %s %s — %s\n[color=%s]%s[/color]" % [
 			UITheme.GOLD.to_html(false), life.get("name", "?"),
 			DB.species.get(life.get("species", ""), {}).get("name", ""), DB.classes.get(life.get("class", ""), {}).get("name", ""),
-			tr("niveau %d, mort à %d ans au jour %d") % [int(life.get("level", 1)), int(life.get("age", 0)), int(life.get("days", 1))],
+			tr("niveau %d, mort à %d ans au jour %d, +%d CP") % [int(life.get("level", 1)), int(life.get("age", 0)),
+				int(life.get("days", 1)), int(life.get("creator_points", 0))],
 			UITheme.TEXT_DIM.to_html(false), life.get("cause", "")])
 	return "\n\n".join(lines)

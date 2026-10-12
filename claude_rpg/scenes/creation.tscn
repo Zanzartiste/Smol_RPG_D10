@@ -200,6 +200,34 @@ theme_override_colors/default_color = Color(0.549, 0.51, 0.451, 1)
 text = "Chaque attribut part de 8 et monte jusqu'à 15 ; les dernières valeurs coûtent plus cher. Ajoutez ensuite +2 à un attribut et +1 à un autre. Changer de classe réapplique son modèle."
 fit_content = true
 
+[node name="Creator Points" type="VBoxContainer" parent="Margin/Columns/Options/OptionsBox/Pages"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 10
+metadata/_tab_index = 4
+
+[node name="PointsSummary" type="RichTextLabel" parent="Margin/Columns/Options/OptionsBox/Pages/Creator Points"]
+unique_name_in_owner = true
+layout_mode = 2
+bbcode_enabled = true
+fit_content = true
+
+[node name="UpgradeGrid" type="GridContainer" parent="Margin/Columns/Options/OptionsBox/Pages/Creator Points"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 6
+columns = 5
+
+[node name="UnlockLabel" type="Label" parent="Margin/Columns/Options/OptionsBox/Pages/Creator Points"]
+layout_mode = 2
+theme_type_variation = &"SectionLabel"
+text = "Déblocages définitifs"
+
+[node name="UnlockBox" type="HFlowContainer" parent="Margin/Columns/Options/OptionsBox/Pages/Creator Points"]
+unique_name_in_owner = true
+layout_mode = 2
+
 [node name="FooterText" type="RichTextLabel" parent="Margin/Columns/Options/OptionsBox"]
 unique_name_in_owner = true
 layout_mode = 2

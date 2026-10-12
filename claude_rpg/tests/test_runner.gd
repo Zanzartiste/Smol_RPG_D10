@@ -25,6 +25,7 @@ const TESTS := [
 	"_test_combat_turns",
 	"_test_companions",
 	"_test_creation",
+	"_test_creator_points",
 	"_test_dice_tray",
 	"_test_saves",
 	"_test_simulation",
@@ -408,6 +409,49 @@ func _test_creation() -> bool:
 	screen._on_class_selected("wizard")
 	_expect(screen.build_character().abilities["int"] == 17, "création : changer de classe réapplique son modèle")
 	screen.free()
+	return true
+
+
+func _test_creator_points() -> bool:
+	var backup := Meta.to_dict()
+	_expect(CreatorPoints.earned_for(0) == 1 and CreatorPoints.earned_for(350) == 3, "gain : 1 par 100 XP, au moins 1")
+	var meta := MetaState.new()
+	var life := _new_life("human", "fighter")
+	life.character.add_xp(450)
+	life.die("Test")
+	meta.record_life(life)
+	_expect(meta.creator_points == 4 and meta.chronicle[0]["creator_points"] == 4, "gain crédité à la mort et noté")
+	meta.free()
+
+	_expect(CreatorPoints.rank_cost("start_level", 1) == 6 and CreatorPoints.rank_cost("start_level", 2) == 12,
+		"coût croissant par rang")
+	_expect(CreatorPoints.total_cost({"start_level": 2, "purse": 1}) == 19, "coût total des bonus")
+	var c := Character.create("human", "fighter", "x")
+	CreatorPoints.apply(c, {"start_level": 2, "purse": 1})
+	_expect(c.level == 3 and c.hp == c.max_hp and c.gold == 15 + 25, "bonus : niveau de départ et bourse")
+
+	# Écran de création : les bonus sont payés au lancement, dans la limite du solde.
+	Meta.reset()
+	Meta.creator_points = 30
+	var screen: Control = load("res://scenes/creation.tscn").instantiate()
+	add_child(screen)
+	screen._on_class_selected("fighter")
+	screen._on_rank("start_level", 1)
+	screen._on_rank("ability_point", 1)
+	screen._on_rank("ability_point", 1)
+	_expect(screen._point_buy.remaining() == 2 and screen.build_character().level == 2, "création : bonus appliqués à l'aperçu")
+	screen._on_rank("start_level", 1)
+	screen._on_rank("start_level", 1)
+	_expect(screen._cp_ranks["start_level"] == 2, "création : impossible de dépasser le solde (6 + 12 + 20 > 30)")
+	_expect(screen.confirm_creation() and Meta.creator_points == 30 - 18 - 4 and Game.life.character.level == 3,
+		"création : les Creator Points sont dépensés au lancement")
+	screen.free()
+
+	Meta.creator_points = 15
+	_expect(Meta.buy_unlock("species:elf") and Meta.creator_points == 0 and Meta.is_species_available("elf"),
+		"déblocage définitif acheté")
+	_expect(not Meta.buy_unlock("class:rogue"), "déblocage refusé sans assez de points")
+	Meta.load_dict(backup)
 	return true
 
 

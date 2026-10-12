@@ -1,5 +1,7 @@
 extends Control
-## Écran de création de personnage, en onglets : espèce et genre, classe, passé, attributs.
+## Écran de création de personnage, en onglets : espèce et genre, classe, passé, attributs, Creator Points.
+## Les Creator Points (gagnés par les vies précédentes) achètent des bonus pour cette vie (dépensés au
+## lancement) ou des déblocages définitifs d'espèces et de classes (dépensés tout de suite).
 ## L'aperçu (portrait, nom, fiche) reste visible à gauche et se met à jour en direct.
 ## Les espèces et classes verrouillées sont visibles mais grisées, avec l'indice pour les débloquer.
 
@@ -24,6 +26,9 @@ const MAIN_SCENE := "res://scenes/main.tscn"
 @onready var template_button: Button = %TemplateButton
 @onready var footer_text: RichTextLabel = %FooterText
 @onready var start_button: Button = %StartButton
+@onready var points_summary: RichTextLabel = %PointsSummary
+@onready var upgrade_grid: GridContainer = %UpgradeGrid
+@onready var unlock_box: HFlowContainer = %UnlockBox
 
 var _species := ""
 var _class := ""
@@ -34,6 +39,10 @@ var _point_buy: PointBuy
 var _name_is_random := true  # le nom suit l'espèce tant que le joueur ne l'a pas tapé lui-même
 var _rng := RandomNumberGenerator.new()
 var _ability_rows := {}  # id d'attribut -> {value, minus, plus, bonus_buttons, total}
+var _cp_ranks := {}  # id d'amélioration (Creator Points) -> rang acheté pour cette vie
+var _upgrade_rows := {}  # id d'amélioration -> {rank, cost, minus, plus}
+var _species_buttons := {}
+var _class_buttons := {}
 
 
 func _ready() -> void:
@@ -44,9 +53,12 @@ func _ready() -> void:
 
 	var species := _fill_buttons(species_buttons, DB.species, Meta.is_species_available, _on_species_selected)
 	var classes := _fill_buttons(class_buttons, DB.classes, Meta.is_class_available, _on_class_selected)
+	_species_buttons = species
+	_class_buttons = classes
 	var backgrounds := _fill_buttons(background_buttons, DB.backgrounds, func(_id): return true, _on_background_selected)
 	var genders := _fill_buttons(gender_buttons, _index(DB.rules["genders"]), func(_id): return true, _on_gender_selected)
 	_build_ability_grid()
+	_build_upgrade_grid()
 
 	random_name_button.pressed.connect(_randomize_name)
 	appearance_button.pressed.connect(_on_appearance_pressed)
@@ -79,6 +91,7 @@ func build_character() -> Character:
 		"gender": _gender,
 	})
 	ch.art_seed = _art_seed
+	CreatorPoints.apply(ch, _cp_ranks)  # niveau de départ et or en plus
 	return ch
 
 
@@ -150,12 +163,12 @@ func _build_ability_grid() -> void:
 		_ability_rows[id] = row
 
 
-func _small_button(text: String, on_pressed: Callable) -> Button:
+func _small_button(text: String, on_pressed: Callable, parent: Container = null) -> Button:
 	var button := Button.new()
 	button.text = text
 	button.custom_minimum_size = Vector2(44, 36)
 	button.pressed.connect(on_pressed)
-	ability_grid.add_child(button)
+	(parent if parent != null else ability_grid).add_child(button)
 	return button
 
 
@@ -180,6 +193,7 @@ func _on_species_selected(species_id: String) -> void:
 func _on_class_selected(class_id: String) -> void:
 	_class = class_id
 	_point_buy = PointBuy.from_class(class_id)
+	_point_buy.extra_budget = CreatorPoints.bonus(_cp_ranks, "point_buy")
 	_refresh()
 
 
@@ -231,10 +245,102 @@ func _randomize_name() -> void:
 
 
 func _on_start() -> void:
-	if start_button.disabled:
-		return
+	if confirm_creation():
+		get_tree().change_scene_to_file(MAIN_SCENE)
+
+
+## Dépense les Creator Points des bonus choisis et commence la vie ; false si impossible.
+func confirm_creation() -> bool:
+	if start_button.disabled or not Meta.spend_creator_points(CreatorPoints.total_cost(_cp_ranks)):
+		return false
 	Game.start_life(build_character())
-	get_tree().change_scene_to_file(MAIN_SCENE)
+	return true
+
+
+# --- Creator Points ----------------------------------------------------------
+
+## Grille des améliorations : nom | rang | coût du rang suivant | − | +
+func _build_upgrade_grid() -> void:
+	for upgrade in CreatorPoints.upgrades():
+		var id: String = upgrade["id"]
+		var name_label := Label.new()
+		name_label.text = upgrade["name"]
+		name_label.tooltip_text = upgrade.get("description", "")
+		name_label.mouse_filter = Control.MOUSE_FILTER_PASS
+		name_label.custom_minimum_size = Vector2(200, 0)
+		upgrade_grid.add_child(name_label)
+		var rank := Label.new()
+		rank.custom_minimum_size = Vector2(56, 0)
+		upgrade_grid.add_child(rank)
+		var cost := Label.new()
+		cost.custom_minimum_size = Vector2(110, 0)
+		upgrade_grid.add_child(cost)
+		var minus := _small_button("−", _on_rank.bind(id, -1), upgrade_grid)
+		var plus := _small_button("+", _on_rank.bind(id, 1), upgrade_grid)
+		_upgrade_rows[id] = {"rank": rank, "cost": cost, "minus": minus, "plus": plus}
+
+
+## Creator Points encore disponibles en tenant compte des bonus sélectionnés.
+func _available_points() -> int:
+	return Meta.creator_points - CreatorPoints.total_cost(_cp_ranks)
+
+
+func _on_rank(upgrade_id: String, delta: int) -> void:
+	var rank := clampi(int(_cp_ranks.get(upgrade_id, 0)) + delta, 0, CreatorPoints.max_rank(upgrade_id))
+	var ranks := _cp_ranks.duplicate()
+	ranks[upgrade_id] = rank
+	if CreatorPoints.total_cost(ranks) > Meta.creator_points:
+		return
+	_cp_ranks = ranks
+	_point_buy.extra_budget = CreatorPoints.bonus(_cp_ranks, "point_buy")
+	_refresh()
+
+
+func _on_buy_unlock(unlock_id: String) -> void:
+	if CreatorPoints.unlock_cost(unlock_id) > _available_points() or not Meta.buy_unlock(unlock_id):
+		return
+	Saves.save_all()
+	var parts := unlock_id.split(":")
+	var button: Button = (_species_buttons if parts[0] == "species" else _class_buttons).get(parts[1])
+	if button != null:
+		button.disabled = false
+		button.tooltip_text = ""
+	footer_text.text = _footer()
+	_refresh()
+
+
+func _refresh_creator_points() -> void:
+	var gold := UITheme.GOLD.to_html(false)
+	points_summary.text = "[color=%s]%s[/color] %d   [color=%s]%s[/color] %d\n[color=%s]%s[/color]" % [
+		gold, tr("Disponibles :"), _available_points(), gold, tr("Bonus choisis :"), CreatorPoints.total_cost(_cp_ranks),
+		UITheme.TEXT_DIM.to_html(false), tr("Gagnés à chaque vie selon l'expérience acquise. Les bonus sont dépensés au lancement de l'aventure.")]
+	for id: String in _upgrade_rows:
+		var row: Dictionary = _upgrade_rows[id]
+		var rank := int(_cp_ranks.get(id, 0))
+		var max_rank := CreatorPoints.max_rank(id)
+		row["rank"].text = "%d / %d" % [rank, max_rank]
+		row["cost"].text = tr("suivant : %d CP") % CreatorPoints.rank_cost(id, rank + 1) if rank < max_rank else tr("maximum")
+		row["minus"].disabled = rank <= 0
+		row["plus"].disabled = rank >= max_rank or CreatorPoints.rank_cost(id, rank + 1) > _available_points()
+	for child in unlock_box.get_children():
+		unlock_box.remove_child(child)
+		child.queue_free()
+	for table: Dictionary in [DB.species, DB.classes]:
+		var prefix := "species:" if table == DB.species else "class:"
+		for entry: Dictionary in table.values():
+			var unlock_id: String = prefix + entry["id"]
+			var cost := CreatorPoints.unlock_cost(unlock_id)
+			if cost > 0 and not Meta.is_unlocked(unlock_id):
+				var button := Button.new()
+				button.text = tr("Débloquer : %s (%d CP)") % [entry["name"], cost]
+				button.disabled = cost > _available_points()
+				button.pressed.connect(_on_buy_unlock.bind(unlock_id), CONNECT_DEFERRED)
+				unlock_box.add_child(button)
+	if unlock_box.get_child_count() == 0:
+		var none := Label.new()
+		none.text = tr("Tout est déjà débloqué.")
+		none.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+		unlock_box.add_child(none)
 
 
 # --- Rafraîchissement ---------------------------------------------------------
@@ -249,11 +355,12 @@ func _refresh() -> void:
 	class_text.text = _class_info(DB.classes[_class])
 	background_text.text = _background_info(DB.backgrounds[_background])
 	_refresh_abilities()
+	_refresh_creator_points()
 	start_button.disabled = ch.name == "" or not _point_buy.is_valid()
 
 
 func _refresh_abilities() -> void:
-	points_label.text = tr("Points restants : %d / %d") % [_point_buy.remaining(), PointBuy.budget()]
+	points_label.text = tr("Points restants : %d / %d") % [_point_buy.remaining(), _point_buy.total_budget()]
 	for id: String in _ability_rows:
 		var row: Dictionary = _ability_rows[id]
 		row["value"].text = str(_point_buy.base[id])

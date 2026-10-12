@@ -7,6 +7,7 @@ var world_flags: Dictionary = {}
 var unlocks: Dictionary = {}  # "species:elf", "class:rogue"... -> true
 var seen_events: Dictionary = {}  # id d'événement -> nombre de fois vu, toutes vies confondues
 var chronicle: Array[Dictionary] = []
+var creator_points := 0  # Creator Points disponibles (gagnés à chaque mort, dépensés à la création)
 
 
 func has_world_flag(id: String) -> bool:
@@ -43,6 +44,23 @@ func unlock_name(id: String) -> String:
 	return id
 
 
+## Dépense des Creator Points ; retourne false si le solde est insuffisant.
+func spend_creator_points(amount: int) -> bool:
+	if amount > creator_points:
+		return false
+	creator_points -= amount
+	return true
+
+
+## Achète le déblocage définitif d'une espèce ou d'une classe ("species:elf", "class:rogue").
+func buy_unlock(unlock_id: String) -> bool:
+	var cost := CreatorPoints.unlock_cost(unlock_id)
+	if cost <= 0 or is_unlocked(unlock_id) or not spend_creator_points(cost):
+		return false
+	unlock(unlock_id)
+	return true
+
+
 func is_species_available(species_id: String) -> bool:
 	return not DB.species[species_id].get("locked", false) or is_unlocked("species:" + species_id)
 
@@ -55,9 +73,14 @@ func mark_event_seen(event_id: String) -> void:
 	seen_events[event_id] = int(seen_events.get(event_id, 0)) + 1
 
 
+## Inscrit la vie dans la chronique et crédite les Creator Points gagnés (selon l'XP du héros).
 func record_life(life: LifeState) -> void:
 	var ch := life.character
+	var earned := CreatorPoints.earned_for(ch.xp)
+	creator_points += earned
 	chronicle.append({
+		"xp": ch.xp,
+		"creator_points": earned,
 		"name": ch.name,
 		"species": ch.species_id,
 		"class": ch.class_id,
@@ -71,17 +94,19 @@ func record_life(life: LifeState) -> void:
 # --- Sauvegarde ----------------------------------------------------------------
 
 func to_dict() -> Dictionary:
-	return {"world_flags": world_flags, "unlocks": unlocks, "seen_events": seen_events, "chronicle": chronicle}
+	return {"world_flags": world_flags, "unlocks": unlocks, "seen_events": seen_events, "chronicle": chronicle,
+		"creator_points": creator_points}
 
 
 func load_dict(data: Dictionary) -> void:
 	world_flags = data.get("world_flags", {})
 	unlocks = data.get("unlocks", {})
 	seen_events = Character._int_dict(data.get("seen_events", {}))
+	creator_points = int(data.get("creator_points", 0))
 	chronicle.clear()
 	for entry: Dictionary in data.get("chronicle", []):
 		var life := entry.duplicate()
-		for key in ["age", "days", "level"]:
+		for key in ["age", "days", "level", "xp", "creator_points"]:
 			life[key] = int(life.get(key, 0))
 		chronicle.append(life)
 

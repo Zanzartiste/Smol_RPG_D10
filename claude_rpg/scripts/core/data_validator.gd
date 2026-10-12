@@ -28,6 +28,14 @@ static func _validate_rules(db: Node, errors: Array[String]) -> void:
 	for level in db.rules.get("advancement_levels", []):
 		if int(level) < 2 or int(level) > xp_table.size():
 			errors.append("rules.json : niveau d'amélioration hors limites : %s" % level)
+	var cp: Dictionary = db.rules.get("creator_points", {})
+	for upgrade: Dictionary in cp.get("upgrades", []):
+		var ctx := "rules.json › creator_points › %s" % upgrade.get("id", "?")
+		if upgrade.get("type") not in ["point_buy", "level", "gold"]:
+			errors.append(ctx + " : type inconnu « %s » (point_buy, level, gold)" % upgrade.get("type"))
+		var cost: Variant = upgrade.get("cost", 0)
+		if cost is Array and cost.size() < int(upgrade.get("max", 1)):
+			errors.append(ctx + " : il faut un coût par rang (max = %d)" % int(upgrade.get("max", 1)))
 	var point_buy: Dictionary = db.rules.get("point_buy", {})
 	var costs: Dictionary = point_buy.get("costs", {})
 	for value in range(int(point_buy.get("min", 8)), int(point_buy.get("max", 15)) + 1):

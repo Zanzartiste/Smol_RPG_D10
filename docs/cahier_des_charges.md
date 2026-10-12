@@ -250,7 +250,8 @@ Claude ne génère pas d'images lui-même. Il peut en revanche écrire le **guid
    l'échelle de la taille, nouvel écran de combat. Les decks ont été essayés puis abandonnés au profit d'actions façon D&D.
 8. ~~Sauvegarde (vie en cours et méta) et écran titre~~ : autosauvegarde, reprise des combats interrompus,
    chronique des vies sur l'écran titre.
-9. Creator Points et chronique.
+9. ~~Creator Points et chronique~~ : gain selon l'XP de la vie, bonus de départ (attributs, niveau, or), déblocages
+   achetables. Valeurs provisoires, à ajuster avec les testeurs.
 10. Contenu du MVP, puis première version pour les testeurs.
 
 ## 11. Backlog (idées validées, non prioritaires)

@@ -147,6 +147,10 @@ func _show_death() -> void:
 		ch.name, DB.species[ch.species_id]["name"], DB.classes[ch.class_id]["name"], ch.age_years(), life.day]
 	body_text.text += "\n\n[color=%s]%s[/color]" % [UITheme.BAD.to_html(false), life.death_cause]
 	body_text.text += "\n\n" + tr("Vies vécues dans ce monde : %d") % Meta.chronicle.size()
+	if not Meta.chronicle.is_empty():
+		var earned := int(Meta.chronicle.back().get("creator_points", 0))
+		body_text.text += "\n[color=%s]%s[/color]" % [UITheme.GOLD.to_html(false),
+			tr("+%d Creator Points (%d XP gagnée) — total : %d") % [earned, ch.xp, Meta.creator_points]]
 	_clear_choices()
 	_add_choice(tr("Commencer une nouvelle vie"), _on_new_life)
 	_add_choice(tr("Menu principal"), _on_menu)

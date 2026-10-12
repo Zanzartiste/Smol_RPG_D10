@@ -7,6 +7,7 @@ extends RefCounted
 
 var base: Dictionary = {}  # id d'attribut -> valeur avant bonus
 var bonuses: Array = []  # bonuses[i] = id de l'attribut qui reçoit le i-ème bonus (ex. [+2, +1])
+var extra_budget := 0  # points en plus (Creator Points)
 
 
 ## Modèle proposé par une classe : répartition standard selon ses priorités,
@@ -49,8 +50,13 @@ func spent() -> int:
 	return total
 
 
+## Budget de ce personnage : budget des règles + points en plus.
+func total_budget() -> int:
+	return budget() + extra_budget
+
+
 func remaining() -> int:
-	return budget() - spent()
+	return total_budget() - spent()
 
 
 ## Coût du prochain point dans cet attribut.

@@ -420,6 +420,26 @@ Les textes du JSON sont en français. Leur clé de traduction est dérivée des 
 Quand une traduction existe pour la langue courante, elle remplace le texte du JSON. Les textes d'interface passent par
 `tr()`, avec la phrase française comme clé.
 
+## Creator Points (méta-progression)
+
+Les Creator Points se règlent dans `rules.json › creator_points`, et l'API correspondante est `CreatorPoints`.
+**Toutes les valeurs sont provisoires**, en attendant les retours des testeurs.
+
+- **Gain** : à la mort, `xp_per_point` (100) XP gagnées par le héros valent 1 point, avec au moins `min_per_life` (1)
+  point par vie. Le gain est noté dans la chronique.
+- **Bonus pour la vie suivante** (`upgrades`) : ils s'achètent dans l'onglet « Creator Points » de la création et sont
+  dépensés au lancement de l'aventure.
+
+| type | Effet |
+|---|---|
+| `point_buy` | Points en plus pour l'achat des attributs |
+| `level` | Niveaux de départ en plus. Les améliorations des niveaux franchis (attribut, don) se choisissent en jeu |
+| `gold` | Or en plus au départ |
+
+  Chaque bonus a un `cost` (un nombre, ou une liste avec un coût par rang) et un `max` (nombre de rangs).
+- **Déblocages définitifs** : une espèce ou une classe verrouillée qui a un `unlock_cost` s'achète dans le même onglet.
+  Les points sont dépensés immédiatement.
+
 ## Sauvegarde
 
 L'autoload `Saves` (`scripts/core/save_manager.gd`) gère deux fichiers JSON dans `user://`. Sur Windows, ce dossier

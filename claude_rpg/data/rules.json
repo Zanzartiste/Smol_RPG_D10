@@ -34,5 +34,38 @@
 	"proficiency_by_level": [2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6],
 	"advancement_levels": [4, 8, 12, 16, 20],
 	"advancement": {"ability_points": 1, "feats": 1},
-	"max_ability_score": 20
+	"max_ability_score": 20,
+	"creator_points": {
+		"xp_per_point": 100,
+		"min_per_life": 1,
+		"upgrades": [
+			{
+				"id": "ability_point",
+				"name": "Point d'attribut",
+				"description": "+1 point pour l'achat des attributs.",
+				"type": "point_buy",
+				"amount": 1,
+				"cost": 2,
+				"max": 6
+			},
+			{
+				"id": "start_level",
+				"name": "Niveau de départ",
+				"description": "Commencer avec un niveau de plus (et son XP).",
+				"type": "level",
+				"amount": 1,
+				"cost": [6, 12, 20],
+				"max": 3
+			},
+			{
+				"id": "purse",
+				"name": "Bourse bien garnie",
+				"description": "+25 po au départ.",
+				"type": "gold",
+				"amount": 25,
+				"cost": 1,
+				"max": 4
+			}
+		]
+	}
 }

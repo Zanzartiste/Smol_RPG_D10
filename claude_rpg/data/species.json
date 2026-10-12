@@ -37,6 +37,7 @@
 		"description": "Gracieux et d'une longévité prodigieuse, les elfes se tiennent à l'écart des affaires des mortels.",
 		"locked": true,
 		"unlock_hint": "Percer le secret d'un sanctuaire oublié.",
+		"unlock_cost": 15,
 		"size": "medium",
 		"start_age": 100,
 		"age_stages": {"child": 0, "teen": 20, "adult": 100, "elder": 500, "venerable": 650},

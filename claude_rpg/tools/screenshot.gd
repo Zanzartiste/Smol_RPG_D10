@@ -21,6 +21,7 @@ func _ready() -> void:
 	await _capture("0_title.png")
 	title.queue_free()
 	Meta.reset()
+	Meta.creator_points = 23  # pour montrer l'onglet Creator Points
 
 	var creation: Control = load("res://scenes/creation.tscn").instantiate()
 	add_child(creation)
