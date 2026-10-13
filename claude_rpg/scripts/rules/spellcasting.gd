@@ -6,7 +6,8 @@ extends RefCounted
 ##                   sorts de niveau i+1 dans la table du SRD. Une classe s'y rattache par
 ##                   "spell_slots": "full" | "half".
 ##   dice_scaling  : {"cantrip": {"1": 1, "5": 2, ...}} ; paliers selon le niveau de classe.
-##   spells        : {"equipped_base", "equipped_per_magic_rank"} : nombre de sorts équipés.
+##   spells        : {"equipped_base", "equipped_per_magic_rank"} : nombre de sorts équipés (les tours de
+##                   magie sont toujours prêts, en plus).
 ##
 ## Emplacements simplifiés (décision du 2026-10-13) : une seule réserve, la ressource "spell_slot". Sa
 ## taille vaut la somme de la table pondérée par le niveau (2 sorts de niveau 1 et 1 de niveau 2 font 4
@@ -60,7 +61,12 @@ static func is_spell(action: Dictionary) -> bool:
 		or action.get("effects", []).any(func(e): return e.get("cantrip", false))
 
 
-## Nombre de sorts équipés possibles pour un rang de Magie.
+## Tour de magie : un sort sans niveau ni emplacement, toujours prêt (hors de la limite des sorts équipés).
+static func is_cantrip(action: Dictionary) -> bool:
+	return is_spell(action) and not action.has("spell_level") and action.get("cost", "") != SLOT_KEY
+
+
+## Nombre de sorts équipés possibles pour un rang de Magie (tours de magie non compris).
 static func max_equipped(magic_rank: int) -> int:
 	var rules: Dictionary = DB.rules.get("spells", {})
 	return int(rules.get("equipped_base", 2)) + int(rules.get("equipped_per_magic_rank", 1)) * magic_rank

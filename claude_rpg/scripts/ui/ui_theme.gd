@@ -45,6 +45,13 @@ static func build() -> Theme:
 	t.set_color("font_placeholder_color", "LineEdit", TEXT_DIM)
 	t.set_color("caret_color", "LineEdit", GOLD)
 
+	# Infobulles : fond très sombre et opaque, pour bien lire le texte.
+	var tooltip := _box(Color("#0b0907"), BORDER, 1, 10)
+	tooltip.bg_color.a = 0.97
+	t.set_stylebox("panel", "TooltipPanel", tooltip)
+	t.set_color("font_color", "TooltipLabel", TEXT)
+	t.set_font_size("font_size", "TooltipLabel", 16)
+
 	t.set_type_variation("SectionLabel", "Label")
 	t.set_color("font_color", "SectionLabel", GOLD)
 	t.set_font_size("font_size", "SectionLabel", 20)

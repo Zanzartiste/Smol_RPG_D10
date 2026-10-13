@@ -47,6 +47,11 @@ static func name_of(id: String) -> String:
 	return def(id).get("name", id)
 
 
+## Ce que fait la compétence (affiché au survol).
+static func description_of(id: String) -> String:
+	return def(id).get("description", "")
+
+
 static func category_of(id: String) -> String:
 	return def(id).get("category", "knowledge")
 

@@ -747,13 +747,15 @@ func max_equipped_spells() -> int:
 	return Spellcasting.max_equipped(skill_rank("magic"))
 
 
+## Sort prêt en combat : un tour de magie, ou un sort équipé.
 func is_spell_equipped(action_id: String) -> bool:
-	return action_id in equipped_spells
+	return action_id in equipped_spells or Spellcasting.is_cantrip(Actions.def(action_id))
 
 
-## Équipe un sort connu ; false s'il n'y a plus de place.
+## Équipe un sort connu ; false s'il n'y a plus de place (ou pour un tour de magie, toujours prêt).
 func equip_spell(action_id: String) -> bool:
-	if action_id in equipped_spells or action_id not in known_spells() or equipped_spells.size() >= max_equipped_spells():
+	if action_id in equipped_spells or action_id not in known_spells() or Spellcasting.is_cantrip(Actions.def(action_id)) \
+			or equipped_spells.size() >= max_equipped_spells():
 		return false
 	equipped_spells.append(action_id)
 	return true
@@ -767,12 +769,12 @@ func unequip_spell(action_id: String) -> bool:
 
 
 ## Met les sorts équipés à jour : oublie les sorts inconnus, et équipe d'office les sorts nouvellement
-## appris s'il reste de la place.
+## appris s'il reste de la place (les tours de magie, toujours prêts, n'y figurent pas).
 func sync_spells() -> void:
 	var known := known_spells()
-	equipped_spells.assign(equipped_spells.filter(func(id): return id in known))
+	equipped_spells.assign(equipped_spells.filter(func(id): return id in known and not Spellcasting.is_cantrip(Actions.def(id))))
 	for action_id in known:
-		if action_id in seen_spells:
+		if action_id in seen_spells or Spellcasting.is_cantrip(Actions.def(action_id)):
 			continue
 		seen_spells.append(action_id)
 		if equipped_spells.size() < max_equipped_spells():
@@ -812,7 +814,7 @@ func max_resource(resource_id: String) -> int:
 ## (ids de actions.json, ou « action|ressource » pour un sort lancé grâce à un don).
 func combat_actions() -> Array:
 	var known := known_spells()
-	return _all_combat_actions().filter(func(id): return id not in known or id in equipped_spells)
+	return _all_combat_actions().filter(func(id): return id not in known or is_spell_equipped(id))
 
 
 ## Toutes les actions, sorts non équipés compris.

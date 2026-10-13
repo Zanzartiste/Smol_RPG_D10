@@ -1,24 +1,24 @@
 [
-	{"id": "weapon_melee", "name": "Armes de mêlée", "category": "combat", "abilities": ["str", "dex"]},
-	{"id": "weapon_ranged", "name": "Armes de trait", "category": "combat", "abilities": ["dex"]},
-	{"id": "weapon_firearms", "name": "Armes à poudre", "category": "combat", "abilities": ["dex"]},
-	{"id": "weapon_siege", "name": "Machines de guerre", "category": "combat", "abilities": ["int", "str"]},
-	{"id": "physique", "name": "Physique", "category": "combat", "instinctive": true, "abilities": ["str", "dex", "con"]},
-	{"id": "magic", "name": "Magie", "category": "combat", "abilities": ["int", "wis", "cha"], "base_rank": 0, "caster_base_rank": 2},
+	{"id": "weapon_melee", "name": "Armes de mêlée", "description": "Se battre avec une arme de corps à corps (épée, hache, dague…) : attaques, dégâts et parades.", "category": "combat", "abilities": ["str", "dex"]},
+	{"id": "weapon_ranged", "name": "Armes de trait", "description": "Tirer à l'arc ou à l'arbalète, lancer des armes : attaques et dégâts à distance.", "category": "combat", "abilities": ["dex"]},
+	{"id": "weapon_firearms", "name": "Armes à poudre", "description": "Manier les armes à poudre (aucune n'existe encore).", "category": "combat", "abilities": ["dex"]},
+	{"id": "weapon_siege", "name": "Machines de guerre", "description": "Servir les machines de guerre : balistes, catapultes… (aucune n'existe encore).", "category": "combat", "abilities": ["int", "str"]},
+	{"id": "physique", "name": "Physique", "description": "Votre forme physique : se bagarrer à mains nues, lancer, grimper, nager, sauter, forcer une porte, faire des acrobaties, garder l'équilibre, esquiver, tenir en apnée, monter à cheval. Sert aussi à résister (FOR, DEX, CON).", "category": "combat", "instinctive": true, "abilities": ["str", "dex", "con"]},
+	{"id": "magic", "name": "Magie", "description": "Votre maîtrise des arcanes : attaques de sort et sorts que la cible doit repousser.", "category": "combat", "abilities": ["int", "wis", "cha"], "base_rank": 0, "caster_base_rank": 2},
 
-	{"id": "languages", "name": "Langues", "category": "social", "abilities": ["cha", "int"]},
-	{"id": "persuasion", "name": "Persuasion", "category": "social", "instinctive": true, "abilities": ["cha"]},
-	{"id": "insight", "name": "Perspicacité", "category": "social", "instinctive": true, "abilities": ["wis", "cha"]},
+	{"id": "languages", "name": "Langues", "description": "Se faire comprendre d'un peuple sans langue commune, par signes et sons. Chaque rang donne une langue de plus.", "category": "social", "abilities": ["cha", "int"]},
+	{"id": "persuasion", "name": "Persuasion", "description": "Convaincre, négocier, séduire, marchander, tromper, mentir, manipuler ; intimider avec la Force. Fait baisser les prix.", "category": "social", "instinctive": true, "abilities": ["cha"]},
+	{"id": "insight", "name": "Perspicacité", "description": "Deviner les intentions, déceler un mensonge, percevoir un sentiment caché ou l'état d'esprit de quelqu'un. Sert à résister (SAG).", "category": "social", "instinctive": true, "abilities": ["wis", "cha"]},
 
-	{"id": "sleight_of_hand", "name": "Escamotage", "category": "roguery", "abilities": ["dex"]},
-	{"id": "stealth", "name": "Furtivité", "category": "roguery", "instinctive": true, "abilities": ["dex"]},
-	{"id": "perception", "name": "Perception", "category": "roguery", "instinctive": true, "abilities": ["int", "wis"]},
+	{"id": "sleight_of_hand", "name": "Escamotage", "description": "Voler à la tire, crocheter une serrure, cacher un objet sur soi lors d'une fouille.", "category": "roguery", "abilities": ["dex"]},
+	{"id": "stealth", "name": "Furtivité", "description": "Se cacher, se déplacer sans bruit. En combat : Se cacher, puis attaquer par surprise.", "category": "roguery", "instinctive": true, "abilities": ["dex"]},
+	{"id": "perception", "name": "Perception", "description": "Chercher des indices, déduire, repérer un mécanisme ou un objet caché, entendre, sentir, suivre une piste.", "category": "roguery", "instinctive": true, "abilities": ["int", "wis"]},
 
-	{"id": "lore", "name": "Érudition", "category": "knowledge", "abilities": ["int"]},
-	{"id": "crafting", "name": "Artisanat", "category": "knowledge", "abilities": ["dex", "int"]},
-	{"id": "arts", "name": "Arts", "category": "knowledge", "abilities": ["cha", "dex"]},
-	{"id": "potions_cooking", "name": "Potions et cuisine", "category": "knowledge", "abilities": ["wis", "int", "dex"]},
-	{"id": "medicine", "name": "Médecine", "category": "knowledge", "abilities": ["wis", "int", "dex"]},
-	{"id": "survival", "name": "Survie", "category": "knowledge", "abilities": ["wis", "int", "dex"]},
-	{"id": "animal_handling", "name": "Dressage", "category": "knowledge", "abilities": ["wis"]}
+	{"id": "lore", "name": "Érudition", "description": "Vos connaissances générales : reconnaître des créatures, des sorts, des objets, des lieux, des dieux. Sert à résister (INT).", "category": "knowledge", "abilities": ["int"]},
+	{"id": "crafting", "name": "Artisanat", "description": "Créer des objets utiles : armes, armures, outils, meubles. La DEX pour reproduire un objet connu, l'INT pour en concevoir les plans.", "category": "knowledge", "abilities": ["dex", "int"]},
+	{"id": "arts", "name": "Arts", "description": "Réaliser des œuvres ou des prestations agréables : peindre, chanter, sculpter, jouer. Le CHA pour l'émotion, la DEX pour la prouesse.", "category": "knowledge", "abilities": ["cha", "dex"]},
+	{"id": "potions_cooking", "name": "Potions et cuisine", "description": "Trouver des ingrédients, cuisiner, préparer potions, remèdes et poisons ; détecter un poison ou un aliment dans un plat.", "category": "knowledge", "abilities": ["wis", "int", "dex"]},
+	{"id": "medicine", "name": "Médecine", "description": "Soigner blessures et maladies, arrêter une hémorragie, recoudre une plaie, diagnostiquer, stabiliser un mourant. En combat : Premiers soins.", "category": "knowledge", "abilities": ["wis", "int", "dex"]},
+	{"id": "survival", "name": "Survie", "description": "Survivre en milieu sauvage : chasser, pêcher, cueillir, s'abriter, s'orienter, pister ; trouver des ingrédients.", "category": "knowledge", "abilities": ["wis", "int", "dex"]},
+	{"id": "animal_handling", "name": "Dressage", "description": "Calmer, monter ou dresser un animal.", "category": "knowledge", "abilities": ["wis"]}
 ]

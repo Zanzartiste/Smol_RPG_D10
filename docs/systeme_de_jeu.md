@@ -180,8 +180,9 @@ chance de réussite (calculée exactement).
   sort de niveau N coûte N emplacements. La réserve vaut la table du SRD pondérée par le niveau des sorts (magicien :
   2 au niveau 1, 8 au niveau 3, 16 au niveau 5) ; la table fixe aussi le niveau de sort le plus haut lançable.
 - **Sorts connus et équipés** : un lanceur connaît les sorts de sa classe, mais seuls les sorts **équipés** sont
-  utilisables en combat : 2 + rang de Magie (4 pour un magicien débutant). Un sort appris est équipé d'office s'il
-  reste de la place. On les change hors combat, dans l'onglet Sorts du tiroir.
+  utilisables en combat : 2 + rang de Magie (4 pour un magicien débutant). Les **tours de magie** sont toujours
+  prêts, en plus de cette limite (décision du 2026-10-14). Un sort appris est équipé d'office s'il reste de la place.
+  On les change hors combat, dans l'onglet Sorts du tiroir.
 - **États** : Poison (1 dégât par tour, les charges sont la durée), Affaibli (un dé de dégâts de moins par charge),
   Protection (chaque charge absorbe 1 point), Endormi et Paralysé (pris par surprise), Invisible (caché : ses
   attaques sont des surprises, Couvert +1), Préparé (+2 dés).
@@ -226,13 +227,9 @@ chance de réussite (calculée exactement).
 
 ## Questions
 
-1. **Améliorations d'attribut** : sur l'échelle 3-8, +1 pèse lourd. Elles arrivent :
-   - tous les 4 niveaux de classe (4, 8, 12, 16, 20) : +1 à un attribut **et** un don au choix ;
-   - par certains dons : « Amélioration d'attribut » (+1 à deux attributs, ou +2 au même), et les demi-dons
-     (Athlète, Résistant, Érudit des arcanes…) qui donnent +1 à un attribut en plus de leur effet ;
-   - par le don du passé, dès la création (ex. Érudit des arcanes : +1 INT).
-   Un guerrier peut ainsi passer de FOR 7 à 10 au niveau 4 (+1, puis +2 avec le don). Faut-il limiter (+1 par
-   palier seulement, don d'amélioration à +1, plafond plus bas) ?
-2. **Test d'attribut sans compétence** : 2 dés contre l'attribut, ça te va ?
-3. **Sorts équipés** : 2 + rang de Magie, tours de magie compris. Faut-il compter les tours de magie à part
-   (toujours disponibles), ou changer la formule ?
+1. **Améliorations d'attribut** (à régler avec la courbe de puissance) : tous les 4 niveaux de classe, +1 à un
+   attribut et un don ; le don « Amélioration d'attribut » (+1 à deux attributs, ou +2 au même) et les demi-dons
+   (+1) ; le don du passé à la création. Un guerrier peut passer de FOR 7 à 10 au niveau 4.
+2. **Test d'attribut sans compétence** (2 dés contre l'attribut) : la règle existe, mais aucun contenu ne s'en sert
+   pour l'instant (les deux tests d'attribut des événements sont devenus des tests de compétence). À garder pour
+   les cas sans compétence évidente (soulever une herse, résister au sommeil sans Perspicacité…) ?

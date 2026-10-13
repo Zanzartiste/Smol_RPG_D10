@@ -53,14 +53,10 @@ func _ready() -> void:
 	_rest_button.pressed.connect(_on_rest, CONNECT_DEFERRED)
 	_rest_button.tooltip_text = tr("Repos long jusqu'au matin, selon le lieu (touche R)")
 	sheet_text.get_parent().add_child(_rest_button)
-	# La fiche détaillée vit dans le tiroir latéral : la colonne de gauche ne garde que le portrait et les
-	# boutons.
-	sheet_text.visible = false
-	var spacer := Control.new()
-	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	sheet_text.get_parent().add_child(spacer)
-	sheet_text.get_parent().move_child(spacer, sheet_text.get_index())
-	sheet_text.get_parent().get_parent().custom_minimum_size.x = 220
+	# La fiche, l'inventaire et le carnet vivent dans le tiroir latéral : plus de colonne de gauche (les
+	# raccourcis I, C et R restent ; le repos est aussi proposé au hub et dans chaque lieu).
+	sheet_text.get_parent().get_parent().visible = false
+	$Margin.add_theme_constant_override("margin_right", 16 + int(SideDrawer.TAB_WIDTH))  # place des onglets
 	if Game.life == null or Game.life.dead:
 		if not Saves.load_life():
 			Game.new_life()  # scène lancée directement, sans sauvegarde ni création
@@ -149,6 +145,7 @@ func _show_hub() -> void:
 	for loc_id in DB.location_order:
 		var loc: Dictionary = DB.locations[loc_id]
 		_add_choice("%s — %s" % [loc["name"], loc.get("description", "")], _on_location_chosen.bind(loc_id))
+	_add_choice("%s (R)" % Game.rest_name(), _on_rest)
 
 func _show_event(ev: Dictionary) -> void:
 	var life := Game.life
@@ -355,6 +352,7 @@ func _show_location_menu(location_id: String) -> void:
 	for shop_id in Shops.of_location(location_id):
 		_add_choice("%s — %s" % [Shops.name_of(shop_id), Shops.def(shop_id).get("description", "")],
 			open_shop.bind(shop_id))
+	_add_choice("%s (R)" % Game.rest_name(), _on_rest)
 	_add_choice(tr("Retour"), _show_hub)
 
 

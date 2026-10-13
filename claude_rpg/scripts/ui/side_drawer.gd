@@ -32,6 +32,7 @@ var _current := ""  # page ouverte ("" : tiroir replié)
 var _pinned := false
 var _open := 0.0  # 0 replié, 1 déroulé
 var _outside := 0.0  # temps passé hors du tiroir
+var _skills_open := true  # section Compétences dépliée
 var _tab_timer := 0.0  # rafraîchissement régulier des onglets
 
 
@@ -216,29 +217,44 @@ func _member_selector(only: Callable = Callable()) -> void:
 func _build_character() -> void:
 	_member_selector()
 	var ch := member
-	_add_label(ch.name, "", "TitleLabel")
+	# En-tête : portrait, nom, espèce et genre, classes.
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 12)
+	var portrait := TextureRect.new()
+	portrait.texture = ArtProvider.portrait(ch)
+	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	portrait.custom_minimum_size = Vector2(88, 88)
+	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	header.add_child(portrait)
+	var identity := VBoxContainer.new()
+	identity.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	identity.alignment = BoxContainer.ALIGNMENT_CENTER
+	header.add_child(identity)
+	identity.add_child(_make_label(ch.name, "", "TitleLabel"))
 	var species_name: String = DB.species[ch.species_id]["name"]
-	_add_label("%s %s" % [species_name, DB.gender_name(ch.gender)], tr("Taille : %s · %d ans (%s)") % [
-		DB.size_name(ch.size()), ch.age_years(), DB.life_stage_name(ch.life_stage())])
+	identity.add_child(_make_label("%s %s" % [species_name, DB.gender_name(ch.gender)], tr("Taille : %s · %d ans (%s)") % [
+		DB.size_name(ch.size()), ch.age_years(), DB.life_stage_name(ch.life_stage())]))
 	var classes := PackedStringArray()
 	for cls: String in ch.class_levels:
 		classes.append(tr("%s niv. %d") % [DB.classes[cls]["name"], int(ch.class_levels[cls])])
-	_add_label(", ".join(classes), _subclass_text(ch))
+	identity.add_child(_make_label(", ".join(classes), _subclass_text(ch)))
+	_content.add_child(header)
 	_add_xp_bar(ch)
 	_add_separator()
-	_add_label(tr("PV : %d / %d") % [ch.hp, ch.max_hp], tr("Constitution %d × 1,414^taille (%d)%s") % [
-		ch.ability_score("con"), ch.size(), _extra_hp_text(ch)])
 	var dex := ch.ability_score("dex")
-	_add_label(tr("Esquive naturelle : %d") % ch.natural_dodge(), tr("Dextérité %d ÷ 3 = %d (au moins 1)%s.\nC'est la difficulté des attaques de mêlée contre %s.") % [
-		dex, maxi(1, floori(dex / 3.0)), _signed_extra(Modifiers.sum(ch.modifiers(), "natural_dodge")), ch.name])
-	_add_label(tr("Armure : %d") % ch.armor(), _parts_text(ch.armor_parts(), tr("Aucune armure.")) +
-		tr("\nBaisse d'autant le seuil des dégâts subis (sans passer sous 1)."))
 	var initiative := tr("Dextérité %d + Intelligence %d") % [dex, ch.ability_score("int")]
 	if ch.has_modifier("initiative_rank"):
 		initiative += tr(" + Physique %d (Vigilant)") % ch.skill_rank("physique")
 	if ch.roll_penalty("dex") > 0:
 		initiative += tr(" − %d (encombrement)") % ch.roll_penalty("dex")
-	_add_label(tr("Initiative : %d") % ch.initiative_base(), initiative + tr("\n+ 1d10 au début du combat."))
+	_add_pair(_make_label(tr("PV : %d / %d") % [ch.hp, ch.max_hp], tr("Constitution %d × 1,414^taille (%d)%s") % [
+		ch.ability_score("con"), ch.size(), _extra_hp_text(ch)]),
+		_make_label(tr("Initiative : %d") % ch.initiative_base(), initiative + tr("\n+ 1d10 au début du combat.")))
+	_add_pair(_make_label(tr("Esquive naturelle : %d") % ch.natural_dodge(), tr("Dextérité %d ÷ 3 = %d (au moins 1)%s.\nC'est la difficulté des attaques de mêlée contre %s.") % [
+		dex, maxi(1, floori(dex / 3.0)), _signed_extra(Modifiers.sum(ch.modifiers(), "natural_dodge")), ch.name]),
+		_make_label(tr("Armure : %d") % ch.armor(), _parts_text(ch.armor_parts(), tr("Aucune armure.")) +
+			tr("\nBaisse d'autant le seuil des dégâts subis (sans passer sous 1).")))
 	if ch.is_encumbered():
 		_add_label(tr("Encombré : −%d dé(s) aux jets de FOR et DEX") % ch.encumbrance_penalty(), "", "", UITheme.BAD)
 	_add_separator()
@@ -252,9 +268,18 @@ func _build_character() -> void:
 		grid.add_child(_make_label("%s %d" % [Abilities.short_of(ability_id), ch.ability_score(ability_id)], tip))
 	_content.add_child(grid)
 	_add_separator()
+	var fold := Button.new()
+	fold.flat = true
+	fold.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	fold.text = ("▾ " if _skills_open else "▸ ") + tr("Compétences")
+	fold.add_theme_color_override("font_color", UITheme.GOLD)
+	fold.pressed.connect(func():
+		_skills_open = not _skills_open
+		_build_page())
+	_content.add_child(fold)
 	for category: String in Skills.CATEGORY_NAMES:
 		var ids := Skills.ids_in(category)
-		if ids.is_empty():
+		if ids.is_empty() or not _skills_open:
 			continue
 		_add_label(tr(Skills.CATEGORY_NAMES[category]), "", "", UITheme.TEXT_DIM)
 		var skills := GridContainer.new()
@@ -304,18 +329,17 @@ static func _parts_text(parts: Array, empty: String) -> String:
 	return "\n".join(PackedStringArray(parts.map(func(p): return "%s : %+d" % [p[0], int(p[1])])))
 
 
+## Au survol d'une compétence : ce qu'elle permet de faire, puis son jet.
 func _skill_tip(ch: Character, skill_id: String) -> String:
 	var abilities := PackedStringArray(Skills.abilities_of(skill_id).map(func(id): return Abilities.short_of(id)))
 	var pool := ch.skill_pool(skill_id)
-	var lines := PackedStringArray([tr("Attributs : %s") % ", ".join(abilities),
-		tr("Rang %d : %s") % [ch.skill_rank(skill_id), ", ".join(PackedStringArray(ch.skill_rank_parts(skill_id).map(
-			func(p): return "%s %+d" % [p[0], int(p[1])])))],
-		tr("Jet : %s") % Dice.pool_text(int(pool["count"]), int(pool["threshold"]))])
-	if Skills.is_instinctive(skill_id):
-		lines.append(tr("Instinctive : rang 2 au départ."))
+	var lines := PackedStringArray([Skills.description_of(skill_id)])
 	if skill_id == "languages":
-		lines.append(tr("Langues connues : %s") % ", ".join(PackedStringArray(ch.known_languages().map(
+		lines.append(tr("Langues connues : %s.") % ", ".join(PackedStringArray(ch.known_languages().map(
 			func(l): return Skills.language_name(l)))))
+	lines.append("")
+	lines.append(tr("%s · jet : %s%s") % [" / ".join(abilities), Dice.pool_text(int(pool["count"]), int(pool["threshold"])),
+		tr(" · instinctive") if Skills.is_instinctive(skill_id) else ""])
 	return "\n".join(lines)
 
 
@@ -430,18 +454,19 @@ func _build_spells() -> void:
 	_add_label(tr("Emplacements : %d / %d") % [int(ch.resources.get(Spellcasting.SLOT_KEY, 0)), ch.max_resource(Spellcasting.SLOT_KEY)],
 		tr("Un sort de niveau N coûte N emplacements. Un repos long les restaure.\nSorts jusqu'au niveau %d.") % ch.max_spell_level())
 	_add_label(tr("Sorts équipés : %d / %d") % [ch.equipped_spells.size(), ch.max_equipped_spells()],
-		tr("Seuls les sorts équipés sont utilisables en combat : 2 + rang de Magie (%d).") % ch.skill_rank("magic"))
+		tr("Seuls les sorts équipés sont utilisables en combat : 2 + rang de Magie (%d). Les tours de magie sont toujours prêts, en plus.") % ch.skill_rank("magic"))
 	if locked:
 		_add_label(tr("On ne change pas ses sorts pendant un combat."), "", "", UITheme.TEXT_DIM)
 	_add_separator()
 	for action_id in ch.known_spells():
 		var action := Actions.def(action_id)
 		var equipped := ch.is_spell_equipped(action_id)
+		var cantrip := Spellcasting.is_cantrip(action)
 		var check := CheckBox.new()
 		var level := int(action.get("spell_level", 0))
-		check.text = "%s — %s" % [action["name"], tr("tour de magie") if level == 0 else tr("niv. %d, coût %d") % [level, level]]
+		check.text = "%s — %s" % [action["name"], tr("tour de magie, toujours prêt") if cantrip else tr("niv. %d, coût %d") % [level, level]]
 		check.button_pressed = equipped
-		check.disabled = locked or (not equipped and ch.equipped_spells.size() >= ch.max_equipped_spells())
+		check.disabled = cantrip or locked or (not equipped and ch.equipped_spells.size() >= ch.max_equipped_spells())
 		check.tooltip_text = "%s\n%s" % [action.get("description", ""), Actions.text_of(action_id)]
 		check.toggled.connect(func(on: bool):
 			if on:
@@ -474,6 +499,16 @@ func _add_label(text: String, tooltip: String, variation := "", color := Color(0
 	var label := _make_label(text, tooltip, variation, color)
 	_content.add_child(label)
 	return label
+
+
+## Deux éléments côte à côte, chacun sur la moitié de la largeur.
+func _add_pair(left: Control, right: Control) -> void:
+	var row := HBoxContainer.new()
+	for item in [left, right]:
+		item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		item.size_flags_stretch_ratio = 1.0
+		row.add_child(item)
+	_content.add_child(row)
 
 
 func _add_separator() -> void:
