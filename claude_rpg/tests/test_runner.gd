@@ -1924,6 +1924,35 @@ func _test_combat_turns() -> bool:
 	_expect(beats[0]["text"].contains("Hurlement"), "l'action annoncée est jouée en premier")
 	Game.combat = null
 
+	# Archétypes d'IA : le chasseur vise le plus blessé ; le lâche s'enfuit, sans XP ni butin.
+	Game.start_life(Character.create("human", "fighter", "Testeur"), 12)
+	Effects.apply_all([{"type": "recruit", "companion": "mira"}], Game.life, Meta)
+	combat = Game.start_combat({"enemies": ["wolf", "bandit"]})
+	var hunter := combat.enemies()[0]
+	var mira := combat.allies()[1]
+	mira.hp = 1
+	combat.turn = combat.order.find(hunter)
+	combat.start_turn()
+	var hunt_beats: Array[Dictionary] = await combat.ai_turn(hunter)
+	_expect(hunter.ai_kind() == "hunter" and hunt_beats.any(func(b): return "attaque Mira" in b["text"]), "le loup vise le plus blessé")
+	var coward := combat.enemies()[1]
+	coward.hp = 1
+	var fled := false
+	for i in 20:
+		combat.turn = combat.order.find(coward)
+		combat.start_turn()
+		await combat.ai_turn(coward)
+		if coward.fled:
+			fled = true
+			break
+	_expect(fled and not coward.is_alive() and combat.living("enemy").size() == 1, "le brigand lâche s'enfuit")
+	hunter.hp = 0
+	combat._check_end()
+	var xp_before := Game.life.character.xp
+	var won := Game.finish_combat()
+	_expect(won["outcome"] == "victory" and Game.life.character.xp - xp_before == int(Creatures.def("wolf")["xp"]),
+		"une créature enfuie ne rapporte pas d'XP")
+
 	# Invocations et places : 4 places par camp (petite ½, moyenne 1, grande 2).
 	Game.start_life(Character.create("human", "wizard", "Mage"), 9)
 	combat = Game.start_combat({"enemies": ["wolf"]})

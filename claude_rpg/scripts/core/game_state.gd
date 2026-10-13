@@ -83,6 +83,8 @@ func finish_combat() -> Dictionary:
 	if c.outcome == "victory":
 		var xp := 0
 		for enemy in c.enemies():
+			if enemy.fled:
+				continue  # une créature enfuie ne laisse ni XP ni butin
 			var creature := enemy.creature
 			xp += int(creature.get("xp", 0))
 			if creature.has("gold"):

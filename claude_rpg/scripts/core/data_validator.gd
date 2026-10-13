@@ -254,6 +254,8 @@ static func _validate_combat_data(db: Node, errors: Array[String]) -> void:
 			_expect_ref(db.abilities, ability_id, "attribut", ctx, errors)
 		if creature.has("gold") and not Dice.is_valid_expr(creature["gold"]):
 			errors.append(ctx + " : or invalide « %s »" % creature["gold"])
+		if creature.get("ai", "brute") not in ["brute", "hunter", "coward"]:
+			errors.append(ctx + " : archétype d'IA inconnu « %s » (brute, hunter, coward)" % creature.get("ai"))
 		if int(creature.get("size", 0)) not in size_ids:
 			errors.append(ctx + " : taille inconnue « %s »" % creature.get("size"))
 		_validate_ai_actions(db, creature.get("actions", []), ctx, errors)

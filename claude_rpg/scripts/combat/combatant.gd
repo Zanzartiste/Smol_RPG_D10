@@ -25,6 +25,7 @@ var reactions := 0  # actions gardées à la fin de son tour : esquives, parades
 var parries_used := 0  # parades pendant le tour en cours (une par main armée)
 var fast_hands_used := false  # Mains lestes déjà utilisées ce tour
 var cunning_used := false  # Ruse (Se cacher sans dépenser d'action) déjà utilisée ce tour
+var fled := false  # a quitté le combat (créature lâche) : ni XP ni butin
 var _hp := 0
 var _max_hp := 0
 
@@ -75,7 +76,13 @@ func is_hero() -> bool:
 
 
 func is_alive() -> bool:
-	return hp > 0
+	return hp > 0 and not fled
+
+
+## Archétype d'IA d'une créature (creatures.json › "ai") : "brute" (par défaut, cible au hasard),
+## "hunter" (vise le plus blessé), "coward" (s'enfuit quand ses PV sont bas).
+func ai_kind() -> String:
+	return creature.get("ai", "brute")
 
 
 func max_hp() -> int:

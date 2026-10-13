@@ -385,6 +385,14 @@ func ai_turn(actor: Combatant) -> Array[Dictionary]:
 	var beats: Array[Dictionary] = []
 	var keep := 1 if actions_left > 1 and rng.randf() < float(setting("ai_guard_chance", 0.25)) else 0
 	var intent_ready := not actor.intent.is_empty()
+	# Lâche : sous coward_hp (30 % de ses PV), une chance sur deux de s'enfuir.
+	if actor.ai_kind() == "coward" and not actor.is_ally() and actor.hp <= actor.max_hp() * float(setting("coward_hp", 0.3)) \
+			and rng.randf() < 0.5:
+		actor.fled = true
+		actor.intent = {}
+		_beat(beats, Loc.ui("%s prend la fuite !") % actor.name)
+		_check_end()
+		return beats
 	for guard in 8:
 		if actions_left <= keep or is_over() or not actor.is_alive():
 			break
@@ -412,8 +420,9 @@ func ai_turn(actor: Combatant) -> Array[Dictionary]:
 			if candidates.is_empty():
 				break
 			candidates.sort_custom(func(a, b): return a.hp < b.hp)
-			# Les invocations alliées visent le plus faible, les ennemis choisissent au hasard.
-			chosen = candidates[0] if actor.is_ally() else candidates[rng.randi_range(0, candidates.size() - 1)]
+			# Les invocations alliées et les chasseurs visent le plus faible, les autres ennemis au hasard.
+			var weakest := actor.is_ally() or actor.ai_kind() == "hunter"
+			chosen = candidates[0] if weakest else candidates[rng.randi_range(0, candidates.size() - 1)]
 		_beat(beats, Loc.ui("%s : %s.") % [actor.name, action["name"]])
 		beats.append_array(await _resolve(actor, action.get("effects", []), target_mode, chosen, not actor.is_ally()))
 		_check_end()

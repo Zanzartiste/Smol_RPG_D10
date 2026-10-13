@@ -2,7 +2,8 @@ class_name Creatures
 extends RefCounted
 ## API du bestiaire : ennemis et invocations. Définitions : data/creatures.json.
 ## Une créature : {"id", "name", "size", "hp"?, "armor"?, "abilities", "skills"?, "actions": [...],
-##                 "xp"?, "gold"?, "loot"?, "defenses"?, "death_cause"?, "summon"?, "art"}
+##                 "xp"?, "gold"?, "loot"?, "defenses"?, "death_cause"?, "summon"?, "art",
+##                 "ai"?: "brute" (cible au hasard) | "hunter" (le plus blessé) | "coward" (fuit à 30 % de PV)}
 ## Une action : {"name", "weight", "target", "announced"?, "effects": [...] (voir CombatEffects)}.
 ## Une action « announced » est annoncée un tour à l'avance (visible par le joueur), puis exécutée.
 

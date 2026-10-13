@@ -177,6 +177,7 @@
 		"prepared_dice": 2,
 		"surprise_crit_bonus": 2,
 		"flee_difficulty": 2,
+		"coward_hp": 0.3,
 		"cover": {"base": 1, "min": 1},
 		"side_capacity": 4,
 		"size_slots": {"-4": 0.25, "-3": 0.25, "-2": 0.5, "-1": 0.5, "0": 1, "1": 1, "2": 2, "3": 3, "4": 4, "5": 4},
