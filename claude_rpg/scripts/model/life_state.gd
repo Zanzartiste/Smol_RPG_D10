@@ -19,6 +19,13 @@ var reputation: Dictionary = {}  # id de lieu -> réputation du héros (−100 �
 var location := ""  # dernier lieu visité (où l'on se repose)
 var crafted: Dictionary = {}  # station -> objets fabriqués (le métier se dessine)
 var quests: Dictionary = {}  # id de quête -> {"status": "active" | "done" | "failed", "step"} (voir Quests)
+## Journal de la vie, dans l'ordre : [{"day", "slot", "kind", "text"}]. Sortes : event, combat, quest, social,
+## level, world (voir JOURNAL_KINDS).
+var journal: Array[Dictionary] = []
+
+const JOURNAL_KINDS := {"event": "Événements", "combat": "Combats", "quest": "Quêtes", "social": "Relations",
+	"level": "Progression", "world": "Le monde"}
+const JOURNAL_MAX := 400
 var last_initiative_day := -1  # dernier jour du monde où un PNJ est venu vous voir
 ## Combat déclenché mais pas encore terminé : il reprend au chargement d'une sauvegarde
 ## (quitter le jeu ne permet pas d'esquiver un combat).
@@ -75,7 +82,18 @@ func advance_time(slots: int) -> void:
 func take_notices() -> Array[String]:
 	var result: Array[String] = notices.duplicate()
 	notices.clear()
+	for notice in result:
+		log_journal("world", notice)
 	return result
+
+
+## Ajoute une entrée au journal (les plus anciennes disparaissent au-delà de JOURNAL_MAX).
+func log_journal(kind: String, text: String) -> void:
+	if text.strip_edges() == "":
+		return
+	journal.append({"day": day, "slot": slot, "kind": kind, "text": text})
+	if journal.size() > JOURNAL_MAX:
+		journal = journal.slice(journal.size() - JOURNAL_MAX)
 
 
 func _new_day() -> void:
@@ -308,7 +326,7 @@ func to_dict() -> Dictionary:
 		"day": day, "slot": slot, "flags": flags, "seen": seen, "last_seen_day": last_seen_day,
 		"dead": dead, "death_cause": death_cause, "recorded": recorded, "notices": notices,
 		"pending_combat": pending_combat, "shops": shops, "reputation": reputation, "location": location,
-		"crafted": crafted, "last_initiative_day": last_initiative_day, "quests": quests,
+		"crafted": crafted, "last_initiative_day": last_initiative_day, "quests": quests, "journal": journal,
 	}
 
 
@@ -331,6 +349,9 @@ static func from_dict(data: Dictionary) -> LifeState:
 	life.reputation = Character._int_dict(data.get("reputation", {}))
 	life.location = data.get("location", "")
 	life.crafted = Character._int_dict(data.get("crafted", {}))
+	for entry: Dictionary in data.get("journal", []):
+		life.journal.append({"day": int(entry.get("day", 1)), "slot": int(entry.get("slot", 0)),
+			"kind": String(entry.get("kind", "event")), "text": String(entry.get("text", ""))})
 	var saved_quests: Dictionary = data.get("quests", {})
 	for quest_id: String in saved_quests:
 		life.quests[quest_id] = {"status": String(saved_quests[quest_id].get("status", "active")),

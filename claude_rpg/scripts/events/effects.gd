@@ -85,6 +85,7 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 				lines.append(Loc.ui("%s XP") % _signed(int(e["amount"])))
 				for new_level in ch.add_xp(int(e["amount"])):
 					lines.append(Loc.ui("Niveau %d atteint ! (classe à choisir)") % new_level)
+					life.log_journal("level", Loc.ui("%s atteint le niveau %d.") % [ch.name, new_level])
 			"ability":
 				var id: String = e["id"]
 				lines.append("%s %s" % [_signed(int(e["amount"])), Abilities.short_of(id)])
@@ -118,6 +119,7 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 					life.companions.append(companion)
 					Social.npc_for_companion(companion)  # le compagnon a une relation avec le héros
 					lines.append(Loc.ui("%s rejoint votre groupe !") % companion.name)
+					life.log_journal("social", Loc.ui("%s rejoint votre groupe.") % companion.name)
 			"combat":
 				combat = e
 			"add_feat":

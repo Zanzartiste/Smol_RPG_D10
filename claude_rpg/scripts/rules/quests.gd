@@ -33,7 +33,14 @@ static func step_text(id: String, step: int) -> String:
 
 
 ## Applique une action à l'avancement d'une quête ; retourne la ligne à annoncer ("" si rien ne change).
+## La ligne est aussi notée dans le journal.
 static func apply(life: LifeState, id: String, action: String, step := -1) -> String:
+	var line := _apply(life, id, action, step)
+	life.log_journal("quest", line)
+	return line
+
+
+static func _apply(life: LifeState, id: String, action: String, step := -1) -> String:
 	var state: Dictionary = life.quests.get(id, {})
 	match action:
 		"start":

@@ -515,6 +515,8 @@ func _test_quests() -> bool:
 		"quête accomplie")
 	var saved := LifeState.from_dict(JSON.parse_string(JSON.stringify(life.to_dict())))
 	_expect(saved.quests == life.quests, "quêtes sauvegardées")
+	_expect(life.journal.any(func(e): return e["kind"] == "quest" and "Quête accomplie" in e["text"])
+		and saved.journal == life.journal, "journal : les quêtes y sont notées, et il est sauvegardé")
 	# L'événement d'Ysolde lance la quête.
 	life = _new_life("human", "fighter")
 	var ev: Dictionary = DB.events["town_merchant_meet"]
@@ -547,6 +549,17 @@ func _test_side_drawer() -> bool:
 	_expect(checks.size() == hero.known_spells().size(), "page des sorts : un sort connu par ligne")
 	var unchecked: CheckBox = checks.filter(func(c): return not c.button_pressed)[0]
 	_expect(unchecked.disabled, "sorts équipés au maximum : les autres sont grisés")
+	life.log_journal("combat", "Victoire contre : Loup.")
+	life.log_journal("quest", "Nouvelle quête : Test.")
+	drawer.open("journal")
+	var journal_texts: Array = drawer._content.find_children("*", "Label", true, false).map(func(c): return c.text)
+	_expect(journal_texts.any(func(t): return "Victoire contre : Loup." in t) and journal_texts.has("Jour %d" % life.day),
+		"journal : entrées groupées par jour")
+	drawer._journal_filter = "quest"
+	drawer.open("journal")
+	journal_texts = drawer._content.find_children("*", "Label", true, false).map(func(c): return c.text)
+	_expect(not journal_texts.any(func(t): return "Victoire" in t) and journal_texts.any(func(t): return "Nouvelle quête" in t),
+		"journal : filtre par sorte")
 	drawer.close()
 	_expect(not drawer.is_open(), "replier le tiroir")
 	var fighter_life := _new_life("human", "fighter")

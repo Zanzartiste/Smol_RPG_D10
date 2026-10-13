@@ -381,6 +381,7 @@ static func perform(action_id: String, n: Npc, life: LifeState, session: Diction
 			n.player["status"] = ""
 			n.player["open"] = false
 			n.remember(Meta.world_day, Loc.ui("%s a rompu avec lui.") % life.character.name)
+			life.log_journal("social", Loc.ui("Rupture avec %s.") % n.name)
 	var effects: Dictionary = a.get("success" if success else "failure", {})
 	var gain := float(trait_reaction(n, action_id)["gain"]) * float(mood(n).get("gain", 1.0))
 	for gauge in GAUGES:
@@ -393,6 +394,7 @@ static func perform(action_id: String, n: Npc, life: LifeState, session: Diction
 		else:
 			n.player["status"] = effects["set"]
 			n.remember(Meta.world_day, Loc.ui("%s avec %s.") % [STATUS_NAMES[effects["set"]], life.character.name])
+			life.log_journal("social", Loc.ui("%s avec %s.") % [STATUS_NAMES[effects["set"]], n.name])
 	if effects.get("fear", false):
 		n.player["fear"] = true
 	if effects.has("reputation"):

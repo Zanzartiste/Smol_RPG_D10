@@ -3,7 +3,7 @@ extends Control
 ## Tiroir latéral droit : caché hors de l'écran, il ne laisse dépasser que des onglets. Survoler un
 ## onglet déroule sa page ; elle se replie quand la souris s'en va. Cliquer sur un onglet épingle la page
 ## (elle reste ouverte jusqu'au clic suivant).
-## Onglets : Personnage (PV), Inventaire (or), Quêtes, Relations, Sorts (lanceurs de sorts seulement).
+## Onglets : Personnage (PV), Inventaire (or), Quêtes, Journal, Relations, Sorts (lanceurs de sorts seulement).
 ## Les détails (calculs, descriptions) s'affichent au survol de chaque ligne.
 
 signal inventory_requested
@@ -16,7 +16,8 @@ const TOP_MARGIN := 60.0
 const CLOSE_DELAY := 0.35  # secondes hors du tiroir avant qu'il se replie
 const SPEED := 7.0  # vitesse d'ouverture (fraction par seconde)
 
-const PAGES := ["character", "inventory", "quests", "social", "spells"]
+const PAGES := ["character", "inventory", "quests", "journal", "social", "spells"]
+const JOURNAL_SHOWN := 150  # entrées affichées au plus (les plus récentes)
 
 var life: LifeState
 var locked := false  # pendant un combat : on ne change ni l'équipement ni les sorts
@@ -33,6 +34,7 @@ var _pinned := false
 var _open := 0.0  # 0 replié, 1 déroulé
 var _outside := 0.0  # temps passé hors du tiroir
 var _skills_open := true  # section Compétences dépliée
+var _journal_filter := ""  # sorte d'entrées du journal affichée ("" : toutes)
 var _tab_timer := 0.0  # rafraîchissement régulier des onglets
 
 
@@ -147,6 +149,7 @@ func _refresh_tabs() -> void:
 	_tab_buttons["inventory"].tooltip_text = tr("Inventaire et équipement")
 	_tab_buttons["quests"].text = tr("Quêtes (%d)") % Quests.with_status(life, "active").size()
 	_tab_buttons["social"].text = tr("Relations")
+	_tab_buttons["journal"].text = tr("Journal")
 	var casters := life.party().filter(func(c): return c.max_resource(Spellcasting.SLOT_KEY) > 0 or not c.known_spells().is_empty())
 	_tab_buttons["spells"].visible = not casters.is_empty()
 	if not casters.is_empty():
@@ -185,6 +188,8 @@ func _build_page() -> void:
 			_build_inventory()
 		"quests":
 			_build_quests()
+		"journal":
+			_build_journal()
 		"social":
 			_build_social()
 		"spells":
@@ -417,6 +422,41 @@ func _build_quests() -> void:
 		_add_label(tr("Quêtes accomplies") if status == "done" else tr("Quêtes échouées"), "", "", UITheme.TEXT_DIM)
 		for quest_id in finished:
 			_add_label(Quests.name_of(quest_id), Quests.def(quest_id).get("description", ""), "", UITheme.TEXT_DIM)
+
+
+## Journal : les entrées les plus récentes d'abord, groupées par jour, avec un filtre par sorte.
+func _build_journal() -> void:
+	_add_label(tr("Journal"), "", "SectionLabel")
+	var filters := HFlowContainer.new()
+	var kinds := [""]
+	for entry: Dictionary in life.journal:
+		if entry["kind"] not in kinds:
+			kinds.append(entry["kind"])
+	for kind: String in kinds:
+		var button := Button.new()
+		button.text = tr("Tout") if kind == "" else tr(LifeState.JOURNAL_KINDS.get(kind, kind))
+		button.toggle_mode = true
+		button.button_pressed = kind == _journal_filter
+		button.pressed.connect(func():
+			_journal_filter = kind
+			_build_page())
+		filters.add_child(button)
+	_content.add_child(filters)
+	var entries := life.journal.filter(func(e): return _journal_filter == "" or e["kind"] == _journal_filter)
+	if entries.is_empty():
+		_add_label(tr("Rien à raconter pour l'instant."), "", "", UITheme.TEXT_DIM)
+		return
+	entries = entries.slice(maxi(0, entries.size() - JOURNAL_SHOWN))
+	entries.reverse()
+	var current_day := -1
+	var slots := DB.time_slots()
+	for entry: Dictionary in entries:
+		if int(entry["day"]) != current_day:
+			current_day = int(entry["day"])
+			_add_separator()
+			_add_label(tr("Jour %d") % current_day, "", "", UITheme.GOLD)
+		var slot_name: String = slots[clampi(int(entry["slot"]), 0, slots.size() - 1)]["name"]
+		_add_label("%s — %s" % [slot_name, entry["text"]], tr(LifeState.JOURNAL_KINDS.get(entry["kind"], "")))
 
 
 func _build_social() -> void:

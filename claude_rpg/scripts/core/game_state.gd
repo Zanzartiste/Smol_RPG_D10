@@ -98,6 +98,7 @@ func finish_combat() -> Dictionary:
 			if member.hp > 0 and xp > 0:
 				for new_level in member.add_xp(xp):
 					lines.append(Loc.ui("%s atteint le niveau %d ! (classe à choisir)") % [member.name, new_level])
+					life.log_journal("level", Loc.ui("%s atteint le niveau %d.") % [member.name, new_level])
 		if xp > 0:
 			lines.push_front(Loc.ui("+%d XP") % xp)
 
@@ -118,6 +119,9 @@ func finish_combat() -> Dictionary:
 			lines.append(Loc.ui("Vos compagnons vous ramènent à vous."))
 
 	var key := c.outcome
+	var foes := PackedStringArray(c.enemies().map(func(e): return e.name))
+	life.log_journal("combat", {"victory": Loc.ui("Victoire contre : %s."), "fled": Loc.ui("Fuite devant : %s."),
+		"defeat": Loc.ui("Défaite contre : %s.")}.get(key, "%s") % ", ".join(foes))
 	var outcome: Dictionary = c.spec.get(key, {})
 	var default_texts := {
 		"victory": Loc.ui("Vous êtes {g:victorieux|victorieuse|victorieux·se}."),

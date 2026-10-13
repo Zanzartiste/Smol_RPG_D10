@@ -95,6 +95,9 @@ static func resolve_choice(ev: Dictionary, choice: Dictionary, life: LifeState, 
 			outcome_key = "critical_failure"
 	var outcome: Dictionary = choice.get(outcome_key, {})
 	var key := "evt.%s.%s.%s" % [ev["id"], choice["id"], outcome_key]
+	var summary := Loc.fill(Loc.t(key, outcome.get("text", "")), life)
+	life.log_journal("event", "%s — %s" % [Loc.fill(Loc.t("evt.%s.title" % ev["id"], ev.get("title", "")), life), summary]
+		if summary != "" else Loc.fill(Loc.t("evt.%s.title" % ev["id"], ev.get("title", "")), life))
 	var applied := Effects.apply_all(outcome.get("effects", []), life, meta)
 	# Approbation des compagnons (à la BG3) : {"approval": {"mira": 2}} sur le choix ou son issue.
 	var approval: Dictionary = choice.get("approval", {}).duplicate()
