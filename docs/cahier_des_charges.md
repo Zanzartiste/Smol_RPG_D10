@@ -370,6 +370,9 @@ Le d20 de D&D est remplacé par des **réserves de d10 à succès**, inspirées 
 14 quinquies. ~~**Système de dés d10**~~ : réserves de d10 partout (événements, social, artisanat, combat), deux
     actions par tour, réactions, Préparé, Esquive naturelle, Couvert, Armure, critiques, surprise, initiative d10 ;
     données converties (attributs, armes, armures, créatures, sorts, états, difficultés).
+14 sexies. ~~**Interface et monde**~~ (2026-10-14) : tiroir latéral (personnage, inventaire, quêtes, journal,
+    relations, sorts), emplacements de sort en une réserve, sorts équipés, quêtes, journal chronologique et
+    filtrable, mort des PNJ de vieillesse, archétypes d'IA (chasseur, lâche), événements de Survie.
 15. **Temps long** : événement voyage (durée, transport, événements en route, se perdre), activités de 1, 2, 5 ou
     10 ans, journal de la vie.
 16. **PNJ générés progressivement** et relations : faits enregistrés, jauges, interactions sociales.
@@ -386,7 +389,7 @@ désormais dans la feuille de route du §10. Restent ici :
 
 - **Conjoint ou enfant comme personnage suivant**, et enfance jouable.
 - **Creator Points** : barème à ajuster avec les testeurs ; autres bonus possibles.
-- **Combat** : contresort, archétypes d'IA (cibler les blessés, se soigner, fuir), revenir à la vie.
+- **Combat** : contresort, revenir à la vie, archétypes d'IA de plus (se soigner, protéger un allié).
 - **Classes** : Barde, Rôdeur, Clerc, Druide, Artificier ; système de magie (sorts appris) à définir.
 - **Lore et univers** : fournis par l'auteur, à intégrer (noms de lieux, factions, campagnes).
 - **Son et musique**, **pipeline d'images IA**, **traduction anglaise**.

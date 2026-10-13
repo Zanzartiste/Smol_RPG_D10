@@ -522,10 +522,31 @@ Calcul des dégâts subis :
 
 ## Interface : le tiroir latéral
 
-- `scripts/ui/side_drawer.gd` (`SideDrawer`) : onglets à droite (PV, or, quêtes, relations, sorts pour un lanceur) ;
-  survol = la page se déroule, clic = épinglée. Pages : personnage (identité, XP, Esquive naturelle, Armure,
-  initiative, attributs, compétences, aptitudes et dons, avec le détail des calculs au survol), inventaire et
-  équipement, quêtes, réputation et relations, sorts (emplacements, sorts équipés à cocher hors combat).
+- `scripts/ui/side_drawer.gd` (`SideDrawer`) : onglets à droite (PV, or, quêtes, journal, relations, sorts pour un
+  lanceur) ; survol = la page se déroule, clic = épinglée. Pages : personnage (portrait, identité, XP, PV et
+  initiative, Esquive naturelle et Armure, attributs, compétences repliables, aptitudes et dons, avec le détail au
+  survol), inventaire et équipement, quêtes, journal, réputation et relations, sorts (emplacements, sorts équipés à
+  cocher hors combat ; les tours de magie sont toujours prêts).
+- Compétences : `skills.json › description`, affichée au survol.
+
+## Journal
+
+- `LifeState.journal` : `[{"day", "slot", "kind", "text"}]`, sauvegardé, 400 entrées au plus. Sortes
+  (`LifeState.JOURNAL_KINDS`) : `event` (titre et issue de chaque choix), `combat`, `quest`, `social` (statuts,
+  recrutements), `level`, `world` (nouvelles affichées au hub : naissances, morts, rumeurs). `life.log_journal(kind,
+  text)` pour en ajouter.
+
+## Mort des PNJ
+
+- `Social._deaths` (chaque jour) : passé l'âge limite de son espèce (`species.json › aging_age`), un PNJ a chaque
+  année `rules.json › social › old_age_yearly_chance` (4 %) × années de plus de mourir. `Social.die(npc, cause,
+  life)` : ses proches (famille, partenaire, amis) s'en souviennent, le héros l'apprend s'il le connaissait.
+
+## Archétypes d'IA
+
+- `creatures.json › ai` : `brute` (par défaut, cible au hasard), `hunter` (vise le plus blessé : loups, rats),
+  `coward` (sous `rules.json › combat › coward_hp`, 30 % de ses PV, une chance sur deux par tour de s'enfuir : ni
+  XP ni butin ; brigands).
 
 ## Repos et multiclassage
 
