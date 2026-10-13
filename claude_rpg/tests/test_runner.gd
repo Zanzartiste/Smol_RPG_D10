@@ -1858,6 +1858,24 @@ func _test_social_life() -> bool:
 			break
 	_expect(visit.get("id", "").begins_with("npc_neglect_"), "un partenaire délaissé se plaint")
 
+	# Mort des PNJ : de vieillesse, passé l'âge limite ; les proches s'en souviennent, le héros l'apprend.
+	var elder := Social.generate("villager", rng, {"age": 120, "species": "human"})
+	var heir := Social.generate("villager", rng, {"age": 30})
+	elder.relations[heir.id] = {"friendship": 60, "love": 0, "trust": 30, "kind": "family"}
+	elder.player["met"] = true
+	elder.player["friendship"] = 40
+	life.notices.clear()
+	for i in 4000:
+		if not elder.alive:
+			break
+		Social._deaths(life)
+	_expect(not elder.alive and heir.memories.any(func(m): return elder.name in m["text"])
+		and life.notices.any(func(t): return elder.name in t and "vieillesse" in t), "un vieillard finit par mourir de vieillesse")
+	var young := Social.generate("villager", rng, {"age": 20, "species": "human"})
+	for i in 400:
+		Social._deaths(life)
+	_expect(young.alive and young not in [] and not Social.known_npcs().has(elder), "les jeunes ne meurent pas de vieillesse ; les morts disparaissent")
+
 	# Enfant d'un héros : mentionné dans la fiche.
 	var child := Social.generate("villager", rng, {"age": 5})
 	child.parents.assign(["hero:Héros"])

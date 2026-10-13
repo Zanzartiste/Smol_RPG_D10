@@ -642,6 +642,42 @@ static func daily_tick(life: LifeState) -> void:
 			if a != b:
 				_npc_interact(a, b, life)
 	_births(life)
+	_deaths(life)
+
+
+## Morts de vieillesse : passé l'âge limite de son espèce (aging_age), un PNJ a chaque année
+## old_age_yearly_chance × années de plus de mourir (rules.json › social). Ses proches s'en souviennent ; le
+## héros l'apprend s'il le connaissait. Les compagnons du groupe ne meurent pas ainsi.
+static func _deaths(life: LifeState) -> void:
+	var per_year := float(setting("old_age_yearly_chance", 0.04))
+	for n in all_npcs():
+		if not n.alive or n.location == "party":
+			continue
+		var limit := int(DB.species.get(n.species, {}).get("aging_age", 0))
+		var over := n.age(Meta.world_day) - limit
+		if limit <= 0 or over <= 0:
+			continue
+		if life.rng.randf() < minf(1.0, per_year * over) / float(DB.days_per_year()):
+			die(n, Loc.ui("de vieillesse"), life)
+
+
+## Un PNJ meurt (`cause` : « de vieillesse »…) : ses proches s'en souviennent, et le héros est prévenu s'il
+## le connaissait.
+static func die(n: Npc, cause: String, life: LifeState) -> void:
+	n.alive = false
+	n.remember(Meta.world_day, Loc.ui("Mort %s.") % cause)
+	for other_id: String in n.relations:
+		var other := npc(other_id)
+		if other == null or not other.alive:
+			continue
+		var kind: String = n.relations[other_id].get("kind", "")
+		if kind in ["family", "partner"] or int(n.relations[other_id].get("friendship", 0)) >= 40:
+			other.remember(Meta.world_day, Loc.ui("A perdu %s.") % n.name)
+	if life != null and n.player.get("met", false):
+		var status: String = n.player.get("status", "")
+		var close := status in ROMANTIC_STATUSES or int(n.player.get("friendship", 0)) >= 30
+		life.notices.append(Loc.ui("%s %s est mort%s %s.") % [Loc.ui("Triste nouvelle :") if close else Loc.ui("On raconte que"),
+			n.name, Loc.gendered("{g:|e|·e}", n.gender), cause])
 
 
 static func _npc_interact(a: Npc, b: Npc, life: LifeState) -> void:

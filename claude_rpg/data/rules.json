@@ -60,7 +60,8 @@
 		"leave_threshold": -50,
 		"companion_start_friendship": 20,
 		"initiative_chance": 0.3,
-		"neglect_days": 7
+		"neglect_days": 7,
+		"old_age_yearly_chance": 0.04
 	},
 	"languages": [
 		{"id": "common", "name": "Commun", "known_by_all": true},
