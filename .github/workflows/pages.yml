@@ -1,0 +1,61 @@
+# Publie le jeu (export Web de Godot) sur GitHub Pages à chaque push sur main.
+# Les tests automatiques passent d'abord : si l'un d'eux échoue, la version en ligne n'est pas remplacée.
+# Réglage à faire une fois dans le dépôt : Settings › Pages › Source : « GitHub Actions ».
+name: Jeu en ligne (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: 4.4.1
+  PROJECT_DIR: claude_rpg
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.4.1
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Modèles d'export de Godot
+        run: |
+          mkdir -v -p ~/.local/share/godot/export_templates/
+          mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+
+      - name: Import du projet
+        run: godot --headless --path "$PROJECT_DIR" --import
+
+      - name: Tests automatiques
+        run: timeout 600 godot --headless --path "$PROJECT_DIR" res://tests/test_runner.tscn
+
+      - name: Export Web
+        run: |
+          mkdir -v -p build/web
+          godot --headless --path "$PROJECT_DIR" --export-release "Web" ../build/web/index.html
+          test -f build/web/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  deploy:
+    needs: export
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
