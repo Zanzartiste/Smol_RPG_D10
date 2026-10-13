@@ -32,6 +32,7 @@ const TESTS := [
 	"_test_choices",
 	"_test_skill_ranks",
 	"_test_social",
+	"_test_multiclass_and_rest",
 	"_test_combat",
 	"_test_combat_turns",
 	"_test_companions",
@@ -64,6 +65,12 @@ func _expect(condition: bool, label: String) -> void:
 	if not condition:
 		_failures += 1
 		printerr("ÉCHEC : " + label)
+
+
+## Attribue les niveaux gagnés à la classe principale (au lieu du choix au hub).
+func _level_up(ch: Character) -> void:
+	while ch.pending_class_levels > 0:
+		ch.assign_class_level(ch.class_id)
 
 
 func _new_life(species := "goblin", cls := "wizard", options := {}) -> LifeState:
@@ -203,8 +210,10 @@ func _test_feats() -> bool:
 		"Frappe brutale : les dés sont relancés (pas de bonus fixe)")
 	var hero := Character.create("goblin", "fighter", "Héros")  # pas d'humain : il a un don en plus dès le départ
 	hero.add_xp(300)
+	_level_up(hero)
 	_expect(hero.level == 2 and not hero.has_pending_advancement(), "niveau 2 : pas d'amélioration")
 	hero.add_xp(2700 - 300)
+	_level_up(hero)
 	_expect(hero.level == 4 and hero.pending_feats == 1 and hero.pending_ability_points == 1, "niveau 4 : attribut + don")
 	_expect(hero.increase_ability("str") and hero.abilities["str"] == 18, "+1 FOR (17 -> 18)")
 	_expect(hero.pending_ability_points == 0 and not hero.increase_ability("dex"), "un seul point à placer")
@@ -213,6 +222,7 @@ func _test_feats() -> bool:
 	_expect(not hero.choose_feat("elemental_adept"), "impossible de choisir un don sans les prérequis")
 	_expect(hero.choose_feat("alert") and hero.pending_feats == 0 and hero.has_feat("alert"), "choix d'un don")
 	hero.add_xp(355000)
+	_level_up(hero)
 	_expect(hero.level == Progression.max_level() and Progression.max_level() == 20, "niveau maximum 20")
 	_expect(hero.pending_feats == 4 and hero.pending_ability_points == 4, "améliorations aux niveaux 8, 12, 16 et 20")
 	_expect(hero.proficiency_bonus() == 6, "maîtrise +6 au niveau 20")
@@ -667,6 +677,7 @@ func _test_spell_progression() -> bool:
 	var mage := Character.create("goblin", "wizard", "Mage")
 	mage.resources["spell_slot_1"] = 0
 	mage.add_xp(Progression.xp_for(3) - mage.xp)
+	_level_up(mage)
 	_expect(mage.resources["spell_slot_1"] == 2 and mage.resources["spell_slot_2"] == 2,
 		"montée de niveau : les emplacements gagnés sont disponibles, les dépensés le restent")
 	mage.long_rest()
@@ -1153,6 +1164,7 @@ func _test_choices() -> bool:
 
 	# Sous-classe au niveau 3 : Champion.
 	fighter.add_xp(Progression.xp_for(3) - fighter.xp)
+	_level_up(fighter)
 	_expect(fighter.pending_choice().get("key") == "feature:subclass/subclass", "sous-classe à choisir au niveau 3")
 	fighter.choose("feature:subclass/subclass", "champion")
 	var champion := Combatant.from_character(fighter, true)
@@ -1433,6 +1445,55 @@ func _test_social() -> bool:
 	Meta.load_dict(backup)
 	Game.combat = null
 	return true
+
+
+func _test_multiclass_and_rest() -> bool:
+	# Multiclassage : chaque niveau gagné se place dans la classe de son choix.
+	var hero := Character.create("human", "fighter", "Mixte")
+	hero.add_xp(Progression.xp_for(3) - hero.xp)
+	_expect(hero.level == 3 and hero.pending_class_levels == 2 and hero.class_level("fighter") == 1, "niveaux en attente de classe")
+	var lines := hero.assign_class_level("wizard")
+	_expect(hero.class_level("wizard") == 1 and hero.has_class("wizard") and lines[0].contains("magicien de niveau 1"),
+		"un niveau de Magicien")
+	_expect(hero.is_caster() and hero.skill_rank("magic") == 2 and hero.max_resource("spell_slot_1") == 2
+		and "fire_bolt" in hero.combat_actions() and "second_wind" in hero.combat_actions(), "actions et sorts des deux classes")
+	hero.assign_class_level("fighter")
+	_expect(hero.class_levels == {"fighter": 2, "wizard": 1} and "action_surge" in hero.combat_actions()
+		and hero.classes_text() == "Guerrier 2 / Magicien 1", "Guerrier 2 / Magicien 1")
+	_expect(Conditions.check({"type": "class", "in": ["wizard"]}, _life_of(hero), null), "condition de classe : toutes les classes")
+	_expect(hero.save_rank("str") == 2 and hero.save_rank("int") == 1, "sauvegardes : celles de la classe principale")
+	var saved := Character.from_dict(JSON.parse_string(JSON.stringify(hero.to_dict())))
+	_expect(saved.class_levels == hero.class_levels and saved.combat_actions() == hero.combat_actions(), "multiclassage sauvegardé")
+	# Améliorations par niveau de classe : Guerrier 4 donne attribut + don, même au niveau total 5.
+	hero.add_xp(Progression.xp_for(5) - hero.xp)
+	hero.assign_class_level("fighter")
+	hero.assign_class_level("fighter")
+	_expect(hero.class_level("fighter") == 4 and hero.pending_ability_points == 1 and hero.pending_feats == 1,
+		"amélioration au niveau 4 de Guerrier")
+	var old := Character.from_dict({"species_id": "human", "class_id": "rogue", "level": 3})
+	_expect(old.class_levels == {"rogue": 3}, "anciennes sauvegardes : tous les niveaux dans la classe principale")
+
+	# Repos selon le lieu.
+	Game.start_life(Character.create("human", "fighter", "Dormeur"), 151)
+	var life := Game.life
+	life.character.hp = 1
+	life.location = "town"
+	life.character.gold = 3
+	_expect(not Game.rest()["ok"] and life.character.hp == 1, "auberge : pas assez d'or")
+	life.character.gold = 20
+	var day := life.day
+	var result := Game.rest()
+	_expect(result["ok"] and life.character.gold == 15 and life.character.hp == life.character.max_hp and life.day == day + 1
+		and life.slot == 0, "nuit à l'auberge : 5 po, PV au maximum, matin suivant")
+	life.location = "forest"
+	_expect(Game.rest_name() == "Camper" and Game.rest()["ok"] and life.character.gold == 15, "camper : gratuit")
+	return true
+
+
+func _life_of(ch: Character) -> LifeState:
+	var life := LifeState.new()
+	life.character = ch
+	return life
 
 
 func _test_combat_turns() -> bool:

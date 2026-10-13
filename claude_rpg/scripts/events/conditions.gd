@@ -60,7 +60,7 @@ static func check(c: Dictionary, life: LifeState, meta: MetaState) -> bool:
 		"species":
 			return ch.species_id in c["in"]
 		"class":
-			return ch.class_id in c["in"]
+			return c["in"].any(func(cls): return ch.has_class(cls))
 		"background":
 			return ch.background_id in c["in"]
 		"size":

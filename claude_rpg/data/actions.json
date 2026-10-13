@@ -97,7 +97,7 @@
 		"description": "Une attaque vicieuse qui frappe là où ça fait mal.",
 		"target": "enemy",
 		"per_combat": 2,
-		"effects": [{"type": "attack", "weapon": true, "extra_damage": "1d6", "scaling": {"table": "sneak_attack", "field": "extra_damage"}}]
+		"effects": [{"type": "attack", "weapon": true, "extra_damage": "1d6", "scaling": {"table": "sneak_attack", "field": "extra_damage", "class": "rogue"}}]
 	},
 	{
 		"id": "poisoned_blade",

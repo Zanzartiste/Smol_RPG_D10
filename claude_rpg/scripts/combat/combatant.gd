@@ -287,7 +287,9 @@ func damage_expr(effect: Dictionary) -> String:
 	var expr: String = effect.get("damage", "1")
 	var extra: String = effect.get("extra_damage", "")
 	if effect.has("scaling") and character != null:
-		var count := Spellcasting.dice_count(effect["scaling"]["table"], character.class_level())
+		var scaling_class: String = effect["scaling"].get("class", "")
+		var scaling_level: int = character.class_level(scaling_class) if scaling_class != "" else character.level
+		var count := Spellcasting.dice_count(effect["scaling"]["table"], scaling_level)
 		if effect["scaling"].get("field", "damage") == "extra_damage":
 			extra = Spellcasting.with_dice_count(extra, count)
 		else:

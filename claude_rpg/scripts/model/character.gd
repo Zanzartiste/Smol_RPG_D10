@@ -6,7 +6,9 @@ extends RefCounted
 
 var name := ""
 var species_id := ""
-var class_id := ""
+var class_id := ""  # classe principale (celle de la création : sauvegardes, compétences de classe, portrait)
+var class_levels: Dictionary = {}  # id de classe -> niveau dans cette classe (multiclassage)
+var pending_class_levels := 0  # niveaux gagnés dont la classe reste à choisir (au hub)
 var background_id := ""  # passé ("" = aucun)
 var gender := ""  # sans effet sur l'apparence ; sert aux accords dans les textes
 var abilities: Dictionary = {}  # valeurs de base (achat de points, vieillesse…) ; voir ability_score()
@@ -38,6 +40,7 @@ static func create(species: String, cls: String, char_name: String, options: Dic
 	var c := Character.new()
 	c.species_id = species
 	c.class_id = cls
+	c.class_levels = {cls: 1}
 	c.name = char_name
 	c.background_id = options.get("background", "")
 	c.gender = options.get("gender", "nonbinary")
@@ -98,6 +101,7 @@ static func create_companion(companion_id: String) -> Character:
 	for feat_id: String in t.get("feats", []):
 		c.feats.append(feat_id)
 	c.level = int(t.get("level", 1))
+	c.class_levels = {c.class_id: c.level}
 	c.xp = Progression.xp_for(c.level)
 	c.complete_all_choices()  # un compagnon arrive avec ses choix déjà faits
 	c.max_hp = c.compute_max_hp()
@@ -162,7 +166,15 @@ func proficiency_bonus() -> int:
 
 ## Le personnage lance-t-il des sorts par sa classe ?
 func is_caster() -> bool:
-	return DB.classes[class_id].has("spellcasting")
+	return class_levels.keys().any(func(cls): return DB.classes[cls].has("spellcasting"))
+
+
+## Rangs de compétence donnés par les classes (skill_ranks) : le meilleur parmi ses classes.
+func _class_skill_ranks(skill_id: String) -> int:
+	var best := 0
+	for cls: String in class_levels:
+		best = maxi(best, int(DB.classes[cls].get("skill_ranks", {}).get(skill_id, 0)))
+	return best
 
 
 func skill_base_rank(skill_id: String) -> int:
@@ -171,7 +183,7 @@ func skill_base_rank(skill_id: String) -> int:
 
 func skill_rank(skill_id: String) -> int:
 	var id := Skills.resolve(skill_id)
-	var rank := skill_base_rank(id) + int(DB.classes[class_id].get("skill_ranks", {}).get(id, 0))
+	var rank := skill_base_rank(id) + _class_skill_ranks(id)
 	if id in DB.backgrounds.get(background_id, {}).get("skills", []):
 		rank += 1
 	return rank + Modifiers.sum(modifiers(), "skill_rank", id)
@@ -291,9 +303,10 @@ func choice_specs() -> Array[Dictionary]:
 		result.append({"key": "species/" + spec["id"], "spec": spec, "source": DB.species[species_id]["name"]})
 	for spec: Dictionary in DB.classes[class_id].get("choices", []):
 		result.append({"key": "class/" + spec["id"], "spec": spec, "source": DB.classes[class_id]["name"]})
-	for feature: Dictionary in features():
+	for pair in _class_features():
+		var feature: Dictionary = pair[1]
 		for spec: Dictionary in feature.get("choices", []):
-			result.append({"key": "feature:%s/%s" % [feature["id"], spec["id"]], "spec": spec, "source": feature["name"]})
+			result.append({"key": _feature_key(pair[0], feature, spec), "spec": spec, "source": feature["name"]})
 	for feat_id in feats:
 		for spec: Dictionary in DB.feats.get(feat_id, {}).get("choices", []):
 			result.append({"key": "feat:%s/%s" % [feat_id, spec["id"]], "spec": spec, "source": Feats.name_of(feat_id)})
@@ -307,7 +320,7 @@ func choice_specs() -> Array[Dictionary]:
 
 ## Rang de Langues, lu sans passer par les choix (pour éviter une boucle choix -> modificateurs).
 func _languages_rank() -> int:
-	var rank := skill_base_rank("languages") + int(DB.classes[class_id].get("skill_ranks", {}).get("languages", 0))
+	var rank := skill_base_rank("languages") + _class_skill_ranks("languages")
 	if "languages" in DB.backgrounds.get(background_id, {}).get("skills", []):
 		rank += 1
 	return rank
@@ -367,6 +380,8 @@ func apply_default_choices(creation_only := false) -> void:
 
 ## Complète tous les choix (valeurs par défaut, puis premières options) : compagnons, personnages générés.
 func complete_all_choices() -> void:
+	while pending_class_levels > 0:
+		assign_class_level(class_id)  # niveaux en attente : dans la classe principale
 	apply_default_choices()
 	for i in 50:
 		var entry := pending_choice()
@@ -543,6 +558,9 @@ func action_ability(ability: String) -> String:
 		"spell":
 			if DB.classes[class_id].has("spellcasting"):
 				return DB.classes[class_id]["spellcasting"]
+			for cls: String in class_levels:
+				if DB.classes[cls].has("spellcasting"):
+					return DB.classes[cls]["spellcasting"]
 			for m: Dictionary in modifiers():
 				if m.get("type") == "spellcasting_ability":
 					return m["id"]  # Initié à la magie
@@ -572,29 +590,95 @@ func weapon_rank(weapon: String) -> int:
 
 # --- Aptitudes de classe et ressources -----------------------------------------
 
-## Niveau dans la classe (égal au niveau du personnage tant qu'il n'y a pas de multiclassage).
-func class_level() -> int:
-	return level
+## Niveau dans une classe (la classe principale par défaut).
+func class_level(cls := "") -> int:
+	return int(class_levels.get(cls if cls != "" else class_id, 0))
 
 
-## Aptitudes de classe acquises (classes.json › features), y compris celles de la sous-classe choisie.
-func features() -> Array:
-	var result: Array = ClassFeatures.up_to(class_id, class_level())
-	var extra: Array = []
-	for feature: Dictionary in result:
-		for spec: Dictionary in feature.get("choices", []):
-			var key := "feature:%s/%s" % [feature["id"], spec["id"]]
-			for sub: Dictionary in Choices.features_from(spec, choices.get(key, [])):
-				if int(sub["level"]) <= class_level():
-					extra.append(sub)
-	result.append_array(extra)
+func has_class(cls: String) -> bool:
+	return class_level(cls) > 0
+
+
+## Ex. « Guerrier 3 / Magicien 1 » (ou « Guerrier » sans multiclassage).
+func classes_text() -> String:
+	if class_levels.size() <= 1:
+		return DB.classes[class_id]["name"]
+	var parts := PackedStringArray()
+	for cls: String in class_levels:
+		parts.append("%s %d" % [DB.classes[cls]["name"], int(class_levels[cls])])
+	return " / ".join(parts)
+
+
+## Clé d'un choix d'aptitude : « feature:id/choix » pour la classe principale (compatibilité),
+## « feature:classe:id/choix » pour les autres.
+func _feature_key(cls: String, feature: Dictionary, spec: Dictionary) -> String:
+	if cls == class_id:
+		return "feature:%s/%s" % [feature["id"], spec["id"]]
+	return "feature:%s:%s/%s" % [cls, feature["id"], spec["id"]]
+
+
+## Aptitudes acquises, par classe : [[classe, aptitude], …], sous-classes comprises.
+func _class_features() -> Array:
+	var result: Array = []
+	for cls: String in class_levels:
+		var lvl := int(class_levels[cls])
+		for feature: Dictionary in ClassFeatures.up_to(cls, lvl):
+			result.append([cls, feature])
+			for spec: Dictionary in feature.get("choices", []):
+				for sub: Dictionary in Choices.features_from(spec, choices.get(_feature_key(cls, feature, spec), [])):
+					if int(sub["level"]) <= lvl:
+						result.append([cls, sub])
 	return result
+
+
+## Aptitudes de classe acquises (classes.json › features), y compris celles des sous-classes choisies.
+func features() -> Array:
+	return _class_features().map(func(pair): return pair[1])
+
+
+## Monte d'un niveau dans une classe (multiclassage libre, sans prérequis). Les améliorations (attribut +
+## don) se comptent par classe. Retourne les lignes à annoncer.
+func assign_class_level(cls: String) -> Array[String]:
+	var lines: Array[String] = []
+	if pending_class_levels <= 0 or not DB.classes.has(cls):
+		return lines
+	var previous_max := max_resources()
+	pending_class_levels -= 1
+	class_levels[cls] = class_level(cls) + 1
+	var lvl := class_level(cls)
+	lines.append(Loc.ui("%s devient %s de niveau %d.") % [name, String(DB.classes[cls]["name"]).to_lower(), lvl])
+	lines.append_array(ClassFeatures.announce(self, lvl, cls))
+	if Progression.is_advancement_level(lvl):
+		pending_ability_points += Progression.ability_points_per_advancement()
+		pending_feats += Progression.feats_per_advancement()
+		lines.append(Loc.ui("%s : %s.") % [name, Progression.advancement_text()])
+	_sync_resources(previous_max)
+	refresh_max_hp()
+	return lines
+
+
+## Emplacements de sort : ceux de sa classe de lanceur ; avec plusieurs, niveau de lanceur cumulé
+## (lanceurs complets + demi-lanceurs / 2) sur la table des lanceurs complets, comme dans D&D.
+func spell_slots() -> Dictionary:
+	var casters: Array = class_levels.keys().filter(func(cls): return DB.classes[cls].has("spell_slots"))
+	if casters.is_empty():
+		return {}
+	if casters.size() == 1:
+		return Spellcasting.slots(DB.classes[casters[0]]["spell_slots"], class_level(casters[0]))
+	var caster_level := 0.0
+	for cls: String in casters:
+		caster_level += class_level(cls) * (1.0 if DB.classes[cls]["spell_slots"] == "full" else 0.5)
+	return Spellcasting.slots("full", int(caster_level))
 
 
 ## Ressources maximales : celles de l'espèce, de la classe, des aptitudes et des dons, plus les
 ## emplacements de sort.
 func max_resources() -> Dictionary:
-	var result: Dictionary = DB.classes[class_id].get("resources", {}).duplicate()
+	var result: Dictionary = {}
+	for cls: String in class_levels:
+		var class_resources: Dictionary = DB.classes[cls].get("resources", {})
+		for id: String in class_resources:
+			result[id] = int(result.get(id, 0)) + int(class_resources[id])
 	for feat_id in feats:
 		var feat_resources: Dictionary = DB.feats.get(feat_id, {}).get("resources", {})
 		for id: String in feat_resources:
@@ -606,7 +690,7 @@ func max_resources() -> Dictionary:
 		var granted: Dictionary = feature.get("resources", {})
 		for id: String in granted:
 			result[id] = int(result.get(id, 0)) + int(granted[id])
-	result.merge(Spellcasting.slots(DB.classes[class_id].get("spell_slots", ""), class_level()))
+	result.merge(spell_slots())
 	for id: String in result:
 		result[id] = int(result[id])
 	return result
@@ -621,6 +705,8 @@ func max_resource(resource_id: String) -> int:
 func combat_actions() -> Array:
 	var result: Array = DB.classes[class_id].get("actions", []).duplicate()
 	var granted: Array = []
+	for cls: String in class_levels:
+		granted.append_array(DB.classes[cls].get("actions", []))
 	for feature: Dictionary in features():
 		granted.append_array(feature.get("actions", []))
 	for feat_id in feats:
@@ -693,21 +779,17 @@ func refresh_max_hp() -> void:
 	max_hp = new_max
 
 
-## Ajoute de l'XP et retourne la liste des niveaux atteints.
-## Un niveau d'amélioration (Progression) donne des points d'attribut et des dons à choisir.
+## Ajoute de l'XP et retourne la liste des niveaux atteints. Chaque niveau gagné attend le choix de sa
+## classe (assign_class_level, au hub), qui apporte aptitudes et améliorations.
 func add_xp(amount: int) -> Array[int]:
 	xp += amount
 	var reached: Array[int] = []
-	var previous_max := max_resources()
 	while level < Progression.max_level() and xp >= Progression.xp_for(level + 1):
 		level += 1
-		refresh_max_hp()
-		if Progression.is_advancement_level(level):
-			pending_ability_points += Progression.ability_points_per_advancement()
-			pending_feats += Progression.feats_per_advancement()
+		pending_class_levels += 1
 		reached.append(level)
 	if not reached.is_empty():
-		_sync_resources(previous_max)
+		refresh_max_hp()
 	return reached
 
 
@@ -737,6 +819,7 @@ func remove_item(item_id: String, count := 1) -> int:
 func to_dict() -> Dictionary:
 	return {
 		"name": name, "species_id": species_id, "class_id": class_id, "background_id": background_id,
+		"class_levels": class_levels, "pending_class_levels": pending_class_levels,
 		"gender": gender, "abilities": abilities, "feats": feats, "choices": choices, "pending_feats": pending_feats,
 		"pending_ability_points": pending_ability_points, "equipment": equipment, "defenses": defenses.to_dict(),
 		"level": level, "xp": xp, "hp": hp, "max_hp": max_hp, "gold": gold, "inventory": inventory,
@@ -751,6 +834,8 @@ static func from_dict(data: Dictionary) -> Character:
 	c.name = data.get("name", "")
 	c.species_id = data.get("species_id", "")
 	c.class_id = data.get("class_id", "")
+	c.class_levels = Character._int_dict(data.get("class_levels", {}))
+	c.pending_class_levels = int(data.get("pending_class_levels", 0))
 	c.background_id = data.get("background_id", "")
 	c.gender = data.get("gender", "nonbinary")
 	c.abilities = _int_dict(data.get("abilities", {}))
@@ -769,6 +854,8 @@ static func from_dict(data: Dictionary) -> Character:
 			c.equipment.erase(old_slot)
 	c.defenses = Defenses.from_dict(data.get("defenses", {}))
 	c.level = int(data.get("level", 1))
+	if c.class_levels.is_empty() and c.class_id != "":
+		c.class_levels = {c.class_id: c.level}  # anciennes sauvegardes
 	c.xp = int(data.get("xp", 0))
 	c.hp = int(data.get("hp", 1))
 	c.max_hp = int(data.get("max_hp", 1))

@@ -1,5 +1,8 @@
 [
-	{"id": "town", "name": "Brumeval", "description": "Le bourg, son marché et sa taverne.", "art": "town"},
-	{"id": "forest", "name": "Forêt des Murmures", "description": "Des bois profonds où rôdent loups et secrets.", "art": "forest"},
-	{"id": "home", "name": "Chez soi", "description": "Se reposer et panser ses plaies.", "art": "home"}
+	{"id": "town", "name": "Brumeval", "description": "Le bourg, son marché et sa taverne.", "art": "town",
+		"rest": {"type": "inn", "name": "Passer une nuit à l'auberge", "cost": 5}},
+	{"id": "forest", "name": "Forêt des Murmures", "description": "Des bois profonds où rôdent loups et secrets.", "art": "forest", "wild": true,
+		"rest": {"type": "camp", "name": "Camper", "event_chance": 0.25}},
+	{"id": "home", "name": "Chez soi", "description": "Se reposer et panser ses plaies.", "art": "home",
+		"rest": {"type": "home", "name": "Dormir chez soi"}}
 ]

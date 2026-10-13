@@ -11,7 +11,7 @@ static func bbcode(ch: Character) -> String:
 	for key: String in ch.choices:
 		if key.begins_with("species/") and DB.species[ch.species_id].get("choices", []).any(func(s): return s.get("type") == "option"):
 			species_name += " (%s)" % ch.choice_label(key)
-	var class_name_text: String = DB.classes[ch.class_id]["name"]
+	var class_name_text: String = ch.classes_text()
 	for key: String in ch.choices:
 		if key.ends_with("/subclass"):
 			class_name_text += " (%s)" % ch.choice_label(key)
@@ -96,7 +96,7 @@ static func companions_bbcode(life: LifeState) -> String:
 	var t := "\n[color=%s]%s[/color]\n" % [UITheme.GOLD.to_html(false), Loc.ui("Compagnons")]
 	for c in life.companions:
 		t += "%s (%s %d) — %d / %d PV, CA %d\n" % [
-			c.name, DB.classes[c.class_id]["name"], c.level, c.hp, c.max_hp, c.armor_class()]
+			c.name, c.classes_text(), c.level, c.hp, c.max_hp, c.armor_class()]
 	return t
 
 

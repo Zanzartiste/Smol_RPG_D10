@@ -22,13 +22,15 @@ static func at_level(class_id: String, class_level: int) -> Array:
 	return of_class(class_id).filter(func(f): return int(f["level"]) == class_level)
 
 
-## Lignes à afficher quand un personnage atteint un niveau, ex. « Mira : nouvelle aptitude, Fougue. »
-static func announce(ch: Character, class_level: int) -> Array[String]:
+## Lignes à afficher quand un personnage atteint un niveau dans une classe (la principale par défaut),
+## ex. « Mira : nouvelle aptitude, Fougue. »
+static func announce(ch: Character, class_level: int, cls := "") -> Array[String]:
 	var lines: Array[String] = []
-	for feature: Dictionary in at_level(ch.class_id, class_level):
+	var class_id := cls if cls != "" else ch.class_id
+	for feature: Dictionary in at_level(class_id, class_level):
 		lines.append(Loc.ui("%s : nouvelle aptitude, %s.") % [ch.name, feature["name"]])
-	var before := Spellcasting.slots(DB.classes[ch.class_id].get("spell_slots", ""), class_level - 1)
-	var after := Spellcasting.slots(DB.classes[ch.class_id].get("spell_slots", ""), class_level)
+	var before := Spellcasting.slots(DB.classes[class_id].get("spell_slots", ""), class_level - 1)
+	var after := Spellcasting.slots(DB.classes[class_id].get("spell_slots", ""), class_level)
 	if after != before:
 		lines.append(Loc.ui("%s : %s.") % [ch.name, slots_text(after)])
 	return lines

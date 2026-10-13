@@ -28,6 +28,7 @@ const MAX_CHOICES_HEIGHT := 330  # au-delà, la liste de choix défile
 var _debug_badge := Label.new()
 var _inventory_button := Button.new()
 var _carnet_button := Button.new()
+var _rest_button := Button.new()
 var _overlay: Control  # fenêtre ouverte par-dessus l'écran : inventaire ou boutique (null sinon)
 var _event_on_screen: Dictionary = {}  # événement dont les choix sont affichés (pour les réafficher en debug)
 
@@ -47,6 +48,9 @@ func _ready() -> void:
 	_carnet_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_carnet_button.pressed.connect(open_carnet, CONNECT_DEFERRED)
 	buttons.add_child(_carnet_button)
+	_rest_button.pressed.connect(_on_rest, CONNECT_DEFERRED)
+	_rest_button.tooltip_text = tr("Repos long jusqu'au matin, selon le lieu (touche R)")
+	sheet_text.get_parent().add_child(_rest_button)
 	if Game.life == null or Game.life.dead:
 		if not Saves.load_life():
 			Game.new_life()  # scène lancée directement, sans sauvegarde ni création
@@ -66,6 +70,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	if key.keycode == KEY_I and not dice_tray.is_playing():
 		open_inventory()
+		accept_event()
+		return
+	if key.keycode == KEY_R and not dice_tray.is_playing():
+		_on_rest()
 		accept_event()
 		return
 	if key.keycode == KEY_C and not dice_tray.is_playing():
@@ -99,6 +107,9 @@ func _show_hub() -> void:
 	# Un membre du groupe a gagné une amélioration en montant de niveau : on la lui fait choisir d'abord.
 	Saves.save_all()
 	for member in Game.life.party():
+		if member.pending_class_levels > 0:
+			_show_class_level_choice(member)
+			return
 		var pending := member.pending_choice()
 		if not pending.is_empty():
 			_show_pending_choice(member, pending)
@@ -210,6 +221,31 @@ func _show_death() -> void:
 	_add_choice(tr("Menu principal"), _on_menu)
 
 
+## Niveau gagné : choix de la classe qui progresse (multiclassage libre).
+func _show_class_level_choice(member: Character) -> void:
+	illustration.texture = ArtProvider.location_image("town", Game.life)
+	title_label.text = tr("Niveau %d — %s") % [member.level - member.pending_class_levels + 1, member.name]
+	body_text.text = tr("%s gagne un niveau. Dans quelle classe ?") % member.name
+	_clear_choices()
+	for cls: String in DB.classes:
+		if not Meta.is_class_available(cls) and not member.has_class(cls):
+			continue
+		var next := member.class_level(cls) + 1
+		var gains := PackedStringArray(ClassFeatures.at_level(cls, next).map(func(f): return f["name"]))
+		if Progression.is_advancement_level(next):
+			gains.append(tr("amélioration"))
+		var label := tr("%s niveau %d") % [DB.classes[cls]["name"], next]
+		if not gains.is_empty():
+			label += " — " + ", ".join(gains)
+		_add_choice(label, _on_class_level_chosen.bind(member, cls))
+
+
+func _on_class_level_chosen(member: Character, cls: String) -> void:
+	Game.life.notices.append_array(member.assign_class_level(cls))
+	_refresh_sheet()
+	_show_hub()
+
+
 ## Un choix à faire (compétences, style de combat, sous-classe, options d'un don…), une valeur à la fois.
 func _show_pending_choice(member: Character, entry: Dictionary) -> void:
 	var spec: Dictionary = entry["spec"]
@@ -277,6 +313,8 @@ func _on_feat_chosen(member: Character, feat_id: String) -> void:
 
 ## Un lieu avec des boutiques ou des habitants ouvre son menu ; les autres tirent directement un événement.
 func _on_location_chosen(location_id: String) -> void:
+	Game.life.location = location_id
+	_refresh_sheet()
 	if Shops.of_location(location_id).is_empty() and not _has_people(location_id):
 		_show_event(Game.draw_event(location_id))
 	else:
@@ -351,6 +389,23 @@ func _on_social_closed(acted: bool, location_id: String) -> void:
 		_show_death()
 	else:
 		_show_people(location_id)
+
+
+## Repos (bouton de la fiche) : hors combat et hors fenêtre ; une nuit agitée tire un événement du lieu.
+func _on_rest() -> void:
+	if not _can_open_overlay() or not Game.current_event.is_empty():
+		return
+	var result := Game.rest()
+	title_label.text = tr("Repos")
+	body_text.text = result["text"]
+	_refresh_sheet()
+	_clear_choices()
+	if result["event_location"] != "":
+		_add_choice(tr("Voir ce qui se passe"), _show_event_from.bind(result["event_location"]))
+	elif Game.life.dead:
+		_add_choice(tr("Continuer"), _show_death)
+	else:
+		_add_choice(tr("Continuer"), _show_hub)
 
 
 ## Carnet des PNJ rencontrés.
@@ -445,6 +500,7 @@ func _run_combat(spec: Dictionary) -> void:
 		_overlay.close_view()
 	_inventory_button.disabled = true
 	_carnet_button.disabled = true
+	_rest_button.disabled = true
 	content_box.visible = false
 	combat_view.visible = true
 	var result: Dictionary = await combat_view.run(spec, illustration.texture)
@@ -452,6 +508,7 @@ func _run_combat(spec: Dictionary) -> void:
 	content_box.visible = true
 	_inventory_button.disabled = false
 	_carnet_button.disabled = false
+	_rest_button.disabled = false
 	_refresh_sheet()
 	title_label.text = {"victory": tr("Victoire"), "defeat": tr("Défaite"), "fled": tr("Fuite")}.get(result["outcome"], "")
 	_show_result(result)
@@ -459,6 +516,7 @@ func _run_combat(spec: Dictionary) -> void:
 
 func _refresh_sheet() -> void:
 	var ch := Game.life.character
+	_rest_button.text = "%s (R)" % Game.rest_name()
 	portrait.texture = ArtProvider.portrait(ch)
 	name_label.text = ch.name
 	sheet_text.text = CharacterSheet.bbcode(ch) + CharacterSheet.companions_bbcode(Game.life)

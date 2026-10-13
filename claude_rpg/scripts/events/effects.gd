@@ -81,10 +81,7 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 			"xp":
 				lines.append(Loc.ui("%s XP") % _signed(int(e["amount"])))
 				for new_level in ch.add_xp(int(e["amount"])):
-					lines.append(Loc.ui("Niveau %d atteint !") % new_level)
-					lines.append_array(ClassFeatures.announce(ch, new_level))
-					if Progression.is_advancement_level(new_level):
-						lines.append(Progression.advancement_text() + ".")
+					lines.append(Loc.ui("Niveau %d atteint ! (classe à choisir)") % new_level)
 			"ability":
 				var id: String = e["id"]
 				lines.append("%s %s" % [_signed(int(e["amount"])), Abilities.short_of(id)])

@@ -685,6 +685,10 @@ static func _validate_features(db: Node, features: Array, ctx: String, errors: A
 
 
 static func _validate_social(db: Node, errors: Array[String]) -> void:
+	for loc: Dictionary in db.locations.values():
+		var rest: Dictionary = loc.get("rest", {})
+		if not rest.is_empty() and rest.get("type") not in ["camp", "inn", "home"]:
+			errors.append("locations.json › %s : rest.type doit valoir camp, inn ou home" % loc["id"])
 	for role: Dictionary in db.npc_roles.values():
 		var ctx := "npc_roles.json › %s" % role["id"]
 		_expect_ref(db.locations, role.get("location"), "lieu", ctx, errors)

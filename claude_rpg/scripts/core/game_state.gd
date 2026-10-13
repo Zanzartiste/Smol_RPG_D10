@@ -97,10 +97,7 @@ func finish_combat() -> Dictionary:
 		for member in life.party():
 			if member.hp > 0 and xp > 0:
 				for new_level in member.add_xp(xp):
-					lines.append(Loc.ui("%s atteint le niveau %d !") % [member.name, new_level])
-					lines.append_array(ClassFeatures.announce(member, new_level))
-					if Progression.is_advancement_level(new_level):
-						lines.append(Loc.ui("%s : %s.") % [member.name, Progression.advancement_text()])
+					lines.append(Loc.ui("%s atteint le niveau %d ! (classe à choisir)") % [member.name, new_level])
 		if xp > 0:
 			lines.push_front(Loc.ui("+%d XP") % xp)
 
@@ -143,6 +140,41 @@ func end_event() -> void:
 	life.advance_time(1)
 	_after_change()
 	Saves.save_all()
+
+
+## Repos du lieu actuel (rules : locations.json › rest) : camper (gratuit, une nuit agitée est possible),
+## nuit à l'auberge (payante), dormir chez soi. Le temps passe jusqu'au matin, et tout le groupe fait un
+## repos long. Retourne {"ok", "text", "event_location"} (lieu d'un événement nocturne, ou "").
+func rest() -> Dictionary:
+	var loc_id := life.location if life.location != "" else DB.location_order[0]
+	var spec: Dictionary = DB.locations.get(loc_id, {}).get("rest", {})
+	if spec.is_empty():
+		return {"ok": false, "text": Loc.ui("Impossible de se reposer ici."), "event_location": ""}
+	var cost := int(spec.get("cost", 0))
+	if life.character.gold < cost:
+		return {"ok": false, "text": Loc.ui("Pas assez d'or (%d po).") % cost, "event_location": ""}
+	life.character.gold -= cost
+	life.advance_time(DB.slots_per_day() - life.slot)  # jusqu'au matin suivant
+	for member in life.party():
+		if member.hp > 0:
+			member.long_rest()
+	var text: String = {"camp": Loc.ui("Vous montez le camp et dormez à la belle étoile."),
+		"inn": Loc.ui("Vous louez une chambre à l'auberge (%d po) et dormez d'un sommeil de plomb.") % cost,
+		"home": Loc.ui("Vous dormez chez vous, dans votre lit.")}.get(spec.get("type", ""), "")
+	text += "\n" + Loc.ui("Le groupe a récupéré ses forces.")
+	var event_location := ""
+	if life.rng.randf() < float(spec.get("event_chance", 0.0)):
+		event_location = loc_id
+		text += "\n" + Loc.ui("Mais la nuit est agitée…")
+	_after_change()
+	Saves.save_all()
+	return {"ok": true, "text": text, "event_location": event_location}
+
+
+## Nom du repos possible au lieu actuel (bouton de la fiche).
+func rest_name() -> String:
+	var loc_id := life.location if life != null and life.location != "" else DB.location_order[0]
+	return DB.locations.get(loc_id, {}).get("rest", {}).get("name", Loc.ui("Se reposer"))
 
 
 ## Fin d'une interaction sociale : elle a pris un créneau de la journée.
