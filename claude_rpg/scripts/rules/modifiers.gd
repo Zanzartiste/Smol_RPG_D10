@@ -14,7 +14,7 @@ const SCHEMA := {
 	"initiative": ["amount"],  # points d'initiative en plus
 	"armor": ["amount"],  # points d'Armure en plus
 	"natural_dodge": ["amount"],  # Esquive naturelle en plus
-	"weapon_damage": ["amount"],  # seuil des dégâts d'arme en plus
+	"weapon_damage": ["amount"],  # dés de dégâts d'arme en plus
 	"weapon_attack": ["amount"],  # dés en plus aux attaques avec une arme
 	"saving_throws": ["amount"],  # dés en plus pour résister
 	"resistance": ["damage_type"],
@@ -38,7 +38,7 @@ const SCHEMA := {
 	"ranged_attack": ["amount"],  # dés en plus aux attaques à distance (Archerie)
 	"armored": ["amount"],  # points d'Armure en plus avec une vraie armure (Défense)
 	"great_weapon_fighting": [],  # arme à deux mains : on relance une fois les dés de dégâts ratés
-	"dueling": ["amount"],  # seuil des dégâts en plus avec une arme de mêlée à une main (Duel)
+	"dueling": ["amount"],  # dés de dégâts en plus avec une arme de mêlée à une main (Duel)
 	"armor_strength_reduction": ["amount"],  # Force conseillée des armures réduite
 	"potent_cantrip": [],  # tour de magie raté : moitié des dégâts (Évocateur)
 	"empowered_evocation": [],  # un dé de dégâts de plus aux sorts d'évocation
@@ -98,7 +98,7 @@ static func describe(m: Dictionary) -> String:
 		"natural_dodge":
 			return Loc.ui("%s Esquive naturelle") % signed
 		"weapon_damage":
-			return Loc.ui("%s au seuil des dégâts d'arme") % signed
+			return Loc.ui("%s dé(s) de dégâts d'arme") % signed
 		"weapon_attack":
 			return Loc.ui("%s dé(s) aux attaques d'arme") % signed
 		"saving_throws":
@@ -146,7 +146,7 @@ static func describe(m: Dictionary) -> String:
 		"great_weapon_fighting":
 			return Loc.ui("Armes à deux mains : relance des dés de dégâts ratés")
 		"dueling":
-			return Loc.ui("%s au seuil des dégâts à une main") % signed
+			return Loc.ui("%s dé(s) de dégâts à une main") % signed
 		"armor_strength_reduction":
 			return Loc.ui("Force des armures −%d") % amount
 		"potent_cantrip":

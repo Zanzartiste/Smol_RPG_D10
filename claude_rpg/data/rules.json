@@ -9,8 +9,9 @@
 		"bonuses": [1, 1]
 	},
 	"dice": {
-		"_doc": "Réserves de d10 : critical_step succès supplémentaires par niveau de réussite critique ; attribute_dice dés pour un test d'attribut sans compétence ; resist_skills : compétence utilisée pour résister selon l'attribut.",
+		"_doc": "Réserves de d10 : critical_step succès supplémentaires par niveau de réussite critique ; échec critique : aucun succès (et au moins un 10 si fumble_needs_ten) ; attribute_dice dés pour un test d'attribut sans compétence ; resist_skills : compétence utilisée pour résister selon l'attribut.",
 		"critical_step": 3,
+		"fumble_needs_ten": true,
 		"attribute_dice": 2,
 		"resist_skills": {"str": "physique", "dex": "physique", "con": "physique", "int": "lore", "wis": "insight", "cha": "persuasion"}
 	},

@@ -7,10 +7,14 @@ extends VBoxContainer
 ## Au tour d'un personnage (héros ou compagnon), le joueur choisit UNE action : une action de classe
 ## (puis sa cible si besoin, en cliquant sur le champ de bataille), un objet, la fuite, ou passer.
 ## Certaines actions (Fougue) en donnent une de plus : le tour continue tant qu'il en reste.
-## Les créatures (ennemis, invocations) jouent seules.
-## Raccourcis : 1-9 pour les actions, Échap annule le ciblage ; une touche accélère les dés.
+## Les créatures (ennemis, invocations) jouent seules. Quand l'une d'elles attaque un personnage du joueur
+## qui a gardé des actions, le joueur choisit sa réaction : contre-attaquer (avant le jet), esquiver (si
+## l'attaque touche), parer (avant les dégâts) — sauf si l'IA joue ce personnage.
+## Les étapes du combat (Combat.stream) sont animées au fil de l'eau, y compris avant un choix de réaction.
+## Raccourcis : 1-9 pour les actions (et les réactions), Échap annule le ciblage ; une touche accélère les dés.
 
 signal _turn_finished
+signal _reaction_chosen(react: bool)
 
 const LOG_LINES := 6
 
@@ -27,6 +31,8 @@ var _actor: Combatant  # personnage contrôlé par le joueur dont c'est le tour 
 var _busy := false  # une animation est en cours : pas d'entrée joueur
 var _pending := {}  # action en attente de cible : {"kind": "action"|"item", "action"/"item"}
 var _log_shown := 0
+var _stream_pos := 0  # étapes de Combat.stream déjà animées
+var _reaction := {}  # réaction en attente du joueur : {"target", "kind", "info"}
 var _action_buttons: Array[Button] = []
 
 
@@ -37,21 +43,25 @@ func _ready() -> void:
 ## Joue un combat jusqu'au bout et retourne son résultat (voir Game.finish_combat).
 func run(spec: Dictionary, background_texture: Texture2D) -> Dictionary:
 	combat = Game.start_combat(spec)
+	combat.reaction_chooser = _choose_reaction
 	background.texture = background_texture
 	battle.show_combat(combat)
 	_log_shown = combat.log.size()
+	_stream_pos = combat.stream.size()
 	_refresh()
 	await dice_tray.play(combat.initiative_roll, true)  # tous les dés d'initiative en même temps
 	while not combat.is_over():
 		var actor := combat.current()
 		_refresh()
-		await _play(combat.start_turn())
+		combat.start_turn()
+		await _play_stream()
 		if combat.is_over():
 			break
 		if not combat.skipped:
 			if actor.is_player_controlled() and actor.is_auto():
 				await get_tree().create_timer(0.3).timeout
-				await _play(combat.auto_turn(actor))
+				await combat.auto_turn(actor)
+				await _play_stream()
 			elif actor.is_player_controlled():
 				_actor = actor
 				_refresh()
@@ -60,7 +70,8 @@ func run(spec: Dictionary, background_texture: Texture2D) -> Dictionary:
 				_cancel_pending()
 			else:
 				await get_tree().create_timer(0.45).timeout
-				await _play(combat.ai_turn(actor))
+				await combat.ai_turn(actor)
+				await _play_stream()
 		combat.end_turn()
 	_log_shown = combat.log.size()
 	_refresh()
@@ -78,7 +89,9 @@ func _refresh() -> void:
 		turn_label.text = tr("Round %d — au tour de %s") % [combat.round_number, combat.current().name]
 	var lines := combat.log.slice(maxi(0, _log_shown - LOG_LINES), _log_shown)
 	log_text.text = "\n".join(PackedStringArray(lines))
-	if not _pending.is_empty():
+	if not _reaction.is_empty():
+		hint_label.text = _reaction_text()
+	elif not _pending.is_empty():
 		hint_label.text = tr("Choisissez une cible sur le champ de bataille (Échap pour annuler).")
 	elif _actor != null and not _busy:
 		hint_label.text = tr("%s : %d action(s) restante(s) ; celles gardées serviront à se défendre") % [_actor.name,
@@ -94,6 +107,9 @@ func _fill_action_bar() -> void:
 		action_bar.remove_child(child)
 		child.queue_free()
 	_action_buttons.clear()
+	if not _reaction.is_empty():
+		_fill_reaction_bar()
+		return
 	if _actor == null or combat.is_over():
 		return
 	var enabled := not _busy
@@ -160,11 +176,13 @@ func _button(text: String, on_pressed: Callable, enabled: bool) -> Button:
 	return button
 
 
-## Anime une liste d'étapes : jets de dés, journal, PV.
-func _play(beats: Array[Dictionary]) -> void:
+## Anime les étapes du combat pas encore montrées (Combat.stream) : jets de dés, journal, PV.
+func _play_stream() -> void:
 	_busy = true
 	_refresh()
-	for beat in beats:
+	while _stream_pos < combat.stream.size():
+		var beat: Dictionary = combat.stream[_stream_pos]
+		_stream_pos += 1
 		if not beat["roll"].is_empty():
 			await dice_tray.play(beat["roll"], beat["fast"])
 		_log_shown += 1
@@ -174,12 +192,77 @@ func _play(beats: Array[Dictionary]) -> void:
 	_refresh()
 
 
-## Joue l'action du personnage actif, anime le résultat, puis termine son tour (sauf s'il lui reste
-## une action, ex. après Fougue).
-func _act(beats: Array[Dictionary]) -> void:
-	await _play(beats)
+## Joue une action du personnage actif (`action_call` : perform, use_item ou flee liés à leurs arguments),
+## anime le résultat, puis termine son tour s'il ne peut plus agir.
+func _act(action_call: Callable) -> void:
+	_busy = true
+	_refresh()
+	await action_call.call()
+	await _play_stream()
 	if not combat.can_act_again():
 		_turn_finished.emit()
+
+
+# --- Réactions ---------------------------------------------------------------
+
+## Appelé par le combat quand un personnage du joueur peut réagir : on montre d'abord ce qui s'est passé,
+## puis on attend son choix.
+func _choose_reaction(target: Combatant, kind: String, info: Dictionary) -> bool:
+	await _play_stream()
+	_reaction = {"target": target, "kind": kind, "info": info}
+	_refresh()
+	var react: bool = await _reaction_chosen
+	_reaction = {}
+	_refresh()
+	return react
+
+
+## Texte de la réaction proposée.
+func _reaction_text() -> String:
+	var target: Combatant = _reaction["target"]
+	var info: Dictionary = _reaction["info"]
+	var attacker: Combatant = info["attacker"]
+	var left := tr("%d réaction(s)") % target.reactions
+	match _reaction["kind"]:
+		"counter":
+			var counter: Dictionary = info["counter"]
+			var attack: Dictionary = info["attack"]
+			return tr("%s attaque %s. Contre-attaquer ? Opposition %s contre %s ; le perdant ne peut pas se défendre (%s).") % [
+				attacker.name, target.name, Dice.pool_text(counter["count"], counter["threshold"]),
+				Dice.pool_text(attack["count"], attack["threshold"]), left]
+		"dodge":
+			return tr("%s touche %s : %d succès contre %d. Esquiver avec %s ? (%s)") % [attacker.name, target.name,
+				info["successes"], info["difficulty"], Dice.pool_text(info["dodge"]["count"], info["dodge"]["threshold"]), left]
+		"parry":
+			return tr("%s va subir %d dégâts de %s. Parer avec %s ? Chaque succès retire un point (%s).") % [target.name,
+				info["damage"], attacker.name, Dice.pool_text(info["parry"]["count"], info["parry"]["threshold"]), left]
+	return ""
+
+
+## Deux boutons : réagir ou non.
+func _fill_reaction_bar() -> void:
+	var info: Dictionary = _reaction["info"]
+	var yes := ""
+	var no := ""
+	match _reaction["kind"]:
+		"counter":
+			yes = tr("Contre-attaquer")
+			no = tr("Laisser venir")
+		"dodge":
+			# Chance d'éviter le coup : il faut plus de succès que ceux au-delà de la difficulté.
+			var need := int(info["successes"]) - int(info["difficulty"]) + 1
+			yes = tr("Esquiver (%d %% de l'éviter)") % roundi(Dice.chance(info["dodge"]["count"], info["dodge"]["threshold"], need) * 100)
+			no = tr("Ne pas esquiver")
+		"parry":
+			yes = tr("Parer")
+			no = tr("Encaisser")
+	_action_buttons.append(_button("1. " + yes, _on_reaction.bind(true), true))
+	_action_buttons.append(_button("2. " + no, _on_reaction.bind(false), true))
+
+
+func _on_reaction(react: bool) -> void:
+	if not _reaction.is_empty():
+		_reaction_chosen.emit(react)
 
 
 # --- Choix du joueur ---------------------------------------------------------
@@ -191,7 +274,7 @@ func _on_action_pressed(action: Dictionary) -> void:
 	if target in CombatEffects.CHOSEN_TARGETS:
 		_ask_target({"kind": "action", "action": action}, combat.targets(_actor, target))
 	else:
-		_act(combat.perform(_actor, action))
+		_act(combat.perform.bind(_actor, action))
 
 
 func _on_item_chosen(menu_index: int) -> void:
@@ -224,9 +307,9 @@ func _on_target_chosen(target: Combatant) -> void:
 func _execute(pending: Dictionary, target: Combatant) -> void:
 	match pending["kind"]:
 		"action":
-			_act(combat.perform(_actor, pending["action"], target))
+			_act(combat.perform.bind(_actor, pending["action"], target))
 		"item":
-			_act(combat.use_item(_actor, pending["item"], target))
+			_act(combat.use_item.bind(_actor, pending["item"], target))
 
 
 func _cancel_pending() -> void:
@@ -237,7 +320,7 @@ func _cancel_pending() -> void:
 
 func _on_flee_pressed() -> void:
 	if _actor != null and not _busy:
-		_act(combat.flee(_actor))
+		_act(combat.flee.bind(_actor))
 
 
 func _on_auto_toggled() -> void:
@@ -245,7 +328,9 @@ func _on_auto_toggled() -> void:
 		return
 	_actor.character.auto_combat = not _actor.character.auto_combat
 	if _actor.character.auto_combat:
-		await _play(combat.auto_turn(_actor))
+		_busy = true
+		await combat.auto_turn(_actor)
+		await _play_stream()
 		_turn_finished.emit()
 	else:
 		_refresh()

@@ -11,7 +11,7 @@ extends RefCounted
 ##   - option « dés nombreux » (Meta.settings › many_dice) : chaque tranche de 10 dés est remplacée par
 ##     seuil + 1 succès automatiques ;
 ##   - réussite critique N : N × 3 succès supplémentaires (rules.json › dice › critical_step) ;
-##   - échec critique : aucun succès.
+##   - échec critique : aucun succès et au moins un 10 (rules.json › dice › fumble_needs_ten).
 ##
 ## Un test s'écrit {"skill": "physique", "difficulty": 2} (avec le meilleur attribut de la compétence),
 ## {"skill": "persuasion", "ability": "str", "difficulty": 2} (attribut imposé : intimider),
@@ -117,12 +117,22 @@ static func critical_level(extra: int, bonus := 0) -> int:
 
 
 ## Résultat d'un jet contre une difficulté : {"successes", "difficulty", "success", "extra",
-## "critical": niveau, "fumble": aucun succès}.
-static func judge(successes: int, difficulty: int, crit_bonus := 0) -> Dictionary:
+## "critical": niveau, "fumble": échec critique}. `dice` : les dés lancés (un échec critique demande aucun
+## succès et au moins un 10 parmi eux).
+static func judge(successes: int, difficulty: int, crit_bonus := 0, dice: Array = []) -> Dictionary:
 	var success := successes >= difficulty
 	var extra := successes - difficulty
 	return {"successes": successes, "difficulty": difficulty, "success": success, "extra": extra,
-		"critical": critical_level(extra, crit_bonus) if success else 0, "fumble": successes == 0}
+		"critical": critical_level(extra, crit_bonus) if success else 0, "fumble": is_fumble(successes, dice)}
+
+
+## Échec critique : aucun succès, et au moins un 10 si la règle l'exige.
+static func is_fumble(successes: int, dice: Array) -> bool:
+	if successes > 0:
+		return false
+	if not setting("fumble_needs_ten", true):
+		return true
+	return dice.any(func(d): return int(d.get("value", 0)) == 10 and not d.get("dropped", false))
 
 
 ## Probabilités du nombre de succès d'une réserve : tableau P[k] (k de 0 à `cap`).
@@ -248,7 +258,7 @@ static func roll_check(ch: Character, check: Dictionary, rng: RandomNumberGenera
 	var roll := roll_pool(rng, int(pool["count"]), int(pool["threshold"]))
 	if reliable(ch, check):
 		roll["successes"] = maxi(1, int(roll["successes"]))
-	var result := judge(int(roll["successes"]), difficulty_of(check))
+	var result := judge(int(roll["successes"]), difficulty_of(check), 0, roll["dice"])
 	result.merge(roll)
 	result["pool"] = true  # pour le plateau de dés
 	result["label"] = label(check)

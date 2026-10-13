@@ -8,8 +8,9 @@ extends RefCounted
 ##          "damage_type": "slashing",
 ##          "properties": ["finesse", "light", "thrown", "versatile", "heavy", "two_handed", "ranged"]}
 ##   Dégâts : [rang de la compétence d'attaque + dice] d10 contre un seuil : l'attribut d'attaque
-##   ("weapon", par défaut), un attribut imposé, ou un seuil fixe (arcs), + "bonus". Une arme
-##   polyvalente tenue à deux mains a +1 au seuil. "parry"?: {"ability", "bonus"} : seuil de parade.
+##   ("weapon", par défaut), un attribut imposé, ou un seuil fixe (arcs), + "bonus". Plus l'arme est grosse,
+##   plus elle a de dés ; une arme polyvalente tenue à deux mains a un dé de plus.
+##   "parry"?: {"ability", "bonus"} : seuil de parade.
 ## Armure : {"category": "armor", "armor_type": "clothing" | "light" | "medium" | "heavy", "armor": N,
 ##           "strength"?: N}  N : points d'Armure (baissent le seuil des dégâts subis). Force nécessaire
 ##           pour la porter sans malus ; par défaut celle de son type (rules.json › armor_strength :
@@ -21,8 +22,8 @@ extends RefCounted
 ## Facultatif pour tous : "modifiers" (voir Modifiers), "rarity", "value", "description" (voir Items).
 ## Facultatif pour une arme : "bonus_damage": [{"dice": 2, "threshold": 5, "damage_type": "fire"}], dégâts
 ## d'autres types ajoutés à chaque coup (une épée enflammée : tranchant + feu).
-## Un objet magique est un équipement avec des modificateurs, ex. une épée +1 (un dé d'attaque et +1 au
-## seuil de dégâts) : "modifiers": [{"type": "weapon_attack", "amount": 1}, {"type": "weapon_damage", "amount": 1}]
+## Un objet magique est un équipement avec des modificateurs, ex. une épée +1 (un dé d'attaque et un
+## dé de dégâts) : "modifiers": [{"type": "weapon_attack", "amount": 1}, {"type": "weapon_damage", "amount": 1}]
 
 const SLOTS := ["main_hand", "off_hand", "head", "armor", "cloak", "hands", "legs", "feet", "neck", "ring_1", "ring_2"]
 const ACCESSORY_SLOTS := ["head", "cloak", "hands", "legs", "feet", "neck", "ring"]
@@ -34,7 +35,7 @@ const SLOT_NAMES := {
 ## Emplacements multiples : un type d'emplacement -> ses emplacements réels.
 const SLOT_GROUPS := {"ring": ["ring_1", "ring_2"]}
 const UNARMED := "unarmed"
-const VERSATILE_BONUS := 1  # seuil de dégâts en plus pour une arme polyvalente tenue à deux mains
+const VERSATILE_DICE := 1  # dés de dégâts en plus pour une arme polyvalente tenue à deux mains
 
 const PROPERTY_NAMES := {
 	"finesse": "finesse", "light": "légère", "thrown": "lancer", "versatile": "polyvalente",
@@ -128,16 +129,16 @@ static func weight_of(id: String) -> float:
 
 
 ## Dégâts d'une arme : {"threshold": "weapon" | attribut | N, "bonus", "dice"} ; une arme polyvalente
-## tenue à deux mains a +1 au seuil.
+## tenue à deux mains a un dé de plus.
 static func weapon_damage(id: String, two_hands := false) -> Dictionary:
 	var spec: Dictionary = def(id).get("damage", {})
 	var result := {"threshold": spec.get("threshold", "weapon"), "bonus": int(spec.get("bonus", 0)), "dice": int(spec.get("dice", 0))}
 	if two_hands and has_property(id, "versatile"):
-		result["bonus"] = int(result["bonus"]) + VERSATILE_BONUS
+		result["dice"] = int(result["dice"]) + VERSATILE_DICE
 	return result
 
 
-## Texte d'une réserve de dégâts : « seuil FOR +1 », « seuil 6, +1 dé ».
+## Texte d'une réserve de dégâts : « seuil attaque, +1 dé », « seuil 6 ».
 static func damage_text(spec: Dictionary) -> String:
 	var threshold: Variant = spec.get("threshold", "weapon")
 	var text := ""
@@ -204,7 +205,7 @@ static func describe(id: String) -> String:
 			for prop: String in item.get("properties", []):
 				var label: String = PROPERTY_NAMES.get(prop, prop)
 				if prop == "versatile":
-					label += Loc.ui(" : +1 à deux mains")
+					label += Loc.ui(" : +1 dé à deux mains")
 				props.append(label)
 			return text + (" (%s)" % ", ".join(props) if not props.is_empty() else "")
 		"armor":

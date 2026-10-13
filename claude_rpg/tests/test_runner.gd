@@ -56,7 +56,8 @@ func _ready() -> void:
 		if verbose:
 			printerr("> " + test)
 		# Une erreur de script interrompt la fonction, qui retourne alors null au lieu de true.
-		_expect(call(test) == true, "%s s'exécute jusqu'au bout (voir les erreurs ci-dessus)" % test)
+		var finished: Variant = await call(test)
+		_expect(finished == true, "%s s'exécute jusqu'au bout (voir les erreurs ci-dessus)" % test)
 	print("\n%d vérifications, %d échec(s)" % [_checks, _failures])
 	get_tree().quit(1 if _failures > 0 else 0)
 
@@ -162,18 +163,18 @@ func _test_equipment() -> bool:
 	_expect(Equipment.attack_ability("rapier", 6, 4) == "str" and Equipment.attack_ability("rapier", 4, 6) == "dex",
 		"finesse : meilleur de FOR et DEX")
 	_expect(Equipment.attack_ability("shortbow", 8, 3) == "dex", "arme à distance : DEX")
-	_expect(Equipment.weapon_damage("longsword") == {"threshold": "weapon", "bonus": 1, "dice": 0}
-		and Equipment.weapon_damage("longsword", true)["bonus"] == 2 and Equipment.weapon_damage("longbow")["threshold"] == 6,
-		"dégâts : seuil de l'attaque + bonus (polyvalente : +1 à deux mains), ou seuil fixe (arc)")
-	_expect(Equipment.describe("longsword") == "Épée longue — tranchant, seuil attaque +1 (polyvalente : +1 à deux mains)",
+	_expect(Equipment.weapon_damage("longsword") == {"threshold": "weapon", "bonus": 0, "dice": 1}
+		and Equipment.weapon_damage("longsword", true)["dice"] == 2 and Equipment.weapon_damage("longbow")["threshold"] == 6,
+		"dégâts : seuil de l'attaque, dés en plus (polyvalente : +1 dé à deux mains), ou seuil fixe (arc)")
+	_expect(Equipment.describe("longsword") == "Épée longue — tranchant, seuil attaque, +1 dé(s) (polyvalente : +1 dé à deux mains)",
 		"description d'arme")
 
 	var c := Character.create("human", "fighter", "Testeur")
 	_expect(c.weapon_id() == "longsword" and c.armor() == 3, "équipement de départ de la classe")
 	c.equip("shield")
-	_expect(c.armor() == 4 and c.weapon_damage()["bonus"] == 1, "bouclier : +1 Armure, épée à une main")
+	_expect(c.armor() == 4 and c.weapon_damage()["dice"] == 1, "bouclier : +1 Armure, épée à une main")
 	c.equip("greataxe")
-	_expect(not c.equipment.has("off_hand") and c.weapon_damage()["bonus"] == 3, "arme à deux mains : le bouclier est retiré")
+	_expect(not c.equipment.has("off_hand") and c.weapon_damage()["dice"] == 2, "arme à deux mains : le bouclier est retiré")
 	c.equip("shield")
 	_expect(c.weapon_id() == Equipment.UNARMED, "bouclier : l'arme à deux mains est rangée")
 
@@ -208,8 +209,8 @@ func _test_feats() -> bool:
 	var soldier := Character.create("human", "fighter", "Soldat", {"background": "soldier"})
 	var sword := Combatant.from_character(soldier, true)
 	var weapon := {"type": "attack", "weapon": true}
-	_expect(sword.damage_pool(weapon, sword.attack_pool(weapon)) == {"count": 2, "threshold": 7 + 2}
-		and soldier.has_modifier("savage_attacker"), "épée longue à deux mains : 2d10 contre FOR 7 + 2 ; Frappe brutale")
+	_expect(sword.damage_pool(weapon, sword.attack_pool(weapon)) == {"count": 2 + 2, "threshold": 7}
+		and soldier.has_modifier("savage_attacker"), "épée longue à deux mains : 2 + 2 dés contre FOR 7 ; Frappe brutale")
 	var hero := Character.create("goblin", "fighter", "Héros")  # pas d'humain : il a un don en plus dès le départ
 	hero.add_xp(300)
 	_level_up(hero)
@@ -267,7 +268,7 @@ func _test_defenses() -> bool:
 	var golem := combat.enemies()[0]
 	var beats: Array[Dictionary] = []
 	var weapon := {"type": "attack", "weapon": true}
-	combat._hit(combat.hero, golem, weapon, combat.hero.attack_pool(weapon), 3, false, false, beats, true)
+	await combat._hit(combat.hero, golem, weapon, combat.hero.attack_pool(weapon), 3, false, false, beats, true)
 	var hurt: Array = beats.filter(func(b): return "subit" in b["text"])
 	_expect(not hurt.is_empty() and ("résistance" in hurt[0]["text"] or "subit 0 dégâts" in hurt[0]["text"]),
 		"combat : résistance appliquée")
@@ -538,7 +539,7 @@ func _test_dice_tray() -> bool:
 ## Joue un combat entièrement en automatique et retourne le résultat de Game.finish_combat().
 ## Joue un combat entièrement en automatique et retourne le résultat de Game.finish_combat().
 func _auto_combat(spec: Dictionary) -> Dictionary:
-	_play_out(Game.start_combat(spec))
+	await _play_out(Game.start_combat(spec))
 	return Game.finish_combat()
 
 
@@ -551,9 +552,9 @@ func _play_out(combat: Combat) -> void:
 		combat.start_turn()
 		if not combat.is_over() and not combat.skipped:
 			if actor.is_player_controlled():
-				combat.auto_turn(actor)
+				await combat.auto_turn(actor)
 			else:
-				combat.ai_turn(actor)
+				await combat.ai_turn(actor)
 		combat.end_turn()
 	_expect(guard < 300, "le combat se termine")
 
@@ -610,8 +611,11 @@ func _test_dice_expressions() -> bool:
 	_expect(valid, "critique : seuls les dés ratés sont relancés")
 	_expect(Dice.judge(5, 2)["critical"] == 1 and Dice.judge(8, 2)["critical"] == 2 and Dice.judge(4, 2)["critical"] == 0,
 		"réussite critique 1 à 3 succès supplémentaires, 2 à 6")
-	_expect(Dice.judge(3, 2, 2)["critical"] == 1 and Dice.judge(0, 1)["fumble"] and not Dice.judge(1, 2)["fumble"],
-		"surprise : critique dès 1 succès supplémentaire ; aucun succès : échec critique")
+	var ten := [{"sides": 10, "value": 10, "success": false}]
+	var nine := [{"sides": 10, "value": 9, "success": false}]
+	_expect(Dice.judge(3, 2, 2)["critical"] == 1 and Dice.judge(0, 1, 0, ten)["fumble"] and not Dice.judge(0, 1, 0, nine)["fumble"]
+		and not Dice.judge(1, 2, 0, ten)["fumble"],
+		"surprise : critique dès 1 succès supplémentaire ; échec critique : aucun succès et un 10")
 	_expect(Dice.dc_to_difficulty(10) == 1 and Dice.dc_to_difficulty(13) == 2 and Dice.dc_to_difficulty(15) == 3
 		and Dice.dc_to_difficulty(20) == 4, "anciens DD convertis en difficulté")
 	Meta.settings["many_dice"] = true
@@ -633,14 +637,14 @@ func _test_dice_expressions() -> bool:
 
 
 func _test_combat() -> bool:
-	# Guerrier humain au modèle : FOR 7, Armes de mêlée 2, épée longue à deux mains (+2 au seuil), cotte de mailles (Armure 3).
+	# Guerrier humain au modèle : FOR 7, Armes de mêlée 2, épée longue à deux mains (+2 dés), cotte de mailles (Armure 3).
 	Game.start_life(Character.create("human", "fighter", "Testeur"), 99)
 	var life := Game.life
 	var fighter := Combatant.from_character(life.character, true)
 	var weapon := {"type": "attack", "weapon": true}
 	var attack := fighter.attack_pool(weapon)
-	_expect(attack["count"] == 2 and attack["threshold"] == 7 and fighter.damage_pool(weapon, attack) == {"count": 2, "threshold": 9},
-		"guerrier : toucher 2d10 ≤ 7, dégâts 2d10 ≤ 9")
+	_expect(attack["count"] == 2 and attack["threshold"] == 7 and fighter.damage_pool(weapon, attack) == {"count": 4, "threshold": 7},
+		"guerrier : toucher 2d10 ≤ 7, dégâts 4d10 ≤ 7")
 	_expect(fighter.damage_type(weapon) == "slashing" and fighter.armor() == 3 and fighter.natural_dodge() == 1,
 		"épée longue tranchante ; Armure 3, Esquive naturelle 1")
 	var mage := Combatant.from_character(Character.create("goblin", "wizard", "Mage"), true)
@@ -656,7 +660,7 @@ func _test_combat() -> bool:
 	_expect(wolf.max_hp() == roundi(5 * pow(1.4142, -1)) and wolf.natural_dodge() == 2 and wolf.armor() == 0,
 		"loup : PV selon CON et taille, Esquive naturelle 2")
 	_expect(combat.cover(wolf) == 1 and combat.cover(combat.hero) == 1, "Couvert : 1 par défaut")
-	_play_out(combat)
+	await _play_out(combat)
 	var result := Game.finish_combat()
 	_expect(result["outcome"] in ["victory", "defeat"], "le combat aboutit à une victoire ou une défaite")
 	if result["outcome"] == "victory":
@@ -671,12 +675,12 @@ func _test_combat() -> bool:
 			"ability": "str", "damage": {"threshold": 8, "dice": 60}, "damage_type": "bludgeoning"}]}],
 		"xp": 0}
 	Game.start_life(Character.create("human", "fighter", "Testeur"), 5)
-	result = _auto_combat({"enemies": ["_ogre"], "on_defeat": "knockout",
+	result = await _auto_combat({"enemies": ["_ogre"], "on_defeat": "knockout",
 		"defeat": {"text": "K.-O.", "effects": [{"type": "gold", "amount": -5}]}})
 	_expect(result["outcome"] == "defeat" and not Game.life.dead and Game.life.character.hp == 1,
 		"K.-O. : défaite non mortelle, 1 PV")
 	_expect(Game.life.character.gold == 10 and result["text"] == "K.-O.", "K.-O. : effets de l'issue « defeat »")
-	result = _auto_combat({"enemies": ["_ogre"]})
+	result = await _auto_combat({"enemies": ["_ogre"]})
 	_expect(result["outcome"] == "defeat" and Game.life.dead and Game.life.death_cause == "Tué par Ogre", "défaite mortelle")
 
 	Game.start_life(Character.create("human", "fighter", "Testeur"), 6)
@@ -716,8 +720,8 @@ func _test_actions() -> bool:
 	var names := combat.action_choices(mage).map(func(c): return c["action"]["id"])
 	_expect(names == Game.life.character.combat_actions(), "actions du magicien : celles de sa classe")
 	var missile := Actions.def("magic_missile")
-	combat.perform(mage, missile, combat.living("enemy")[0])
-	combat.perform(mage, missile, combat.living("enemy")[0] if not combat.living("enemy").is_empty() else null)
+	await combat.perform(mage, missile, combat.living("enemy")[0])
+	await combat.perform(mage, missile, combat.living("enemy")[0] if not combat.living("enemy").is_empty() else null)
 	_expect(Game.life.character.resources["spell_slot_1"] == 0, "projectile magique : 2 emplacements dépensés")
 	_expect(combat.action_unavailable_reason(mage, missile) == "plus d'emplacement de sort de niveau 1", "plus d'emplacement")
 	Game.finish_combat()
@@ -733,7 +737,7 @@ func _test_actions() -> bool:
 	combat.start_turn()
 	_expect(combat.actions_left == 2, "deux actions par tour")
 	hero.hp = 1
-	combat.perform(hero, wind)
+	await combat.perform(hero, wind)
 	_expect(hero.hp > 1 and combat.actions_left == 1, "Second souffle : une action, il en reste une")
 	_expect(combat.action_unavailable_reason(hero, wind) != "" and combat.can_act_again(), "une seule fois")
 	combat.end_turn()
@@ -743,7 +747,7 @@ func _test_actions() -> bool:
 	_expect(hero.reactions == 0 and hero.is_prepared() and beats[0]["text"].contains("préparé"),
 		"réaction non utilisée : préparé au début de son tour")
 	_expect(hero.use_prepared() == 2 and not hero.is_prepared(), "préparé : +2 dés au prochain jet de combat, puis disparaît")
-	combat.perform(hero, Actions.def("prepare"))
+	await combat.perform(hero, Actions.def("prepare"))
 	_expect(hero.is_prepared() and combat.actions_left == 1, "action Se préparer")
 	hero.statuses.clear()
 
@@ -785,13 +789,14 @@ func _test_actions() -> bool:
 	var before := combat.log.size()
 	beats.clear()
 	var weapon := {"type": "attack", "weapon": true}
-	_expect(not combat._attack(hero, duelist, weapon, beats, true) and duelist.reactions == 0 and hero.hp < 999,
+	var duel_hit: bool = await combat._attack(hero, duelist, weapon, beats, true)
+	_expect(not duel_hit and duelist.reactions == 0 and hero.hp < 999,
 		"contre-attaque : le bretteur l'emporte et touche")
 	_expect(combat.log.slice(before).any(func(l): return "contre-attaque" in l), "contre-attaque annoncée")
 	hero.reactions = 1
 	duelist.reactions = 0
 	var hp := duelist.hp
-	combat._hit(hero, duelist, weapon, hero.attack_pool(weapon), 0, false, true, beats, true)
+	await combat._hit(hero, duelist, weapon, hero.attack_pool(weapon), 0, false, true, beats, true)
 	_expect(duelist.hp <= hp, "attaque qui touche : dégâts")
 	DB.creatures.erase("_duelist")
 
@@ -799,10 +804,35 @@ func _test_actions() -> bool:
 	hero.add_status("invisible", 2)
 	_expect(combat.is_surprise(hero, duelist) and combat.attack_difficulty(hero, duelist, weapon) == 1,
 		"attaque surprise : Esquive naturelle 1")
-	combat._attack(hero, duelist, weapon, beats, true)
+	await combat._attack(hero, duelist, weapon, beats, true)
 	_expect(hero.stacks("invisible") == 0, "en attaquant, on se révèle")
+	# Réactions choisies par le joueur : contre-attaque, esquive, parade ; jamais demandées en mode IA.
+	var asked: Array = []
+	var answer := [false]
+	combat.reaction_chooser = func(_target: Combatant, kind: String, _info: Dictionary) -> bool:
+		asked.append(kind)
+		return answer[0]
+	var lunge := {"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": 8, "dice": 3},
+		"damage_type": "piercing"}
+	hero.statuses.clear()
+	hero.reactions = 2
+	hero.parries_used = 0
+	await combat._attack(duelist, hero, lunge, beats, true)
+	_expect(asked == ["counter", "dodge", "parry"] and hero.reactions == 2, "réactions proposées puis refusées : aucune dépensée")
+	asked.clear()
+	answer[0] = true
+	await combat._attack(duelist, hero, lunge, beats, true)
+	_expect(asked == ["counter"] and hero.reactions == 1, "contre-attaque acceptée : une réaction dépensée")
+	var archer := {"type": "attack", "ranged": true, "skill": "physique", "ability": "dex", "damage": {"threshold": 8}}
+	asked.clear()
+	await combat._attack(duelist, hero, archer, beats, true)
+	_expect(not asked.has("counter"), "pas de contre-attaque contre un tir sans arme de tir")
+	asked.clear()
+	hero.reactions = 2
 	hero.character.auto_combat = true
 	_expect(hero.is_auto(), "IA activable par personnage")
+	await combat._attack(duelist, hero, lunge, beats, true)
+	_expect(asked.is_empty(), "en mode IA, les réactions sont automatiques")
 	Game.combat = null
 	_expect(Actions.text_of("pommel_strike") == "Attaque avec votre arme. Si elle touche : 1 Étourdi.",
 		"texte généré d'une action")
@@ -857,7 +887,7 @@ func _test_spell_progression() -> bool:
 	_expect(high["name"] == "Projectile magique (niv. 3)" and high["effects"][0]["damage"]["dice"] == 5,
 		"niveau 3 : deux dés de plus")
 	_expect(Actions.def("magic_missile")["effects"][0]["damage"]["dice"] == 3, "l'action de base n'est pas modifiée")
-	combat.perform(combat.hero, high, combat.living("enemy")[0])
+	await combat.perform(combat.hero, high, combat.living("enemy")[0])
 	_expect(Game.life.character.resources["spell_slot_3"] == 1 and Game.life.character.resources["spell_slot_1"] == 4,
 		"l'emplacement du niveau choisi est dépensé")
 	_expect(combat.action_choices(combat.hero).any(func(c): return c["action"]["id"] == "fireball"), "Boule de feu au niveau 5")
@@ -885,10 +915,10 @@ func _test_class_features() -> bool:
 	var hero := combat.hero
 	combat.turn = combat.order.find(hero)
 	combat.start_turn()
-	combat.perform(hero, Actions.def("action_surge"))
+	await combat.perform(hero, Actions.def("action_surge"))
 	_expect(combat.actions_left == 3 and combat.can_act_again(), "Fougue : une action de plus, sans coûter la sienne")
 	var before := combat.log.size()
-	combat.perform(hero, Actions.def("weapon_attack"), combat.enemies()[0])
+	await combat.perform(hero, Actions.def("weapon_attack"), combat.enemies()[0])
 	_expect(combat.log.slice(before).count("Niv9 : attaque supplémentaire.") == 1, "Attaque supplémentaire : deux coups au niveau 9")
 	_expect(combat.actions_left == 2, "il reste deux actions")
 	var beats: Array[Dictionary] = []
@@ -904,7 +934,8 @@ func _test_class_features() -> bool:
 	var sneak := Combatant.from_character(rogue, true)
 	var sneak_effect: Dictionary = Actions.def("sneak_attack")["effects"][0]
 	var attack := sneak.attack_pool(sneak_effect)
-	_expect(sneak.damage_pool(sneak_effect, attack)["count"] == int(attack["rank"]) + 6, "Attaque sournoise : 6 dés de plus au niveau 11")
+	var plain_dice: int = sneak.damage_pool({"type": "attack", "weapon": true}, attack)["count"]
+	_expect(sneak.damage_pool(sneak_effect, attack)["count"] == plain_dice + 6, "Attaque sournoise : 6 dés de plus au niveau 11")
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 5
 	var fewest := 99
@@ -919,13 +950,13 @@ func _test_class_features() -> bool:
 	hero.character.max_hp = 200
 	hero.hp = 200
 	before = combat.log.size()
-	combat._roll_damage(target, hero, {"count": 12, "threshold": 8}, "", 0, beats, {"from_attack": true})
-	combat._roll_damage(target, hero, {"count": 12, "threshold": 8}, "", 0, beats, {"from_attack": true})
+	await combat._roll_damage(target, hero, {"count": 12, "threshold": 8}, "", 0, beats, {"from_attack": true})
+	await combat._roll_damage(target, hero, {"count": 12, "threshold": 8}, "", 0, beats, {"from_attack": true})
 	_expect(combat.log.slice(before).filter(func(l): return "esquive instinctive" in l).size() == 1,
 		"Esquive instinctive : la première attaque du round est divisée par deux")
 	hero.character.abilities["dex"] = 10
 	var hp := hero.hp
-	combat._apply(target, {"type": "damage", "damage": {"dice": 1, "threshold": 1}, "resist": {"ability": "dex"}}, hero, true)
+	await combat._apply(target, {"type": "damage", "damage": {"dice": 1, "threshold": 1}, "resist": {"ability": "dex"}}, hero, true)
 	_expect(hero.hp == hp, "Dérobade : chaque succès de résistance (DEX) retire deux points")
 	Game.combat = null
 
@@ -934,7 +965,7 @@ func _test_class_features() -> bool:
 	combat = Game.start_combat({"enemies": ["_target"]})
 	target = combat.enemies()[0]
 	hp = target.hp
-	combat._resolve(combat.hero, [{"type": "damage", "damage": {"dice": 1, "threshold": 1}, "damage_type": "fire", "resist": {"ability": "dex"}},
+	await combat._resolve(combat.hero, [{"type": "damage", "damage": {"dice": 1, "threshold": 1}, "damage_type": "fire", "resist": {"ability": "dex"}},
 		{"type": "status", "status": "burning", "stacks": 1}], "enemy", target, true)
 	_expect(hp == target.hp and target.stacks("burning") == 0, "résisté : aucun dégât et pas d'état")
 	Game.combat = null
@@ -957,13 +988,14 @@ func _test_inventory() -> bool:
 	var weapon_effect: Dictionary = Actions.def("weapon_attack")["effects"][0]
 	var attack := combatant.attack_pool(weapon_effect)
 	var damage := combatant.damage_pool(weapon_effect, attack)
+	var damage_dice: int = damage["count"]
 	hero.add_item("longsword_plus_1")
 	_expect(life.equip(hero, "longsword_plus_1") and hero.weapon_id() == "longsword_plus_1"
 		and hero.item_count("longsword") == 1 and hero.item_count("longsword_plus_1") == 0,
 		"équiper depuis le sac : l'ancienne arme retourne dans le sac")
 	_expect(combatant.attack_pool(weapon_effect)["count"] == int(attack["count"]) + 1
-		and combatant.damage_pool(weapon_effect, attack)["threshold"] == int(damage["threshold"]) + 1,
-		"arme +1 : un dé au toucher, +1 au seuil des dégâts")
+		and combatant.damage_pool(weapon_effect, attack)["count"] == damage_dice + 1,
+		"arme +1 : un dé au toucher et un dé de dégâts")
 
 	hero.add_item("shield")
 	hero.add_item("greataxe")
@@ -1107,7 +1139,7 @@ func _test_new_species() -> bool:
 func _test_damage_types() -> bool:
 	DB.creatures["_target"] = {"id": "_target", "name": "Cible", "hp": 200,
 		"actions": [{"name": "Rien", "weight": 1, "target": "self", "effects": [{"type": "status", "status": "shielded", "stacks": 0}]}]}
-	_expect(Equipment.describe("flame_tongue").begins_with("Langue de feu — tranchant, seuil attaque +1 + feu 2d10 ≤ 5"),
+	_expect(Equipment.describe("flame_tongue").begins_with("Langue de feu — tranchant, seuil attaque, +1 dé(s) + feu 2d10 ≤ 5"),
 		"arme à deux types de dégâts")
 
 	# Une attaque peut infliger plusieurs types de dégâts, lancés séparément.
@@ -1120,7 +1152,7 @@ func _test_damage_types() -> bool:
 	var before := combat.log.size()
 	var beats: Array[Dictionary] = []
 	var weapon := {"type": "attack", "weapon": true}
-	combat._hit(combat.hero, target, weapon, combat.hero.attack_pool(weapon), 0, false, false, beats, true)
+	await combat._hit(combat.hero, target, weapon, combat.hero.attack_pool(weapon), 0, false, false, beats, true)
 	var lines := combat.log.slice(before)
 	_expect(lines.any(func(l): return "tranchant" in l) and lines.any(func(l): return "feu[/color] (immunité)" in l),
 		"tranchant puis feu, chacun avec ses défenses")
@@ -1129,7 +1161,7 @@ func _test_damage_types() -> bool:
 	target.creature["defenses"] = {}
 	var backup: Dictionary = DB.damage_types["fire"]["status"]
 	DB.damage_types["fire"]["status"] = {"id": "burning", "chance": 1.0, "stacks": 1}
-	combat._roll_damage(combat.hero, target, {"count": 6, "threshold": 8}, "fire", 0, beats)
+	await combat._roll_damage(combat.hero, target, {"count": 6, "threshold": 8}, "fire", 0, beats)
 	_expect(target.stacks("burning") == 1, "dégât de feu : la cible s'enflamme")
 	DB.damage_types["fire"]["status"] = backup
 
@@ -1148,14 +1180,14 @@ func _test_damage_types() -> bool:
 	# L'Armure baisse le seuil des dégâts, sans passer sous 1 ; une attaque surprise l'ignore.
 	target.creature["armor"] = 5
 	before = combat.log.size()
-	combat._roll_damage(combat.hero, target, {"count": 3, "threshold": 4}, "slashing", 0, beats, {"armor": true})
+	await combat._roll_damage(combat.hero, target, {"count": 3, "threshold": 4}, "slashing", 0, beats, {"armor": true})
 	_expect(combat.log.slice(before).any(func(l): return "armure : seuil 4 → 1" in l), "Armure 5 : seuil 4 → 1")
 	before = combat.log.size()
-	combat._hit(combat.hero, target, weapon, combat.hero.attack_pool(weapon), 0, true, false, beats, true)
+	await combat._hit(combat.hero, target, weapon, combat.hero.attack_pool(weapon), 0, true, false, beats, true)
 	_expect(not combat.log.slice(before).any(func(l): return "armure" in l), "surprise : armure ignorée")
 	target.creature["natural_armor"] = true
 	before = combat.log.size()
-	combat._hit(combat.hero, target, weapon, combat.hero.attack_pool(weapon), 0, true, false, beats, true)
+	await combat._hit(combat.hero, target, weapon, combat.hero.attack_pool(weapon), 0, true, false, beats, true)
 	_expect(combat.log.slice(before).any(func(l): return "armure" in l), "surprise : l'armure naturelle compte")
 	Game.combat = null
 	DB.creatures.erase("_target")
@@ -1242,10 +1274,10 @@ func _test_economy() -> bool:
 		"+2 : 150 po")
 	var c := Combatant.from_character(hero, true)
 	var weapon := {"type": "attack", "weapon": true}
-	var plain: int = c.damage_pool(weapon, c.attack_pool(weapon))["threshold"]
+	var plain: int = c.damage_pool(weapon, c.attack_pool(weapon))["count"]
 	life.equip(hero, "longsword@1")
-	_expect(c.damage_pool(weapon, c.attack_pool(weapon))["threshold"] == plain + 1 and hero.weapon_id() == "longsword@1",
-		"arme +1 équipée : +1 au seuil des dégâts")
+	_expect(c.damage_pool(weapon, c.attack_pool(weapon))["count"] == plain + 1 and hero.weapon_id() == "longsword@1",
+		"arme +1 équipée : un dé de dégâts de plus")
 	_expect(Shops.buys("forge", "longsword") and Shops.buys("armorer", "chain_mail@2"), "les objets améliorés se revendent")
 	return true
 
@@ -1310,7 +1342,7 @@ func _test_advantage() -> bool:
 	var slept := 0
 	for i in 30:
 		target.statuses.clear()
-		combat._resolve(combat.hero, [{"type": "status", "status": "asleep", "stacks": 2, "resist": {"ability": "wis"}}],
+		await combat._resolve(combat.hero, [{"type": "status", "status": "asleep", "stacks": 2, "resist": {"ability": "wis"}}],
 			"all_enemies", null, true)
 		slept += 1 if target.stacks("asleep") == 2 else 0
 	_expect(slept > 15 and slept < 30, "Sommeil : la cible s'endort le plus souvent, mais résiste parfois (%d/30)" % slept)
@@ -1383,7 +1415,7 @@ func _test_choices() -> bool:
 	Game.start_life(knight, 121)
 	var combat := Game.start_combat({"enemies": ["wolf"]})
 	var missile := Actions.def("magic_missile|magic_initiate")
-	combat.perform(combat.hero, missile, combat.enemies()[0])
+	await combat.perform(combat.hero, missile, combat.enemies()[0])
 	_expect(knight.resources["magic_initiate"] == 0 and combat.action_unavailable_reason(combat.hero, missile) != "",
 		"Initié à la magie : une fois par repos long")
 	Game.combat = null
@@ -1401,7 +1433,7 @@ func _test_choices() -> bool:
 	combat = Game.start_combat({"enemies": ["wolf"]})
 	combat.turn = combat.order.find(combat.hero)
 	combat.start_turn()
-	combat.use_item(combat.hero, "potion_heal", combat.hero)
+	await combat.use_item(combat.hero, "potion_heal", combat.hero)
 	_expect(combat.actions_left == 2, "Mains lestes : l'objet ne coûte pas d'action")
 	Game.combat = null
 
@@ -1468,11 +1500,11 @@ func _test_skill_ranks() -> bool:
 
 	# Actions communes : Se préparer, Se cacher, Intimider, Premiers soins.
 	_expect(["prepare", "hide", "intimidate", "first_aid"].all(func(id): return id in fighter.combat_actions()), "actions communes")
-	combat._resolve(combat.hero, [{"type": "check", "skill": "stealth", "difficulty": 0}, {"type": "status", "status": "invisible", "stacks": 2}],
+	await combat._resolve(combat.hero, [{"type": "check", "skill": "stealth", "difficulty": 0}, {"type": "status", "status": "invisible", "stacks": 2}],
 		"self", null, true)
 	_expect(combat.hero.stacks("invisible") == 2 and combat.is_surprise(combat.hero, target), "Se cacher : invisible, attaque surprise")
 	combat.hero.statuses.clear()
-	combat._resolve(combat.hero, [{"type": "check", "skill": "stealth", "difficulty": 100}, {"type": "status", "status": "invisible", "stacks": 2}],
+	await combat._resolve(combat.hero, [{"type": "check", "skill": "stealth", "difficulty": 100}, {"type": "status", "status": "invisible", "stacks": 2}],
 		"self", null, true)
 	_expect(combat.hero.stacks("invisible") == 0, "test raté : pas d'effet")
 	_expect(Actions.text_of("intimidate") == "Test de Persuasion (FOR) contre la résistance (Sagesse) de la cible. Si c'est réussi : 2 Effrayé.",
@@ -1780,7 +1812,7 @@ func _test_combat_turns() -> bool:
 	alpha.intent = howl
 	combat.turn = combat.order.find(alpha)
 	combat.start_turn()
-	var beats := combat.ai_turn(alpha)
+	var beats: Array[Dictionary] = await combat.ai_turn(alpha)
 	_expect(combat.hero.stacks("weakened") == 2, "action annoncée jouée au tour suivant")
 	_expect(beats[0]["text"].contains("Hurlement"), "l'action annoncée est jouée en premier")
 	Game.combat = null
@@ -1790,15 +1822,16 @@ func _test_combat_turns() -> bool:
 	combat = Game.start_combat({"enemies": ["wolf"]})
 	_expect(combat.capacity_used("ally") == 1.0, "le héros occupe 1 place")
 	var familiar := Actions.def("find_familiar")
-	combat.perform(combat.hero, familiar)
+	await combat.perform(combat.hero, familiar)
 	_expect(combat.living("ally").size() == 2 and combat.living("ally")[1].summoned, "Appel du familier : une invocation")
 	for i in 15:
-		combat._apply(combat.hero, {"type": "summon", "creature": "familiar"}, null, false)
+		await combat._apply(combat.hero, {"type": "summon", "creature": "familiar"}, null, false)
 	_expect(combat.living("ally").size() == 13 and combat.capacity_used("ally") == 4.0,
 		"12 familiers (taille −3 : ¼ de place) + le héros = 4 places, pas plus")
 	_expect(combat.action_unavailable_reason(combat.hero, familiar) != "", "plus d'invocation sans place")
 	var summon := combat.living("ally")[1]
-	_expect(not summon.is_player_controlled() and not combat.ai_turn(summon).is_empty(), "l'invocation joue seule")
+	var summon_beats: Array[Dictionary] = await combat.ai_turn(summon)
+	_expect(not summon.is_player_controlled() and not summon_beats.is_empty(), "l'invocation joue seule")
 	Game.combat = null
 	_expect(Combat.size_slots(2) == 2.0 and Combat.size_slots(-1) == 0.5 and Combat.size_slots(9) == 4.0, "places selon la taille")
 	return true
@@ -1824,7 +1857,8 @@ func _test_companions() -> bool:
 	_expect(combat.action_choices(ally).any(func(c): return c["action"]["id"] == "sneak_attack"),
 		"le compagnon a les actions de sa classe")
 	var choice := combat.auto_choice(ally)
-	_expect(not combat.perform(ally, choice["action"], choice["target"]).is_empty(), "le compagnon agit")
+	var ally_beats: Array[Dictionary] = await combat.perform(ally, choice["action"], choice["target"])
+	_expect(not ally_beats.is_empty(), "le compagnon agit")
 	# Le compagnon tombe pendant un combat mortel : inconscient, il est ramené à lui après la victoire.
 	ally.hp = 0
 	combat.enemies()[0].hp = 0
@@ -1926,7 +1960,7 @@ func _test_simulation() -> bool:
 			var result := Game.resolve_choice(options[rng.randi_range(0, options.size() - 1)]["choice"])
 			while not result["combat"].is_empty() and not Game.life.dead:
 				combats += 1
-				result = _auto_combat(result["combat"])
+				result = await _auto_combat(result["combat"])
 			if Game.life.dead:
 				break
 			ev = DB.events[result["goto"]] if result["goto"] != "" else {}

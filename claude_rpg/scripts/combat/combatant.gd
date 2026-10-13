@@ -424,7 +424,7 @@ func damage_spec(effect: Dictionary) -> Dictionary:
 
 ## Réserve de dégâts d'un effet : {"count", "threshold"}. Nombre de dés : rang de la compétence
 ## d'attaque (ou de "skill"), + "dice", + paliers (tours de magie, Attaque sournoise), + états ; seuil :
-## l'attribut d'attaque, un attribut, ou fixe, + "bonus" (+ arme magique, style Duel).
+## l'attribut d'attaque, un attribut, ou fixe, + "bonus". Arme magique et style Duel : des dés en plus.
 func damage_pool(effect: Dictionary, attack: Dictionary = {}) -> Dictionary:
 	var spec := damage_spec(effect)
 	var count := int(spec.get("dice", 0)) + damage_dice_modifier()
@@ -453,9 +453,9 @@ func damage_pool(effect: Dictionary, attack: Dictionary = {}) -> Dictionary:
 	if character != null:
 		var mods := character.modifiers()
 		if _uses_own_weapon(effect):
-			threshold += Modifiers.sum(mods, "weapon_damage")
+			count += Modifiers.sum(mods, "weapon_damage")
 			if not two_handed_grip() and not Equipment.has_property(character.weapon_id(), "ranged"):
-				threshold += Modifiers.sum(mods, "dueling")  # style Duel
+				count += Modifiers.sum(mods, "dueling")  # style Duel
 		if effect.get("school") == "evocation" and has_modifier("empowered_evocation"):
 			count += 1
 	return {"count": count, "threshold": threshold}

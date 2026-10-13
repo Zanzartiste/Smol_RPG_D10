@@ -7,7 +7,7 @@ extends RefCounted
 ## Fabriquer demande un test de la compétence de la station (rules.json › crafting).
 ## Amélioration : une arme, une armure ou un bouclier ordinaire devient « +1 », puis « +2 », « +3 ».
 ## L'objet amélioré a l'id "<base>@<rang>" (ex. "longsword@2"), décrit par Equipment.def :
-## un dé d'attaque et +1 au seuil des dégâts par rang pour une arme, +1 Armure par rang pour une armure
+## un dé d'attaque et un dé de dégâts par rang pour une arme, +1 Armure par rang pour une armure
 ## ou un bouclier.
 
 const UPGRADE_SEPARATOR := "@"

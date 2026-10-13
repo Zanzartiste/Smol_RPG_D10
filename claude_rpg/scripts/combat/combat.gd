@@ -13,6 +13,11 @@ extends RefCounted
 ## Les actions non utilisées deviennent des réactions (esquive, parade, contre-attaque) jusqu'au tour
 ## suivant du combattant. end_turn() passe au suivant. Réglages : rules.json › combat.
 ##
+## Réactions des personnages du joueur (sauf en mode automatique) : `reaction_chooser` est appelé à
+## chaque occasion et peut attendre le joueur ; les fonctions qui résolvent des effets (perform,
+## ai_turn, auto_turn…) sont donc des coroutines, à appeler avec await. Toutes les étapes sont aussi
+## ajoutées à `stream`, dans l'ordre, pour que l'interface puisse les animer au fil de l'eau.
+##
 ## Attaque : [rang] d10 contre l'attribut, difficulté = Esquive naturelle de la cible (mêlée) ou son
 ## Couvert (distance) ; les succès au-delà donnent un critique (relances des dés de dégâts ratés).
 ## Dégâts : un succès = un point de dégâts ; l'Armure de la cible baisse le seuil des dégâts.
@@ -35,6 +40,10 @@ var initiative_roll: Dictionary = {}  # lancer d'initiative de tous les combatta
 var hero_down_cause := ""  # cause de la mort si tout le groupe tombe après le héros
 var skipped := false  # le combattant actif passe son tour (étourdi, mort pendant ses états…)
 var actions_left := 2  # actions restantes au combattant actif pendant ce tour
+## Choix d'une réaction par le joueur : (cible: Combatant, sorte: "counter" | "dodge" | "parry",
+## infos: Dictionary) -> bool. Peut être une coroutine (fenêtre de choix). Sans lui, choix automatique.
+var reaction_chooser: Callable
+var stream: Array[Dictionary] = []  # toutes les étapes, dans l'ordre (voir _beat)
 var _next_id := 0
 
 
@@ -328,7 +337,7 @@ func perform(actor: Combatant, action: Dictionary, target: Combatant = null) -> 
 				others.sort_custom(func(a, b): return a.hp < b.hp)
 				target = others[0]
 			_beat(beats, Loc.ui("%s : attaque supplémentaire.") % actor.name)
-		beats.append_array(_resolve(actor, action.get("effects", []), action.get("target", "enemy"), target,
+		beats.append_array(await _resolve(actor, action.get("effects", []), action.get("target", "enemy"), target,
 			not actor.is_player_controlled()))
 		if is_over():
 			break
@@ -352,7 +361,7 @@ func use_item(actor: Combatant, item_id: String, target: Combatant) -> Array[Dic
 		effects.append({"type": "cleanse", "status": use["cleanse"]})
 	var beats: Array[Dictionary] = []
 	_beat(beats, Loc.ui("%s utilise : %s.") % [actor.name, item["name"]])
-	beats.append_array(_resolve(actor, effects, "ally", target, false))
+	beats.append_array(await _resolve(actor, effects, "ally", target, false))
 	_check_end()
 	return beats
 
@@ -362,7 +371,7 @@ func flee(actor: Combatant) -> Array[Dictionary]:
 	actions_left = 0
 	var pool := flee_pool(actor)
 	var roll := Dice.roll_pool(rng, int(pool["count"]), int(pool["threshold"]))
-	var judged := Dice.judge(int(roll["successes"]), flee_difficulty())
+	var judged := Dice.judge(int(roll["successes"]), flee_difficulty(), 0, roll["dice"])
 	var beats: Array[Dictionary] = []
 	_beat(beats, Loc.ui("%s tente de fuir : %s.") % [actor.name, Dice.verdict(judged)],
 		_roll_info(Loc.ui("Fuite (Physique, DEX)"), roll, judged))
@@ -410,7 +419,7 @@ func ai_turn(actor: Combatant) -> Array[Dictionary]:
 			# Les invocations alliées visent le plus faible, les ennemis choisissent au hasard.
 			chosen = candidates[0] if actor.is_ally() else candidates[rng.randi_range(0, candidates.size() - 1)]
 		_beat(beats, Loc.ui("%s : %s.") % [actor.name, action["name"]])
-		beats.append_array(_resolve(actor, action.get("effects", []), target_mode, chosen, not actor.is_ally()))
+		beats.append_array(await _resolve(actor, action.get("effects", []), target_mode, chosen, not actor.is_ally()))
 		_check_end()
 	return beats
 
@@ -440,7 +449,7 @@ func auto_turn(actor: Combatant) -> Array[Dictionary]:
 		var choice := auto_choice(actor)
 		if choice["action"].is_empty():
 			break
-		beats.append_array(perform(actor, choice["action"], choice["target"]))
+		beats.append_array(await perform(actor, choice["action"], choice["target"]))
 	return beats
 
 
@@ -532,7 +541,8 @@ func _resolve(actor: Combatant, effects: Array, target_mode: String, chosen: Com
 		target_list = targets(actor, target_mode)
 	for e: Dictionary in effects:
 		if e.get("type") in CombatEffects.UNTARGETED:
-			beats.append_array(_apply(actor, e, null, fast)["beats"])
+			var untargeted: Dictionary = await _apply(actor, e, null, fast)
+			beats.append_array(untargeted["beats"])
 	for target in target_list:
 		var hit := true
 		for e: Dictionary in effects:
@@ -541,11 +551,12 @@ func _resolve(actor: Combatant, effects: Array, target_mode: String, chosen: Com
 			if e.get("type") in ["attack", "check"] or e.has("resist"):
 				if not target.is_alive() or not actor.is_alive():
 					break
-				var result := _apply(actor, e, target, fast)
+				var result: Dictionary = await _apply(actor, e, target, fast)
 				beats.append_array(result["beats"])
 				hit = result["hit"]
 			elif hit and target.is_alive():
-				beats.append_array(_apply(actor, e, target, fast)["beats"])
+				var applied: Dictionary = await _apply(actor, e, target, fast)
+				beats.append_array(applied["beats"])
 	return beats
 
 
@@ -560,13 +571,13 @@ func _apply(actor: Combatant, e: Dictionary, target: Combatant, fast: bool) -> D
 			return {"beats": beats, "hit": false}
 	match e.get("type"):
 		"attack":
-			hit = _attack(actor, target, e, beats, fast)
+			hit = await _attack(actor, target, e, beats, fast)
 		"damage":
 			var pool := actor.damage_pool(e)
-			var dealt := _roll_damage(actor, target, pool, actor.damage_type(e), 0, beats, {"resist": e.get("resist", {})})
+			var dealt: int = await _roll_damage(actor, target, pool, actor.damage_type(e), 0, beats, {"resist": e.get("resist", {})})
 			hit = dealt > 0 or not e.has("resist")
 			for part: Dictionary in actor.bonus_damage(e):
-				_roll_damage(actor, target, {"count": int(part.get("dice", 1)), "threshold": int(part.get("threshold", 5))},
+				await _roll_damage(actor, target, {"count": int(part.get("dice", 1)), "threshold": int(part.get("threshold", 5))},
 					part["damage_type"], 0, beats)
 		"heal":
 			var spec: Variant = e["amount"]
@@ -617,7 +628,7 @@ func _apply(actor: Combatant, e: Dictionary, target: Combatant, fast: bool) -> D
 ## contre-attaque (avant le jet), esquive (après un jet réussi), parade (contre les dégâts). Un attaquant
 ## caché se révèle. Retourne true si l'attaque touche.
 func _attack(actor: Combatant, target: Combatant, e: Dictionary, beats: Array[Dictionary], fast: bool) -> bool:
-	var hit := _attack_roll(actor, target, e, beats, fast)
+	var hit: bool = await _attack_roll(actor, target, e, beats, fast)
 	_reveal(actor)
 	return hit
 
@@ -626,13 +637,16 @@ func _attack_roll(actor: Combatant, target: Combatant, e: Dictionary, beats: Arr
 	var surprise := is_surprise(actor, target)
 	var attack := actor.attack_pool(e)
 	var can_react := not surprise and target.reactions > 0
-	if can_react and _wants_counter(actor, target, e, attack):
-		return _counter(actor, target, e, attack, beats, fast)
+	if can_react and _can_counter(actor, target, e):
+		var info := {"attacker": actor, "effect": e, "attack": attack, "counter": target.attack_pool(_counter_effect(target)),
+			"beats": beats}
+		if await _decide(target, "counter", info, _wants_counter(actor, target, e, attack)):
+			return await _counter(actor, target, e, attack, beats, fast)
 	var difficulty := attack_difficulty(actor, target, e)
 	var crit_bonus := actor.critical_bonus() + (int(setting("surprise_crit_bonus", 2)) if surprise else 0)
 	var bonus := actor.use_prepared()
 	var roll := Dice.roll_pool(rng, int(attack["count"]) + bonus, int(attack["threshold"]))
-	var judged := Dice.judge(int(roll["successes"]), difficulty, crit_bonus)
+	var judged := Dice.judge(int(roll["successes"]), difficulty, crit_bonus, roll["dice"])
 	var against := Loc.ui("Couvert") if actor.is_ranged_attack(e) else Loc.ui("Esquive naturelle")
 	var notes := PackedStringArray()
 	if surprise:
@@ -646,17 +660,20 @@ func _attack_roll(actor: Combatant, target: Combatant, e: Dictionary, beats: Arr
 	if not judged["success"]:
 		if e.get("cantrip", false) and actor.has_modifier("potent_cantrip"):
 			_beat(beats, Loc.ui("Tour de magie puissant : la moitié des dégâts passe."))
-			_roll_damage(actor, target, actor.damage_pool(e, attack), actor.damage_type(e), 0, beats,
+			await _roll_damage(actor, target, actor.damage_pool(e, attack), actor.damage_type(e), 0, beats,
 				{"armor": true, "multiplier": 0.5})
 		return false
-	if can_react and target.reactions > 0:
+	var dodge_info := {"attacker": actor, "successes": int(judged["successes"]), "difficulty": difficulty,
+		"critical": int(judged["critical"]), "dodge": target.skill_pool("physique", "dex", target_prepared_bonus(target)),
+		"beats": beats}
+	if can_react and target.reactions > 0 and await _decide(target, "dodge", dodge_info, true):
 		var dodged := _dodge(target, beats, fast)
 		if dodged > 0:
 			judged = Dice.judge(int(judged["successes"]) - dodged, difficulty, crit_bonus)
 			_beat(beats, Loc.ui("Il reste %d succès à %s — %s") % [int(judged["successes"]), actor.name, _attack_verdict(judged)])
 			if not judged["success"]:
 				return false
-	_hit(actor, target, e, attack, int(judged["critical"]), surprise, not surprise, beats, fast)
+	await _hit(actor, target, e, attack, int(judged["critical"]), surprise, not surprise, beats, fast)
 	return true
 
 
@@ -680,15 +697,17 @@ func _dodge(target: Combatant, beats: Array[Dictionary], fast: bool) -> int:
 	return int(roll["successes"])
 
 
-## Faut-il contre-attaquer (réaction, avant le jet d'attaque) ? Seulement contre une attaque de mêlée,
-## avec une attaque à soi, et si l'on a de bonnes chances de l'emporter (plus de succès attendus).
-func _wants_counter(actor: Combatant, target: Combatant, e: Dictionary, attack: Dictionary) -> bool:
-	if actor.is_ranged_attack(e):
-		return false
+## La cible peut-elle contre-attaquer ? Il lui faut une attaque ; contre un tir, une arme de tir.
+func _can_counter(actor: Combatant, target: Combatant, e: Dictionary) -> bool:
 	var counter := _counter_effect(target)
 	if counter.is_empty():
 		return false
-	var mine := target.attack_pool(counter)
+	return not actor.is_ranged_attack(e) or target.is_ranged_attack(counter)
+
+
+## Choix automatique : contre-attaquer si l'on a de bonnes chances de l'emporter (plus de succès attendus).
+func _wants_counter(actor: Combatant, target: Combatant, _e: Dictionary, attack: Dictionary) -> bool:
+	var mine := target.attack_pool(_counter_effect(target))
 	var bonus := int(setting("prepared_dice", 2))
 	var mine_expected := Dice.expected(int(mine["count"]) + (bonus if target.is_prepared() else 0), int(mine["threshold"]))
 	var theirs_expected := Dice.expected(int(attack["count"]) + (bonus if actor.is_prepared() else 0), int(attack["threshold"]))
@@ -706,9 +725,9 @@ func _counter_effect(c: Combatant) -> Dictionary:
 	return {}
 
 
-## Contre-attaque : les deux font un jet d'attaque en opposition (Esquive naturelle à 0) ; le plus de
-## succès touche, l'attaquant initial l'emportant en cas d'égalité ; le perdant ne peut ni esquiver ni
-## parer. Retourne true si l'attaque initiale touche.
+## Contre-attaque : les deux font un jet d'attaque en opposition (Esquive naturelle ou Couvert à 0) ; le
+## plus de succès touche, l'attaquant initial l'emportant en cas d'égalité ; le perdant ne peut ni esquiver
+## ni parer. Retourne true si l'attaque initiale touche.
 func _counter(actor: Combatant, target: Combatant, e: Dictionary, attack: Dictionary, beats: Array[Dictionary],
 		fast: bool) -> bool:
 	target.reactions -= 1
@@ -726,11 +745,11 @@ func _counter(actor: Combatant, target: Combatant, e: Dictionary, attack: Dictio
 	if a >= d:
 		var level := Dice.critical_level(a - d, actor.critical_bonus())
 		_beat(beats, Loc.ui("%s l'emporte%s.") % [actor.name, Loc.ui(" (critique %d)") % level if level > 0 else ""])
-		_hit(actor, target, e, attack, level, false, false, beats, fast)
+		await _hit(actor, target, e, attack, level, false, false, beats, fast)
 		return true
 	var counter_level := Dice.critical_level(d - a, target.critical_bonus())
 	_beat(beats, Loc.ui("%s l'emporte%s.") % [target.name, Loc.ui(" (critique %d)") % counter_level if counter_level > 0 else ""])
-	_hit(target, actor, counter_effect, counter, counter_level, false, false, beats, fast)
+	await _hit(target, actor, counter_effect, counter, counter_level, false, false, beats, fast)
 	return false
 
 
@@ -746,21 +765,31 @@ func _hit(actor: Combatant, target: Combatant, e: Dictionary, attack: Dictionary
 	var options := {"armor": not ignore_armor, "from_attack": true, "savage": savage}
 	if can_parry:
 		options["parry"] = {"attacker": actor, "effect": e, "fast": fast}
-	_roll_damage(actor, target, actor.damage_pool(e, attack), actor.damage_type(e), rerolls, beats, options)
+	await _roll_damage(actor, target, actor.damage_pool(e, attack), actor.damage_type(e), rerolls, beats, options)
 	for part: Dictionary in actor.bonus_damage(e):
-		_roll_damage(actor, target, {"count": int(part.get("dice", 1)), "threshold": int(part.get("threshold", 5))},
+		await _roll_damage(actor, target, {"count": int(part.get("dice", 1)), "threshold": int(part.get("threshold", 5))},
 			part["damage_type"], rerolls, beats, {"armor": not ignore_armor})
 
 
-## Parade (une réaction, une par main armée et par tour) : Armes de mêlée (arme, bouclier) ou Physique
-## (mains nues), DEX. Une attaque à distance ne se pare qu'avec un bouclier ; une attaque armée ne se
-## pare pas à mains nues. Retourne ses succès (0 si elle n'est pas possible).
-func _parry(attacker: Combatant, target: Combatant, e: Dictionary, beats: Array[Dictionary], fast: bool) -> int:
+## La cible peut-elle parer (une réaction, une par main armée et par tour) ? Une attaque à distance ne se
+## pare qu'avec un bouclier ; une attaque armée ne se pare pas à mains nues.
+func can_parry(attacker: Combatant, target: Combatant, e: Dictionary) -> bool:
 	if target.reactions <= 0 or target.parries_used >= target.parries_per_turn():
-		return 0
+		return false
 	if attacker.is_ranged_attack(e) and not target.has_shield():
-		return 0
-	if attacker.is_armed_attack(e) and not target.is_armed():
+		return false
+	return not (attacker.is_armed_attack(e) and not target.is_armed())
+
+
+## Dés en plus d'un combattant préparé (sans consommer l'état), pour l'affichage.
+func target_prepared_bonus(c: Combatant) -> int:
+	return int(setting("prepared_dice", 2)) if c.is_prepared() else 0
+
+
+## Parade : Armes de mêlée (arme, bouclier) ou Physique (mains nues), DEX. Retourne ses succès (0 si elle
+## n'est pas possible).
+func _parry(attacker: Combatant, target: Combatant, e: Dictionary, beats: Array[Dictionary], fast: bool) -> int:
+	if not can_parry(attacker, target, e):
 		return 0
 	target.reactions -= 1
 	target.parries_used += 1
@@ -813,7 +842,9 @@ func _roll_damage(actor: Combatant, target: Combatant, pool: Dictionary, type: S
 			notes.append(Loc.ui("résiste : −%d") % mini(resisted, amount))
 			amount = maxi(0, amount - resisted)
 	var parry: Dictionary = options.get("parry", {})
-	if not parry.is_empty() and amount > 0:
+	if not parry.is_empty() and amount > 0 and can_parry(parry["attacker"], target, parry["effect"]) \
+			and await _decide(target, "parry", {"attacker": parry["attacker"], "damage": amount, "beats": beats,
+				"parry": target.parry_pool(target_prepared_bonus(target))}, true):
 		var parried := _parry(parry["attacker"], target, parry["effect"], beats, parry.get("fast", false))
 		if parried > 0:
 			notes.append(Loc.ui("parade : −%d") % mini(parried, amount))
@@ -869,7 +900,7 @@ func _skill_check(actor: Combatant, target: Combatant, e: Dictionary, beats: Arr
 		_beat(beats, Loc.ui("%s résiste : %d succès.") % [target.name, int(resist_roll["successes"])],
 			_roll_info(Loc.ui("Résister (%s)") % Abilities.name_of(ability), resist_roll), true)
 		return success
-	var judged := Dice.judge(int(roll["successes"]), Dice.difficulty_of(e))
+	var judged := Dice.judge(int(roll["successes"]), Dice.difficulty_of(e), 0, roll["dice"])
 	_beat(beats, Loc.ui("%s : %s, %d succès / %d — %s") % [actor.name, label, int(roll["successes"]), int(judged["difficulty"]),
 		Dice.verdict(judged)], _roll_info("%s (%s)" % [label, actor.name], roll, judged), fast)
 	return judged["success"]
@@ -993,8 +1024,19 @@ func _party_standing() -> bool:
 
 
 func _beat(beats: Array[Dictionary], text: String, roll: Dictionary = {}, fast := false) -> void:
-	beats.append({"text": text, "roll": roll, "fast": fast})
+	var beat := {"text": text, "roll": roll, "fast": fast}
+	beats.append(beat)
+	stream.append(beat)
 	log.append(text)
+
+
+## Décide d'une réaction : le joueur choisit pour ses personnages (sauf en mode automatique), sinon le
+## choix automatique `auto`.
+func _decide(target: Combatant, kind: String, info: Dictionary, auto: bool) -> bool:
+	if reaction_chooser.is_valid() and target.is_player_controlled() and not target.is_auto():
+		var chosen: bool = await reaction_chooser.call(target, kind, info)
+		return chosen
+	return auto
 
 
 ## Jet de réserve pour le plateau de dés : {"dice", "pool": true, "threshold", "successes", "stat",

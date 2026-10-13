@@ -44,7 +44,7 @@ func _ready() -> void:
 						member.add_xp(int(DB.rules["xp_by_level"][encounter["level"] - 1]) - member.xp)
 						member.complete_all_choices()  # style de combat, don de l'humain… comme en jeu
 						member.long_rest()
-					if _fight(encounter["enemies"], life) == "victory":
+					if await _fight(encounter["enemies"], life) == "victory":
 						wins += 1
 				line += "%11d%%" % roundi(100.0 * wins / RUNS)
 			print(line + "   (%.1f rounds en moyenne)" % (float(_rounds) / maxi(1, _fights)))
@@ -62,9 +62,9 @@ func _fight(enemies: Array, life: LifeState) -> String:
 		combat.start_turn()
 		if not combat.is_over() and not combat.skipped:
 			if actor.is_player_controlled():
-				combat.auto_turn(actor)
+				await combat.auto_turn(actor)
 			else:
-				combat.ai_turn(actor)
+				await combat.ai_turn(actor)
 		combat.end_turn()
 	_rounds += combat.round_number
 	_fights += 1

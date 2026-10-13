@@ -135,6 +135,10 @@ func _ready() -> void:
 		await _wait_for_hero(view)
 		if not view.visible:
 			break
+		if view.combat.actions_left == 1 and not _reaction_shot:
+			view._on_pass_pressed()  # garde une action : une réaction sera proposée au tour ennemi
+			await _wait_frames(2)
+			continue
 		var choice := view.combat.auto_choice(view._actor)
 		if choice["target"] != null and choice["action"].get("target") in CombatEffects.CHOSEN_TARGETS:
 			view._execute({"kind": "action", "action": choice["action"]}, choice["target"])
@@ -146,9 +150,21 @@ func _ready() -> void:
 	get_tree().quit()
 
 
-## Attend que le héros puisse agir (ou que le combat soit terminé).
+var _reaction_shot := false
+
+
+## Attend que le héros puisse agir (ou que le combat soit terminé). Une réaction proposée est capturée
+## (la première fois), puis acceptée.
 func _wait_for_hero(view: CombatView) -> void:
 	while view.visible and (view._actor == null or view._busy):
+		if not view._reaction.is_empty():
+			if not _reaction_shot:
+				_reaction_shot = true
+				var scale := Engine.time_scale
+				Engine.time_scale = 1.0
+				await _capture("9b_reaction.png")
+				Engine.time_scale = scale
+			view._on_reaction(true)
 		await get_tree().process_frame
 
 

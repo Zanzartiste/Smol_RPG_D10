@@ -47,7 +47,8 @@
 
 - **Réussite critique N** : N × 3 succès supplémentaires (3 → critique 1, 6 → critique 2, 9 → critique 3).
   Réglage : `rules.json › dice › critical_step`.
-- **Échec critique** : aucun succès.
+- **Échec critique** : aucun succès **et au moins un 10** (décision du 2026-10-13 ; environ 10 % pour un débutant,
+  4 % pour un expert). Réglage : `fumble_needs_ten`.
 - Leurs effets dépendent de la situation. En combat, une attaque critique permet de relancer les dés de dégâts
   ratés (voir plus bas). Dans un événement, un choix peut prévoir une issue `critical_success` ou
   `critical_failure` (sinon, c'est la réussite ou l'échec ordinaire).
@@ -143,20 +144,23 @@ chance de réussite (calculée exactement).
   - On peut parer après une esquive qui n'a pas suffi.
 - **Contre-attaque** : avant le jet de l'attaquant. L'Esquive naturelle tombe à 0 pour les deux ; les deux font un
   jet d'attaque en opposition ; le plus de succès touche (égalité : l'attaquant initial), avec un critique selon
-  l'écart ; le perdant ne peut ni esquiver ni parer cette attaque. Avec une arme à distance, c'est le Couvert qui
-  tombe à 0.
+  l'écart ; le perdant ne peut ni esquiver ni parer cette attaque. Contre un tir, il faut soi-même une arme de tir
+  (le Couvert tombe alors à 0).
+- **Qui choisit** : le joueur, pour ses personnages, sauf ceux joués par l'IA. Pendant le tour ennemi, le jeu
+  s'arrête à chaque occasion (« Contre-attaquer / Laisser venir », « Esquiver / Ne pas esquiver », « Parer /
+  Encaisser ») et montre les dés de chacun. Les créatures et les personnages en mode IA réagissent seuls.
 
 ### Dégâts et Armure
 
 - **[Rang de la compétence de l'arme] d10** contre le **seuil de l'arme** : chaque succès est un point de dégâts.
-  - Seuil : celui de l'attaque (FOR, ou DEX pour une arme de finesse), + un bonus selon l'arme ; ou un seuil fixe
-    (arc court 5, arc long 6).
-  - Conversion des armes : 1d4 → −1, 1d6 → +0, 1d8 → +1, 1d10 → +2, 1d12 ou 2d6 → +3 ; mains nues : FOR −2 ;
-    polyvalente à deux mains : +1.
-  - Exemple : guerrier FOR 7, épée longue à deux mains (+2), Armes de mêlée 2 → 2d10 contre 9 → 9 au-dessus de 8,
-    donc 3d10 contre 8.
+  - Seuil : celui de l'attaque (FOR, ou DEX pour une arme de finesse) ; ou un seuil fixe (arc court 5, arc long 6).
+  - Les **armes plus grosses donnent des dés en plus** (décision du 2026-10-13) : dague, gourdin −1 ; épée courte,
+    masse, bâton +0 ; rapière, épée longue +1 ; hache à deux mains +2 ; mains nues −1 ; polyvalente à deux mains
+    +1. Une arme magique +1 donne un dé d'attaque et un dé de dégâts ; le style Duel, un dé de dégâts.
+  - Exemple : guerrier FOR 7, épée longue à deux mains (+2 dés), Armes de mêlée 2 → 4d10 contre 7.
 - L'**Armure** de la cible (armure portée + bouclier + objets) **baisse le seuil** des dégâts d'autant, sans passer
-  sous 1. Vêtements 0, armures légères 1, intermédiaires 1 ou 2, cotte de mailles 3, harnois 4, bouclier +1.
+  sous 1 (décision du 2026-10-13) : au seuil 1, seuls les 1 font des dégâts, si bien qu'une marée de rats finit
+  quand même par blesser un chevalier en harnois. Vêtements 0, armures légères 1, intermédiaires 1 ou 2, cotte de mailles 3, harnois 4, bouclier +1.
 - **Critique N** : on peut relancer jusqu'à N fois les dés de dégâts en échec. Un dé relancé qui fait 1 se relance
   comme d'habitude ; un dé né d'un 1 ne se relance pas grâce au critique.
 - **Attaque surprise** (la cible ignore votre présence : vous êtes caché, ou elle dort, ou elle est paralysée) :
@@ -195,43 +199,32 @@ chance de réussite (calculée exactement).
 
 ## Choix faits en l'absence de précision (à valider)
 
-1. **Armure** : j'ai appliqué la version « on baisse le seuil des dégâts », et non « on retire des dés de dégâts ».
-   Pas de minimum de 1 dégât : une armure lourde peut tout arrêter.
-2. **Préparé (+2)** : deux dés de plus, au prochain jet de combat (attaque, esquive ou parade).
-3. **Avantage et désavantage** (états, événements) : difficulté −1 / +1 ; pour un jet sans difficulté (dégâts,
+1. **Préparé (+2)** : deux dés de plus, au prochain jet de combat (attaque, esquive ou parade).
+2. **Avantage et désavantage** (états, événements) : difficulté −1 / +1 ; pour un jet sans difficulté (dégâts,
    résistance), un dé de plus ou de moins.
-4. **Contre-attaque** : seulement contre une attaque de mêlée.
-5. **Réactions automatiques** : le jeu contre-attaque si l'on a nettement plus de chances de l'emporter, esquive
-   dès qu'une attaque touche, puis pare si on va subir des dégâts. Les ennemis gardent parfois une action pour se
-   défendre (25 %).
-6. **Seuils d'armes** : conversion des dés D&D ci-dessus ; arcs à seuil fixe.
-7. **Créatures** : attributs convertis (÷ 2,5) ; PV calculés comme ceux des personnages (sauf l'Alpha : 12) ;
+3. **Réactions automatiques** (créatures, personnages en mode IA) : contre-attaquer si l'on a nettement plus de
+   chances de l'emporter, esquiver dès qu'une attaque touche, puis parer. Les ennemis gardent parfois une action
+   pour se défendre (25 %).
+4. **Sorts** : leurs dégâts gardent un bonus de seuil (Trait de feu : seuil INT +2) ; seules les armes et les
+   attaques des créatures sont passées aux dés en plus.
+5. **Créatures** : attributs convertis (÷ 2,5) ; PV calculés comme ceux des personnages (sauf l'Alpha : 12) ;
    l'Alpha a une armure naturelle de 1, le brigand une armure de cuir (1).
-8. **Échelles converties** : anciens DD → difficulté (11 et moins → 1, 12-14 → 2, 15-17 → 3, 18-20 → 4) ; dégâts
+6. **Échelles converties** : anciens DD → difficulté (11 et moins → 1, 12-14 → 2, 15-17 → 3, 18-20 → 4) ; dégâts
    et soins des événements ÷ 2,5 ; Force des armures 4 / 5 / 6 ; capacité de charge 18 kg par point de Force ;
    encombrement −1 dé par point de Force manquant (au plus −3).
-9. **Dons** : Robuste +3 PV ; Archerie +1 dé ; Duel +1 au seuil ; Défense +1 Armure ; Armes à deux mains : une
+7. **Dons** : Robuste +3 PV ; Archerie +1 dé ; Duel +1 dé de dégâts ; Défense +1 Armure ; Armes à deux mains : une
    relance des dés de dégâts ratés ; Critique amélioré : un succès supplémentaire compté en plus ; Évocation
    renforcée : un dé de dégâts ; Dérobade : chaque succès de résistance (DEX) en retire deux ; Inflexible : relance
    une résistance ratée ; Vigilant : rang de Physique à l'initiative ; Esquive instinctive : dégâts divisés par deux.
-10. **Croc-en-jambe du loup** : il met À terre au lieu d'étourdir.
+8. **Croc-en-jambe du loup** : il met À terre au lieu d'étourdir.
 
 ## Questions
 
-1. **Échec critique** : avec « aucun succès », il est très fréquent pour un personnage peu entraîné (1 dé au seuil
-   4 : 60 % ; 2 dés au seuil 4 : 36 % ; 3 dés au seuil 6 : 6 %). Proposition : « aucun succès **et** au moins un
-   10 » (environ 10 % pour un débutant, 4 % pour un expert). Qu'en penses-tu ?
-2. **Réussite critique tous les 3 succès supplémentaires** : c'est rare pour un débutant (2 dés : presque jamais)
-   et fréquent pour un expert contre une petite difficulté (5 dés au seuil 6, difficulté 2 : 19 %). Ça me semble
-   bien : le critique récompense la maîtrise. Faut-il plutôt un palier relatif à la difficulté (ton idée de
-   départ : autant de succès supplémentaires que la difficulté) ?
-3. **Armure** : seuil baissé (ce que j'ai fait) ou dés retirés ? Et faut-il au moins 1 point de dégâts quand une
-   attaque touche ?
-4. **Dégâts des armes** : le bonus de seuil par arme te convient-il, ou préfères-tu que les grosses armes donnent
-   des dés en plus ?
-5. **Contre-attaque contre une attaque à distance** : possible (avec une arme à distance, Couvert à 0) ou non ?
-6. **Réactions** : faut-il que le joueur choisisse lui-même (fenêtre « Esquiver / Parer / Contre-attaquer / Rien »
-   pendant le tour ennemi), ou l'automatique suffit pour l'instant ?
-7. **Améliorations d'attribut** : avec l'échelle 3-8, +1 compte beaucoup. Le don « Amélioration d'attribut » (+1
-   deux fois) et les demi-dons (+1) restent-ils tels quels ?
-8. **Test d'attribut sans compétence** : 2 dés contre l'attribut, ça te va ?
+1. **Améliorations d'attribut** : sur l'échelle 3-8, +1 pèse lourd. Elles arrivent :
+   - tous les 4 niveaux de classe (4, 8, 12, 16, 20) : +1 à un attribut **et** un don au choix ;
+   - par certains dons : « Amélioration d'attribut » (+1 à deux attributs, ou +2 au même), et les demi-dons
+     (Athlète, Résistant, Érudit des arcanes…) qui donnent +1 à un attribut en plus de leur effet ;
+   - par le don du passé, dès la création (ex. Érudit des arcanes : +1 INT).
+   Un guerrier peut ainsi passer de FOR 7 à 10 au niveau 4 (+1, puis +2 avec le don). Faut-il limiter (+1 par
+   palier seulement, don d'amélioration à +1, plafond plus bas) ?
+2. **Test d'attribut sans compétence** : 2 dés contre l'attribut, ça te va ?

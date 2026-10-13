@@ -178,7 +178,8 @@ Les règles complètes sont dans [systeme_de_jeu.md](systeme_de_jeu.md) ; les r�
 - **Réactions** : chaque action gardée permet, jusqu'au tour suivant, une **esquive** (Physique, DEX : retire des
   succès à l'attaque), une **parade** (Armes de mêlée ou Physique, DEX : retire des points de dégâts ; une par main
   armée et par tour ; à distance : avec un bouclier) ou une **contre-attaque** (opposition avant le jet ennemi).
-  Elles sont automatiques pour l'instant.
+  Le joueur les choisit pour ses personnages (`Combat.reaction_chooser`), sauf en mode IA ; contre un tir, la
+  contre-attaque demande une arme de tir.
 - **Attaque** : [rang] d10 contre l'attribut, difficulté = Esquive naturelle de la cible (DEX ÷ 3, au moins 1) en
   mêlée, ou son Couvert à distance. Les succès au-delà donnent des critiques (relances des dés de dégâts ratés).
 - **Dégâts** : [rang] d10 contre le seuil de l'arme, un point par succès ; l'Armure de la cible baisse le seuil.
@@ -393,7 +394,7 @@ Les dons, les espèces et les équipements peuvent porter des `modifiers`. Ils s
 | `hp_per_level` / `max_hp` | `amount` | PV max en plus, à chaque niveau / une fois (Robuste +3, Amulette de vigueur +2) |
 | `initiative` | `amount` | Points d'initiative en plus |
 | `armor` / `natural_dodge` | `amount` | Points d'Armure / d'Esquive naturelle en plus |
-| `weapon_damage` | `amount` | Seuil des dégâts d'arme en plus |
+| `weapon_damage` | `amount` | Dés de dégâts d'arme en plus |
 | `weapon_attack` | `amount` | Dés en plus aux attaques avec une arme |
 | `saving_throws` | `amount` | Dés en plus pour résister |
 | `resistance` / `immunity` / `vulnerability` | `damage_type` | Défense contre un type de dégâts |
@@ -411,7 +412,7 @@ Les dons, les espèces et les équipements peuvent porter des `modifiers`. Ils s
 | `spellcasting_ability` | `id` | Attribut d'incantation hors classe (Initié à la magie) |
 | `savage_attacker` | — | Une fois par tour, dés de dégâts d'arme lancés deux fois, le meilleur gardé |
 | `ignore_resistance` | `damage_type` | Les cibles ne résistent plus à ce type |
-| `ranged_attack`, `armored`, `dueling` | `amount` | Styles Archerie (dés à distance), Défense (Armure en armure), Duel (seuil des dégâts à une main) |
+| `ranged_attack`, `armored`, `dueling` | `amount` | Styles Archerie (dés à distance), Défense (Armure en armure), Duel (dés de dégâts à une main) |
 | `great_weapon_fighting` | — | À deux mains, on relance une fois les dés de dégâts ratés |
 | `armor_strength_reduction` | `amount` | Force conseillée des armures réduite |
 | `potent_cantrip`, `empowered_evocation` | — | Évocateur : tour de magie raté = moitié des dégâts ; un dé de dégâts en plus aux sorts d'évocation (`"school": "evocation"`) |
@@ -421,7 +422,7 @@ Les dons, les espèces et les équipements peuvent porter des `modifiers`. Ils s
 
 | Catégorie | Champs |
 |---|---|
-| `weapon` | `damage` (`{"threshold"?: "weapon" \| "str" \| "dex" \| N, "bonus"?, "dice"?}`), `damage_type`, `properties` (`finesse`, `light`, `thrown`, `versatile` : +1 au seuil à deux mains, `heavy`, `two_handed`, `ranged`), `parry`? (`{"ability", "bonus"}`) |
+| `weapon` | `damage` (`{"threshold"?: "weapon" \| "str" \| "dex" \| N, "bonus"?, "dice"?}` : les armes plus grosses ont des dés en plus), `damage_type`, `properties` (`finesse`, `light`, `thrown`, `versatile` : +1 dé à deux mains, `heavy`, `two_handed`, `ranged`), `parry`? (`{"ability", "bonus"}`) |
 | `armor` | `armor_type` (`clothing`, `light`, `medium`, `heavy`), `armor` (points d'Armure), `strength`? (Force requise, voir ci-dessous) |
 | `shield` | `armor` (points d'Armure) ; permet de parer les attaques à distance |
 | `accessory` | `slot` : `head` (couvre-chef), `hands` (gants), `legs` (jambes), `feet` (chaussures), `neck` (collier) ou `ring` (anneau : `ring_1`, ou `ring_2` si le premier est pris) |
@@ -451,7 +452,7 @@ Champs communs : `weight` (kg) ; facultatifs : `modifiers`, `rarity` (`common`, 
 
 **Règles appliquées :**
 - Une arme de finesse utilise le meilleur de FOR et DEX, une arme à distance utilise la DEX.
-- Une arme polyvalente tenue sans bouclier a +1 au seuil des dégâts.
+- Une arme polyvalente tenue sans bouclier a un dé de dégâts de plus.
 - Une arme à deux mains et un bouclier s'excluent.
 - L'entrée `unarmed` (mains nues) est obligatoire.
 - **Force et encombrement** (`rules.json › encumbrance`) : toute armure peut être portée. Le malus d'encombrement
@@ -548,7 +549,7 @@ affiche le **métier** qui se dessine (« Forgeronne (7 objets) »).
 - Une arme, une armure (pas un vêtement) ou un bouclier **ordinaire** (sans rareté) devient +1, +2, +3 pour
   `upgrade_costs` po (50, 150, 400), avec la rareté `upgrade_rarities`.
 - L'objet amélioré a l'id `<base>@<rang>` (ex. `longsword@2`). `Equipment.def` le calcule à partir de la base : nom
-  « Épée longue +2 », dés au toucher et seuil des dégâts (arme) ou Armure en plus, valeur augmentée. Il se sauvegarde,
+  « Épée longue +2 », dés au toucher et aux dégâts (arme) ou Armure en plus, valeur augmentée. Il se sauvegarde,
   s'équipe et se revend comme n'importe quel objet.
 - On peut améliorer un objet du sac ou un objet porté par un membre du groupe.
 

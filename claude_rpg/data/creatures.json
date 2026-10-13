@@ -17,7 +17,7 @@
 				"weight": 1,
 				"target": "enemy",
 				"effects": [
-					{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "bonus": -1}, "damage_type": "piercing"},
+					{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": -1}, "damage_type": "piercing"},
 					{"type": "status", "status": "prone", "stacks": 1}
 				]
 			}
@@ -41,7 +41,7 @@
 				"name": "Morsure brutale",
 				"weight": 3,
 				"target": "enemy",
-				"effects": [{"type": "attack", "skill": "physique", "ability": "str", "damage": {"threshold": "str", "bonus": 1, "dice": 1}, "damage_type": "piercing"}]
+				"effects": [{"type": "attack", "skill": "physique", "ability": "str", "damage": {"threshold": "str", "dice": 2}, "damage_type": "piercing"}]
 			},
 			{
 				"name": "Hurlement terrifiant",
@@ -110,7 +110,7 @@
 				"announced": true,
 				"target": "enemy",
 				"effects": [
-					{"type": "attack", "skill": "physique", "ability": "str", "damage": {"threshold": "str", "bonus": 1}, "damage_type": "bludgeoning"},
+					{"type": "attack", "skill": "physique", "ability": "str", "damage": {"threshold": "str", "dice": 1}, "damage_type": "bludgeoning"},
 					{"type": "status", "status": "stunned", "stacks": 1}
 				]
 			}
@@ -134,7 +134,7 @@
 				"name": "Morsure",
 				"weight": 3,
 				"target": "enemy",
-				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "bonus": 1}, "damage_type": "piercing"}]
+				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 1}, "damage_type": "piercing"}]
 			},
 			{
 				"name": "Morsure infectée",
@@ -161,7 +161,7 @@
 				"name": "Coup de bec",
 				"weight": 2,
 				"target": "enemy",
-				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "bonus": 1}, "damage_type": "piercing"}]
+				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 1}, "damage_type": "piercing"}]
 			},
 			{
 				"name": "Distraction",
@@ -183,7 +183,7 @@
 				"name": "Morsure spectrale",
 				"weight": 1,
 				"target": "enemy",
-				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "bonus": 1}, "damage_type": "force"}]
+				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 1}, "damage_type": "force"}]
 			}
 		],
 		"art": {"type": "wolf", "fur": "#8fc3e8", "belly": "#d8ecf8", "eyes": "#ffffff"}

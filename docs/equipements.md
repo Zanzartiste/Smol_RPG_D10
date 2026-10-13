@@ -10,9 +10,9 @@
 - **Emplacements** : main principale, main secondaire, couvre-chef, torse (armure, avec bras et épaules), cape,
   gants, jambes, chaussures, collier (1), anneaux (2).
 - **Armes** (voir [systeme_de_jeu.md](systeme_de_jeu.md)) : on attaque avec [rang de la compétence de l'arme] d10
-  contre la FOR (finesse : le meilleur de FOR et DEX ; à distance : la DEX). Les **dégâts** sont autant de d10 contre
-  un **seuil** propre à l'arme : celui de l'attaque + un bonus (plus l'arme est lourde, plus il est haut), ou un seuil
-  fixe (arcs) ; chaque succès est un point de dégâts. Une arme polyvalente a +1 au seuil à deux mains (sans bouclier).
+  contre la FOR (finesse : le meilleur de FOR et DEX ; à distance : la DEX). Les **dégâts** sont autant de d10, plus
+  des dés selon l'arme (plus elle est grosse, plus elle en a), contre le seuil de l'attaque, ou un seuil fixe (arcs) ;
+  chaque succès est un point de dégâts. Une arme polyvalente a un dé de plus à deux mains (sans bouclier).
   Une arme à deux mains et un bouclier s'excluent.
 - **Armures** : leurs points d'**Armure** baissent d'autant le seuil des dégâts subis (sans passer sous 1). Toute
   armure peut être portée, mais sous la **Force conseillée** (vêtement 0, légère 4, intermédiaire 5, lourde 6) le
@@ -29,7 +29,7 @@
   prix d'achat **et** de revente (jusqu'à ±15 %).
 - **Forge** :
   - **Amélioration** d'une arme, d'une armure (pas d'un vêtement) ou d'un bouclier ordinaire : +1 (50 po), +2 (150 po),
-    +3 (400 po). +N dés au toucher et +N au seuil des dégâts pour une arme, +N Armure sinon. Les objets déjà
+    +3 (400 po). +N dés au toucher et aux dégâts pour une arme, +N Armure sinon. Les objets déjà
     magiques ne s'améliorent pas.
   - **Fabrication** à partir de matériaux (voir Recettes ci-dessous).
 - ⚠️ Licence : les armes, armures et objets magiques du SRD 5.1 sont réutilisables (CC-BY 4.0).
@@ -60,12 +60,12 @@
 
 ### Mains nues (`unarmed`)
 
-- **Dégâts** : contondant, seuil FOR -2.
+- **Dégâts** : contondant, seuil FOR, -1 dé.
 - **Propriétés** : aucune.
 
 ### Gourdin (`club`)
 
-- **Dégâts** : contondant, seuil de l'attaque -1.
+- **Dégâts** : contondant, seuil de l'attaque, -1 dé.
 - **Propriétés** : légère.
 - **Poids** : 1 kg.
 - **Valeur** : 1 po.
@@ -73,7 +73,7 @@
 
 ### Dague (`dagger`)
 
-- **Dégâts** : perforant, seuil de l'attaque -1.
+- **Dégâts** : perforant, seuil de l'attaque, -1 dé.
 - **Propriétés** : finesse, légère, lancer.
 - **Poids** : 0.5 kg.
 - **Valeur** : 1 po.
@@ -82,7 +82,7 @@
 ### Bâton (`quarterstaff`)
 
 - **Dégâts** : contondant, seuil de l'attaque.
-- **Propriétés** : polyvalente (+1 au seuil à deux mains).
+- **Propriétés** : polyvalente (+1 dé à deux mains).
 - **Poids** : 2 kg.
 - **Valeur** : 1 po.
 - **Où le trouver** : départ : Magicien.
@@ -121,7 +121,7 @@
 
 ### Rapière (`rapier`)
 
-- **Dégâts** : perforant, seuil de l'attaque +1.
+- **Dégâts** : perforant, seuil de l'attaque, +1 dé.
 - **Propriétés** : finesse.
 - **Poids** : 1 kg.
 - **Valeur** : 5 po.
@@ -129,15 +129,15 @@
 
 ### Épée longue (`longsword`)
 
-- **Dégâts** : tranchant, seuil de l'attaque +1.
-- **Propriétés** : polyvalente (+1 au seuil à deux mains).
+- **Dégâts** : tranchant, seuil de l'attaque, +1 dé.
+- **Propriétés** : polyvalente (+1 dé à deux mains).
 - **Poids** : 1.5 kg.
 - **Valeur** : 3 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald, fabriqué (forge), départ : Guerrier.
 
 ### Hache à deux mains (`greataxe`)
 
-- **Dégâts** : tranchant, seuil de l'attaque +3.
+- **Dégâts** : tranchant, seuil de l'attaque, +2 dé.
 - **Propriétés** : lourde, à deux mains.
 - **Poids** : 3.5 kg.
 - **Valeur** : 6 po.
@@ -270,8 +270,8 @@
 
 ### Épée longue +1 (`longsword_plus_1`)
 
-- **Dégâts** : tranchant, seuil de l'attaque +1.
-- **Propriétés** : polyvalente (+1 au seuil à deux mains).
+- **Dégâts** : tranchant, seuil de l'attaque, +1 dé.
+- **Propriétés** : polyvalente (+1 dé à deux mains).
 - **Effets** : +1 dé au toucher, +1 au seuil des dégâts.
 - **Poids** : 1.5 kg.
 - **Rareté** : peu commun.
@@ -281,8 +281,8 @@
 
 ### Langue de feu (`flame_tongue`)
 
-- **Dégâts** : tranchant, seuil de l'attaque +1 + feu 2d10 ≤ 5.
-- **Propriétés** : polyvalente (+1 au seuil à deux mains).
+- **Dégâts** : tranchant, seuil de l'attaque, +1 dé + feu 2d10 ≤ 5.
+- **Propriétés** : polyvalente (+1 dé à deux mains).
 - **Poids** : 1.5 kg.
 - **Rareté** : rare.
 - **Valeur** : 400 po.
@@ -291,7 +291,7 @@
 
 ### Dague +1 (`dagger_plus_1`)
 
-- **Dégâts** : perforant, seuil de l'attaque -1.
+- **Dégâts** : perforant, seuil de l'attaque, -1 dé.
 - **Propriétés** : finesse, légère, lancer.
 - **Effets** : +1 dé au toucher, +1 au seuil des dégâts.
 - **Poids** : 0.5 kg.
