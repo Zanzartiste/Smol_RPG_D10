@@ -118,7 +118,7 @@ static func summary(id: String) -> String:
 			parts.append(Modifiers.describe_all(mods))
 	var use: Dictionary = def(id).get("use", {})
 	if use.has("heal"):
-		parts.append(Loc.ui("Soigne %s PV") % use["heal"])
+		parts.append(Loc.ui("Soigne %s PV") % Dice.pool_text(int(use["heal"].get("dice", 1)), int(use["heal"].get("threshold", 5))))
 	if use.has("cleanse"):
 		parts.append(Loc.ui("Retire %s") % StatusEffects.name_of(use["cleanse"]))
 	if rarity_of(id) != "common":
