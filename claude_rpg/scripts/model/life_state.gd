@@ -15,6 +15,7 @@ var dead := false
 var death_cause := ""
 var recorded := false  # déjà inscrite dans la chronique
 var notices: Array[String] = []  # messages à afficher au prochain retour au hub
+var reputation: Dictionary = {}  # id de lieu -> réputation du héros (−100 à 100)
 ## Combat déclenché mais pas encore terminé : il reprend au chargement d'une sauvegarde
 ## (quitter le jeu ne permet pas d'esquiver un combat).
 var pending_combat: Dictionary = {}
@@ -78,6 +79,8 @@ func _new_day() -> void:
 	var old_stage := character.life_stage()
 	day += 1
 	character.age_days += 1
+	Meta.world_day += 1
+	Social.daily_tick(self)  # le monde vit : liens entre PNJ, couples, naissances
 	if character.age_years() != old_age:
 		notices.append(Loc.ui("Vous avez maintenant %d ans.") % character.age_years())
 		var stage := character.life_stage()
@@ -275,7 +278,7 @@ func to_dict() -> Dictionary:
 		"rng_state": str(rng.state),
 		"day": day, "slot": slot, "flags": flags, "seen": seen, "last_seen_day": last_seen_day,
 		"dead": dead, "death_cause": death_cause, "recorded": recorded, "notices": notices,
-		"pending_combat": pending_combat, "shops": shops,
+		"pending_combat": pending_combat, "shops": shops, "reputation": reputation,
 	}
 
 
@@ -295,6 +298,7 @@ static func from_dict(data: Dictionary) -> LifeState:
 	life.death_cause = data.get("death_cause", "")
 	life.recorded = data.get("recorded", false)
 	life.notices.assign(data.get("notices", []))
+	life.reputation = Character._int_dict(data.get("reputation", {}))
 	life.pending_combat = data.get("pending_combat", {})
 	var saved_shops: Dictionary = data.get("shops", {})
 	for shop_id: String in saved_shops:

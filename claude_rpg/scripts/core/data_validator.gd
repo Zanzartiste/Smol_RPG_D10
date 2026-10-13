@@ -15,6 +15,7 @@ static func validate(db: Node) -> void:
 	_validate_items(db, errors)
 	_validate_damage_types(db, errors)
 	_validate_economy(db, errors)
+	_validate_social(db, errors)
 	for id: String in db.events:
 		_validate_event(db, db.events[id], errors)
 
@@ -676,6 +677,41 @@ static func _validate_features(db: Node, features: Array, ctx: String, errors: A
 			_expect_ref(db.actions, action_id, "action", fctx, errors)
 		_validate_modifiers(db, feature.get("modifiers", []), fctx, errors, true)
 		_validate_choices(db, feature.get("choices", []), fctx, errors)
+
+
+static func _validate_social(db: Node, errors: Array[String]) -> void:
+	for role: Dictionary in db.npc_roles.values():
+		var ctx := "npc_roles.json › %s" % role["id"]
+		_expect_ref(db.locations, role.get("location"), "lieu", ctx, errors)
+		if role.has("shop"):
+			_expect_ref(db.shops, role["shop"], "boutique", ctx, errors)
+		if role.has("class"):
+			_expect_ref(db.classes, role["class"], "classe", ctx, errors)
+		if role.get("fixed", {}).has("species"):
+			_expect_ref(db.species, role["fixed"]["species"], "espèce", ctx, errors)
+		for item_id: String in role.get("inventory", {}):
+			_expect_item(db, item_id, ctx, errors)
+	for trait_def: Dictionary in db.traits.values():
+		var ctx := "traits.json › %s" % trait_def["id"]
+		for action_id: String in trait_def.get("reactions", {}):
+			if not db.social_actions.has(action_id) and action_id not in ["gift", "ask_free", "trust_gain"]:
+				errors.append(ctx + " : réaction à une action inconnue « %s »" % action_id)
+		for category in trait_def.get("likes", []):
+			if category not in Items.CATEGORIES:
+				errors.append(ctx + " : catégorie d'objet inconnue « %s »" % category)
+	for fact: Dictionary in db.npc_facts.values():
+		if fact.get("values", []).is_empty():
+			errors.append("npc_facts.json › %s : aucune valeur" % fact["id"])
+	for a: Dictionary in db.social_actions.values():
+		var ctx := "social_actions.json › %s" % a["id"]
+		if a.get("category") not in ["friendly", "romantic", "hostile", "special"]:
+			errors.append(ctx + " : catégorie inconnue « %s »" % a.get("category"))
+		if a.has("check"):
+			_expect_ref(db.skills, a["check"].get("skill"), "compétence", ctx, errors)
+			if a["check"].has("vs"):
+				_expect_ref(db.skills, a["check"]["vs"], "compétence", ctx, errors)
+		if a.get("special", "") not in ["", "reveal_fact", "trade", "recruit", "gestures", "child", "break_up"]:
+			errors.append(ctx + " : special inconnu « %s »" % a["special"])
 
 
 ## Un objet du sac : id de items.json ou de equipment.json.

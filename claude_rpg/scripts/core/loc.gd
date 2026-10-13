@@ -36,6 +36,12 @@ static func fill(text: String, life: LifeState) -> String:
 	})
 
 
+## « de » ou « d' » devant un nom (élision devant une voyelle ou un h muet supposé) : de_name("Audace") -> "d'Audace".
+static func de_name(name: String) -> String:
+	var first := name.substr(0, 1).to_lower()
+	return ("d'" if first in ["a", "e", "i", "o", "u", "y", "h", "é", "è", "ê", "â", "î"] else "de ") + name
+
+
 static func gendered(text: String, gender: String) -> String:
 	var form: int = GENDER_FORMS.get(gender, 2)
 	var result := text

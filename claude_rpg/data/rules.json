@@ -18,6 +18,29 @@
 	"days_per_year": 365,
 	"majority_age": 18,
 	"common_actions": ["hide", "intimidate", "first_aid"],
+	"social": {
+		"_doc": "Interactions sociales : humeurs du jour (dc : modificateur du DD des tests contre le PNJ, gain : multiplicateur des gains de relation), saluts selon l'humeur, nombre de traits, chance qu'un partenaire jaloux apprenne une infidélité, durée d'une grossesse (jours), rencontres quotidiennes entre PNJ par lieu, seuil d'Amitié sous lequel un compagnon part.",
+		"moods": [
+			{"id": "radiant", "name": "radieux", "dc": -2, "gain": 1.25, "weight": 1},
+			{"id": "good", "name": "de bonne humeur", "dc": -1, "gain": 1.1, "weight": 2},
+			{"id": "neutral", "name": "neutre", "dc": 0, "gain": 1.0, "weight": 3},
+			{"id": "sullen", "name": "maussade", "dc": 1, "gain": 0.8, "weight": 2},
+			{"id": "furious", "name": "furieux", "dc": 3, "gain": 0.5, "weight": 1}
+		],
+		"greetings": {
+			"radiant": ["« Quelle belle journée ! »", "« Ah, vous tombez bien ! »"],
+			"good": ["« Bonjour à vous ! »", "« Que puis-je pour vous ? »"],
+			"neutral": ["« Bonjour. »", "« Oui ? »"],
+			"sullen": ["« Mmh. Quoi encore ? »", "« Faites vite. »"],
+			"furious": ["« Pas aujourd'hui ! »", "« Laissez-moi tranquille ! »"]
+		},
+		"traits_per_npc": 2,
+		"jealousy_chance": 0.5,
+		"gestation_days": 270,
+		"daily_pairs": 2,
+		"leave_threshold": -50,
+		"companion_start_friendship": 20
+	},
 	"languages": [
 		{"id": "common", "name": "Commun", "known_by_all": true},
 		{"id": "elvish", "name": "Elfique"},

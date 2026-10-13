@@ -27,6 +27,7 @@ const MAX_CHOICES_HEIGHT := 330  # au-delà, la liste de choix défile
 
 var _debug_badge := Label.new()
 var _inventory_button := Button.new()
+var _carnet_button := Button.new()
 var _overlay: Control  # fenêtre ouverte par-dessus l'écran : inventaire ou boutique (null sinon)
 var _event_on_screen: Dictionary = {}  # événement dont les choix sont affichés (pour les réafficher en debug)
 
@@ -38,7 +39,14 @@ func _ready() -> void:
 	_setup_debug_badge()
 	_inventory_button.text = tr("Inventaire (I)")
 	_inventory_button.pressed.connect(open_inventory, CONNECT_DEFERRED)
-	sheet_text.get_parent().add_child(_inventory_button)
+	var buttons := HBoxContainer.new()
+	sheet_text.get_parent().add_child(buttons)
+	_inventory_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	buttons.add_child(_inventory_button)
+	_carnet_button.text = tr("Carnet (C)")
+	_carnet_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_carnet_button.pressed.connect(open_carnet, CONNECT_DEFERRED)
+	buttons.add_child(_carnet_button)
 	if Game.life == null or Game.life.dead:
 		if not Saves.load_life():
 			Game.new_life()  # scène lancée directement, sans sauvegarde ni création
@@ -58,6 +66,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	if key.keycode == KEY_I and not dice_tray.is_playing():
 		open_inventory()
+		accept_event()
+		return
+	if key.keycode == KEY_C and not dice_tray.is_playing():
+		open_carnet()
 		accept_event()
 		return
 	if key.keycode == KEY_F12:
@@ -263,12 +275,16 @@ func _on_feat_chosen(member: Character, feat_id: String) -> void:
 
 
 
-## Un lieu avec des boutiques ouvre son menu ; les autres tirent directement un événement.
+## Un lieu avec des boutiques ou des habitants ouvre son menu ; les autres tirent directement un événement.
 func _on_location_chosen(location_id: String) -> void:
-	if Shops.of_location(location_id).is_empty():
+	if Shops.of_location(location_id).is_empty() and not _has_people(location_id):
 		_show_event(Game.draw_event(location_id))
 	else:
 		_show_location_menu(location_id)
+
+
+func _has_people(location_id: String) -> bool:
+	return DB.npc_roles.values().any(func(r): return r.get("location") == location_id)
 
 
 ## Menu d'un lieu : se promener (événement au hasard), entrer dans une boutique, ou revenir.
@@ -280,10 +296,67 @@ func _show_location_menu(location_id: String) -> void:
 	body_text.text = loc.get("description", "")
 	_clear_choices()
 	_add_choice(tr("Se promener (événement au hasard)"), _show_event_from.bind(location_id))
+	if _has_people(location_id):
+		_add_choice(tr("Parler à quelqu'un"), _show_people.bind(location_id))
 	for shop_id in Shops.of_location(location_id):
 		_add_choice("%s — %s" % [Shops.name_of(shop_id), Shops.def(shop_id).get("description", "")],
 			open_shop.bind(shop_id))
 	_add_choice(tr("Retour"), _show_hub)
+
+
+## Les gens présents dans un lieu, et la possibilité de chercher un garde, un villageois…
+func _show_people(location_id: String) -> void:
+	title_label.text = tr("%s — Parler à quelqu'un") % DB.locations[location_id]["name"]
+	body_text.text = tr("Qui allez-vous voir ?")
+	_clear_choices()
+	for n in Social.at_location(location_id, Game.life.rng):
+		var label := "%s — %s" % [n.name, n.role_name()]
+		if n.player.get("met", false):
+			label += " (%s)" % Social.status_name(n)
+		_add_choice(label, open_social.bind(n))
+	for role_id in Social.searchable_roles(location_id):
+		_add_choice(tr("Chercher : %s") % String(DB.npc_roles[role_id]["name"]).to_lower(), _on_search.bind(role_id))
+	_add_choice(tr("Retour"), _show_location_menu.bind(location_id))
+
+
+func _on_search(role_id: String) -> void:
+	open_social(Social.generate(role_id, Game.life.rng))
+
+
+## Conversation avec un PNJ (fenêtre par-dessus l'écran). Quitter après avoir agi fait passer un créneau.
+func open_social(n: Npc) -> void:
+	if not _can_open_overlay():
+		return
+	var view := SocialView.new(Game.life, n)
+	_overlay = view
+	view.changed.connect(_refresh_sheet)
+	view.trade_requested.connect(_open_npc_trade.bind(view))
+	view.closed.connect(_on_social_closed.bind(n.location if n.location != "party" else DB.location_order[0]))
+	add_child(view)
+
+
+func _open_npc_trade(n: Npc, social: SocialView) -> void:
+	var trade := NpcTradeView.new(Game.life, n, social.session)
+	trade.changed.connect(_refresh_sheet)
+	trade.closed.connect(social.refresh)
+	add_child(trade)
+
+
+func _on_social_closed(acted: bool, location_id: String) -> void:
+	_overlay = null
+	if acted:
+		Game.end_interaction()
+	_refresh_sheet()
+	if Game.life.dead:
+		_show_death()
+	else:
+		_show_people(location_id)
+
+
+## Carnet des PNJ rencontrés.
+func open_carnet() -> void:
+	if _can_open_overlay():
+		_open_overlay(CarnetView.new(Game.life))
 
 
 func _show_event_from(location_id: String) -> void:
@@ -371,12 +444,14 @@ func _run_combat(spec: Dictionary) -> void:
 	if _overlay != null:
 		_overlay.close_view()
 	_inventory_button.disabled = true
+	_carnet_button.disabled = true
 	content_box.visible = false
 	combat_view.visible = true
 	var result: Dictionary = await combat_view.run(spec, illustration.texture)
 	combat_view.visible = false
 	content_box.visible = true
 	_inventory_button.disabled = false
+	_carnet_button.disabled = false
 	_refresh_sheet()
 	title_label.text = {"victory": tr("Victoire"), "defeat": tr("Défaite"), "fled": tr("Fuite")}.get(result["outcome"], "")
 	_show_result(result)

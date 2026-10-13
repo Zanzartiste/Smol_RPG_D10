@@ -57,6 +57,27 @@ func _ready() -> void:
 		main._overlay.show_tab(tab)
 		await _capture("2d_forge_%s.png" % tab)
 	main._overlay.close_view()
+	# Social : gens présents, conversation, échange, carnet.
+	main._show_people("town")
+	await _capture("2e_people.png")
+	var people := Social.at_location("town", Game.life.rng)
+	var target: Npc = people.filter(func(n): return n.role == "innkeeper")[0]
+	target.player["friendship"] = 35
+	main.open_social(target)
+	var social: SocialView = main._overlay
+	for action_id in ["chat", "ask_about", "joke", "flirt"]:
+		social._on_action(action_id)
+	await _capture("2f_social.png")
+	main._open_npc_trade(target, social)
+	await _capture("2g_trade.png")
+	get_children().back()
+	for child in main.get_children():
+		if child is NpcTradeView:
+			child.close_view()
+	social.close_view()
+	main.open_carnet()
+	await _capture("2h_carnet.png")
+	main._overlay.close_view()
 	main._show_hub()
 	Meta.settings["manual_skill_ability"] = true  # pour montrer les boutons d'attribut
 	main._on_location_chosen("forest")

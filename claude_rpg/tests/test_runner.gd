@@ -31,6 +31,7 @@ const TESTS := [
 	"_test_advantage",
 	"_test_choices",
 	"_test_skill_ranks",
+	"_test_social",
 	"_test_combat",
 	"_test_combat_turns",
 	"_test_companions",
@@ -1264,6 +1265,143 @@ func _test_skill_ranks() -> bool:
 	_expect(meta.settings["manual_skill_ability"], "réglages sauvegardés")
 	meta.free()
 	Meta.settings["manual_skill_ability"] = false
+	return true
+
+
+func _test_social() -> bool:
+	var backup := Meta.to_dict()
+	Meta.npcs.clear()
+	Meta.pregnancies.clear()
+	Game.start_life(Character.create("human", "fighter", "Héros", {"background": "artisan"}), 141)
+	var life := Game.life
+	var rng := life.rng
+
+	# Habitués créés à la première visite, gens qu'on cherche, génération progressive.
+	var people := Social.at_location("town", rng)
+	_expect(people.size() >= 4 and people.any(func(n): return n.name == "Hilde" and n.species == "dwarf"),
+		"habitués de Brumeval (Hilde la forgeronne…)")
+	_expect(Social.at_location("town", rng).size() == people.size(), "les habitués ne sont créés qu'une fois")
+	var guard := Social.generate("guard", rng)
+	_expect(guard.location == "town" and guard.traits.size() == 2 and guard.facts.is_empty() and guard.age(Meta.world_day) >= 18,
+		"garde généré : 2 traits, aucun fait avant de les apprendre")
+	_expect(guard.known_traits.size() <= 1, "au plus un trait visible à la rencontre")
+
+	# Actions : jauges, faits révélés (définitifs), statut.
+	var session := {"acted": false, "understood": false}
+	Social.perform("chat", guard, life, session)
+	_expect(guard.player["met"] and guard.player["friendship"] > 0 and session["acted"], "Discuter : Amitié en hausse")
+	var result := Social.perform("ask_about", guard, life, session)
+	_expect(guard.facts.size() == 1 and String(result["lines"].back()) == guard.facts.values()[0], "Se renseigner : un fait révélé")
+	for i in 10:
+		Social.reveal_fact(guard, rng)
+	_expect(guard.facts.size() == DB.npc_facts.size() and Social.reveal_fact(guard, rng) == "", "tous les faits finissent révélés")
+	_expect(Meta.npcs.values().any(func(n): return guard.relations.has(n.id) and n.relations.get(guard.id, {}).get("kind") == "family"),
+		"fait de famille : un parent du PNJ est créé et lié")
+	guard.player["friendship"] = 35
+	_expect(Social.status(guard) == "friend" and Social.status_name(guard) != "", "statut : ami")
+	guard.player["friendship"] = -70
+	_expect(Social.status(guard) == "enemy", "statut : ennemi")
+
+	# Tests : Perspicacité du PNJ, humeur et traits.
+	_expect(Social.mood(guard) == Social.mood(guard) and Social.mood(guard).has("dc"), "humeur du jour stable")
+	guard.traits = ["romantic", "jovial"]
+	_expect(Social.trait_reaction(guard, "flirt")["dc"] == -2 and is_equal_approx(Social.trait_reaction(guard, "joke")["gain"], 2.0),
+		"traits : DD et gains modifiés")
+
+	# Romance : seuils, couple, relation libre, jalousie, mariage, enfant.
+	var a := Social.generate("villager", rng)
+	var b := Social.generate("villager", rng)
+	a.languages = ["common"]
+	b.languages = ["common"]
+	_expect(Social.unavailable_reason("propose_dating", a, life, session) != "", "se fréquenter : Amour 40 requis")
+	a.player["love"] = 50
+	a.player["friendship"] = 40
+	a.traits = ["generous", "curious"]
+	a.player["status"] = "dating"
+	_expect(Social.status(a) == "dating" and Social.unavailable_reason("propose_dating", a, life, session) == "déjà fait", "en couple")
+	b.player["love"] = 50
+	b.player["status"] = "dating"
+	b.traits = ["jealous", "proud"]
+	_expect(Social.unavailable_reason("propose_open", b, life, session) != "", "un jaloux refuse la relation libre")
+	var love_before := int(b.player["love"])
+	for i in 6:
+		Social.jealousy(a, life)
+	_expect(int(b.player["love"]) < love_before, "jalousie : le partenaire l'apprend")
+	a.player["open"] = true
+	_expect(Social.status_name(a).ends_with("(relation libre)"), "relation libre affichée")
+	a.player["love"] = 80
+	a.player["trust"] = 50
+	a.player["status"] = "engaged"
+	Social.perform("marry", a, life, session)
+	_expect(a.player["status"] == "married" and a.memories.size() > 0, "mariage, et le PNJ s'en souvient")
+	Social.perform("have_child", a, life, session)
+	_expect(Meta.pregnancies.size() == 1 and Social.unavailable_reason("have_child", a, life, session) != "", "un enfant en route")
+	Meta.world_day = int(Meta.pregnancies[0]["due"])
+	Social.daily_tick(life)
+	var children := Meta.npcs.values().filter(func(n): return n.parents.has(a.id))
+	_expect(children.size() == 1 and children[0].age(Meta.world_day) == 0 and life.notices.any(func(t): return "enfant" in t),
+		"naissance : l'enfant est un PNJ, le héros est prévenu")
+	Social.perform("break_up", a, life, session)
+	_expect(Social.status(a) != "married" and not a.player["open"], "divorce")
+
+	# Monde autonome : les PNJ se lient et forment des couples.
+	var c := Social.generate("villager", rng, {"age": 30})
+	var d := Social.generate("villager", rng, {"age": 30})
+	c.relations[d.id] = {"friendship": 60, "love": 38, "trust": 20, "kind": "friend"}
+	d.relations[c.id] = {"friendship": 60, "love": 38, "trust": 20, "kind": "friend"}
+	for i in 5:
+		Social._npc_interact(c, d, life)
+	_expect(c.relations[d.id]["kind"] == "partner" and life.notices.any(func(t): return "Rumeur" in t), "monde autonome : un couple se forme")
+
+	# Langues : texte crypté, une lettre par rang.
+	var plain := "Bonjour étranger"
+	var crypt := Social.scramble(plain, 1, "elvish")
+	var changed := 0
+	for i in plain.length():
+		changed += 1 if crypt[i] != plain[i] else 0
+	_expect(crypt.length() == plain.length() and changed >= 8 and crypt[8] == "é" and crypt[14] == "e" and crypt[7] == " ",
+		"crypté : au rang 1, seuls les e (et les espaces) restent lisibles")
+	_expect(Social.scramble(plain, 26, "elvish") == plain, "toutes les lettres au rang 26")
+	var foreigner := Social.generate("villager", rng)
+	foreigner.languages = ["orc"]
+	_expect(Social.speak("Il dit « bonjour »", life.character, foreigner) != "Il dit « bonjour »"
+		and Social.speak("Il dit « bonjour »", life.character, foreigner).begins_with("Il dit «"), "seules les paroles sont cryptées")
+	_expect(Social.unavailable_reason("gestures", foreigner, life, session) == "", "gestes possibles sans langue commune")
+	life.character.choose("skill/languages", "orc")
+	_expect(Social.speak("« bonjour »", life.character, foreigner) == "« bonjour »", "langue apprise : texte clair")
+
+	# Commerce avec un PNJ : achat, vente, cadeau, demande.
+	var innkeeper: Npc = Social.at_location("town", rng).filter(func(n): return n.role == "innkeeper")[0]
+	innkeeper.gold = 100
+	life.character.gold = 100
+	var bought := Social.buy(innkeeper, "potion_heal", life)
+	_expect(bought and life.character.item_count("potion_heal") >= 1 and innkeeper.gold > 100, "acheter à un PNJ : son or augmente")
+	life.character.add_item("old_amulet")
+	var friendship := int(innkeeper.player["friendship"])
+	Social.gift(innkeeper, "old_amulet", life)
+	_expect(int(innkeeper.player["friendship"]) > friendship and innkeeper.inventory.get("old_amulet", 0) == 1, "cadeau : Amitié")
+	var smith: Npc = Social.at_location("town", rng).filter(func(n): return n.role == "blacksmith")[0]
+	_expect(Social.goods(smith, life) == life.shop_stock("forge"), "un PNJ marchand propose sa boutique")
+
+	# Recrutement, approbation, souvenirs d'une vie à l'autre.
+	guard.player["friendship"] = 70
+	var recruited := Social.recruit(guard, life)
+	_expect(recruited != null and recruited.npc_id == guard.id and guard.location == "party" and recruited in life.companions,
+		"recruter un PNJ ami")
+	var lines := Social.approve(life, {guard.id: -200})
+	_expect(recruited not in life.companions and lines.size() == 2, "désapprobation : le compagnon quitte le groupe")
+	Social.on_hero_death(life)
+	_expect(a.memories.back()["text"].begins_with("A connu Héros"), "les PNJ se souviennent du héros mort")
+	Social.on_new_life()
+	_expect(not a.player["met"] and a.player["status"] == "", "nouvelle vie : relations remises à zéro")
+
+	# Sauvegarde du monde.
+	var meta := MetaState.new()
+	meta.load_dict(Meta.to_dict())
+	_expect(meta.npcs.size() == Meta.npcs.size() and meta.npcs[a.id].memories.size() == a.memories.size(), "PNJ sauvegardés")
+	meta.free()
+	Meta.load_dict(backup)
+	Game.combat = null
 	return true
 
 

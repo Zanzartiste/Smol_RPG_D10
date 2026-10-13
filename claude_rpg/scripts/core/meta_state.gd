@@ -8,6 +8,11 @@ var unlocks: Dictionary = {}  # "species:elf", "class:rogue"... -> true
 var seen_events: Dictionary = {}  # id d'événement -> nombre de fois vu, toutes vies confondues
 var chronicle: Array[Dictionary] = []
 var creator_points := 0
+## Monde vivant : PNJ (id -> Npc), horloge du monde (jours, toutes vies confondues), grossesses en cours.
+var npcs: Dictionary = {}
+var world_day := 0
+var pregnancies: Array = []
+var next_npc_id := 0
 ## Réglages du joueur (conservés même quand on efface le monde) :
 ##   manual_skill_ability : choisir soi-même l'attribut d'un test de compétence (sinon le meilleur).
 var settings := {"manual_skill_ability": false}  # Creator Points disponibles (gagnés à chaque mort, dépensés à la création)
@@ -98,7 +103,9 @@ func record_life(life: LifeState) -> void:
 
 func to_dict() -> Dictionary:
 	return {"world_flags": world_flags, "unlocks": unlocks, "seen_events": seen_events, "chronicle": chronicle,
-		"creator_points": creator_points, "settings": settings}
+		"creator_points": creator_points, "settings": settings,
+		"npcs": npcs.values().map(func(n): return n.to_dict()), "world_day": world_day, "pregnancies": pregnancies,
+		"next_npc_id": next_npc_id}
 
 
 func load_dict(data: Dictionary) -> void:
@@ -107,6 +114,13 @@ func load_dict(data: Dictionary) -> void:
 	seen_events = Character._int_dict(data.get("seen_events", {}))
 	creator_points = int(data.get("creator_points", 0))
 	settings.merge(data.get("settings", {}), true)
+	npcs.clear()
+	for entry: Dictionary in data.get("npcs", []):
+		var n := Npc.from_dict(entry)
+		npcs[n.id] = n
+	world_day = int(data.get("world_day", 0))
+	pregnancies = data.get("pregnancies", [])
+	next_npc_id = int(data.get("next_npc_id", 0))
 	chronicle.clear()
 	for entry: Dictionary in data.get("chronicle", []):
 		var life := entry.duplicate()

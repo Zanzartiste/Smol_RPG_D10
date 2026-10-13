@@ -116,6 +116,7 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 				else:
 					var companion := Character.create_companion(e["companion"])
 					life.companions.append(companion)
+					Social.npc_for_companion(companion)  # le compagnon a une relation avec le héros
 					lines.append(Loc.ui("%s rejoint votre groupe !") % companion.name)
 			"combat":
 				combat = e

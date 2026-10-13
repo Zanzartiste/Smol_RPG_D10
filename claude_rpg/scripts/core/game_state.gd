@@ -22,6 +22,7 @@ func start_life(character: Character, seed_value: int = 0) -> void:
 	life = LifeState.new()
 	life.rng.seed = seed_value if seed_value != 0 else randi()
 	life.character = character
+	Social.on_new_life()  # les relations avec le héros repartent de zéro, les souvenirs restent
 	current_event = {}
 	life_changed.emit()
 	Saves.save_all()
@@ -139,10 +140,18 @@ func end_event() -> void:
 	Saves.save_all()
 
 
+## Fin d'une interaction sociale : elle a pris un créneau de la journée.
+func end_interaction() -> void:
+	life.advance_time(1)
+	_after_change()
+	Saves.save_all()
+
+
 func _after_change() -> void:
 	life_changed.emit()
 	if life.dead and not life.recorded:
 		life.recorded = true
+		Social.on_hero_death(life)
 		Meta.record_life(life)
 		Saves.save_all()  # la méta garde la vie dans la chronique, la sauvegarde de vie est supprimée
 		life_ended.emit()

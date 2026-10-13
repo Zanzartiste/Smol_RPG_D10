@@ -1,0 +1,37 @@
+[
+	{
+		"id": "blacksmith", "name": "Forgeronne", "location": "town", "regular": true, "shop": "forge", "class": "fighter",
+		"fixed": {"name": "Hilde", "species": "dwarf", "gender": "female"},
+		"art": {"headgear": "", "outfit": "#5a4a3a", "accent": "#c06030"}
+	},
+	{
+		"id": "armorer", "name": "Armurier", "location": "town", "regular": true, "shop": "armorer", "class": "fighter",
+		"fixed": {"name": "Gorvald", "species": "human", "gender": "male", "age": 52},
+		"art": {"headgear": "", "outfit": "#4a4a52", "accent": "#9a2f2f"}
+	},
+	{
+		"id": "herbalist", "name": "Herboriste", "location": "town", "regular": true, "shop": "apothecary", "class": "wizard",
+		"fixed": {"name": "Maëlle", "species": "elf", "gender": "female", "age": 160},
+		"art": {"headgear": "hood", "outfit": "#3a5a3a", "accent": "#a0c060"}
+	},
+	{
+		"id": "innkeeper", "name": "Aubergiste", "location": "town", "regular": true,
+		"inventory": {"potion_heal": 1, "healing_herbs": 2}, "gold": "4d10",
+		"art": {"headgear": "", "outfit": "#6a4a2a", "accent": "#d4b06a"}
+	},
+	{
+		"id": "guard", "name": "Garde", "location": "town", "searchable": true, "class": "fighter",
+		"inventory": {"dagger": 1}, "gold": "2d6",
+		"art": {"headgear": "helmet", "outfit": "#4a5a7a", "accent": "#c0c0c0"}
+	},
+	{
+		"id": "villager", "name": "Villageois", "location": "town", "searchable": true, "foreign_chance": 0.15,
+		"inventory": {"healing_herbs": 1, "wolf_pelt": 1}, "gold": "1d10",
+		"art": {"headgear": "", "outfit": "#7a6a4a", "accent": "#a08060"}
+	},
+	{
+		"id": "woodcutter", "name": "Bûcheron", "location": "forest", "searchable": true, "class": "fighter",
+		"inventory": {"handaxe": 1, "wolf_pelt": 1}, "gold": "1d6",
+		"art": {"headgear": "hood", "outfit": "#4a3a2a", "accent": "#6a8a3a"}
+	}
+]

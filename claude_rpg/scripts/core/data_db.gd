@@ -22,6 +22,10 @@ var companions: Dictionary = {}
 var items: Dictionary = {}
 var shops: Dictionary = {}  # boutiques et services (API Shops)
 var recipes: Dictionary = {}  # recettes de fabrication (API Crafting)
+var npc_roles: Dictionary = {}  # rôles des PNJ (API Social)
+var traits: Dictionary = {}  # traits de personnalité des PNJ
+var npc_facts: Dictionary = {}  # faits révélables sur les PNJ
+var social_actions: Dictionary = {}  # actions de dialogue
 var locations: Dictionary = {}
 var location_order: Array[String] = []
 var events: Dictionary = {}
@@ -51,6 +55,10 @@ func load_all() -> void:
 	items = _index_by_id(_load_json("items.json", []), "items.json")
 	shops = _index_by_id(_load_json("shops.json", []), "shops.json")
 	recipes = _index_by_id(_load_json("recipes.json", []), "recipes.json")
+	npc_roles = _index_by_id(_load_json("npc_roles.json", []), "npc_roles.json")
+	traits = _index_by_id(_load_json("traits.json", []), "traits.json")
+	npc_facts = _index_by_id(_load_json("npc_facts.json", []), "npc_facts.json")
+	social_actions = _index_by_id(_load_json("social_actions.json", []), "social_actions.json")
 	locations = _index_by_id(_load_json("locations.json", []), "locations.json")
 	location_order.assign(locations.keys())
 

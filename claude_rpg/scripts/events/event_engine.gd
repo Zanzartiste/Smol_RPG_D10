@@ -89,6 +89,11 @@ static func resolve_choice(ev: Dictionary, choice: Dictionary, life: LifeState, 
 	var outcome: Dictionary = choice.get(outcome_key, {})
 	var key := "evt.%s.%s.%s" % [ev["id"], choice["id"], outcome_key]
 	var applied := Effects.apply_all(outcome.get("effects", []), life, meta)
+	# Approbation des compagnons (à la BG3) : {"approval": {"mira": 2}} sur le choix ou son issue.
+	var approval: Dictionary = choice.get("approval", {}).duplicate()
+	approval.merge(outcome.get("approval", {}), true)
+	if not approval.is_empty():
+		applied["lines"].append_array(Social.approve(life, approval))
 	return {
 		"outcome": outcome_key,
 		"text": Loc.t(key, outcome.get("text", "")),

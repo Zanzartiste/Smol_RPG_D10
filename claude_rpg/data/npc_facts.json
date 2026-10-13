@@ -1,0 +1,42 @@
+[
+	{"id": "origin", "name": "Origine", "values": [
+		"Né{g:|e|·e} dans un hameau de montagne, {npc} est descendu{g:|e|·e} en ville pour trouver du travail.",
+		"{npc} a grandi au bord de la mer et en garde la nostalgie.",
+		"{npc} vient d'un pays lointain dont plus personne ne prononce le nom ici.",
+		"{npc} n'a jamais quitté Brumeval, et s'en vante."
+	]},
+	{"id": "family", "name": "Famille", "creates_relative": true, "values": [
+		"{npc} a {relative_kind} : {relative}, qui vit aussi par ici.",
+		"{npc} parle souvent de {relative_kind}, {relative}, avec qui les rapports sont compliqués."
+	]},
+	{"id": "dream", "name": "Rêve", "values": [
+		"{npc} rêve d'ouvrir sa propre échoppe.",
+		"{npc} voudrait voir la mer avant de mourir.",
+		"{npc} espère qu'on écrira un jour une chanson sur {g:lui|elle|iel}.",
+		"{npc} rêve d'une vie tranquille, loin des monstres et des guerres."
+	]},
+	{"id": "fear", "name": "Peur", "values": [
+		"{npc} a une peur bleue des loups depuis l'enfance.",
+		"{npc} craint par-dessus tout de mourir seul{g:|e|·e}.",
+		"{npc} n'ose pas s'aventurer dans la Forêt des Murmures.",
+		"{npc} a peur de la magie et de ceux qui la pratiquent."
+	]},
+	{"id": "hobby", "name": "Passe-temps", "values": [
+		"{npc} sculpte de petites figurines de bois le soir.",
+		"{npc} joue aux dés à la taverne, et perd souvent.",
+		"{npc} collectionne les plantes séchées.",
+		"{npc} chante à tue-tête quand {g:il|elle|iel} se croit seul{g:|e|·e}."
+	]},
+	{"id": "secret", "name": "Secret", "values": [
+		"{npc} a autrefois volé une bourse au marché, et s'en veut encore.",
+		"{npc} cache une petite fortune sous son plancher.",
+		"{npc} a déserté l'armée du roi il y a des années.",
+		"{npc} écrit des lettres d'amour qu'{g:il|elle|iel} n'envoie jamais."
+	]},
+	{"id": "opinion", "name": "Opinion", "values": [
+		"{npc} trouve que les gardes en font trop.",
+		"{npc} se méfie des aventuriers : « Ça porte malheur. »",
+		"{npc} pense que les elfes cachent quelque chose.",
+		"{npc} admire les gens qui travaillent de leurs mains."
+	]}
+]
