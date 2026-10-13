@@ -41,6 +41,7 @@ func run(spec: Dictionary, background_texture: Texture2D) -> Dictionary:
 	battle.show_combat(combat)
 	_log_shown = combat.log.size()
 	_refresh()
+	await dice_tray.play(combat.initiative_roll, true)  # tous les dés d'initiative en même temps
 	while not combat.is_over():
 		var actor := combat.current()
 		_refresh()

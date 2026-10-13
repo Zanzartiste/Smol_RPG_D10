@@ -7,6 +7,8 @@ extends Control
 ##
 ## `roll` : {"dice": [{"sides": 20, "value": 14, "dropped"?: true}, ...], "mod": 2, "stat": "Athlétisme",
 ##           "dc": 13, "dc_label": "CA", "success": true}  (dc, dc_label, success et stat sont facultatifs)
+## "per_die": true : chaque dé a son "label" (et son "total") et le verdict les liste au lieu de les additionner
+## (initiative de tous les combattants).
 
 signal finished
 
@@ -52,6 +54,8 @@ func play(roll: Dictionary, fast := false) -> void:
 		_dice.append({
 			"sides": sides,
 			"value": int(specs[i]["value"]),
+			"label": specs[i].get("label", ""),
+			"total": int(specs[i].get("total", specs[i]["value"])),
 			"dropped": specs[i].get("dropped", false),  # dé écarté (avantage ou désavantage)
 			"shown": _rng.randi_range(1, sides),
 			"pos": Vector2(_play_area().position.x, clampf(_play_area().get_center().y + lane,
@@ -228,9 +232,20 @@ func _draw_die(d: Dictionary, font: Font) -> void:
 	draw_string(font, Vector2(-text_size.x / 2.0, NUMBER_SIZE * 0.35), text, HORIZONTAL_ALIGNMENT_LEFT, -1,
 		NUMBER_SIZE, ink)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	if d["label"] != "" and d["settled"]:
+		var label: String = d["label"]
+		var label_size := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15)
+		draw_string(font, d["pos"] + Vector2(-label_size.x / 2.0, DIE_RADIUS + 16), label, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			15, UITheme.TEXT)
 
 
 func _draw_verdict(font: Font) -> void:
+	if _roll.get("per_die", false):
+		var sorted := _dice.duplicate()
+		sorted.sort_custom(func(a, b): return a["total"] > b["total"])
+		var line := " · ".join(PackedStringArray(sorted.map(func(d): return "%s %d" % [d["label"], d["total"]])))
+		draw_string(font, Vector2(16, size.y - 18.0), line, HORIZONTAL_ALIGNMENT_LEFT, size.x - 32, 20, UITheme.TEXT)
+		return
 	var total := 0
 	var parts := PackedStringArray()
 	var kept: Array[Dictionary] = []

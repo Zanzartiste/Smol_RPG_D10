@@ -96,6 +96,8 @@ func _ready() -> void:
 	main.illustration.texture = ArtProvider.location_image("forest", Game.life)
 	main._run_combat({"enemies": ["dire_wolf", "bandit", "giant_rat"]})
 	var view: CombatView = main.combat_view
+	await get_tree().create_timer(1.2).timeout
+	await _capture("6c_initiative.png")
 	await _wait_for_hero(view)
 	await _capture("7_combat.png")
 	# Une action qui demande une cible (plusieurs ennemis : le champ de bataille passe en mode ciblage).

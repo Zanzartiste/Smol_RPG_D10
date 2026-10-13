@@ -27,6 +27,7 @@ var round_number := 1
 var outcome := ""  # "" en cours, puis "victory", "defeat" ou "fled"
 var log: Array[String] = []
 var hero: Combatant
+var initiative_roll: Dictionary = {}  # lancer d'initiative de tous les combattants, animé en une fois
 var skipped := false  # le combattant actif passe son tour (étourdi, mort pendant ses états…)
 var actions_left := 1  # actions restantes au combattant actif pendant ce tour
 var _next_id := 0
@@ -727,10 +728,16 @@ func _select(predicate: Callable) -> Array[Combatant]:
 	return result
 
 
+## Initiative de tous les combattants, lancée d'un coup : `initiative_roll` garde un d20 par combattant
+## (avec son nom et son total) pour que l'interface anime tous les dés ensemble.
 func _roll_initiative() -> void:
 	var parts := PackedStringArray()
+	var dice: Array[Dictionary] = []
 	for c in combatants:
-		c.initiative = int(Dice.roll_d20(rng, 1 if c.has_modifier("initiative_advantage") else 0)["die"]) + c.initiative_bonus()
+		var d20 := Dice.roll_d20(rng, 1 if c.has_modifier("initiative_advantage") else 0)
+		c.initiative = int(d20["die"]) + c.initiative_bonus()
+		dice.append({"sides": 20, "value": int(d20["die"]), "label": c.name, "total": c.initiative})
+	initiative_roll = {"dice": dice, "stat": Loc.ui("Initiative"), "per_die": true}
 	order = combatants.duplicate()
 	order.sort_custom(func(a, b): return a.initiative > b.initiative \
 		or (a.initiative == b.initiative and a.ability_mod("dex") > b.ability_mod("dex")))
