@@ -198,9 +198,9 @@ func _fill_equipment() -> void:
 			row.add_child(_small_button(tr("Retirer"), _on_unequip.bind(slot)))
 		_equipment_box.add_child(row)
 	var gold := UITheme.GOLD.to_html(false)
-	_stats_text.text = "\n[color=%s]PV[/color] %d / %d    [color=%s]CA[/color] %d\n[color=%s]%s[/color] %s" % [
-		gold, _member.hp, _member.max_hp, gold, _member.armor_class(), gold, tr("Arme"),
-		Equipment.describe(_member.weapon_id())]
+	_stats_text.text = "\n[color=%s]PV[/color] %d / %d    [color=%s]%s[/color] %d    [color=%s]%s[/color] %d\n[color=%s]%s[/color] %s" % [
+		gold, _member.hp, _member.max_hp, gold, tr("Esquive naturelle"), _member.natural_dodge(), gold, tr("Armure"),
+		_member.armor(), gold, tr("Arme"), Equipment.describe(_member.weapon_id())]
 	var defenses := _member.all_defenses()
 	if not defenses.is_empty():
 		_stats_text.text += "\n" + defenses.describe()

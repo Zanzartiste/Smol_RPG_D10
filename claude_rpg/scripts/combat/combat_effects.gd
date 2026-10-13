@@ -1,28 +1,31 @@
 class_name CombatEffects
 extends RefCounted
 ## Effets de combat, communs aux actions des classes (actions.json) et des créatures (creatures.json).
-##   {"type": "attack", "weapon": true | "<id d'arme>", "ability"?: "spell" | "str"…, "to_hit"?: N,
-##    "damage"?: "1d10", "damage_type"?: "fire", "extra_damage"?: "1d6", "add_mod"?: bool}
-##        Jet d'attaque contre la CA puis dégâts. Les effets qui suivent une attaque ne s'appliquent
-##        que si elle touche (jusqu'à l'attaque suivante).
-##   {"type": "damage", "damage": "3d4", "damage_type": "force"}   dégâts automatiques
-##   {"type": "heal", "amount": "1d10+level"}                     soins (« level » = niveau)
+## Les jets sont des réserves de d10 (voir Dice et docs/systeme_de_jeu.md).
+##   {"type": "attack", "weapon": true | "<id d'arme>", "ability"?: "spell" | "str"…, "skill"?: "physique",
+##    "damage"?: {"threshold"?: "weapon" | "spell" | attribut | N, "bonus"?: N, "dice"?: N, "skill"?},
+##    "damage_type"?: "fire", "ranged"?: true}
+##        Jet d'attaque ([rang] d10 contre l'attribut) contre l'Esquive naturelle de la cible (mêlée) ou
+##        son Couvert (distance), puis dégâts : [rang + dice] d10 contre le seuil, un succès = un point.
+##        Les effets qui suivent une attaque ne s'appliquent que si elle touche (jusqu'à l'attaque suivante).
+##   {"type": "damage", "damage": {"dice": 3, "threshold": 6}, "damage_type": "force"}   dégâts sans jet d'attaque
+##   {"type": "heal", "amount": {"dice": 2, "skill"?: "medicine", "threshold": "wis" | N}}   soins (un succès = 1 PV)
 ##   {"type": "status", "status": "poisoned", "stacks": 3}         ajoute des charges d'état
 ##   {"type": "cleanse", "status": "poisoned" | "negative"}        retire un état, ou tous les négatifs
 ##   {"type": "summon", "creature": "familiar"}                    invoque une créature dans son camp
 ##   {"type": "extra_action"}                                     une action de plus ce tour (Fougue)
-##   {"type": "check", "skill": "stealth", "dc": 13}               test de compétence de l'acteur contre un DD,
-##   {"type": "check", "skill": "persuasion", "ability": "str", "vs_save": "wis"}  ou contre un jet de
-##        sauvegarde de la cible. Raté : les effets suivants sont ignorés (comme après une attaque ratée).
+##   {"type": "check", "skill": "stealth", "difficulty": 2}        test de compétence de l'acteur,
+##   {"type": "check", "skill": "persuasion", "ability": "str", "vs_resist": "wis"}  ou en opposition
+##        contre la résistance de la cible. Raté : les effets suivants sont ignorés.
 ## Champs communs facultatifs :
-##   "save": {"ability": "dex", "half"?: true, "dc"?: N}  la cible fait un jet de sauvegarde contre le DD
-##        des sorts (ou "dc", ou le save_dc de la créature) ; réussi : rien (ou moitié des dégâts si
-##        "half"), et les effets suivants sont ignorés comme après une attaque ratée.
-##   "scaling": {"table": "cantrip", "field"?: "damage" | "extra_damage"}  nombre de dés selon le niveau
+##   "resist": {"ability": "dex"}  la cible résiste (voir Character.resist_pool) : contre des dégâts,
+##        chaque succès retire un point ; contre un autre effet, opposition avec la réserve
+##        d'incantation de l'acteur (il faut plus de succès qu'elle, sinon l'effet et les suivants sont ignorés).
+##   "scaling": {"table": "cantrip" | "sneak_attack", "class"?}  dés de dégâts en plus selon le niveau
 ##        (rules.json › dice_scaling).
-##   "upcast": "1d6"   dégâts en plus par niveau d'emplacement au-delà du niveau du sort (Spellcasting).
-##   "bonus_damage": [{"damage": "1d4", "damage_type": "fire"}]  dégâts d'autres types ajoutés (attack, damage) ;
-##        une arme peut aussi en porter (Equipment).
+##   "upcast": 1   dés de dégâts en plus par niveau d'emplacement au-delà du niveau du sort (Spellcasting).
+##   "bonus_damage": [{"dice": 2, "threshold": 5, "damage_type": "fire"}]  dégâts d'autres types ajoutés
+##        (lancés à part) ; une arme peut aussi en porter (Equipment).
 
 ## type -> champs obligatoires (utilisé par DataValidator)
 const SCHEMA := {
@@ -80,15 +83,16 @@ static func describe(e: Dictionary) -> String:
 				text = Loc.ui("Attaque de sort : %s") % _damage_text(e)
 			else:
 				text = Loc.ui("Attaque : %s") % _damage_text(e)
-			if e.has("extra_damage"):
-				text += Loc.ui(" (+%s dégâts)") % e["extra_damage"]
+			if e.has("scaling") and e["scaling"].get("table") == "sneak_attack":
+				text += Loc.ui(" (+1 dé de dégâts par palier)")
 			return text
 		"damage":
-			return Loc.ui("Inflige %s") % _damage_text(e) + _save_text(e)
+			return Loc.ui("Inflige %s") % _damage_text(e) + _resist_text(e)
 		"heal":
-			return Loc.ui("Soigne %s PV") % String(e["amount"]).replace("level", Loc.ui("niveau"))
+			var spec: Variant = e["amount"]
+			return Loc.ui("Soigne (%s)") % (_pool_text(spec) if spec is Dictionary else str(spec)) + _resist_text(e)
 		"status":
-			return Loc.ui("%d %s") % [int(e["stacks"]), StatusEffects.name_of(e["status"])]
+			return Loc.ui("%d %s") % [int(e["stacks"]), StatusEffects.name_of(e["status"])] + _resist_text(e)
 		"cleanse":
 			if e["status"] == "negative":
 				return Loc.ui("Retire les états négatifs")
@@ -99,26 +103,41 @@ static func describe(e: Dictionary) -> String:
 			return Loc.ui("Une action de plus ce tour")
 		"check":
 			var skill := Skills.name_of(e["skill"]) + (" (%s)" % Abilities.short_of(e["ability"]) if e.has("ability") else "")
-			if e.has("vs_save"):
-				return Loc.ui("Test de %s contre la %s de la cible") % [skill, Abilities.name_of(e["vs_save"])]
-			return Loc.ui("Test de %s (DD %d)") % [skill, int(e.get("dc", 10))]
+			if e.has("vs_resist"):
+				return Loc.ui("Test de %s contre la résistance (%s) de la cible") % [skill, Abilities.name_of(e["vs_resist"])]
+			return Loc.ui("Test de %s (difficulté %d)") % [skill, Dice.difficulty_of(e)]
 	return str(e)
 
 
-## Ex. « (sauvegarde de DEX : moitié) ».
-static func _save_text(e: Dictionary) -> String:
-	if not e.has("save"):
+## Ex. « (la cible résiste avec la DEX) ».
+static func _resist_text(e: Dictionary) -> String:
+	if not e.has("resist"):
 		return ""
-	var save: Dictionary = e["save"]
-	var outcome := Loc.ui("moitié") if save.get("half", false) else Loc.ui("annule")
-	return Loc.ui(" (sauvegarde de %s : %s)") % [Abilities.short_of(save["ability"]), outcome]
+	return Loc.ui(" (la cible résiste : %s)") % Abilities.short_of(e["resist"].get("ability", "con"))
+
+
+## Ex. « 3 dés, seuil 6 », « Médecine, seuil SAG ».
+static func _pool_text(spec: Dictionary) -> String:
+	var parts := PackedStringArray()
+	if spec.has("skill"):
+		parts.append(Skills.name_of(spec["skill"]) + (" + %d" % int(spec["dice"]) if int(spec.get("dice", 0)) > 0 else ""))
+	elif spec.has("dice"):
+		parts.append(Loc.ui("%d dé(s)") % int(spec["dice"]))
+	var threshold: Variant = spec.get("threshold", "weapon")
+	if threshold is String:
+		var name := Loc.ui("attaque") if threshold == "weapon" else (Loc.ui("sort") if threshold == "spell" else Abilities.short_of(threshold))
+		parts.append(Loc.ui("seuil %s") % name + (" %+d" % int(spec["bonus"]) if int(spec.get("bonus", 0)) != 0 else ""))
+	else:
+		parts.append(Loc.ui("seuil %d") % (int(threshold) + int(spec.get("bonus", 0))))
+	return ", ".join(parts)
 
 
 static func _damage_text(e: Dictionary) -> String:
 	var type: String = e.get("damage_type", "")
-	var text: String = e.get("damage", "?")
+	var spec: Variant = e.get("damage", {})
+	var text := _pool_text(spec if spec is Dictionary else {})
 	if type != "":
-		text += " " + DamageTypes.name_of(type).to_lower()
+		text = DamageTypes.name_of(type).to_lower() + " (" + text + ")"
 	for part: Dictionary in e.get("bonus_damage", []):
-		text += " + %s %s" % [part["damage"], DamageTypes.name_of(part["damage_type"]).to_lower()]
+		text += " + %s (%s)" % [DamageTypes.name_of(part["damage_type"]).to_lower(), _pool_text(part)]
 	return text

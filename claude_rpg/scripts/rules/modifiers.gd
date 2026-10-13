@@ -10,39 +10,41 @@ const SCHEMA := {
 	"ability": ["id", "amount"],  # bonus à un attribut
 	"skill_rank": ["id", "amount"],  # rangs en plus dans une compétence
 	"hp_per_level": ["amount"],  # PV max en plus, par niveau
-	"initiative": ["amount"],  # bonus d'initiative
-	"ac": ["amount"],  # bonus de CA
-	"weapon_damage": ["amount"],  # bonus aux dégâts des attaques d'arme
-	"weapon_attack": ["amount"],  # bonus aux jets d'attaque avec une arme
-	"saving_throws": ["amount"],  # bonus à tous les jets de sauvegarde
+	"max_hp": ["amount"],  # PV max en plus (Robuste)
+	"initiative": ["amount"],  # points d'initiative en plus
+	"armor": ["amount"],  # points d'Armure en plus
+	"natural_dodge": ["amount"],  # Esquive naturelle en plus
+	"weapon_damage": ["amount"],  # seuil des dégâts d'arme en plus
+	"weapon_attack": ["amount"],  # dés en plus aux attaques avec une arme
+	"saving_throws": ["amount"],  # dés en plus pour résister
 	"resistance": ["damage_type"],
 	"immunity": ["damage_type"],
 	"vulnerability": ["damage_type"],
 	"status_immunity": ["status"],
-	"save_proficiency": ["id"],  # +1 rang à un jet de sauvegarde
+	"save_proficiency": ["id"],  # un dé de plus pour résister avec un attribut
 	"extra_attack": ["amount"],  # attaques en plus pour l'action Attaque
 	"uncanny_dodge": [],  # une fois par round, dégâts d'une attaque divisés par deux
-	"evasion": [],  # sauvegarde de DEX pour moitié : 0 si réussie, moitié si ratée
-	"reliable_talent": [],  # test d'une compétence entraînée : un d20 sous 10 compte comme 10
+	"evasion": [],  # résister aux dégâts avec la DEX : chaque succès retire deux points
+	"reliable_talent": [],  # test d'une compétence entraînée : au moins un succès
 	"relentless_endurance": [],
-	"critical_range": ["amount"],  # critique à partir de 20 − amount (Critique amélioré : 1)
-	"save_advantage": ["id"],  # avantage aux jets de sauvegarde d'un attribut
+	"critical_range": ["amount"],  # succès comptés en plus pour le critique (Critique amélioré : 1)
+	"save_advantage": ["id"],  # un dé de plus pour résister avec un attribut
 	"initiative_proficiency": [],  # rang de Physique ajouté à l'initiative (Vigilant)
-	"initiative_advantage": [],  # avantage à l'initiative (Champion)
-	"skill_advantage": ["id"],  # avantage aux tests d'une compétence
+	"initiative_advantage": [],  # deux d10 à l'initiative, on garde le meilleur (Champion)
+	"skill_advantage": ["id"],  # un dé de plus aux tests d'une compétence
 	"spellcasting_ability": ["id"],  # attribut d'incantation hors classe (Initié à la magie)
 	"savage_attacker": [],  # une fois par tour, dés de dégâts d'arme lancés deux fois (Frappe brutale)
 	"ignore_resistance": ["damage_type"],  # ignore la résistance des cibles à ce type (Adepte élémentaire)
-	"ranged_attack": ["amount"],  # bonus au toucher avec une arme à distance (Archerie)
-	"armored_ac": ["amount"],  # bonus de CA en armure (Défense)
-	"great_weapon_fighting": [],  # arme à deux mains : 1 et 2 aux dés de dégâts comptent 3
-	"dueling": ["amount"],  # bonus aux dégâts avec une arme de corps à corps à une main (Duel)
+	"ranged_attack": ["amount"],  # dés en plus aux attaques à distance (Archerie)
+	"armored": ["amount"],  # points d'Armure en plus avec une vraie armure (Défense)
+	"great_weapon_fighting": [],  # arme à deux mains : on relance une fois les dés de dégâts ratés
+	"dueling": ["amount"],  # seuil des dégâts en plus avec une arme de mêlée à une main (Duel)
 	"armor_strength_reduction": ["amount"],  # Force conseillée des armures réduite
 	"potent_cantrip": [],  # tour de magie raté : moitié des dégâts (Évocateur)
-	"empowered_evocation": [],  # + modificateur d'incantation aux dégâts d'évocation
+	"empowered_evocation": [],  # un dé de dégâts de plus aux sorts d'évocation
 	"fast_hands": [],  # utiliser un objet ne coûte pas l'action, une fois par tour (Voleur)
 	"survivor": [],
-	"cunning_action": [],  # Se cacher devient une action bonus (Ruse du Roublard)  # début de tour à moitié de PV ou moins : récupère 5 + CON (Champion)  # tombe à 1 PV au lieu de 0 (ressource relentless_endurance, repos long)
+	"cunning_action": [],  # Se cacher ne coûte pas d'action, une fois par tour (Ruse du Roublard)  # début de tour à moitié de PV ou moins : récupère 5 + CON (Champion)  # tombe à 1 PV au lieu de 0 (ressource relentless_endurance, repos long)
 }
 
 ## Types de modificateurs qui deviennent des défenses (type -> sorte de Defenses).
@@ -87,16 +89,20 @@ static func describe(m: Dictionary) -> String:
 			return Loc.ui("%s rang en %s") % [signed, Skills.name_of(m["id"])]
 		"hp_per_level":
 			return Loc.ui("%s PV par niveau") % signed
+		"max_hp":
+			return Loc.ui("%s PV max") % signed
 		"initiative":
 			return Loc.ui("%s à l'initiative") % signed
-		"ac":
-			return Loc.ui("%s CA") % signed
+		"armor":
+			return Loc.ui("%s Armure") % signed
+		"natural_dodge":
+			return Loc.ui("%s Esquive naturelle") % signed
 		"weapon_damage":
-			return Loc.ui("%s aux dégâts d'arme") % signed
+			return Loc.ui("%s au seuil des dégâts d'arme") % signed
 		"weapon_attack":
-			return Loc.ui("%s au toucher avec une arme") % signed
+			return Loc.ui("%s dé(s) aux attaques d'arme") % signed
 		"saving_throws":
-			return Loc.ui("%s aux jets de sauvegarde") % signed
+			return Loc.ui("%s dé(s) pour résister") % signed
 		"resistance":
 			return Loc.ui("Résistance : %s") % DamageTypes.name_of(m["damage_type"])
 		"immunity":
@@ -106,7 +112,7 @@ static func describe(m: Dictionary) -> String:
 		"status_immunity":
 			return Loc.ui("Immunité à l'état : %s") % StatusEffects.name_of(m["status"])
 		"save_proficiency":
-			return Loc.ui("+1 rang aux sauvegardes de %s") % Abilities.name_of(m["id"])
+			return Loc.ui("+1 dé pour résister (%s)") % Abilities.name_of(m["id"])
 		"extra_attack":
 			return Loc.ui("%s attaque(s) par action Attaque") % signed
 		"uncanny_dodge":
@@ -118,15 +124,15 @@ static func describe(m: Dictionary) -> String:
 		"relentless_endurance":
 			return Loc.ui("Endurance implacable")
 		"critical_range":
-			return Loc.ui("Critique sur %d-20") % (20 - amount)
+			return Loc.ui("Critique : %s succès compté(s) en plus") % signed
 		"save_advantage":
-			return Loc.ui("Avantage aux sauvegardes de %s") % Abilities.name_of(m["id"])
+			return Loc.ui("+1 dé pour résister (%s)") % Abilities.name_of(m["id"])
 		"initiative_proficiency":
 			return Loc.ui("Rang de Physique à l'initiative")
 		"initiative_advantage":
-			return Loc.ui("Avantage à l'initiative")
+			return Loc.ui("Initiative : deux d10, le meilleur")
 		"skill_advantage":
-			return Loc.ui("Avantage en %s") % Skills.name_of(m["id"])
+			return Loc.ui("+1 dé en %s") % Skills.name_of(m["id"])
 		"spellcasting_ability":
 			return Loc.ui("Incantation : %s") % Abilities.name_of(m["id"])
 		"savage_attacker":
@@ -134,13 +140,13 @@ static func describe(m: Dictionary) -> String:
 		"ignore_resistance":
 			return Loc.ui("Ignore la résistance : %s") % DamageTypes.name_of(m["damage_type"])
 		"ranged_attack":
-			return Loc.ui("%s au toucher à distance") % signed
-		"armored_ac":
-			return Loc.ui("%s CA en armure") % signed
+			return Loc.ui("%s dé(s) aux attaques à distance") % signed
+		"armored":
+			return Loc.ui("%s Armure en armure") % signed
 		"great_weapon_fighting":
-			return Loc.ui("Armes à deux mains : 1 et 2 comptent 3")
+			return Loc.ui("Armes à deux mains : relance des dés de dégâts ratés")
 		"dueling":
-			return Loc.ui("%s dégâts à une main") % signed
+			return Loc.ui("%s au seuil des dégâts à une main") % signed
 		"armor_strength_reduction":
 			return Loc.ui("Force des armures −%d") % amount
 		"potent_cantrip":
@@ -152,7 +158,7 @@ static func describe(m: Dictionary) -> String:
 		"survivor":
 			return Loc.ui("Survivant")
 		"cunning_action":
-			return Loc.ui("Ruse : se cacher en action bonus")
+			return Loc.ui("Ruse : se cacher sans dépenser d'action")
 	return str(m)
 
 

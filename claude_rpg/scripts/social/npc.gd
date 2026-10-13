@@ -51,8 +51,8 @@ func role_name() -> String:
 	return Loc.gendered(String(role_def().get("name", role)), gender)
 
 
-func ability_mod(ability_id: String) -> int:
-	return Abilities.modifier(int(abilities.get(ability_id, 10)))
+func ability_score(ability_id: String) -> int:
+	return int(abilities.get(ability_id, 4))
 
 
 ## Rang d'une compétence : rang de départ (1, 2 si instinctive) + rangs en plus.
@@ -60,14 +60,14 @@ func skill_rank(skill_id: String) -> int:
 	return Skills.base_rank(skill_id) + int(skill_bonus.get(skill_id, 0))
 
 
-## Bonus d'un test : meilleur attribut de la compétence (ou celui imposé) + rang.
-func skill_mod(skill_id: String, ability := "") -> int:
+## Réserve d'un test : [rang] d10 contre le meilleur attribut de la compétence (ou celui imposé).
+func skill_pool(skill_id: String, ability := "", bonus := 0) -> Dictionary:
 	var used := ability
 	if used == "":
 		for candidate: String in Skills.abilities_of(skill_id):
-			if used == "" or ability_mod(candidate) > ability_mod(used):
+			if used == "" or ability_score(candidate) > ability_score(used):
 				used = candidate
-	return ability_mod(used) + skill_rank(skill_id)
+	return {"count": skill_rank(skill_id) + bonus, "threshold": ability_score(used), "ability": used}
 
 
 func has_trait(trait_id: String) -> bool:

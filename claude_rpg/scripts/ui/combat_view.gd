@@ -81,8 +81,8 @@ func _refresh() -> void:
 	if not _pending.is_empty():
 		hint_label.text = tr("Choisissez une cible sur le champ de bataille (Échap pour annuler).")
 	elif _actor != null and not _busy:
-		hint_label.text = tr("%s : action %d · action bonus %d") % [_actor.name, maxi(0, combat.actions_left),
-			maxi(0, combat.bonus_left)]
+		hint_label.text = tr("%s : %d action(s) restante(s) ; celles gardées serviront à se défendre") % [_actor.name,
+			maxi(0, combat.actions_left)]
 	else:
 		hint_label.text = ""
 	_fill_action_bar()
@@ -115,14 +115,13 @@ func _fill_action_bar() -> void:
 	item_menu.get_popup().id_pressed.connect(_on_item_chosen, CONNECT_DEFERRED)
 	action_bar.add_child(item_menu)
 	if combat.can_flee_now(_actor):
-		var chance := clampf((21 - (combat.flee_dc() - _actor.check_mod("dex"))) / 20.0, 0.05, 0.95)
-		_button(tr("Fuir (%d %%)") % roundi(chance * 100), _on_flee_pressed, enabled)
+		_button(tr("Fuir (%d %%)") % roundi(combat.flee_chance(_actor) * 100), _on_flee_pressed, enabled)
 	var auto := _button(tr("IA : %s") % (tr("oui") if _actor.is_auto() else tr("non")), _on_auto_toggled, enabled)
 	auto.tooltip_text = tr("Laisser l'IA jouer ce personnage (à partir de maintenant)")
 	_button(tr("Fin du tour"), _on_pass_pressed, enabled)
 
 
-## Ex. « Attaque (Épée longue) — 1d10+3 tranchant, +5 », « Projectile magique — 3d4+3 force [2/2] ».
+## Ex. « Attaque (Épée longue) — tranchant, 2d10 ≤ 8, toucher 2d10 ≤ 7 », « Projectile magique — force, 3d10 ≤ 6 [2/2] ».
 func _action_label(actor: Combatant, action: Dictionary) -> String:
 	var label: String = action["name"]
 	for e: Dictionary in action.get("effects", []):
@@ -130,11 +129,15 @@ func _action_label(actor: Combatant, action: Dictionary) -> String:
 			if e.get("weapon") is bool and e.get("weapon"):
 				label += " (%s)" % Equipment.name_of(actor.character.weapon_id())
 			var type := actor.damage_type(e)
-			label += " — %s%s" % [actor.damage_expr(e), (" " + DamageTypes.name_of(type).to_lower()) if type != "" else ""]
+			var attack := actor.attack_pool(e) if e.get("type") == "attack" else {}
+			var damage := actor.damage_pool(e, attack)
+			label += " — %s%s" % [(DamageTypes.name_of(type).to_lower() + " ") if type != "" else "",
+				Dice.pool_text(int(damage["count"]), int(damage["threshold"]))]
 			for part: Dictionary in actor.bonus_damage(e):
-				label += " + %s %s" % [part["damage"], DamageTypes.name_of(part["damage_type"]).to_lower()]
-			if e.get("type") == "attack":
-				label += ", %s" % CharacterSheet.signed(actor.attack_bonus(e))
+				label += " + %s %s" % [DamageTypes.name_of(part["damage_type"]).to_lower(),
+					Dice.pool_text(int(part.get("dice", 1)), int(part.get("threshold", 5)))]
+			if not attack.is_empty():
+				label += tr(", toucher %s") % Dice.pool_text(int(attack["count"]), int(attack["threshold"]))
 			break
 	var key := actor.resource_key(action)
 	if key != "":

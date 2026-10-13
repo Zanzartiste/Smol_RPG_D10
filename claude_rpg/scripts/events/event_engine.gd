@@ -76,9 +76,12 @@ static func visible_choices(ev: Dictionary, life: LifeState, meta: MetaState,
 	return result
 
 
-## Résout un choix : jet éventuel, puis effets du résultat.
+## Résout un choix : jet éventuel, puis effets du résultat. Une réussite critique utilise l'issue
+## "critical_success" si le choix en a une (sinon "success"), un échec critique "critical_failure" (sinon
+## "failure").
 ## `roll` permet de fournir un jet déjà effectué (pour l'animer avant d'appliquer les effets).
-## Retourne {"outcome": "outcome"|"success"|"failure", "text", "roll", "lines", "goto"}.
+## Retourne {"outcome": "outcome"|"success"|"failure"|"critical_success"|"critical_failure", "text", "roll",
+## "lines", "goto"}.
 static func resolve_choice(ev: Dictionary, choice: Dictionary, life: LifeState, meta: MetaState,
 		roll: Dictionary = {}) -> Dictionary:
 	var outcome_key := "outcome"
@@ -86,6 +89,10 @@ static func resolve_choice(ev: Dictionary, choice: Dictionary, life: LifeState, 
 		if roll.is_empty():
 			roll = Dice.roll_check(life.character, choice["check"], life.rng)
 		outcome_key = "success" if roll["success"] else "failure"
+		if roll["success"] and int(roll.get("critical", 0)) > 0 and choice.has("critical_success"):
+			outcome_key = "critical_success"
+		elif not roll["success"] and roll.get("fumble", false) and choice.has("critical_failure"):
+			outcome_key = "critical_failure"
 	var outcome: Dictionary = choice.get(outcome_key, {})
 	var key := "evt.%s.%s.%s" % [ev["id"], choice["id"], outcome_key]
 	var applied := Effects.apply_all(outcome.get("effects", []), life, meta)

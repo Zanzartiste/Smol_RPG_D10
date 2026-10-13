@@ -51,7 +51,7 @@ static func create(species: String, cls: String, char_name: String, options: Dic
 	if scores.is_empty():
 		scores = PointBuy.from_class(cls).final_scores()
 	for ability in Abilities.ids():
-		c.abilities[ability] = int(scores.get(ability, 10))
+		c.abilities[ability] = int(scores.get(ability, 4))
 	var background_feat := Feats.for_background(c.background_id)
 	if background_feat != "":
 		c.feats.append(background_feat)
@@ -147,22 +147,15 @@ func all_defenses() -> Defenses:
 
 ## Valeur d'un attribut : base + modificateurs (dons…).
 func ability_score(ability_id: String) -> int:
-	return int(abilities.get(ability_id, 10)) + Modifiers.sum(modifiers(), "ability", ability_id)
+	return int(abilities.get(ability_id, 4)) + Modifiers.sum(modifiers(), "ability", ability_id)
 
 
-func ability_mod(ability_id: String) -> int:
-	return Abilities.modifier(ability_score(ability_id))
-
-
-func proficiency_bonus() -> int:
-	return Progression.proficiency_bonus(level)
-
-
-# --- Compétences : rangs ---------------------------------------------------------------
+# --- Compétences : rangs et réserves de dés ---------------------------------------------
+# Attributs : de 3 à 8 pour un humain (4 pour une personne ordinaire) ; la valeur sert de seuil.
 # Rang = rang de départ (1, 2 si instinctive ; Magie : 0, ou 2 pour un lanceur de sorts)
 #        + 1 par passé qui la donne + rangs de la classe (skill_ranks) + modificateurs "skill_rank"
 #        (choix de classe, dons, Expertise, équipement…).
-# Test = d20 + modificateur d'attribut + rang.
+# Test = [rang] d10 contre un seuil égal à l'attribut (voir Dice).
 
 ## Le personnage lance-t-il des sorts par sa classe ?
 func is_caster() -> bool:
@@ -203,45 +196,53 @@ func is_proficient(skill_id: String) -> bool:
 func best_skill_ability(skill_id: String) -> String:
 	var best := ""
 	for ability: String in Skills.abilities_of(Skills.resolve(skill_id)):
-		if best == "" or check_mod(ability) > check_mod(best):
+		if best == "" or _pool_value(ability) > _pool_value(best):
 			best = ability
 	return best
 
 
-## Bonus d'un test de compétence : modificateur de l'attribut (imposé, ou le meilleur) + rang.
-func skill_mod(skill_id: String, ability := "") -> int:
+## Valeur d'un attribut pour départager deux attributs : le seuil, moins un point par dé de malus.
+func _pool_value(ability_id: String) -> int:
+	return ability_score(ability_id) - roll_penalty(ability_id)
+
+
+## Réserve d'un test de compétence : {"count": rang + bonus − encombrement, "threshold": attribut}.
+func skill_pool(skill_id: String, ability := "", bonus := 0) -> Dictionary:
 	var used := ability if ability != "" else best_skill_ability(skill_id)
-	return check_mod(used) + skill_rank(skill_id)
+	return {"count": skill_rank(skill_id) + bonus - roll_penalty(used), "threshold": ability_score(used),
+		"ability": used}
 
 
-## Test d'attribut (événements) : modificateur moins l'encombrement pour FOR et DEX.
-func check_mod(ability_id: String) -> int:
-	return ability_mod(ability_id) - roll_penalty(ability_id)
+## Test d'attribut seul (sans compétence) : rules.json › dice › attribute_dice dés.
+func ability_pool(ability_id: String, bonus := 0) -> Dictionary:
+	return {"count": int(Dice.setting("attribute_dice", 2)) + bonus - roll_penalty(ability_id),
+		"threshold": ability_score(ability_id), "ability": ability_id}
 
 
-## Jets de sauvegarde (provisoire, en attendant leur refonte) : un rang par attribut, 1 au départ,
-## +1 si la classe le maîtrise, +1 par modificateur "save_proficiency" (don Résistant).
+## Maîtrise d'une sauvegarde (classe de départ, ou Résistant) : un dé de plus pour résister.
 func is_proficient_save(ability_id: String) -> bool:
 	return ability_id in DB.classes[class_id].get("saving_throws", []) \
 		or Modifiers.grants(modifiers(), "save_proficiency", ability_id)
 
 
-func save_rank(ability_id: String) -> int:
-	var rank := 1 + (1 if ability_id in DB.classes[class_id].get("saving_throws", []) else 0)
+## Résister à un effet (poison, sort, peur…) : la compétence liée à l'attribut (rules.json › dice ›
+## resist_skills : Physique pour FOR, DEX et CON, Perspicacité pour SAG…), contre un seuil égal à
+## l'attribut ; +1 dé par maîtrise (classe de départ, Résistant) et par modificateur "saving_throws".
+func resist_pool(ability_id: String, bonus := 0) -> Dictionary:
+	var skill: String = Dice.setting("resist_skills", {}).get(ability_id, "physique")
+	var dice := skill_rank(skill) + bonus + Modifiers.sum(modifiers(), "saving_throws")
+	if ability_id in DB.classes[class_id].get("saving_throws", []):
+		dice += 1
 	for m: Dictionary in modifiers():
 		if m.get("type") == "save_proficiency" and m.get("id") == ability_id:
-			rank += 1
-	return rank
+			dice += 1
+	return {"count": dice - roll_penalty(ability_id), "threshold": ability_score(ability_id), "ability": ability_id}
 
 
-func save_mod(ability_id: String) -> int:
-	return ability_mod(ability_id) + save_rank(ability_id) + Modifiers.sum(modifiers(), "saving_throws") \
-		- roll_penalty(ability_id)
-
-
-## Perception passive : 10 + bonus de Perception (repérer sans lancer de dé).
+## Valeur passive (repérer sans lancer de dé) : nombre moyen de succès de la réserve, arrondi.
 func passive(skill_id: String) -> int:
-	return 10 + skill_mod(skill_id)
+	var pool := skill_pool(skill_id)
+	return roundi(Dice.expected(int(pool["count"]), int(pool["threshold"])))
 
 
 # --- Langues --------------------------------------------------------------------------
@@ -400,7 +401,7 @@ func choice_label(key: String) -> String:
 
 
 func can_raise(ability_id: String) -> bool:
-	return int(abilities.get(ability_id, 10)) < Progression.max_ability_score()
+	return int(abilities.get(ability_id, 4)) < Progression.max_ability_score()
 
 
 ## Dépense un point d'attribut gagné en montant de niveau.
@@ -482,7 +483,7 @@ func encumbrance_reason(item_id: String) -> String:
 	if missing <= 0:
 		return ""
 	var penalty := ceili(missing / float(_encumbrance("armor_points_per_penalty", 2)))
-	return Loc.ui("Force %d conseillée (vous avez %d) : −%d aux jets de FOR et DEX") % [
+	return Loc.ui("Force %d conseillée (vous avez %d) : −%d dé(s) aux jets de FOR et DEX") % [
 		ability_score("str") + missing, ability_score("str"), penalty]
 
 
@@ -523,7 +524,7 @@ func unequip(slot: String) -> String:
 
 
 ## Dégâts de l'arme en main (polyvalente à deux mains si la main secondaire est libre).
-func weapon_damage() -> String:
+func weapon_damage() -> Dictionary:
 	return Equipment.weapon_damage(weapon_id(), not equipment.has("off_hand"))
 
 
@@ -531,30 +532,41 @@ func weapon_damage_type() -> String:
 	return Equipment.damage_type_of(weapon_id())
 
 
-## Classe d'armure : armure, DEX, bouclier (voir Equipment.armor_class) + modificateurs.
-func armor_class() -> int:
-	var mods := modifiers()
-	var ac := Equipment.armor_class(equipment.get("armor", ""), equipment.get("off_hand", ""), ability_mod("dex")) \
-		+ Modifiers.sum(mods, "ac")
-	var armor := Equipment.def(equipment.get("armor", ""))
-	if not armor.is_empty() and armor.get("armor_type") != "clothing":
-		ac += Modifiers.sum(mods, "armored_ac")  # style Défense
-	return ac
+## Esquive naturelle : Dextérité ÷ 3 (arrondie à l'inférieur), au moins 1, + modificateurs. C'est la
+## difficulté des attaques de mêlée contre le personnage.
+func natural_dodge() -> int:
+	var divisor := int(DB.rules.get("combat", {}).get("dodge_divisor", 3))
+	@warning_ignore("integer_division")
+	return maxi(1, ability_score("dex") / divisor) + Modifiers.sum(modifiers(), "natural_dodge")
 
 
-func initiative_bonus() -> int:
+## Armure : celle de l'armure portée + bouclier + modificateurs ("armor" ; style Défense : "armored",
+## avec une vraie armure). Elle baisse le seuil des dégâts subis.
+func armor() -> int:
 	var mods := modifiers()
-	var bonus := ability_mod("dex") + Modifiers.sum(mods, "initiative") - roll_penalty("dex")
+	var total := Equipment.armor_value(equipment.get("armor", "")) + Equipment.armor_value(equipment.get("off_hand", "")) \
+		+ Modifiers.sum(mods, "armor")
+	var worn := Equipment.def(equipment.get("armor", ""))
+	if not worn.is_empty() and worn.get("armor_type") != "clothing":
+		total += Modifiers.sum(mods, "armored")  # style Défense
+	return maxi(0, total)
+
+
+## Initiative de base : Dextérité + Intelligence (+ rang de Physique avec Vigilant, + modificateurs),
+## moins l'encombrement. On y ajoute 1d10 en début de combat.
+func initiative_base() -> int:
+	var base := ability_score("dex") + ability_score("int") + Modifiers.sum(modifiers(), "initiative") - roll_penalty("dex")
 	if has_modifier("initiative_proficiency"):
-		bonus += skill_rank("physique")  # Vigilant
-	return bonus
+		base += skill_rank("physique")  # Vigilant
+	return base
 
 
 ## Attribut utilisé par une action : "weapon" (celui de l'arme), "spell" (celui de la classe) ou un id d'attribut.
 func action_ability(ability: String) -> String:
 	match ability:
 		"weapon":
-			return Equipment.attack_ability(weapon_id(), ability_mod("str"), ability_mod("dex"))
+			return Equipment.attack_ability(weapon_id(), ability_score("str") - roll_penalty("str"),
+				ability_score("dex") - roll_penalty("dex"))
 		"spell":
 			if DB.classes[class_id].has("spellcasting"):
 				return DB.classes[class_id]["spellcasting"]
@@ -568,16 +580,17 @@ func action_ability(ability: String) -> String:
 	return ability
 
 
-## Bonus d'attaque : attribut + rang de la compétence. "weapon" : l'arme en main (compétence de son
-## type, voir Equipment.skills_for) ; "spell" : Magie ; un attribut : l'arme `weapon` donnée.
-func attack_bonus(ability: String, weapon := "") -> int:
+## Réserve d'attaque : [rang de la compétence] d10 contre l'attribut. "weapon" : l'arme en main
+## (compétence de son type, voir Equipment.skills_for) ; "spell" : Magie ; un attribut : l'arme
+## `weapon` donnée. Retourne {"count", "threshold", "ability"}.
+func attack_pool(ability: String, weapon := "", bonus := 0) -> Dictionary:
 	var used := action_ability(ability)
 	var rank := 0
 	if ability == "spell":
 		rank = skill_rank("magic")
 	else:
 		rank = weapon_rank(weapon if weapon != "" else weapon_id())
-	return ability_mod(used) + rank - roll_penalty(used)
+	return {"count": rank + bonus - roll_penalty(used), "threshold": ability_score(used), "ability": used}
 
 
 ## Rang d'attaque avec une arme : le meilleur rang parmi ses compétences (mains nues : mêlée ou Physique).
@@ -766,9 +779,11 @@ func life_stage() -> String:
 ## modificateurs (don Robuste : par niveau). Ni la classe ni le niveau ne les font monter : un
 ## personnage reste fragile.
 func compute_max_hp() -> int:
-	var base := float(DB.rules.get("hit_points", {}).get("size_base", 1.4142))
-	var hp := maxi(1, roundi(ability_score("con") * pow(base, size())))
-	return hp + Modifiers.sum(modifiers(), "hp_per_level") * level
+	var rules: Dictionary = DB.rules.get("hit_points", {})
+	var base := float(rules.get("size_base", 1.4142))
+	var hp := maxi(1, roundi(ability_score("con") * float(rules.get("per_con", 1.0)) * pow(base, size())))
+	var mods := modifiers()
+	return hp + Modifiers.sum(mods, "max_hp") + Modifiers.sum(mods, "hp_per_level") * level
 
 
 ## Recalcule les PV max (après un changement de niveau, de Constitution ou de don).

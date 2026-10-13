@@ -120,8 +120,8 @@ func refresh() -> void:
 	var skill: String = DB.rules.get("trade", {}).get("price_skill", "persuasion")
 	var percent := roundi(Shops.discount(life) * 100)
 	_deal_label.text = "[color=%s]%s[/color]" % [UITheme.TEXT_DIM.to_html(false),
-		tr("Prix négociés par %s (%s %s) : %s %%") % [negotiator.name, Skills.name_of(skill),
-			CharacterSheet.signed(negotiator.skill_mod(skill)), CharacterSheet.signed(-percent)]]
+		tr("Prix négociés par %s (%s, %.1f succès en moyenne) : %s %%") % [negotiator.name, Skills.name_of(skill),
+			Shops.bargaining(negotiator), CharacterSheet.signed(-percent)]]
 	_clear(_tabs)
 	for tab in tabs():
 		var button := Button.new()
@@ -172,7 +172,8 @@ func _fill_craft() -> void:
 			detail += "\n[color=%s]%s[/color]" % [UITheme.BAD.to_html(false), missing]
 		var count := int(recipe.get("count", 1))
 		var button := _row(Items.bbcode_name(recipe["result"]) + (" ×%d" % count if count > 1 else ""), detail,
-			tr("Fabriquer (%s, DD %d)") % [Skills.name_of(Crafting.check_for(recipe)["skill"]), int(recipe.get("dc", 10))],
+			tr("Fabriquer (%s, difficulté %d, %d %%)") % [Skills.name_of(Crafting.check_for(recipe)["skill"]),
+				int(recipe.get("difficulty", 1)), roundi(Dice.success_chance(life.character, Crafting.check_for(recipe)) * 100)],
 			_on_craft.bind(recipe["id"]))
 		button.disabled = missing != ""
 

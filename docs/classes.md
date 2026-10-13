@@ -9,7 +9,8 @@
 - Niveaux 1 à 20. La progression suit pour l'instant le **SRD 5.1** : emplacements de sorts, aptitudes, bonus de
   maîtrise.
 - Améliorations aux niveaux 4, 8, 12, 16 et 20 : +1 à un attribut **et** un don (`rules.json › advancement`).
-- Chaque classe maîtrise **deux jets de sauvegarde** (provisoirement : rang 2 au lieu de 1).
+- Chaque classe maîtrise **deux résistances** (ex-jets de sauvegarde) : un dé de plus pour résister avec ces
+  attributs (voir [systeme_de_jeu.md](systeme_de_jeu.md)).
 - **Compétences** : les rangs remplacent le bonus de maîtrise (voir [competences.md](competences.md)).
 - **Multiclassage** (implémenté, libre) : à chaque niveau gagné, on choisit au hub la classe qui progresse. Les
   aptitudes et les améliorations se comptent par niveau de classe ; les emplacements de sort se cumulent (lanceurs
@@ -45,9 +46,9 @@
 
 - **Concept** : une phrase.
 - **Statut** : disponible / à débloquer (indice, coût en Creator Points).
-- **Dé de vie** : d6 / d8 / d10 / d12.
+- **Dé de vie** : plus utilisé (les PV viennent de la Constitution et de la taille).
 - **Priorité des attributs** (modèle d'achat de points) : ex. FOR > CON > DEX > SAG > CHA > INT.
-- **Jets de sauvegarde maîtrisés** : deux attributs.
+- **Résistances maîtrisées** : deux attributs.
 - **Compétences maîtrisées** : …
 - **Équipement de départ** : arme, armure, objets.
 - **Lanceur de sorts** : non / complet / demi — attribut d'incantation.
@@ -74,9 +75,9 @@
 
 - **Concept** : maître des armes et des armures, il règle les problèmes de front.
 - **Statut** : disponible.
-- **Dé de vie** : d10.
+- **Dé de vie** : plus utilisé.
 - **Priorité des attributs** : FOR > CON > DEX > SAG > CHA > INT.
-- **Jets de sauvegarde maîtrisés** : Force, Constitution.
+- **Résistances maîtrisées** : Force, Constitution.
 - **Compétences** : +1 rang dans 2 compétences au choix parmi Physique, Dressage, Érudition, Perspicacité,
   Persuasion, Perception, Survie ; +1 rang en Armes de mêlée et en Armes de trait.
 - **Équipement de départ** : épée longue, cotte de mailles, une potion de soins.
@@ -89,7 +90,7 @@
 - Niveau 2 : Fougue (une action de plus, une fois par combat).
 - Niveau 3 : Archétype martial (sous-classe).
 - Niveau 5 : Attaque supplémentaire (deux coups par action Attaque).
-- Niveau 9 : Inflexible (relance automatique d'un jet de sauvegarde raté, une fois par repos long).
+- Niveau 9 : Inflexible (relance automatique d'une résistance ratée, une fois par repos long).
 - Niveau 11 : Attaque supplémentaire (trois coups).
 - Niveau 13 : Inflexible (deux utilisations).
 - Niveau 17 : Inflexible (trois utilisations).
@@ -97,7 +98,8 @@
 
 **Sous-classe : Champion** (SRD 5.2, implémentée)
 
-- Niveau 3 : Critique amélioré (critique sur 19-20) ; Athlète remarquable (avantage à l'initiative et en Physique).
+- Niveau 3 : Critique amélioré (un succès supplémentaire compté en plus pour le critique) ; Athlète remarquable
+  (deux d10 à l'initiative, un dé de plus en Physique).
 - Niveau 7 : Style de combat supplémentaire.
 - Niveau 10 : Guerrier héroïque (pas encore de mécanique).
 - Niveau 15 : Critique supérieur (critique sur 18-20).
@@ -107,9 +109,9 @@
 
 - **Concept** : érudit des arcanes, fragile mais redoutable.
 - **Statut** : disponible.
-- **Dé de vie** : d6.
+- **Dé de vie** : plus utilisé.
 - **Priorité des attributs** : INT > CON > DEX > SAG > CHA > FOR.
-- **Jets de sauvegarde maîtrisés** : Intelligence, Sagesse.
+- **Résistances maîtrisées** : Intelligence, Sagesse.
 - **Compétences** : +1 rang dans 2 compétences au choix parmi Érudition, Perspicacité, Perception, Médecine,
   Langues, Potions et cuisine ; Magie au rang 2 (lanceur de sorts).
 - **Équipement de départ** : bâton, robe d'érudit (vêtement).
@@ -141,9 +143,9 @@ appris.
 
 - **Concept** : discret, agile et beau parleur. Les serrures n'ont pas de secret pour lui.
 - **Statut** : à débloquer (« Réussir un larcin audacieux à Brumeval », ou 10 Creator Points).
-- **Dé de vie** : d8.
+- **Dé de vie** : plus utilisé.
 - **Priorité des attributs** : DEX > CON > CHA > SAG > INT > FOR.
-- **Jets de sauvegarde maîtrisés** : Dextérité, Intelligence.
+- **Résistances maîtrisées** : Dextérité, Intelligence.
 - **Compétences** : +1 rang dans 4 compétences au choix parmi Physique, Persuasion, Perspicacité, Perception,
   Escamotage, Furtivité, Langues ; +1 rang en Armes de mêlée et en Armes de trait.
 - **Équipement de départ** : rapière, armure de cuir (Force 10 conseillée : avec le modèle de la classe, FOR 8, il est
@@ -153,20 +155,20 @@ appris.
 
 **Progression** (implémentée)
 
-- Niveau 1 : Expertise : +1 rang dans deux compétences déjà entraînées ; Attaque sournoise à 1d6.
+- Niveau 1 : Expertise : +1 rang dans deux compétences déjà entraînées ; Attaque sournoise (+1 dé de dégâts).
 - Niveau 2 : Ruse (Se cacher devient une action bonus).
 - Niveau 3 : Archétype de roublard (sous-classe).
-- Niveaux 3, 5, 7… 19 : l'Attaque sournoise gagne 1d6 (10d6 au niveau 19).
+- Niveaux 3, 5, 7… 19 : l'Attaque sournoise gagne un dé de dégâts (10 au niveau 19).
 - Niveau 5 : Esquive instinctive (une attaque par round divisée par deux).
 - Niveau 6 : Expertise : +1 rang dans deux autres compétences entraînées.
-- Niveau 7 : Dérobade (sauvegarde de DEX : rien si réussie, moitié si ratée).
-- Niveau 11 : Talent fiable (pas moins de 10 au d20 pour une compétence entraînée).
+- Niveau 7 : Dérobade (en résistant à des dégâts avec la DEX, chaque succès retire deux points).
+- Niveau 11 : Talent fiable (toujours au moins un succès avec une compétence entraînée).
 
 **Sous-classe : Voleur** (SRD 5.2, implémentée)
 
 - Niveau 3 : Mains lestes (une fois par tour, utiliser un objet ne coûte pas l'action) ; Monte-en-l'air (+1 rang en
   Physique).
-- Niveau 9 : Furtivité suprême (avantage en Furtivité).
+- Niveau 9 : Furtivité suprême (un dé de plus en Furtivité).
 - Niveau 13 : Utilisation d'objets magiques (pas encore de mécanique).
 - Niveau 17 : Réflexes de voleur (pas encore de mécanique).
 

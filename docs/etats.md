@@ -17,12 +17,14 @@
   - passer son tour ;
   - dégâts infligés modifiés ;
   - absorption des dégâts reçus ;
-  - **avantage ou désavantage** : à ses attaques, pour qui l'attaque, à ses sauvegardes ou à ses tests ;
-  - coups critiques automatiques, sauvegardes ratées d'office, fuite impossible, aucune action hostile ;
+  - **difficulté +1 ou −1** à ses attaques ou pour qui l'attaque ; **dés en plus ou en moins** pour résister ou à
+    ses tests ;
+  - pris par surprise (Esquive naturelle 1, pas de réaction, armure ignorée), caché, immobile (Couvert),
+    résistance impossible, fuite impossible, aucune action hostile ;
   - disparaître si l'on subit des dégâts ;
   - perte de charges au début ou à la fin du tour.
-- **Avantage / désavantage** : on lance deux d20 et on garde le meilleur (ou le pire) ; les deux s'annulent. Le dé
-  écarté apparaît grisé sur le plateau.
+- **Avantage / désavantage** (système d10, voir [systeme_de_jeu.md](systeme_de_jeu.md)) : la difficulté baisse ou
+  monte de 1 ; pour un jet sans difficulté, un dé de plus ou de moins.
 
 ---
 
@@ -51,8 +53,8 @@ Tous les états ci-dessous ont une mécanique en combat.
 ### Poison (`poisoned`)
 
 - **Négatif** : oui.
-- **Effet** : Au début de son tour, subit 1 dégât de poison par charge, puis perd 1 charge.
-- **Mécanique** : 1 dégât(s) par charge au début du tour ; perd 1 charge(s) au début de son tour.
+- **Effet** : Au début de son tour, subit 1 dégât de poison, puis perd 1 charge (les charges sont la durée).
+- **Mécanique** : 1 dégât au début du tour ; perd 1 charge au début de son tour.
 - **Sources** : Lame empoisonnée (Roublard), brigand, rat géant. Remède : Antidote.
 - **Couleur** : `#7ac943`.
 
@@ -61,7 +63,7 @@ Tous les états ci-dessous ont une mécanique en combat.
 - **Négatif** : oui.
 - **Effet** : Au début de son tour, subit 5 % de ses PV max par charge (au moins 1 par charge, dégâts de feu), puis perd 1 charge.
 - **Mécanique** : 5 % des PV max par charge au début du tour ; perd 1 charge(s) au début de son tour.
-- **Sources** : Mains brûlantes (si la sauvegarde est ratée) ; tout dégât de feu (25 %).
+- **Sources** : Mains brûlantes (si la cible ne résiste pas à tout) ; tout dégât de feu (25 %).
 - **Couleur** : `#f08a2e`.
 
 ### Étourdi (`stunned`)
@@ -75,8 +77,8 @@ Tous les états ci-dessous ont une mécanique en combat.
 ### Affaibli (`weakened`)
 
 - **Négatif** : oui.
-- **Effet** : Inflige 1 dégât de moins par charge. Perd 1 charge à la fin de son tour.
-- **Mécanique** : -1 dégât(s) infligé(s) par charge ; perd 1 charge(s) à la fin de son tour.
+- **Effet** : Un dé de dégâts de moins par charge. Perd 1 charge à la fin de son tour.
+- **Mécanique** : −1 dé de dégâts par charge ; perd 1 charge à la fin de son tour.
 - **Sources** : Rayon de givre, Alpha des loups, familier.
 - **Couleur** : `#9a8cc8`.
 
@@ -91,16 +93,16 @@ Tous les états ci-dessous ont une mécanique en combat.
 ### Endormi (`asleep`)
 
 - **Négatif** : oui.
-- **Effet** : Passe ses tours (1 charge par tour) et se réveille s'il subit des dégâts. Les attaques contre lui ont l'avantage et sont des critiques si elles touchent.
-- **Mécanique** : passe son tour ; avantage pour qui l'attaque ; un coup qui le touche est critique ; disparaît s'il subit des dégâts ; perd 1 charge(s) au début de son tour.
-- **Sources** : sort Sommeil (Magicien, sauvegarde de SAG). Immunité : elfes.
+- **Effet** : Passe ses tours (1 charge par tour) et se réveille s'il subit des dégâts. Il est pris par surprise : Esquive naturelle 1, pas de réaction, armure ignorée (sauf naturelle), critique plus facile.
+- **Mécanique** : passe son tour ; pris par surprise ; immobile ; disparaît s'il subit des dégâts ; perd 1 charge au début de son tour.
+- **Sources** : sort Sommeil (Magicien, opposition Magie contre Perspicacité/SAG). Immunité : elfes.
 - **Couleur** : `#6a7ac8`.
 
 ### Aveuglé (`blinded`)
 
 - **Négatif** : oui.
-- **Effet** : Désavantage à ses attaques ; avantage pour ceux qui l'attaquent. Perd 1 charge par tour.
-- **Mécanique** : désavantage à ses attaques ; avantage pour qui l'attaque ; perd 1 charge(s) au début de son tour.
+- **Effet** : Difficulté +1 à ses attaques ; −1 pour ceux qui l'attaquent. Perd 1 charge par tour.
+- **Mécanique** : difficulté +1 à ses attaques ; −1 pour qui l'attaque ; perd 1 charge au début de son tour.
 - **Sources** : aucune pour l'instant.
 - **Couleur** : `#4a4a4a`.
 
@@ -115,40 +117,46 @@ Tous les états ci-dessous ont une mécanique en combat.
 ### Effrayé (`frightened`)
 
 - **Négatif** : oui.
-- **Effet** : Désavantage à ses attaques et à ses tests (fuite comprise). Perd 1 charge par tour.
-- **Mécanique** : désavantage à ses attaques ; désavantage à ses tests (fuite) ; perd 1 charge(s) au début de son tour.
+- **Effet** : Difficulté +1 à ses attaques et un dé de moins à ses tests (fuite comprise). Perd 1 charge par tour.
+- **Mécanique** : difficulté +1 à ses attaques ; −1 dé à ses tests (fuite) ; perd 1 charge au début de son tour.
 - **Sources** : aucune pour l'instant.
 - **Couleur** : `#a0a0d0`.
 
 ### Paralysé (`paralyzed`)
 
 - **Négatif** : oui.
-- **Effet** : Passe son tour et rate ses sauvegardes de FOR et de DEX ; les attaques contre lui ont l'avantage et sont des critiques si elles touchent. Perd 1 charge par tour.
-- **Mécanique** : passe son tour ; avantage pour qui l'attaque ; un coup qui le touche est critique ; rate ses sauvegardes de Force, Dextérité ; perd 1 charge(s) au début de son tour.
+- **Effet** : Passe son tour et ne peut pas résister (FOR, DEX) ; il est pris par surprise (Esquive naturelle 1, pas de réaction, armure ignorée sauf naturelle, critique plus facile). Perd 1 charge par tour.
+- **Mécanique** : passe son tour ; pris par surprise ; immobile ; ne résiste pas en Force et Dextérité ; perd 1 charge au début de son tour.
 - **Sources** : aucune pour l'instant.
 - **Couleur** : `#c8c060`.
 
 ### À terre (`prone`)
 
 - **Négatif** : oui.
-- **Effet** : Les attaques contre lui ont l'avantage. Il se relève au début de son tour.
-- **Mécanique** : avantage pour qui l'attaque ; perd toutes ses charges au début de son tour.
+- **Effet** : Difficulté −1 pour ceux qui l'attaquent. Il se relève au début de son tour.
+- **Mécanique** : difficulté −1 pour qui l'attaque ; perd toutes ses charges au début de son tour.
 - **Sources** : aucune pour l'instant.
 - **Couleur** : `#8a6a4a`.
 
 ### Entravé (`restrained`)
 
 - **Négatif** : oui.
-- **Effet** : Désavantage à ses attaques et à ses sauvegardes de DEX ; avantage pour ceux qui l'attaquent ; ne peut pas fuir. Perd 1 charge par tour.
-- **Mécanique** : désavantage à ses attaques ; avantage pour qui l'attaque ; ne peut pas fuir ; désavantage aux sauvegardes de Dextérité ; perd 1 charge(s) au début de son tour.
+- **Effet** : Difficulté +1 à ses attaques, un dé de moins pour résister (DEX), difficulté −1 pour ceux qui l'attaquent ; immobile, il ne peut pas fuir. Perd 1 charge par tour.
+- **Mécanique** : difficulté +1 à ses attaques ; −1 pour qui l'attaque ; −1 dé pour résister (DEX) ; immobile ; ne peut pas fuir ; perd 1 charge au début de son tour.
 - **Sources** : Empoignade (don Lutteur).
 - **Couleur** : `#7a5a3a`.
 
 ### Invisible (`invisible`)
 
 - **Négatif** : non.
-- **Effet** : Avantage à ses attaques ; désavantage pour ceux qui l'attaquent. Perd 1 charge par tour.
-- **Mécanique** : avantage à ses attaques ; désavantage pour qui l'attaque ; perd 1 charge(s) au début de son tour.
+- **Effet** : Caché : ses attaques prennent la cible par surprise ; Couvert +1 contre les tirs. Il se révèle en attaquant. Perd 1 charge à la fin de son tour.
+- **Mécanique** : attaques surprises ; Couvert +1 ; disparaît quand il attaque ; perd 1 charge à la fin de son tour.
+
+### Préparé (`prepared`)
+
+- **Effet** : +2 dés à son prochain jet de combat (attaque, esquive, parade), puis disparaît.
+- **Mécanique** : positif ; consommé au premier jet de combat.
+- **Sources** : l'action Se préparer ; ou des réactions gardées jusqu'au début de son tour.
 - **Sources** : aucune pour l'instant.
 - **Couleur** : `#c8e8f0`.
 
@@ -178,7 +186,7 @@ Tous les états ci-dessous ont une mécanique en combat.
 ## Décisions (2026-10-13)
 
 - **Charges partout** : chaque état utilise ses charges à sa façon (dégâts, tours passés, absorption…).
-- **Avantage et désavantage** : oui (fait : attaques, sauvegardes, fuite, tests d'événement).
+- **Avantage et désavantage** : oui, traduits en difficulté ±1 ou en dés ±1 (système d10).
 - **États hors combat** (maladies, malédictions, fatigue…) : oui, à terme.
 - **Jet de sauvegarde** : généralement, un état infligé en permet un.
 

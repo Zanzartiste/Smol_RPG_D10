@@ -14,8 +14,9 @@ var world_day := 0
 var pregnancies: Array = []
 var next_npc_id := 0
 ## Réglages du joueur (conservés même quand on efface le monde) :
-##   manual_skill_ability : choisir soi-même l'attribut d'un test de compétence (sinon le meilleur).
-var settings := {"manual_skill_ability": false}  # Creator Points disponibles (gagnés à chaque mort, dépensés à la création)
+##   manual_skill_ability : choisir soi-même l'attribut d'un test de compétence (sinon le meilleur) ;
+##   many_dice : règle des dés nombreux (10 dés -> seuil + 1 succès automatiques, voir Dice).
+var settings := {"manual_skill_ability": false, "many_dice": false}  # Creator Points disponibles (gagnés à chaque mort, dépensés à la création)
 
 
 func has_world_flag(id: String) -> bool:

@@ -474,7 +474,7 @@ func _refresh_abilities() -> void:
 		for i in row["bonus_buttons"].size():
 			row["bonus_buttons"][i].set_pressed_no_signal(_point_buy.bonuses[i] == id)
 		var score := _point_buy.final_score(id)
-		row["total"].text = "%d (%s)" % [score, CharacterSheet.signed(floori((score - 10) / 2.0))]
+		row["total"].text = str(score)
 
 
 # --- Textes ------------------------------------------------------------------

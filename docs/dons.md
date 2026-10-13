@@ -19,8 +19,9 @@
   qu'on obtient le don (voir le système de choix dans [modele_donnees.md](modele_donnees.md)).
 - Un don ne se prend qu'une fois.
 - Ce qu'un don peut faire aujourd'hui :
-  - bonus d'attribut, de CA, d'initiative, de PV par niveau, aux dégâts ou au toucher avec une arme, aux sauvegardes ;
-  - rangs de compétence, rang de sauvegarde ;
+  - bonus d'attribut, d'Armure, d'Esquive naturelle, d'initiative, de PV, au seuil des dégâts ou en dés au toucher
+    avec une arme, en dés pour résister ;
+  - rangs de compétence, dé de résistance ;
   - résistance, immunité ou vulnérabilité à un type de dégâts, immunité à un état.
 
   Il peut aussi donner des **actions de combat** (Empoignade) et des **sorts** utilisables une fois par repos long
@@ -83,7 +84,7 @@
 - **Catégorie** : origine.
 - **Prérequis** : aucun.
 - **Effet** : Votre endurance est hors du commun.
-- **Détail** : +2 PV par niveau.
+- **Détail** : +3 PV (une fois ; les PV ne montent plus avec le niveau).
 - **Obtenu par** : passé Héros du peuple, don de l'humain.
 
 ### Guérisseur (`healer`)
@@ -167,14 +168,14 @@
 - **Catégorie** : général.
 - **Prérequis** : Dextérité 13.
 - **Effet** : Vous savez parer les coups grâce à votre agilité.
-- **Détail** : +1 CA.
+- **Détail** : +1 Esquive naturelle (système d10).
 - **Obtenu par** : montée de niveau (4, 8, 12, 16, 20).
 
 ### Résistant (`resilient`)
 
 - **Catégorie** : général.
 - **Prérequis** : aucun.
-- **Effet** : +1 à un attribut, et +1 rang à ses jets de sauvegarde.
+- **Effet** : +1 à un attribut, et un dé de plus pour résister avec cet attribut.
 - **Détail** : au choix : 1 attribut(s) parmi : n'importe quel attribut.
 - **Obtenu par** : montée de niveau (4, 8, 12, 16, 20).
 
@@ -210,8 +211,8 @@
 
 - **Catégorie** : style de combat (SRD 5.2).
 - **Prérequis** : aucun.
-- **Effet** : +1 CA tant que vous portez une armure (pas de simples vêtements).
-- **Détail** : +1 CA en armure.
+- **Effet** : +1 Armure tant que vous portez une armure (pas de simples vêtements).
+- **Détail** : +1 Armure en armure.
 - **Obtenu par** : aptitude Style de combat (Guerrier niveau 1, Champion niveau 7).
 
 ### Style : Armes à deux mains (`great_weapon_fighting`)
@@ -242,7 +243,7 @@
 ### Chanceux
 
 - **Catégorie** : origine ou général.
-- **Effet envisagé** : quelques relances de d20 par repos long.
+- **Effet envisagé** : quelques relances de dés ratés par repos long.
 
 ### Bagarreur de taverne
 

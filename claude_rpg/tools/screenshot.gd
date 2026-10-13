@@ -81,6 +81,7 @@ func _ready() -> void:
 	main._show_hub()
 	Meta.settings["manual_skill_ability"] = true  # pour montrer les boutons d'attribut
 	main._on_location_chosen("forest")
+	main._show_event(DB.events["forest_wolf"])  # un événement avec des tests de dés
 	await _capture("3_event.png")
 	Game.toggle_debug()
 	await _capture("3b_event_debug.png")

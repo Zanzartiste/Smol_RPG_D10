@@ -43,18 +43,13 @@ static func progressions() -> Array:
 	return DB.rules.get("spell_slots", {}).keys().filter(func(k): return not k.begins_with("_"))
 
 
-## DD des sorts d'un personnage : 8 + rang de Magie + modificateur de l'attribut d'incantation.
-static func save_dc(ch: Character) -> int:
-	return 8 + ch.skill_rank("magic") + ch.ability_mod(ch.action_ability("spell"))
-
-
 # --- Dés qui augmentent avec le niveau ----------------------------------------
 
 static func scaling_tables() -> Array:
 	return DB.rules.get("dice_scaling", {}).keys().filter(func(k): return not k.begins_with("_"))
 
 
-## Nombre de dés d'une table à un niveau de classe (palier le plus haut atteint), 1 par défaut.
+## Palier d'une table à un niveau de classe (le plus haut atteint), 1 par défaut.
 static func dice_count(table: String, class_level: int) -> int:
 	var steps: Dictionary = DB.rules.get("dice_scaling", {}).get(table, {})
 	var best_level := 0
@@ -66,12 +61,6 @@ static func dice_count(table: String, class_level: int) -> int:
 	return count
 
 
-## Remplace le nombre du premier dé d'une expression : with_dice_count("1d10+2", 3) -> "3d10+2".
-static func with_dice_count(expr: String, count: int) -> String:
-	var regex := RegEx.create_from_string("^(\\d*)d")
-	return regex.sub(expr, "%dd" % count)
-
-
 # --- Sorts lancés à un niveau supérieur ----------------------------------------
 
 ## L'action a-t-elle un effet amélioré par un emplacement de niveau supérieur ?
@@ -80,7 +69,7 @@ static func can_upcast(action: Dictionary) -> bool:
 
 
 ## Copie d'une action lancée avec un emplacement de niveau `level` : "slot_level" est fixé et chaque
-## effet "upcast" ajoute ses dégâts par niveau au-delà du niveau du sort.
+## effet "upcast" ajoute ce nombre de dés de dégâts par niveau au-delà du niveau du sort.
 static func at_level(action: Dictionary, level: int) -> Dictionary:
 	var variant := action.duplicate(true)
 	variant["slot_level"] = level
@@ -88,7 +77,6 @@ static func at_level(action: Dictionary, level: int) -> Dictionary:
 	if extra > 0:
 		variant["name"] = Loc.ui("%s (niv. %d)") % [action["name"], level]
 		for e: Dictionary in variant.get("effects", []):
-			if e.has("upcast"):
-				for i in extra:
-					e["damage"] = "%s+%s" % [e["damage"], e["upcast"]]
+			if e.has("upcast") and e.get("damage") is Dictionary:
+				e["damage"]["dice"] = int(e["damage"].get("dice", 0)) + int(e["upcast"]) * extra
 	return variant

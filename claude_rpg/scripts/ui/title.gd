@@ -58,6 +58,14 @@ func open_options() -> void:
 		Meta.settings["manual_skill_ability"] = on
 		Saves.save_meta())
 	box.add_child(manual)
+	var many := CheckBox.new()
+	many.text = tr("Règle des dés nombreux")
+	many.tooltip_text = tr("À partir de 10 dés, chaque tranche de 10 dés est remplacée par seuil + 1 succès automatiques.")
+	many.button_pressed = Meta.settings.get("many_dice", false)
+	many.toggled.connect(func(on: bool):
+		Meta.settings["many_dice"] = on
+		Saves.save_meta())
+	box.add_child(many)
 	var close := Button.new()
 	close.text = tr("Fermer")
 	close.pressed.connect(overlay.queue_free)

@@ -1,6 +1,6 @@
 # Cahier des charges — Lifantasy (titre provisoire)
 
-> Version 0.6 — 2026-10-13 — document vivant, à mettre à jour au fil des décisions.
+> Version 0.7 — 2026-10-13 — document vivant, à mettre à jour au fil des décisions.
 
 ---
 
@@ -303,6 +303,21 @@ Le détail est dans les catalogues ([equipements.md](equipements.md), [objets.md
 | **Contenu** | Des événements de test peuvent être générés au besoin. |
 | **Images** | Le pixel art actuel convient (le rapprocher de BG3 serait un plus). |
 
+### 9.7 Décisions de la v0.7 : le système de dés (2026-10-13)
+
+Le d20 de D&D est remplacé par des **réserves de d10 à succès**, inspirées d'Aetherpunk. Toutes les règles sont dans
+[systeme_de_jeu.md](systeme_de_jeu.md). En résumé :
+
+| Sujet | Décision |
+|---|---|
+| **Jet** | [Compétence] d10 contre un seuil (l'attribut) ; ≤ seuil = succès ; 9 et 10 jamais, 1 toujours et relancé ; réussi si les succès atteignent la difficulté (1 à 8+) |
+| **Attributs** | De 3 à 8 pour un humain, 4 pour une personne ordinaire ; au-delà de 8, des dés en plus au seuil 8 |
+| **Critiques** | Réussite critique N tous les 3 succès supplémentaires ; échec critique : aucun succès (à confirmer) |
+| **Bonus et malus** | Sur la difficulté en général, sinon en dés ; jamais moins d'un dé (le seuil baisse) ; option « dés nombreux » |
+| **Combat** | Deux actions par tour ; actions gardées = réactions (esquive, parade, contre-attaque) ; réactions non utilisées = Préparé (+2 dés) ; Esquive naturelle (DEX ÷ 3) en mêlée, Couvert à distance ; Armure qui baisse le seuil des dégâts ; dégâts = succès ; critiques = relances ; attaques surprises |
+| **Initiative** | 1d10 + DEX + INT ; égalité : DEX, puis INT, puis au hasard |
+| **Sauvegardes** | Remplacées par « Résister » : une compétence contre l'attribut (option B de [jets_de_sauvegarde.md](jets_de_sauvegarde.md)) |
+
 ## 10. Prochaines étapes proposées
 
 1. ~~Répondre aux questions ouvertes du §9.~~
@@ -352,6 +367,9 @@ Le détail est dans les catalogues ([equipements.md](equipements.md), [objets.md
     inconscience au lieu de la mort ; action et action bonus ; réactions (esquive, parade) ; IA par
     personnage ; repos (camp, auberge) ; multiclassage libre ; Artisanat avec test et métiers qui se dessinent ;
     activités, initiatives des PNJ, réputation ; Vigilant converti ; fiches de conception et de lore.
+14 quinquies. ~~**Système de dés d10**~~ : réserves de d10 partout (événements, social, artisanat, combat), deux
+    actions par tour, réactions, Préparé, Esquive naturelle, Couvert, Armure, critiques, surprise, initiative d10 ;
+    données converties (attributs, armes, armures, créatures, sorts, états, difficultés).
 15. **Temps long** : événement voyage (durée, transport, événements en route, se perdre), activités de 1, 2, 5 ou
     10 ans, journal de la vie.
 16. **PNJ générés progressivement** et relations : faits enregistrés, jauges, interactions sociales.

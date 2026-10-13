@@ -2,22 +2,26 @@ class_name StatusEffects
 extends RefCounted
 ## API des états (poison, brûlure, étourdi…). Définitions : data/status_effects.json.
 ## Les états se cumulent en charges (stacks). Mécaniques, toutes facultatives :
-##   tick_damage_per_stack           dégâts bruts par charge au début du tour (ignorent défenses et Protection)
+##   tick_damage                     dégâts au début du tour, quel que soit le nombre de charges
+##   tick_damage_per_stack           dégâts par charge au début du tour
 ##   tick_max_hp_percent_per_stack   dégâts en % des PV max par charge (au moins 1 par charge)
 ##   tick_damage_type                type des dégâts de tick (les défenses s'appliquent alors)
 ##   skip_turn                       la créature passe son tour
-##   damage_dealt_per_stack          modifie les dégâts infligés (ex. -1 par charge)
+##   damage_dice_per_stack           dés de dégâts en plus ou en moins par charge (ex. -1 : Affaibli)
 ##   absorb                          chaque charge absorbe 1 point de dégâts (et est consommée)
 ##   decay                           charges perdues à chaque tour : un nombre, ou "all"
 ##   decay_at                        "start" (par défaut) ou "end" du tour de la créature
 ##   negative                        état négatif (retiré par un effet cleanse « negative »)
 ##   death_cause                     texte de l'écran de mort si l'état tue le héros
-##   attack_advantage / attack_disadvantage       avantage / désavantage à ses jets d'attaque
-##   attacked_advantage / attacked_disadvantage   avantage / désavantage pour qui l'attaque
-##   attacked_critical               une attaque qui le touche est un critique
-##   save_disadvantage: ["dex"]      désavantage à ces jets de sauvegarde
-##   auto_fail_saves: ["str", "dex"] rate automatiquement ces jets de sauvegarde
-##   check_disadvantage              désavantage à ses tests (fuite)
+##   attack_disadvantage             difficulté +1 à ses attaques
+##   attacked_advantage / attacked_disadvantage   difficulté −1 / +1 pour qui l'attaque
+##   attack_surprise                 ses attaques prennent la cible par surprise (caché)
+##   unaware                         il est pris par surprise (endormi, paralysé)
+##   hidden / immobile / moving      Couvert +1 / −1 / +1 contre les attaques à distance
+##   resist_penalty: ["dex"]         un dé de moins pour résister avec ces attributs
+##   auto_fail_resist: ["str", "dex"] ne peut pas résister avec ces attributs
+##   check_disadvantage              un dé de moins à ses tests (fuite)
+##   prepared                        +2 dés au prochain jet de combat, puis disparaît (Préparé)
 ##   no_flee                         ne peut pas fuir
 ##   no_hostile_actions              ne peut rien entreprendre contre ses ennemis (Charmé)
 ##   wake_on_damage                  disparaît s'il subit des dégâts (Endormi)
@@ -61,14 +65,10 @@ static func absorbs(id: String) -> bool:
 	return def(id).get("absorb", false)
 
 
-static func damage_dealt_per_stack(id: String) -> int:
-	return int(def(id).get("damage_dealt_per_stack", 0))
-
-
 ## Dégâts infligés au début du tour par `stacks` charges, sur une créature de `max_hp` PV.
 static func tick_damage(id: String, stacks: int, max_hp: int) -> int:
 	var d := def(id)
-	var damage := int(d.get("tick_damage_per_stack", 0)) * stacks
+	var damage := int(d.get("tick_damage", 0)) + int(d.get("tick_damage_per_stack", 0)) * stacks
 	if d.has("tick_max_hp_percent_per_stack"):
 		damage += maxi(stacks, roundi(max_hp * float(d["tick_max_hp_percent_per_stack"]) / 100.0 * stacks))
 	return damage

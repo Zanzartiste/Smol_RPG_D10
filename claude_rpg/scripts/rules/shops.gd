@@ -44,21 +44,25 @@ static func _trade(key: String, default: Variant) -> Variant:
 	return DB.rules.get("trade", {}).get(key, default)
 
 
-## Membre du groupe qui négocie : la meilleure valeur dans la compétence de prix (Persuasion).
+## Talent de négociation d'un personnage : nombre moyen de succès de sa réserve de Persuasion.
+static func bargaining(ch: Character) -> float:
+	var pool := ch.skill_pool(_trade("price_skill", "persuasion"))
+	return Dice.expected(int(pool["count"]), int(pool["threshold"]))
+
+
+## Membre du groupe qui négocie : le meilleur talent de négociation.
 static func negotiator(life: LifeState) -> Character:
-	var skill: String = _trade("price_skill", "persuasion")
 	var best := life.character
 	for member in life.party():
-		if member.hp > 0 and member.skill_mod(skill) > best.skill_mod(skill):
+		if member.hp > 0 and bargaining(member) > bargaining(best):
 			best = member
 	return best
 
 
-## Remise en fraction (0.15 = 15 %), négative si le négociateur est mauvais.
+## Remise en fraction (0.15 = 15 %) : percent_per_success % par succès moyen, au plus max_percent.
 static func discount(life: LifeState) -> float:
-	var mod := negotiator(life).skill_mod(_trade("price_skill", "persuasion"))
 	var limit := float(_trade("max_percent", 15))
-	return clampf(mod * float(_trade("percent_per_point", 3)), -limit, limit) / 100.0
+	return clampf(bargaining(negotiator(life)) * float(_trade("percent_per_success", 5)), 0.0, limit) / 100.0
 
 
 ## Effet de la réputation du héros dans un lieu sur les prix : +5 % s'il est respecté, −10 % s'il est honni.

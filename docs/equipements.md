@@ -9,26 +9,28 @@
 
 - **Emplacements** : main principale, main secondaire, couvre-chef, torse (armure, avec bras et épaules), cape,
   gants, jambes, chaussures, collier (1), anneaux (2).
-- **Armes** : la FOR sert à l'attaque et aux dégâts ; une arme de finesse prend le meilleur de FOR et DEX, une arme
-  à distance la DEX. Une arme polyvalente fait plus de dégâts à deux mains (sans bouclier). Une arme à deux mains et
-  un bouclier s'excluent.
-- **Armures** : CA de base + DEX (vêtement et légère), + DEX plafonnée à 2 (intermédiaire), sans DEX (lourde).
-  Toute armure peut être portée, mais sous la **Force conseillée** (vêtement 0, légère 10, intermédiaire 12,
-  lourde 14) le personnage est **encombré**.
-- **Encombrement** : un malus à **tous les jets de FOR et de DEX** (attaques, sauvegardes, tests, initiative, fuite),
-  qui dépend de l'importance de l'encombrement :
-  - armure trop lourde : −1 par tranche de 2 points de Force manquants ;
-  - charge : chaque objet a un **poids** (kg). Le groupe peut porter 7,5 kg par point de Force de chaque membre
-    (sac partagé + objets portés) ; au-delà, −1 par tranche de 10 % de surcharge ;
-  - les deux se cumulent, avec un maximum de −5 (réglages : `rules.json › encumbrance`).
+- **Armes** (voir [systeme_de_jeu.md](systeme_de_jeu.md)) : on attaque avec [rang de la compétence de l'arme] d10
+  contre la FOR (finesse : le meilleur de FOR et DEX ; à distance : la DEX). Les **dégâts** sont autant de d10 contre
+  un **seuil** propre à l'arme : celui de l'attaque + un bonus (plus l'arme est lourde, plus il est haut), ou un seuil
+  fixe (arcs) ; chaque succès est un point de dégâts. Une arme polyvalente a +1 au seuil à deux mains (sans bouclier).
+  Une arme à deux mains et un bouclier s'excluent.
+- **Armures** : leurs points d'**Armure** baissent d'autant le seuil des dégâts subis (sans passer sous 1). Toute
+  armure peut être portée, mais sous la **Force conseillée** (vêtement 0, légère 4, intermédiaire 5, lourde 6) le
+  personnage est **encombré**. L'Esquive naturelle (DEX ÷ 3) ne dépend pas de l'armure.
+- **Encombrement** : des **dés en moins à tous les jets de FOR et de DEX** (attaques, résistances, tests, fuite ;
+  l'initiative perd autant de points) :
+  - armure trop lourde : −1 dé par point de Force manquant ;
+  - charge : chaque objet a un **poids** (kg). Le groupe peut porter 18 kg par point de Force de chaque membre
+    (sac partagé + objets portés) ; au-delà, −1 dé par tranche de 25 % de surcharge ;
+  - les deux se cumulent, avec un maximum de −3 dés (réglages : `rules.json › encumbrance`).
 - **Plusieurs types de dégâts** : une arme peut ajouter des dégâts d'un autre type (Langue de feu : tranchant + feu).
 - **Prix** : environ un cinquième des prix du SRD, pour que la potion de soins coûte 10 po. **Tout marchand rachète
   tout** (sauf les objets de quête), à 50 % de la valeur. La Persuasion du meilleur négociateur du groupe ajuste les
   prix d'achat **et** de revente (jusqu'à ±15 %).
 - **Forge** :
   - **Amélioration** d'une arme, d'une armure (pas d'un vêtement) ou d'un bouclier ordinaire : +1 (50 po), +2 (150 po),
-    +3 (400 po). +N au toucher et aux dégâts pour une arme, +N à la CA sinon. Les objets déjà magiques ne
-    s'améliorent pas.
+    +3 (400 po). +N dés au toucher et +N au seuil des dégâts pour une arme, +N Armure sinon. Les objets déjà
+    magiques ne s'améliorent pas.
   - **Fabrication** à partir de matériaux (voir Recettes ci-dessous).
 - ⚠️ Licence : les armes, armures et objets magiques du SRD 5.1 sont réutilisables (CC-BY 4.0).
 
@@ -40,9 +42,9 @@
 ### <Nom> (`<id>`)
 
 - **Catégorie** : arme / armure (torse) / bouclier / accessoire (couvre-chef, cape, gants, jambes, chaussures, collier, anneau).
-- **Dégâts** (arme) : ex. 1d8 tranchant (+ 1d6 feu).
-- **Propriétés** (arme) : finesse, légère, lancer, polyvalente (1d10), lourde, à deux mains, à distance.
-- **Type et CA** (armure) : vêtement / légère / intermédiaire / lourde, CA de base.
+- **Dégâts** (arme) : type et seuil, ex. tranchant, seuil de l'attaque +1 (+ feu 2d10 ≤ 5).
+- **Propriétés** (arme) : finesse, légère, lancer, polyvalente, lourde, à deux mains, à distance.
+- **Type et Armure** (armure) : vêtement / légère / intermédiaire / lourde, points d'Armure.
 - **Force conseillée** (armure) : si différente de celle du type.
 - **Effets** : bonus, résistances… (objets magiques).
 - **Poids** : en kg.
@@ -58,12 +60,12 @@
 
 ### Mains nues (`unarmed`)
 
-- **Dégâts** : 1 contondant.
+- **Dégâts** : contondant, seuil FOR -2.
 - **Propriétés** : aucune.
 
 ### Gourdin (`club`)
 
-- **Dégâts** : 1d4 contondant.
+- **Dégâts** : contondant, seuil de l'attaque -1.
 - **Propriétés** : légère.
 - **Poids** : 1 kg.
 - **Valeur** : 1 po.
@@ -71,7 +73,7 @@
 
 ### Dague (`dagger`)
 
-- **Dégâts** : 1d4 perforant.
+- **Dégâts** : perforant, seuil de l'attaque -1.
 - **Propriétés** : finesse, légère, lancer.
 - **Poids** : 0.5 kg.
 - **Valeur** : 1 po.
@@ -79,15 +81,15 @@
 
 ### Bâton (`quarterstaff`)
 
-- **Dégâts** : 1d6 contondant.
-- **Propriétés** : polyvalente (1d8).
+- **Dégâts** : contondant, seuil de l'attaque.
+- **Propriétés** : polyvalente (+1 au seuil à deux mains).
 - **Poids** : 2 kg.
 - **Valeur** : 1 po.
 - **Où le trouver** : départ : Magicien.
 
 ### Masse d'armes (`mace`)
 
-- **Dégâts** : 1d6 contondant.
+- **Dégâts** : contondant, seuil de l'attaque.
 - **Propriétés** : aucune.
 - **Poids** : 2 kg.
 - **Valeur** : 1 po.
@@ -95,7 +97,7 @@
 
 ### Hachette (`handaxe`)
 
-- **Dégâts** : 1d6 tranchant.
+- **Dégâts** : tranchant, seuil de l'attaque.
 - **Propriétés** : légère, lancer.
 - **Poids** : 1 kg.
 - **Valeur** : 1 po.
@@ -103,7 +105,7 @@
 
 ### Épée courte (`shortsword`)
 
-- **Dégâts** : 1d6 perforant.
+- **Dégâts** : perforant, seuil de l'attaque.
 - **Propriétés** : finesse, légère.
 - **Poids** : 1 kg.
 - **Valeur** : 2 po.
@@ -111,7 +113,7 @@
 
 ### Cimeterre (`scimitar`)
 
-- **Dégâts** : 1d6 tranchant.
+- **Dégâts** : tranchant, seuil de l'attaque.
 - **Propriétés** : finesse, légère.
 - **Poids** : 1.5 kg.
 - **Valeur** : 5 po.
@@ -119,7 +121,7 @@
 
 ### Rapière (`rapier`)
 
-- **Dégâts** : 1d8 perforant.
+- **Dégâts** : perforant, seuil de l'attaque +1.
 - **Propriétés** : finesse.
 - **Poids** : 1 kg.
 - **Valeur** : 5 po.
@@ -127,15 +129,15 @@
 
 ### Épée longue (`longsword`)
 
-- **Dégâts** : 1d8 tranchant.
-- **Propriétés** : polyvalente (1d10).
+- **Dégâts** : tranchant, seuil de l'attaque +1.
+- **Propriétés** : polyvalente (+1 au seuil à deux mains).
 - **Poids** : 1.5 kg.
 - **Valeur** : 3 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald, fabriqué (forge), départ : Guerrier.
 
 ### Hache à deux mains (`greataxe`)
 
-- **Dégâts** : 1d12 tranchant.
+- **Dégâts** : tranchant, seuil de l'attaque +3.
 - **Propriétés** : lourde, à deux mains.
 - **Poids** : 3.5 kg.
 - **Valeur** : 6 po.
@@ -143,7 +145,7 @@
 
 ### Arc court (`shortbow`)
 
-- **Dégâts** : 1d6 perforant.
+- **Dégâts** : perforant, seuil fixe 5.
 - **Propriétés** : à distance, à deux mains.
 - **Poids** : 1 kg.
 - **Valeur** : 5 po.
@@ -151,7 +153,7 @@
 
 ### Arc long (`longbow`)
 
-- **Dégâts** : 1d8 perforant.
+- **Dégâts** : perforant, seuil fixe 6.
 - **Propriétés** : à distance, lourde, à deux mains.
 - **Poids** : 1 kg.
 - **Valeur** : 10 po.
@@ -164,7 +166,7 @@
 ### Vêtements ordinaires (`clothes`)
 
 - **Type** : vêtement.
-- **CA** : 10 + DEX.
+- **Armure** : 0.
 - **Force conseillée** : aucune.
 - **Poids** : 1.5 kg.
 - **Valeur** : 1 po.
@@ -173,7 +175,7 @@
 ### Robe d'érudit (`robe`)
 
 - **Type** : vêtement.
-- **CA** : 10 + DEX.
+- **Armure** : 0.
 - **Force conseillée** : aucune.
 - **Poids** : 2 kg.
 - **Valeur** : 2 po.
@@ -182,8 +184,8 @@
 ### Armure matelassée (`padded`)
 
 - **Type** : légère.
-- **CA** : 11 + DEX.
-- **Force conseillée** : 10.
+- **Armure** : 1.
+- **Force conseillée** : 4.
 - **Poids** : 4 kg.
 - **Valeur** : 1 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald.
@@ -191,8 +193,8 @@
 ### Armure de cuir (`leather`)
 
 - **Type** : légère.
-- **CA** : 11 + DEX.
-- **Force conseillée** : 10.
+- **Armure** : 1.
+- **Force conseillée** : 4.
 - **Poids** : 5 kg.
 - **Valeur** : 2 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald, départ : Roublard.
@@ -200,8 +202,8 @@
 ### Cuir clouté (`studded_leather`)
 
 - **Type** : légère.
-- **CA** : 12 + DEX.
-- **Force conseillée** : 10.
+- **Armure** : 1.
+- **Force conseillée** : 4.
 - **Poids** : 6.5 kg.
 - **Valeur** : 9 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald, fabriqué (forge), butin : Brigand (10 %).
@@ -209,8 +211,8 @@
 ### Armure de peau (`hide`)
 
 - **Type** : intermédiaire.
-- **CA** : 12 + DEX (max 2).
-- **Force conseillée** : 12.
+- **Armure** : 1.
+- **Force conseillée** : 5.
 - **Poids** : 6 kg.
 - **Valeur** : 2 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald.
@@ -218,8 +220,8 @@
 ### Chemise de mailles (`chain_shirt`)
 
 - **Type** : intermédiaire.
-- **CA** : 13 + DEX (max 2).
-- **Force conseillée** : 12.
+- **Armure** : 2.
+- **Force conseillée** : 5.
 - **Poids** : 10 kg.
 - **Valeur** : 10 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald, fabriqué (forge).
@@ -227,8 +229,8 @@
 ### Cuirasse (`breastplate`)
 
 - **Type** : intermédiaire.
-- **CA** : 14 + DEX (max 2).
-- **Force conseillée** : 12.
+- **Armure** : 2.
+- **Force conseillée** : 5.
 - **Poids** : 10 kg.
 - **Valeur** : 80 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald.
@@ -236,8 +238,8 @@
 ### Cotte de mailles (`chain_mail`)
 
 - **Type** : lourde.
-- **CA** : 16.
-- **Force conseillée** : 14.
+- **Armure** : 3.
+- **Force conseillée** : 6.
 - **Poids** : 27 kg.
 - **Valeur** : 15 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald, départ : Guerrier.
@@ -245,8 +247,8 @@
 ### Harnois (`plate`)
 
 - **Type** : lourde.
-- **CA** : 18.
-- **Force conseillée** : 14.
+- **Armure** : 4.
+- **Force conseillée** : 6.
 - **Poids** : 32 kg.
 - **Valeur** : 300 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald.
@@ -257,7 +259,7 @@
 
 ### Bouclier (`shield`)
 
-- **CA** : +2.
+- **Armure** : +1 (permet de parer les attaques à distance).
 - **Poids** : 3 kg.
 - **Valeur** : 2 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald.
@@ -268,9 +270,9 @@
 
 ### Épée longue +1 (`longsword_plus_1`)
 
-- **Dégâts** : 1d8 tranchant.
-- **Propriétés** : polyvalente (1d10).
-- **Effets** : +1 au toucher, +1 aux dégâts.
+- **Dégâts** : tranchant, seuil de l'attaque +1.
+- **Propriétés** : polyvalente (+1 au seuil à deux mains).
+- **Effets** : +1 dé au toucher, +1 au seuil des dégâts.
 - **Poids** : 1.5 kg.
 - **Rareté** : peu commun.
 - **Valeur** : 120 po.
@@ -279,8 +281,8 @@
 
 ### Langue de feu (`flame_tongue`)
 
-- **Dégâts** : 1d8 tranchant + 2d6 feu.
-- **Propriétés** : polyvalente (1d10).
+- **Dégâts** : tranchant, seuil de l'attaque +1 + feu 2d10 ≤ 5.
+- **Propriétés** : polyvalente (+1 au seuil à deux mains).
 - **Poids** : 1.5 kg.
 - **Rareté** : rare.
 - **Valeur** : 400 po.
@@ -289,9 +291,9 @@
 
 ### Dague +1 (`dagger_plus_1`)
 
-- **Dégâts** : 1d4 perforant.
+- **Dégâts** : perforant, seuil de l'attaque -1.
 - **Propriétés** : finesse, légère, lancer.
-- **Effets** : +1 au toucher, +1 aux dégâts.
+- **Effets** : +1 dé au toucher, +1 au seuil des dégâts.
 - **Poids** : 0.5 kg.
 - **Rareté** : peu commun.
 - **Valeur** : 80 po.
@@ -301,9 +303,9 @@
 ### Cuir clouté +1 (`studded_leather_plus_1`)
 
 - **Type** : légère.
-- **CA** : 12 + DEX.
-- **Force conseillée** : 10.
-- **Effets** : +1 CA.
+- **Armure** : 1.
+- **Force conseillée** : 4.
+- **Effets** : +1 Armure.
 - **Poids** : 6.5 kg.
 - **Rareté** : peu commun.
 - **Valeur** : 120 po.
@@ -313,7 +315,7 @@
 ### Cape de protection (`cloak_of_protection`)
 
 - **Emplacement** : cape.
-- **Effets** : +1 CA, +1 aux jets de sauvegarde.
+- **Effets** : +1 Armure, +1 dé pour résister.
 - **Poids** : 0.5 kg.
 - **Rareté** : peu commun.
 - **Valeur** : 150 po.
@@ -333,7 +335,7 @@
 ### Anneau de protection (`ring_of_protection`)
 
 - **Emplacement** : anneau.
-- **Effets** : +1 CA, +1 aux jets de sauvegarde.
+- **Effets** : +1 Armure, +1 dé pour résister.
 - **Poids** : 0 kg.
 - **Rareté** : peu commun.
 - **Valeur** : 150 po.
@@ -353,12 +355,12 @@
 ### Amulette de vigueur (`amulet_vigor`)
 
 - **Emplacement** : collier.
-- **Effets** : +1 PV par niveau.
+- **Effets** : +2 PV.
 - **Poids** : 0.2 kg.
 - **Rareté** : peu commun.
 - **Valeur** : 100 po.
 - **Où le trouver** : aucune pour l'instant (événements à écrire).
-- **Description** : Un pendentif de chêne qui bat comme un cœur.
+- **Description** : Un pendentif de chêne qui bat comme un cœur (+2 PV).
 
 ### Gantelets de puissance d'ogre (`gauntlets_ogre_power`)
 

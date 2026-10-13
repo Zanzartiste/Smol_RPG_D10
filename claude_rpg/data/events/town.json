@@ -28,7 +28,7 @@
 				"id": "haggle",
 				"text": "Marchander une babiole pour le plaisir",
 				"conditions": [{"type": "gold", "min": 2}],
-				"check": {"skill": "persuasion", "dc": 13},
+				"check": {"skill": "persuasion", "difficulty": 2},
 				"success": {
 					"text": "Épuisé par votre éloquence, le marchand vous cède une vieille amulette pour une bouchée de pain.",
 					"effects": [{"type": "gold", "amount": -2}, {"type": "add_item", "id": "old_amulet"}]
@@ -161,14 +161,14 @@
 			{
 				"id": "intimidate",
 				"text": "Le fixer droit dans les yeux",
-				"check": {"skill": "persuasion", "ability": "str", "dc": 14},
+				"check": {"skill": "persuasion", "ability": "str", "difficulty": 2},
 				"success": {
 					"text": "Il blêmit, bredouille une excuse et vous paie une chope.",
 					"effects": [{"type": "xp", "amount": 50}]
 				},
 				"failure": {
 					"text": "Il éclate de rire et vous colle une gifle monumentale.",
-					"effects": [{"type": "hp", "amount": -2, "cause": "Une gifle de trop"}]
+					"effects": [{"type": "hp", "amount": -1, "cause": "Une gifle de trop"}]
 				}
 			},
 			{
@@ -193,7 +193,7 @@
 			{
 				"id": "talk",
 				"text": "Les convaincre que vous êtes un honnête citoyen",
-				"check": {"skill": "persuasion", "dc": 13},
+				"check": {"skill": "persuasion", "difficulty": 2},
 				"success": {
 					"text": "Les gardes échangent un regard perplexe, puis vous laissent passer en grommelant.",
 					"effects": [{"type": "xp", "amount": 25}]
@@ -206,14 +206,14 @@
 			{
 				"id": "sneak",
 				"text": "Filer entre leurs jambes",
-				"check": {"skill": "stealth", "dc": 12},
+				"check": {"skill": "stealth", "difficulty": 2},
 				"success": {
 					"text": "Le temps qu'ils se retournent, vous êtes déjà trois ruelles plus loin.",
 					"effects": [{"type": "xp", "amount": 25}]
 				},
 				"failure": {
 					"text": "Une main gantée vous rattrape par le col. Les coups de bâton pleuvent.",
-					"effects": [{"type": "hp", "amount": -3, "cause": "Bastonné par la garde"}]
+					"effects": [{"type": "hp", "amount": -1, "cause": "Bastonné par la garde"}]
 				}
 			},
 			{
@@ -246,15 +246,15 @@
 			{
 				"id": "read",
 				"text": "Tenter de déchiffrer les runes",
-				"conditions": [{"type": "ability", "id": "int", "min": 12}],
-				"check": {"skill": "lore", "dc": 13},
+				"conditions": [{"type": "ability", "id": "int", "min": 5}],
+				"check": {"skill": "lore", "difficulty": 2},
 				"success": {
 					"text": "Les runes décrivent un sanctuaire caché au cœur de la Forêt des Murmures, et la formule pour l'éveiller.",
 					"effects": [{"type": "xp", "amount": 100}, {"type": "set_flag", "id": "knows_shrine_rune"}]
 				},
 				"failure": {
 					"text": "Les symboles se mettent à danser devant vos yeux. Une migraine atroce vous saisit.",
-					"effects": [{"type": "hp", "amount": -2, "cause": "Terrassé par un savoir interdit"}]
+					"effects": [{"type": "hp", "amount": -1, "cause": "Terrassé par un savoir interdit"}]
 				}
 			},
 			{
@@ -275,14 +275,14 @@
 			{
 				"id": "steal",
 				"text": "Subtiliser la bourse",
-				"check": {"skill": "sleight_of_hand", "dc": 14},
+				"check": {"skill": "sleight_of_hand", "difficulty": 2},
 				"success": {
 					"text": "La bourse change de propriétaire sans que personne ne remarque rien. Vous avez un don.",
 					"effects": [{"type": "gold", "amount": 20}, {"type": "unlock", "id": "class:rogue"}]
 				},
 				"failure": {
 					"text": "« Au voleur ! » La garde vous tombe dessus.",
-					"effects": [{"type": "hp", "amount": -5, "cause": "Lynché pour un larcin raté"}]
+					"effects": [{"type": "hp", "amount": -2, "cause": "Lynché pour un larcin raté"}]
 				}
 			},
 			{
@@ -313,7 +313,7 @@
 			{
 				"id": "convince",
 				"text": "La convaincre de vous suivre pour la gloire",
-				"check": {"skill": "persuasion", "dc": 15},
+				"check": {"skill": "persuasion", "difficulty": 3},
 				"success": {
 					"text": "Mira éclate de rire. « La gloire, hein ? Pourquoi pas. Ça change de l'or. »",
 					"effects": [{"type": "recruit", "companion": "mira"}]

@@ -21,7 +21,7 @@ static func validate(db: Node) -> void:
 
 
 static func _validate_rules(db: Node, errors: Array[String]) -> void:
-	for key in ["standard_array", "point_buy", "genders", "sizes", "time_slots", "life_stages", "days_per_year"]:
+	for key in ["standard_array", "point_buy", "genders", "sizes", "time_slots", "life_stages", "days_per_year", "dice"]:
 		if not db.rules.has(key):
 			errors.append("rules.json : champ « %s » manquant" % key)
 	if db.rules.get("standard_array", []).size() != db.abilities.size():
@@ -85,23 +85,23 @@ static func _validate_rule_tables(db: Node, errors: Array[String]) -> void:
 		var ctx := "equipment.json › %s" % item["id"]
 		match item.get("category"):
 			"weapon":
-				if not Dice.is_valid_expr(item.get("damage", "")):
-					errors.append(ctx + " : dégâts invalides « %s »" % item.get("damage"))
+				_validate_pool_spec(db, item.get("damage"), ctx + " › damage", errors)
 				_expect_ref(db.damage_types, item.get("damage_type"), "type de dégâts", ctx, errors)
 				for prop in item.get("properties", []):
 					if prop not in Equipment.PROPERTY_NAMES:
 						errors.append(ctx + " : propriété inconnue « %s »" % prop)
-				if "versatile" in item.get("properties", []) and not Dice.is_valid_expr(item.get("versatile_damage", "")):
-					errors.append(ctx + " : arme polyvalente sans versatile_damage valide")
 				_validate_bonus_damage(db, item.get("bonus_damage", []), ctx, errors)
 			"armor":
 				if item.get("armor_type") not in Equipment.ARMOR_TYPE_NAMES:
 					errors.append(ctx + " : armor_type doit valoir clothing, light, medium ou heavy")
 				elif not item.has("strength") and not db.rules.get("armor_strength", {}).has(item.get("armor_type")):
 					errors.append(ctx + " : aucune Force requise définie pour « %s » (rules.json › armor_strength)" % item.get("armor_type"))
-				if not item.has("base_ac"):
-					errors.append(ctx + " : base_ac manquant")
-			"shield", "accessory":
+				if not item.has("armor"):
+					errors.append(ctx + " : armor (points d'Armure) manquant")
+			"shield":
+				if not item.has("armor"):
+					errors.append(ctx + " : armor (points d'Armure) manquant")
+			"accessory":
 				pass
 			_:
 				errors.append(ctx + " : catégorie inconnue « %s » (weapon, armor, shield, accessory)" % item.get("category"))
@@ -238,7 +238,7 @@ static func _validate_backgrounds(db: Node, errors: Array[String]) -> void:
 
 static func _validate_combat_data(db: Node, errors: Array[String]) -> void:
 	var combat: Dictionary = db.rules.get("combat", {})
-	for key in ["side_capacity", "size_slots", "sprite_scale"]:
+	for key in ["side_capacity", "size_slots", "sprite_scale", "actions_per_turn", "dodge_divisor", "prepared_dice"]:
 		if not combat.has(key):
 			errors.append("rules.json › combat : champ « %s » manquant" % key)
 
@@ -248,11 +248,13 @@ static func _validate_combat_data(db: Node, errors: Array[String]) -> void:
 	var size_ids: Array = db.rules.get("sizes", []).map(func(s): return int(s.get("value", 0)))
 	for creature: Dictionary in db.creatures.values():
 		var ctx := "creatures.json › %s" % creature["id"]
-		for key in ["name", "ac", "hp", "actions"]:
+		for key in ["name", "abilities", "actions"]:
 			if not creature.has(key):
 				errors.append(ctx + " : champ « %s » manquant" % key)
-		if not Dice.is_valid_expr(str(creature.get("hp", ""))):
-			errors.append(ctx + " : PV invalides « %s »" % creature.get("hp"))
+		if creature.has("hp") and int(creature["hp"]) < 1:
+			errors.append(ctx + " : PV invalides « %s » (un nombre ; sans « hp » : CON × 1,414^taille)" % creature.get("hp"))
+		for ability_id: String in creature.get("abilities", {}):
+			_expect_ref(db.abilities, ability_id, "attribut", ctx, errors)
 		if creature.has("gold") and not Dice.is_valid_expr(creature["gold"]):
 			errors.append(ctx + " : or invalide « %s »" % creature["gold"])
 		if int(creature.get("size", 0)) not in size_ids:
@@ -298,13 +300,13 @@ static func _validate_combat_data(db: Node, errors: Array[String]) -> void:
 		if not item.has("use"):
 			continue
 		var use: Dictionary = item["use"]
-		if use.has("heal") and not Dice.is_valid_expr(use["heal"]):
-			errors.append("items.json › %s : use.heal invalide" % item["id"])
+		if use.has("heal"):
+			_validate_pool_spec(db, use["heal"], "items.json › %s › use.heal" % item["id"], errors)
 		if use.has("cleanse") and use["cleanse"] != "negative":
 			_expect_ref(db.status_effects, use["cleanse"], "état", "items.json › %s" % item["id"], errors)
 
 
-## Actions de combat (classes, créatures) : {"name", "target", "effects", "weight"?, "prepared"?,
+## Actions de combat (classes, créatures) : {"name", "target", "effects", "weight"?, "announced"?,
 ## "cost"?, "per_combat"?}.
 static func _validate_ai_actions(db: Node, actions: Variant, ctx: String, errors: Array[String]) -> void:
 	if typeof(actions) != TYPE_ARRAY or actions.is_empty():
@@ -331,19 +333,19 @@ static func _validate_combat_effects(db: Node, effects: Variant, ctx: String, er
 		if typeof(e) != TYPE_DICTIONARY or not CombatEffects.SCHEMA.has(e.get("type", "")):
 			errors.append(ctx + " : effet de combat invalide %s (types : %s)" % [str(e), CombatEffects.SCHEMA.keys()])
 			continue
-		if e.has("save"):
-			var save: Variant = e["save"]
-			if typeof(save) != TYPE_DICTIONARY or not db.abilities.has(save.get("ability", "")):
-				errors.append(ctx + " : save doit valoir {\"ability\": <attribut>, \"half\"?, \"dc\"?}")
+		if e.has("save") or e.has("dc") or e.has("to_hit"):
+			errors.append(ctx + " : save, dc et to_hit n'existent plus (resist, difficulty ; voir docs/systeme_de_jeu.md)")
+		if e.has("resist"):
+			var resist: Variant = e["resist"]
+			if typeof(resist) != TYPE_DICTIONARY or not db.abilities.has(resist.get("ability", "")):
+				errors.append(ctx + " : resist doit valoir {\"ability\": <attribut>, \"skill\"?}")
 		_validate_bonus_damage(db, e.get("bonus_damage", []), ctx, errors)
-		if e.has("upcast") and not Dice.is_valid_expr(e["upcast"]):
-			errors.append(ctx + " : upcast invalide « %s »" % e["upcast"])
+		if e.has("upcast") and (typeof(e["upcast"]) not in [TYPE_INT, TYPE_FLOAT] or int(e["upcast"]) < 1):
+			errors.append(ctx + " : upcast doit être un nombre de dés « %s »" % str(e["upcast"]))
 		if e.has("scaling"):
 			var scaling: Variant = e["scaling"]
 			if typeof(scaling) != TYPE_DICTIONARY or scaling.get("table", "") not in Spellcasting.scaling_tables():
-				errors.append(ctx + " : scaling doit valoir {\"table\": %s, \"field\"?}" % [Spellcasting.scaling_tables()])
-			elif scaling.get("field", "damage") not in ["damage", "extra_damage"]:
-				errors.append(ctx + " : scaling.field doit valoir damage ou extra_damage")
+				errors.append(ctx + " : scaling doit valoir {\"table\": %s, \"class\"?}" % [Spellcasting.scaling_tables()])
 		var missing: Array = CombatEffects.SCHEMA[e["type"]].filter(func(k): return not e.has(k))
 		if not missing.is_empty():
 			errors.append(ctx + " : effet « %s » sans %s" % [e["type"], missing])
@@ -354,18 +356,17 @@ static func _validate_combat_effects(db: Node, effects: Variant, ctx: String, er
 				if weapon is String:
 					_expect_ref(db.equipment, weapon, "arme", ctx, errors)
 				elif not (weapon is bool and weapon):
-					if not Dice.is_valid_expr(e.get("damage", "")):
-						errors.append(ctx + " : attaque sans dégâts valides (damage, ou weapon)")
+					_validate_pool_spec(db, e.get("damage"), ctx + " › damage", errors)
 					_expect_ref(db.damage_types, e.get("damage_type"), "type de dégâts", ctx, errors)
-				if e.has("extra_damage") and not Dice.is_valid_expr(e["extra_damage"]):
-					errors.append(ctx + " : extra_damage invalide « %s »" % e["extra_damage"])
+				if e.has("skill"):
+					_expect_ref(db.skills, e["skill"], "compétence", ctx, errors)
+				if e.has("ability") and e["ability"] not in ["spell", "weapon"]:
+					_expect_ref(db.abilities, e["ability"], "attribut", ctx, errors)
 			"damage":
-				if not Dice.is_valid_expr(e["damage"]):
-					errors.append(ctx + " : dégâts invalides « %s »" % e["damage"])
+				_validate_pool_spec(db, e["damage"], ctx + " › damage", errors)
 				_expect_ref(db.damage_types, e.get("damage_type"), "type de dégâts", ctx, errors)
 			"heal":
-				if not Dice.is_valid_expr(String(e["amount"]).replace("level", "1")):
-					errors.append(ctx + " : soins invalides « %s »" % e["amount"])
+				_validate_pool_spec(db, e["amount"], ctx + " › amount", errors)
 			"status":
 				_expect_ref(db.status_effects, e["status"], "état", ctx, errors)
 			"cleanse":
@@ -375,8 +376,10 @@ static func _validate_combat_effects(db: Node, effects: Variant, ctx: String, er
 				_expect_ref(db.creatures, e["creature"], "créature", ctx, errors)
 			"check":
 				_expect_ref(db.skills, e["skill"], "compétence", ctx, errors)
-				if e.has("vs_save"):
-					_expect_ref(db.abilities, e["vs_save"], "attribut", ctx, errors)
+				if e.has("vs_resist"):
+					_expect_ref(db.abilities, e["vs_resist"], "attribut", ctx, errors)
+				elif not e.has("difficulty"):
+					errors.append(ctx + " : test sans difficulty (ni vs_resist)")
 
 
 static func _validate_skills_and_items(db: Node, entry: Dictionary, ctx: String, errors: Array[String]) -> void:
@@ -424,20 +427,25 @@ static func _validate_event(db: Node, ev: Dictionary, errors: Array[String]) -> 
 
 		if choice.has("check"):
 			var check: Dictionary = choice["check"]
-			if not check.has("dc"):
-				errors.append(cctx + " : DD (dc) manquant")
+			if not check.has("difficulty"):
+				errors.append(cctx + " : difficulté (difficulty) manquante")
+			elif int(check["difficulty"]) < 0:
+				errors.append(cctx + " : difficulté négative")
 			if check.has("skill") and not db.skills.has(check["skill"]):
 				errors.append(cctx + " : compétence inconnue « %s »" % check["skill"])
 			elif check.has("ability") and not db.abilities.has(check["ability"]):
 				errors.append(cctx + " : attribut inconnu « %s »" % check["ability"])
-			elif check.has("save") and not db.abilities.has(check["save"]):
-				errors.append(cctx + " : sauvegarde inconnue « %s »" % check["save"])
-			elif not check.has("skill") and not check.has("ability") and not check.has("save"):
-				errors.append(cctx + " : le test doit indiquer « skill », « ability » ou « save »")
+			elif check.has("resist") and not db.abilities.has(check["resist"]):
+				errors.append(cctx + " : résistance inconnue « %s »" % check["resist"])
+			elif not check.has("skill") and not check.has("ability") and not check.has("resist"):
+				errors.append(cctx + " : le test doit indiquer « skill », « ability » ou « resist »")
 			for key in ["success", "failure"]:
 				if not choice.has(key):
 					errors.append(cctx + " : résultat « %s » manquant" % key)
 				else:
+					_validate_effects(db, choice[key].get("effects", []), "%s › %s" % [cctx, key], errors)
+			for key in ["critical_success", "critical_failure"]:
+				if choice.has(key):
 					_validate_effects(db, choice[key].get("effects", []), "%s › %s" % [cctx, key], errors)
 		elif choice.has("outcome"):
 			_validate_effects(db, choice["outcome"].get("effects", []), cctx, errors)
@@ -582,16 +590,32 @@ static func _validate_unlock_id(db: Node, id: String, ctx: String, errors: Array
 		_expect_ref(db.classes, parts[1], "classe", ctx, errors)
 
 
-## "bonus_damage" : [{"damage": "1d4", "damage_type": "fire"}, ...]
+## "bonus_damage" : [{"dice": 2, "threshold": 5, "damage_type": "fire"}, ...]
 static func _validate_bonus_damage(db: Node, parts: Variant, ctx: String, errors: Array[String]) -> void:
 	if typeof(parts) != TYPE_ARRAY:
 		errors.append(ctx + " : bonus_damage doit être une liste")
 		return
 	for part: Variant in parts:
-		if typeof(part) != TYPE_DICTIONARY or not Dice.is_valid_expr(String(part.get("damage", ""))):
-			errors.append(ctx + " : bonus_damage invalide %s (attendu {\"damage\", \"damage_type\"})" % str(part))
+		if typeof(part) != TYPE_DICTIONARY or not part.has("dice") or typeof(part.get("threshold")) not in [TYPE_INT, TYPE_FLOAT]:
+			errors.append(ctx + " : bonus_damage invalide %s (attendu {\"dice\", \"threshold\", \"damage_type\"})" % str(part))
 		else:
 			_expect_ref(db.damage_types, part.get("damage_type"), "type de dégâts", ctx, errors)
+
+
+## Réserve de dégâts ou de soins : {"dice"?: N, "skill"?: compétence, "threshold"?: "weapon" | "spell" |
+## attribut | N, "bonus"?: N}.
+static func _validate_pool_spec(db: Node, spec: Variant, ctx: String, errors: Array[String]) -> void:
+	if typeof(spec) != TYPE_DICTIONARY:
+		errors.append(ctx + " : réserve invalide %s (attendu {\"dice\"?, \"skill\"?, \"threshold\"?, \"bonus\"?})" % str(spec))
+		return
+	for key: String in spec:
+		if key not in ["dice", "skill", "threshold", "bonus"]:
+			errors.append(ctx + " : champ inconnu « %s »" % key)
+	if spec.has("skill"):
+		_expect_ref(db.skills, spec["skill"], "compétence", ctx, errors)
+	var threshold: Variant = spec.get("threshold", "weapon")
+	if threshold is String and threshold not in ["weapon", "spell"] and not db.abilities.has(threshold):
+		errors.append(ctx + " : seuil inconnu « %s » (weapon, spell, un attribut ou un nombre)" % threshold)
 
 
 static func _validate_damage_types(db: Node, errors: Array[String]) -> void:
@@ -628,7 +652,7 @@ static func _validate_economy(db: Node, errors: Array[String]) -> void:
 			errors.append(ctx + " : station sans compétence (rules.json › crafting › station_skills)")
 		if not stations.has(recipe.get("station")):
 			errors.append(ctx + " : aucune boutique n'a la station « %s » (shops.json › crafting)" % recipe.get("station"))
-	for key in ["sell_rate", "price_skill", "percent_per_point", "max_percent"]:
+	for key in ["sell_rate", "price_skill", "percent_per_success", "max_percent"]:
 		if not db.rules.get("trade", {}).has(key):
 			errors.append("rules.json › trade : champ « %s » manquant" % key)
 	if not db.skills.has(db.rules.get("trade", {}).get("price_skill", "")):

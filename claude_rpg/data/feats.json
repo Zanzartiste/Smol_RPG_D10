@@ -48,7 +48,7 @@
 		"name": "Robuste",
 		"category": "origin",
 		"description": "Votre endurance est hors du commun.",
-		"modifiers": [{"type": "hp_per_level", "amount": 2}]
+		"modifiers": [{"type": "max_hp", "amount": 3}]
 	},
 	{
 		"id": "healer",
@@ -121,7 +121,7 @@
 		"category": "general",
 		"source": "SRD 5.2",
 		"description": "+1 FOR ou DEX. Vous savez frapper et empoigner d'un même geste : l'Empoignade entrave la cible.",
-		"prerequisites": [{"type": "level", "min": 4}, {"type": "any", "conditions": [{"type": "ability", "id": "str", "min": 13}, {"type": "ability", "id": "dex", "min": 13}]}],
+		"prerequisites": [{"type": "level", "min": 4}, {"type": "any", "conditions": [{"type": "ability", "id": "str", "min": 5}, {"type": "ability", "id": "dex", "min": 5}]}],
 		"actions": ["grapple"],
 		"choices": [
 			{"id": "ability", "name": "Attribut", "type": "ability", "count": 1, "options": ["str", "dex"],
@@ -133,8 +133,8 @@
 		"name": "Duelliste défensif",
 		"category": "general",
 		"description": "Vous savez parer les coups grâce à votre agilité.",
-		"prerequisites": [{"type": "ability", "id": "dex", "min": 13}],
-		"modifiers": [{"type": "ac", "amount": 1}]
+		"prerequisites": [{"type": "ability", "id": "dex", "min": 5}],
+		"modifiers": [{"type": "natural_dodge", "amount": 1}]
 	},
 	{
 		"id": "resilient",
@@ -165,7 +165,7 @@
 		"category": "general",
 		"description": "+1 FOR ou CON. Les armures vous pèsent moins : leur Force conseillée baisse de 2.",
 		"prerequisites": [{"type": "level", "min": 4}],
-		"modifiers": [{"type": "armor_strength_reduction", "amount": 2}],
+		"modifiers": [{"type": "armor_strength_reduction", "amount": 1}],
 		"choices": [
 			{"id": "ability", "name": "Attribut", "type": "ability", "count": 1, "options": ["str", "con"],
 				"modifiers": [{"type": "ability", "id": "$", "amount": 1}], "default": ["str"]}
@@ -177,7 +177,7 @@
 		"category": "fighting_style",
 		"source": "SRD 5.2",
 		"description": "+2 aux jets d'attaque avec une arme à distance.",
-		"modifiers": [{"type": "ranged_attack", "amount": 2}]
+		"modifiers": [{"type": "ranged_attack", "amount": 1}]
 	},
 	{
 		"id": "defense",
@@ -185,7 +185,7 @@
 		"category": "fighting_style",
 		"source": "SRD 5.2",
 		"description": "+1 CA tant que vous portez une armure (pas de simples vêtements).",
-		"modifiers": [{"type": "armored_ac", "amount": 1}]
+		"modifiers": [{"type": "armored", "amount": 1}]
 	},
 	{
 		"id": "great_weapon_fighting",
@@ -200,6 +200,6 @@
 		"name": "Style : Duel",
 		"category": "fighting_style",
 		"description": "+2 aux dégâts avec une arme de corps à corps tenue à une main.",
-		"modifiers": [{"type": "dueling", "amount": 2}]
+		"modifiers": [{"type": "dueling", "amount": 1}]
 	}
 ]

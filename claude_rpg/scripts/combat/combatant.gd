@@ -6,6 +6,7 @@ extends RefCounted
 ##   - "creature"  : une créature du bestiaire (ennemi ou invocation), contrôlée par l'IA.
 ## Les personnages agissent avec les actions de leur classe (actions.json) ; les créatures avec les leurs.
 ## Pour un personnage, les PV sont ceux du Character : les dégâts persistent après le combat.
+## Les jets sont des réserves de d10 (voir Dice) : {"count": dés, "threshold": seuil}.
 
 var id := ""  # unique dans le combat
 var name := ""
@@ -16,12 +17,14 @@ var creature: Dictionary = {}
 var summoned := false  # invoqué pendant le combat (disparaît à la fin)
 var initiative := 0
 var statuses: Dictionary = {}  # id d'état -> charges
-var intent: Dictionary = {}  # action préparée, exécutée au prochain tour (ennemis)
+var intent: Dictionary = {}  # action annoncée, exécutée au prochain tour (ennemis)
 var uses: Dictionary = {}  # id d'action -> utilisations restantes dans ce combat (per_combat)
-var reaction_used := false  # réaction déjà utilisée ce round (Esquive instinctive…), rendue à son tour
+var reaction_used := false  # Esquive instinctive déjà utilisée ce round, rendue à son tour
 var savage_used := false  # Frappe brutale déjà utilisée ce tour
-var reactions := 0  # actions gardées à la fin de son tour : esquives et parades jusqu'à son prochain tour
+var reactions := 0  # actions gardées à la fin de son tour : esquives, parades, contre-attaques
+var parries_used := 0  # parades pendant le tour en cours (une par main armée)
 var fast_hands_used := false  # Mains lestes déjà utilisées ce tour
+var cunning_used := false  # Ruse (Se cacher sans dépenser d'action) déjà utilisée ce tour
 var _hp := 0
 var _max_hp := 0
 
@@ -47,13 +50,18 @@ static func from_character(ch: Character, hero: bool) -> Combatant:
 	return c
 
 
-static func from_creature(creature_id: String, label: String, side_id: String, rng: RandomNumberGenerator) -> Combatant:
+static func from_creature(creature_id: String, label: String, side_id: String, _rng: RandomNumberGenerator = null) -> Combatant:
 	var c := Combatant.new()
 	c.creature = Creatures.def(creature_id)
 	c.kind = "creature"
 	c.side = side_id
 	c.name = label
-	c._max_hp = maxi(1, Dice.roll_expr(str(c.creature.get("hp", "1")), rng)["total"])
+	if c.creature.has("hp"):
+		c._max_hp = maxi(1, int(c.creature["hp"]))
+	else:
+		# Comme un personnage : Constitution × 1,414^taille.
+		var base := float(DB.rules.get("hit_points", {}).get("size_base", 1.4142))
+		c._max_hp = maxi(1, roundi(c.ability_score("con") * pow(base, c.size())))
 	c._hp = c._max_hp
 	return c
 
@@ -74,51 +82,100 @@ func max_hp() -> int:
 	return character.max_hp if character != null else _max_hp
 
 
-func armor_class() -> int:
-	return character.armor_class() if character != null else int(creature.get("ac", 10))
+# --- Attributs, compétences, défenses ----------------------------------------
 
-
-func ability_mod(ability_id: String) -> int:
+## Valeur d'un attribut (personnage : avec ses modificateurs ; créature : "abilities", 4 par défaut).
+func ability_score(ability_id: String) -> int:
 	if character != null:
-		return character.ability_mod(ability_id)
-	return Abilities.modifier(int(creature.get("abilities", {}).get(ability_id, 10)))
+		return character.ability_score(ability_id)
+	return int(creature.get("abilities", {}).get(ability_id, 4))
 
 
-## Bonus d'un test de compétence. Créature : attribut (imposé, ou le meilleur de la compétence) + son
-## rang dans "skills" (0 si la compétence n'est pas listée).
-func skill_mod(skill_id: String, ability := "") -> int:
+## Rang d'une compétence. Créature : "skills", sinon le rang de départ (1, 2 si instinctive).
+func skill_rank(skill_id: String) -> int:
 	if character != null:
-		return character.skill_mod(skill_id, ability)
+		return character.skill_rank(skill_id)
+	var skill := Skills.resolve(skill_id)
+	return int(creature.get("skills", {}).get(skill, Skills.base_rank(skill)))
+
+
+## Réserve d'un test de compétence : {"count", "threshold", "ability"} (attribut imposé, ou le meilleur).
+func skill_pool(skill_id: String, ability := "", bonus := 0) -> Dictionary:
+	if character != null:
+		return character.skill_pool(skill_id, ability, bonus)
 	var used := ability
 	if used == "":
 		for candidate: String in Skills.abilities_of(skill_id):
-			if used == "" or ability_mod(candidate) > ability_mod(used):
+			if used == "" or ability_score(candidate) > ability_score(used):
 				used = candidate
-	return ability_mod(used) + int(creature.get("skills", {}).get(Skills.resolve(skill_id), 0))
+	return {"count": skill_rank(skill_id) + bonus, "threshold": ability_score(used), "ability": used}
 
 
-## Jet de sauvegarde : modificateur d'attribut (+ maîtrise pour un personnage, + "saves" pour une créature).
-func save_mod(ability_id: String) -> int:
+## Réserve pour résister à un effet (voir Character.resist_pool). Créature : la compétence liée à
+## l'attribut, + "saves" (dés en plus). Un état peut retirer un dé (Entravé : DEX).
+func resist_pool(ability_id: String, bonus := 0) -> Dictionary:
+	if has_status_flag("resist_penalty", ability_id):
+		bonus -= 1
+	if has_save_advantage(ability_id):
+		bonus += 1
 	if character != null:
-		return character.save_mod(ability_id)
-	return ability_mod(ability_id) + int(creature.get("saves", {}).get(ability_id, 0))
+		return character.resist_pool(ability_id, bonus)
+	var skill: String = Dice.setting("resist_skills", {}).get(ability_id, "physique")
+	return {"count": skill_rank(skill) + bonus + int(creature.get("saves", {}).get(ability_id, 0)),
+		"threshold": ability_score(ability_id), "ability": ability_id}
 
 
-## DD des jets de sauvegarde imposés : DD des sorts pour un personnage, "save_dc" pour une créature.
-func save_dc() -> int:
-	return Spellcasting.save_dc(character) if character != null else int(creature.get("save_dc", 10))
+## Esquive naturelle : DEX ÷ 3 (au moins 1). Difficulté des attaques de mêlée contre lui.
+func natural_dodge() -> int:
+	if character != null:
+		return character.natural_dodge()
+	var divisor := int(Combat.setting("dodge_divisor", 3))
+	@warning_ignore("integer_division")
+	return maxi(1, ability_score("dex") / divisor) + int(creature.get("natural_dodge", 0))
+
+
+## Armure : baisse d'autant le seuil des dégâts subis (sans passer sous 1).
+func armor() -> int:
+	return character.armor() if character != null else int(creature.get("armor", 0))
+
+
+## Armure naturelle (peau épaisse, carapace) : une attaque surprise ne l'ignore pas.
+func has_natural_armor() -> bool:
+	return character == null and creature.get("natural_armor", false)
+
+
+## Initiative de base : DEX + INT (+ Vigilant…). On y ajoute 1d10 en début de combat.
+func initiative_base() -> int:
+	return character.initiative_base() if character != null else ability_score("dex") + ability_score("int")
+
+
+## Actions par tour (rules.json › combat › actions_per_turn ; une créature peut en avoir plus).
+func actions_per_turn() -> int:
+	return int(creature.get("actions_per_turn", Combat.setting("actions_per_turn", 2)))
+
+
+## Seuil d'un sort lancé par ce combattant (attribut d'incantation ; créature : "spell_ability", INT).
+func spell_threshold() -> int:
+	if character != null:
+		return character.ability_score(character.action_ability("spell"))
+	return ability_score(creature.get("spell_ability", "int"))
+
+
+## Réserve d'incantation (Magie contre l'attribut d'incantation) pour imposer un effet à une cible.
+func spell_pool(bonus := 0) -> Dictionary:
+	return {"count": skill_rank("magic") + bonus, "threshold": spell_threshold(), "ability": "spell"}
 
 
 func has_modifier(type: String) -> bool:
 	return character != null and character.has_modifier(type)
 
 
-## Valeur minimale du d20 pour un coup critique (20, ou moins avec Critique amélioré).
-func critical_threshold() -> int:
-	return 20 - (Modifiers.sum(character.modifiers(), "critical_range") if character != null else 0)
+## Succès comptés en plus pour atteindre un critique (Critique amélioré : 1 par aptitude).
+func critical_bonus() -> int:
+	return Modifiers.sum(character.modifiers(), "critical_range") if character != null else 0
 
 
-## Avantage aux jets de sauvegarde de cet attribut (modificateur "save_advantage").
+## Un dé de plus pour résister avec cet attribut (modificateur "save_advantage").
 func has_save_advantage(ability_id: String) -> bool:
 	return character != null and Modifiers.grants(character.modifiers(), "save_advantage", ability_id)
 
@@ -126,15 +183,6 @@ func has_save_advantage(ability_id: String) -> bool:
 ## Attaques en plus pour l'action Attaque (Attaque supplémentaire).
 func extra_attacks() -> int:
 	return Modifiers.sum(character.modifiers(), "extra_attack") if character != null else 0
-
-
-## Test d'attribut (fuite…) : modificateur moins l'encombrement.
-func check_mod(ability_id: String) -> int:
-	return character.check_mod(ability_id) if character != null else ability_mod(ability_id)
-
-
-func initiative_bonus() -> int:
-	return character.initiative_bonus() if character != null else ability_mod("dex")
 
 
 ## Résistances, immunités et vulnérabilités (voir Defenses).
@@ -150,6 +198,8 @@ func size() -> int:
 func slots() -> float:
 	return Combat.size_slots(size())
 
+
+# --- Actions -----------------------------------------------------------------
 
 ## Le joueur choisit les actions des personnages (héros et compagnons) ; l'IA celles des créatures.
 func is_player_controlled() -> bool:
@@ -195,9 +245,9 @@ func resource_key(action: Dictionary) -> String:
 	return Spellcasting.slot_key(base)
 
 
-## L'action est-elle une action bonus pour ce combattant (Second souffle ; Se cacher avec la Ruse) ?
-func is_bonus(action: Dictionary) -> bool:
-	return action.get("bonus", false) or (action.get("id", "") == "hide" and has_modifier("cunning_action"))
+## L'action ne coûte-t-elle aucune action (Fougue ; Se cacher avec la Ruse, une fois par tour) ?
+func is_free(action: Dictionary) -> bool:
+	return action.get("free", false) or (action.get("id", "") == "hide" and has_modifier("cunning_action") and not cunning_used)
 
 
 ## L'IA joue-t-elle ce personnage (option par personnage) ?
@@ -208,6 +258,33 @@ func is_auto() -> bool:
 ## Le combattant a-t-il un bouclier (pour parer une attaque à distance) ?
 func has_shield() -> bool:
 	return character != null and Equipment.is_shield(character.equipment.get("off_hand", ""))
+
+
+## Tient-il une arme (ou un bouclier) en main ? Une créature est armée si une de ses attaques utilise
+## une arme.
+func is_armed() -> bool:
+	if character != null:
+		return character.weapon_id() != Equipment.UNARMED or character.equipment.has("off_hand")
+	return creature.get("actions", []).any(func(a): return a.get("effects", []).any(func(e): return e.get("weapon") is String))
+
+
+## Parades possibles par tour : une par main armée (arme et arme ou bouclier), une seule sinon.
+func parries_per_turn() -> int:
+	if character != null and character.weapon_id() != Equipment.UNARMED and character.equipment.has("off_hand"):
+		return 2
+	return 1
+
+
+## Réserve de parade : Armes de mêlée (arme ou bouclier) ou Physique (mains nues), contre la DEX
+## (une arme peut imposer un autre seuil : "parry": {"ability", "bonus"}).
+func parry_pool(bonus := 0) -> Dictionary:
+	var weapon := character.weapon_id() if character != null else ""
+	var armed := is_armed()
+	var pool := skill_pool("weapon_melee" if armed else "physique", "dex", bonus)
+	var parry: Dictionary = Equipment.def(weapon).get("parry", {}) if weapon != "" else {}
+	if not parry.is_empty():
+		pool["threshold"] = ability_score(parry.get("ability", "dex")) + int(parry.get("bonus", 0))
+	return pool
 
 
 ## Une action peut-elle être utilisée ? Retourne "" si oui, sinon la raison.
@@ -255,65 +332,137 @@ func remove_status(status_id: String) -> void:
 	statuses.erase(status_id)
 
 
-## Modificateur de dégâts infligés dû aux états (ex. Affaibli : -1 par charge).
-func damage_modifier() -> int:
+## Dés de dégâts en plus ou en moins dus aux états (ex. Affaibli : −1 par charge).
+func damage_dice_modifier() -> int:
 	var total := 0
 	for status_id: String in statuses:
-		total += StatusEffects.damage_dealt_per_stack(status_id) * stacks(status_id)
+		total += int(StatusEffects.def(status_id).get("damage_dice_per_stack", 0)) * stacks(status_id)
 	return total
+
+
+func is_prepared() -> bool:
+	return has_status_flag("prepared")
+
+
+## Préparé : consomme l'état et retourne les dés en plus (0 s'il n'est pas préparé).
+func use_prepared() -> int:
+	if not is_prepared():
+		return 0
+	for status_id: String in statuses.keys():
+		if StatusEffects.has_flag(status_id, "prepared"):
+			statuses.erase(status_id)
+	return int(Combat.setting("prepared_dice", 2))
+
+
+## Devient Préparé (sans cumul).
+func become_prepared() -> void:
+	for status_id: String in StatusEffects.ids():
+		if StatusEffects.has_flag(status_id, "prepared"):
+			statuses[status_id] = 1
+			return
 
 
 # --- Attaques ----------------------------------------------------------------
 
-## Bonus au jet d'attaque d'un effet "attack".
-func attack_bonus(effect: Dictionary) -> int:
-	if effect.has("to_hit"):
-		return int(effect["to_hit"])
-	if character == null:
-		return 0
+## Réserve d'attaque d'un effet "attack" : {"count", "threshold", "rank", "skill", "ability"}.
+## Personnage : arme en main (+ modificateurs d'arme), arme donnée, ou sort (Magie). Créature : "skill"
+## et "ability" de l'effet (Physique et FOR par défaut), ou l'arme donnée.
+func attack_pool(effect: Dictionary) -> Dictionary:
+	var pool := {}
+	if character != null:
+		if _uses_own_weapon(effect):
+			var mods := character.modifiers()
+			var bonus := Modifiers.sum(mods, "weapon_attack")
+			if Equipment.has_property(character.weapon_id(), "ranged"):
+				bonus += Modifiers.sum(mods, "ranged_attack")  # style Archerie
+			pool = character.attack_pool("weapon", "", bonus)
+			pool["skill"] = _best_weapon_skill(character.weapon_id())
+		elif effect.get("weapon") is String:
+			pool = character.attack_pool(String(effect.get("ability", "weapon")), effect["weapon"])
+			pool["skill"] = _best_weapon_skill(effect["weapon"])
+		elif effect.get("ability") == "spell":
+			pool = character.attack_pool("spell")
+			pool["skill"] = "magic"
+		else:
+			pool = character.skill_pool(effect.get("skill", "physique"), effect.get("ability", "str"))
+			pool["skill"] = effect.get("skill", "physique")
+	elif effect.get("weapon") is String:
+		var weapon: String = effect["weapon"]
+		var skill := _best_weapon_skill(weapon)
+		var ability := Equipment.attack_ability(weapon, ability_score("str"), ability_score("dex"))
+		pool = {"count": skill_rank(skill), "threshold": ability_score(ability), "ability": ability, "skill": skill}
+	elif effect.get("ability") == "spell":
+		pool = spell_pool()
+		pool["skill"] = "magic"
+	else:
+		var skill: String = effect.get("skill", "physique")
+		pool = skill_pool(skill, effect.get("ability", "str"))
+		pool["skill"] = skill
+	pool["rank"] = skill_rank(pool["skill"])
+	return pool
+
+
+## Compétence d'arme la plus haute pour une arme (Equipment.skills_for).
+func _best_weapon_skill(weapon: String) -> String:
+	var best := ""
+	for skill_id: String in Equipment.skills_for(weapon):
+		if best == "" or skill_rank(skill_id) > skill_rank(best):
+			best = skill_id
+	return best
+
+
+## Spécification des dégâts d'un effet : {"threshold": "weapon" | "spell" | attribut | N, "bonus",
+## "dice", "skill"?} (celle de l'arme pour une attaque d'arme).
+func damage_spec(effect: Dictionary) -> Dictionary:
 	if _uses_own_weapon(effect):
-		var mods := character.modifiers()
-		var bonus := character.attack_bonus("weapon") + Modifiers.sum(mods, "weapon_attack")
-		if Equipment.has_property(character.weapon_id(), "ranged"):
-			bonus += Modifiers.sum(mods, "ranged_attack")  # style Archerie
-		return bonus
+		return Equipment.weapon_damage(character.weapon_id(), not character.equipment.has("off_hand"))
 	if effect.get("weapon") is String:
-		return character.attack_bonus(String(effect.get("ability", "str")), effect["weapon"])
-	return character.attack_bonus(String(effect.get("ability", "weapon")))
+		return Equipment.weapon_damage(effect["weapon"])
+	var spec: Variant = effect.get("damage", {})
+	return spec if spec is Dictionary else {}
 
 
-## Expression de dégâts d'un effet "attack" ou "damage", ex. « 1d8+3+1d6 ».
-func damage_expr(effect: Dictionary) -> String:
-	var expr: String = effect.get("damage", "1")
-	var extra: String = effect.get("extra_damage", "")
+## Réserve de dégâts d'un effet : {"count", "threshold"}. Nombre de dés : rang de la compétence
+## d'attaque (ou de "skill"), + "dice", + paliers (tours de magie, Attaque sournoise), + états ; seuil :
+## l'attribut d'attaque, un attribut, ou fixe, + "bonus" (+ arme magique, style Duel).
+func damage_pool(effect: Dictionary, attack: Dictionary = {}) -> Dictionary:
+	var spec := damage_spec(effect)
+	var count := int(spec.get("dice", 0)) + damage_dice_modifier()
+	if spec.has("skill"):
+		count += skill_rank(spec["skill"])
+	elif not attack.is_empty():
+		count += int(attack["rank"])
 	if effect.has("scaling") and character != null:
 		var scaling_class: String = effect["scaling"].get("class", "")
 		var scaling_level: int = character.class_level(scaling_class) if scaling_class != "" else character.level
-		var count := Spellcasting.dice_count(effect["scaling"]["table"], scaling_level)
-		if effect["scaling"].get("field", "damage") == "extra_damage":
-			extra = Spellcasting.with_dice_count(extra, count)
-		else:
-			expr = Spellcasting.with_dice_count(expr, count)
-	var bonus := 0
-	if _uses_own_weapon(effect):
-		expr = character.weapon_damage()
+		var steps := Spellcasting.dice_count(effect["scaling"]["table"], scaling_level)
+		count += steps - 1 if effect["scaling"]["table"] == "cantrip" else steps
+	var threshold := 0
+	var source: Variant = spec.get("threshold", "spell" if effect.get("ability") == "spell" else "weapon")
+	if source is String:
+		match source:
+			"weapon":
+				threshold = int(attack.get("threshold", ability_score("str")))
+			"spell":
+				threshold = spell_threshold()
+			_:
+				threshold = ability_score(source)
+	else:
+		threshold = int(source)
+	threshold += int(spec.get("bonus", 0))
+	if character != null:
 		var mods := character.modifiers()
-		bonus += Modifiers.sum(mods, "weapon_damage") + character.ability_mod(character.action_ability("weapon"))
-		if not two_handed_grip() and not Equipment.has_property(character.weapon_id(), "ranged"):
-			bonus += Modifiers.sum(mods, "dueling")  # style Duel
-	elif effect.get("weapon") is String:
-		expr = Equipment.weapon_damage(effect["weapon"])
-	elif effect.get("add_mod", false) and character != null:
-		bonus += character.ability_mod(character.action_ability(effect.get("ability", "str")))
-	if effect.get("school") == "evocation" and has_modifier("empowered_evocation"):
-		bonus += character.ability_mod(character.action_ability("spell"))
-	expr = Dice.add_mod(expr, bonus)
-	if extra != "":
-		expr += "+" + extra
-	return expr
+		if _uses_own_weapon(effect):
+			threshold += Modifiers.sum(mods, "weapon_damage")
+			if not two_handed_grip() and not Equipment.has_property(character.weapon_id(), "ranged"):
+				threshold += Modifiers.sum(mods, "dueling")  # style Duel
+		if effect.get("school") == "evocation" and has_modifier("empowered_evocation"):
+			count += 1
+	return {"count": count, "threshold": threshold}
 
 
 ## Dégâts d'autres types ajoutés à un effet : ceux de l'effet, plus ceux de l'arme s'il l'utilise.
+## Chaque partie : {"dice", "threshold", "damage_type"}, lancée à part.
 func bonus_damage(effect: Dictionary) -> Array:
 	var result: Array = effect.get("bonus_damage", []).duplicate()
 	if _uses_own_weapon(effect):
@@ -331,6 +480,24 @@ func damage_type(effect: Dictionary) -> String:
 	return effect.get("damage_type", "")
 
 
+## L'attaque est-elle à distance (arme à distance, sort, ou "ranged") ?
+func is_ranged_attack(effect: Dictionary) -> bool:
+	if effect.get("ability", "") == "spell" or effect.get("ranged", false):
+		return true
+	if _uses_own_weapon(effect):
+		return Equipment.has_property(character.weapon_id(), "ranged")
+	return effect.get("weapon") is String and Equipment.has_property(effect["weapon"], "ranged")
+
+
+## L'attaque est-elle armée (arme, sort) ? Sinon (mains nues, crocs), elle se pare à mains nues.
+func is_armed_attack(effect: Dictionary) -> bool:
+	if effect.get("ability", "") == "spell":
+		return true
+	if _uses_own_weapon(effect):
+		return character.weapon_id() != Equipment.UNARMED
+	return effect.get("weapon") is String and effect["weapon"] != Equipment.UNARMED
+
+
 ## L'arme est tenue à deux mains (arme à deux mains, ou polyvalente sans rien en main secondaire).
 func two_handed_grip() -> bool:
 	if character == null:
@@ -340,14 +507,19 @@ func two_handed_grip() -> bool:
 		or (Equipment.has_property(weapon, "versatile") and not character.equipment.has("off_hand"))
 
 
-## L'attaque d'arme profite-t-elle du style Armes à deux mains ?
+## L'attaque d'arme profite-t-elle du style Armes à deux mains (une relance des dés de dégâts ratés) ?
 func great_weapon_fighting(effect: Dictionary) -> bool:
 	return _uses_own_weapon(effect) and two_handed_grip() and has_modifier("great_weapon_fighting")
 
 
-## Expression de soins, « level » étant remplacé par le niveau du personnage.
-func heal_expr(amount: String) -> String:
-	return amount.replace("level", str(character.level if character != null else 1))
+## Réserve de soins : {"dice", "skill"?, "threshold": attribut | N, "bonus"?}.
+func heal_pool(spec: Dictionary) -> Dictionary:
+	var count := int(spec.get("dice", 0))
+	if spec.has("skill"):
+		count += skill_rank(spec["skill"])
+	var source: Variant = spec.get("threshold", 5)
+	var threshold := ability_score(source) if source is String else int(source)
+	return {"count": count, "threshold": threshold + int(spec.get("bonus", 0))}
 
 
 func _uses_own_weapon(effect: Dictionary) -> bool:

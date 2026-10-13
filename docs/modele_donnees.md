@@ -16,7 +16,7 @@ dans la console Godot. Les tests automatisés le signalent aussi.
 | `species.json` | Espèces : taille, âges, vieillissement, noms, apparence des portraits |
 | `classes.json` | Classes : dé de vie, modèle d'attributs, compétences maîtrisées, objets de départ |
 | `backgrounds.json` | Passés : compétences maîtrisées, or et objets de départ éventuels |
-| `items.json` | Objets hors équipement, avec une `category` : `consumable` (`use`, ex. `{"heal": "2d4+2"}`), `material`, `treasure`. Les ids sont uniques entre `items.json` et `equipment.json` |
+| `items.json` | Objets hors équipement, avec une `category` : `consumable` (`use`, ex. `{"heal": {"dice": 3, "threshold": 7}}`), `material`, `treasure`. Les ids sont uniques entre `items.json` et `equipment.json` |
 | `shops.json`, `recipes.json` | Boutiques et recettes (voir Économie) |
 | `creatures.json` | Bestiaire : ennemis et invocations (API `Creatures`) |
 | `actions.json` | Actions de combat des classes : attaques, sorts, capacités (API `Actions`) |
@@ -72,23 +72,24 @@ Un choix est soit **direct** (`outcome`), soit **avec test** (`check`, `success`
 	"id": "fight",
 	"text": "L'affronter",
 	"conditions": [{"type": "class", "in": ["wizard"]}],
-	"check": {"skill": "athletics", "dc": 13},
+	"check": {"skill": "physique", "difficulty": 2},
 	"success": {"text": "La bête s'effondre.", "effects": [{"type": "xp", "amount": 100}]},
-	"failure": {"text": "Ses crocs se referment sur vous.", "effects": [{"type": "hp", "amount": -6, "cause": "Dévoré par un loup"}]}
+	"failure": {"text": "Ses crocs se referment sur vous.", "effects": [{"type": "hp", "amount": -2, "cause": "Dévoré par un loup"}]}
 }
 ```
 
 | Champ | Description |
 |---|---|
-| `conditions` | Si elles ne sont pas remplies, le choix est **caché**. En mode debug (F12), il est affiché grisé, avec la raison (ex. « INT 12+ ») |
-| `check` | Test d20 : `{"skill": "<compétence>", "dc": N}`, `{"ability": "<attribut>", "dc": N}` ou `{"save": "<attribut>", "dc": N}` (jet de sauvegarde, avec la maîtrise si la classe le maîtrise) |
+| `conditions` | Si elles ne sont pas remplies, le choix est **caché**. En mode debug (F12), il est affiché grisé, avec la raison (ex. « INT 5+ ») |
+| `check` | Test en réserve de d10 : `{"skill": "<compétence>", "ability"?: "<attribut>", "difficulty": N}`, `{"ability": "<attribut>", "difficulty": N}` (2 dés) ou `{"resist": "<attribut>", "difficulty": N}` (résister) ; `"advantage"` / `"disadvantage"` : difficulté −1 / +1 ; `"bonus"` : dés en plus |
 | `outcome` / `success` / `failure` | `{"text": "...", "effects": [...]}` |
+| `critical_success`? / `critical_failure`? | Issue d'une réussite critique / d'un échec critique (sinon `success` / `failure`) |
 
-**Tests :** on lance d20 + modificateur et on compare au DD. Un 20 naturel réussit toujours, un 1 naturel échoue
-toujours. Le pourcentage de réussite est affiché au joueur. Le modificateur vaut celui de l'attribut, plus le bonus de
-maîtrise si la classe maîtrise la compétence.
+**Tests :** [rang de la compétence] d10 contre un seuil égal à l'attribut ; chaque dé ≤ seuil est un succès (9 et 10
+jamais, 1 toujours et relancé) ; réussi si les succès atteignent la difficulté. Le pourcentage de réussite est
+affiché au joueur. Voir [systeme_de_jeu.md](systeme_de_jeu.md).
 
-Repères de DD : 10 facile · 13 moyen · 15 difficile · 18+ très difficile.
+Repères de difficulté : 1 tous les jours · 2 moyen · 3 difficile · 4 expert · 5+ exceptionnel.
 
 ## Conditions
 
@@ -159,36 +160,37 @@ Un combat se lance avec l'effet `combat` :
 | Champ | Description |
 |---|---|
 | `enemies` | Ids de `creatures.json`. Les doublons sont numérotés (Brigand A, Brigand B). Le total des places ne doit pas dépasser la capacité d'un camp |
-| `flee` (true), `flee_dc` (12) | La fuite est-elle possible, et son DD (d20 + DEX) |
+| `flee` (true), `flee_difficulty` (2) | La fuite est-elle possible, et sa difficulté (Physique, DEX) |
+| `light`? | `dim` (pénombre : Couvert +1) ou `dark` (noir : Couvert +2) |
 | `on_defeat` | `death` (par défaut) : le héros à 0 PV meurt, les compagnons à 0 PV aussi. `knockout` : tout le monde se relève à 1 PV, comme pour une bagarre de taverne |
 | `victory` / `fled` / `defeat` | Texte et effets de chaque issue. `defeat` ne sert qu'en `knockout` |
 
 ### Déroulement
 
-C'est un combat proche de D&D 5e. Les réglages sont dans `rules.json › combat`.
+Les règles complètes sont dans [systeme_de_jeu.md](systeme_de_jeu.md) ; les réglages dans `rules.json › combat`.
 
-- **Initiative** : chacun lance d20 + DEX (+ bonus d'initiative).
-- **Début de chaque tour** : les états agissent (poison, brûlure…) puis perdent leurs charges. Un combattant étourdi
-  passe son tour.
-- **Héros et compagnons** sont contrôlés par le joueur. À leur tour, ils font **une action** :
-  - une action de leur classe (attaque, sort, capacité) ;
-  - un objet ;
-  - la fuite ;
-  - ou passer leur tour.
-
-  Une action `free` (Fougue) ne consomme pas l'action du tour, et l'effet `extra_action` en donne une de plus :
-  le tour continue tant qu'il en reste (`Combat.actions_left`).
+- **Initiative** : 1d10 + DEX + INT (égalité : DEX, puis INT, puis au hasard).
+- **Début de chaque tour** : les réactions gardées depuis le tour précédent sont perdues et donnent l'état Préparé ;
+  puis les états agissent (poison, brûlure…) et perdent leurs charges. Un combattant étourdi passe son tour.
+- **Deux actions par tour** (`actions_per_turn`, ou `actions_per_turn` d'une créature). Héros et compagnons sont
+  contrôlés par le joueur (ou par l'IA, au choix) : action de classe, objet, fuite (tout le tour), Se préparer, ou
+  fin du tour. Une action `free` (Fougue) ne coûte rien ; `extra_action` en donne une de plus.
+- **Réactions** : chaque action gardée permet, jusqu'au tour suivant, une **esquive** (Physique, DEX : retire des
+  succès à l'attaque), une **parade** (Armes de mêlée ou Physique, DEX : retire des points de dégâts ; une par main
+  armée et par tour ; à distance : avec un bouclier) ou une **contre-attaque** (opposition avant le jet ennemi).
+  Elles sont automatiques pour l'instant.
+- **Attaque** : [rang] d10 contre l'attribut, difficulté = Esquive naturelle de la cible (DEX ÷ 3, au moins 1) en
+  mêlée, ou son Couvert à distance. Les succès au-delà donnent des critiques (relances des dés de dégâts ratés).
+- **Dégâts** : [rang] d10 contre le seuil de l'arme, un point par succès ; l'Armure de la cible baisse le seuil.
+- **Attaque surprise** (attaquant caché, cible endormie ou paralysée) : Esquive naturelle 1, pas de réaction, armure
+  ignorée (sauf naturelle), critique plus facile.
 - **Attaque supplémentaire** : l'action Attaque (`attack_action`) frappe 1 + `extra_attack` fois. Si la cible tombe,
   les coups suivants visent l'ennemi le plus faible.
-- **Jets de sauvegarde** : un effet avec `save` fait lancer à la cible d20 + modificateur (+ maîtrise si sa classe
-  maîtrise cette sauvegarde) contre le DD des sorts de l'acteur (8 + maîtrise + attribut d'incantation), le `dc` de
-  l'effet ou le `save_dc` de la créature.
-- **Réactions** (première version) : l'Esquive instinctive divise par deux une attaque par round ; la réaction revient
-  au début du tour du personnage.
-- **Créatures** (ennemis, invocations) : elles jouent seules (IA). Un ennemi qui tire une action `prepared` l'annonce
-  (« Prépare : … », visible au-dessus de lui), puis l'exécute à son tour suivant.
-- **Attaque** : d20 + bonus contre la CA. Un 20 naturel est un critique (dés doublés), un 1 naturel rate toujours.
-  Le bonus vaut le modificateur d'attribut plus la maîtrise.
+- **Résister** : un effet avec `resist` fait lancer à la cible sa réserve de résistance (Physique pour FOR, DEX et
+  CON ; Perspicacité pour SAG…). Contre des dégâts, chaque succès retire un point ; contre un autre effet, opposition
+  avec la Magie de l'acteur (il faut plus de succès qu'elle).
+- **Créatures** (ennemis, invocations) : elles jouent seules (IA) et gardent parfois une action pour se défendre
+  (`ai_guard_chance`). Une action `announced` est d'abord annoncée (« s'apprête à : … »), puis jouée au tour suivant.
 - **Places** : chaque camp a `side_capacity` places (4). Une créature en occupe `size_slots[taille]` : ½ pour une petite,
   1 pour une moyenne, 2 pour une grande. Sa taille à l'écran suit `sprite_scale`.
 - **Récompenses à la victoire** : l'XP de tous les ennemis va à chaque membre du groupe encore debout, et l'or et le
@@ -207,7 +209,7 @@ victoire par classe, seul et avec un compagnon, ainsi que la durée moyenne en r
 	"target": "enemy",
 	"cost": "spell_slot",
 	"spell_level": 1,
-	"effects": [{"type": "damage", "damage": "3d4+3", "damage_type": "force", "upcast": "1d4+1"}]
+	"effects": [{"type": "damage", "damage": {"dice": 3, "threshold": 6}, "damage_type": "force", "upcast": 1}]
 }
 ```
 
@@ -230,7 +232,7 @@ d'emplacement disponible (« Projectile magique (niv. 3) »), avec `upcast` ajou
 Chaque classe déclare :
 - `actions` : ses actions dès le niveau 1 ;
 - `features` : ses aptitudes par niveau (voir ci-dessous) ;
-- `saving_throws` : ses deux jets de sauvegarde maîtrisés ;
+- `saving_throws` : ses deux résistances maîtrisées (un dé de plus pour résister avec ces attributs) ;
 - `equipment` : son équipement ;
 - `spellcasting` : l'attribut d'incantation (pour les sorts, `"ability": "spell"`) ;
 - `spell_slots` : `full` (lanceur complet) ou `half` (demi-lanceur), qui renvoie aux tables de
@@ -261,25 +263,29 @@ Ils sont communs aux actions des classes (`actions.json`) et à celles des créa
 
 | type | Champs | Effet |
 |---|---|---|
-| `attack` | `weapon: true` (arme du personnage), ou `weapon: "<id>"` (arme du catalogue), ou `damage` + `damage_type` ; `ability`? (`spell`…), `to_hit`? (créatures), `extra_damage`?, `add_mod`? | Jet d'attaque contre la CA, puis dégâts. **Les effets qui suivent ne s'appliquent que si l'attaque touche** |
-| `damage` | `damage`, `damage_type` | Dégâts automatiques |
+| `attack` | `weapon: true` (arme du personnage), ou `weapon: "<id>"` (arme du catalogue), ou `damage` + `damage_type` ; `skill`? et `ability`? (créatures : Physique et FOR par défaut ; `spell` : Magie), `ranged`? | Jet d'attaque contre l'Esquive naturelle ou le Couvert, puis dégâts. **Les effets qui suivent ne s'appliquent que si l'attaque touche** |
+| `damage` | `damage`, `damage_type` | Dégâts sans jet d'attaque (l'Armure ne compte pas) |
 | `extra_action` | — | Une action de plus ce tour |
-| `heal` | `amount` (`level` = niveau) | Soins |
+| `heal` | `amount` (réserve) | Soins : un PV par succès, au moins 1 |
 | `status` | `status`, `stacks` | Ajoute des charges d'état (sauf immunité) |
 | `cleanse` | `status` (ou `negative`) | Retire un état, ou tous les états négatifs |
 | `summon` | `creature` | Invoque une créature dans son camp (s'il reste de la place) |
+| `check` | `skill`, `ability`?, `difficulty` ou `vs_resist` | Test de l'acteur ; raté, les effets suivants sont ignorés |
+
+**Réserves de dégâts et de soins** : `{"dice"?: N, "skill"?: compétence, "threshold"?: "weapon" | "spell" | attribut |
+N, "bonus"?: N}`. Nombre de dés : `dice` + rang de `skill` (ou, pour une attaque, le rang de sa compétence) ; seuil :
+celui de l'attaque (`weapon`), l'attribut d'incantation (`spell`), un attribut, ou fixe ; + `bonus`.
 
 Champs facultatifs, valables pour tout effet :
-- `save` : `{"ability": "dex", "half"?: true, "dc"?: N}`. La cible fait un jet de sauvegarde. Si elle le réussit,
-  l'effet est annulé, ou ses dégâts sont divisés par deux avec `half`, et **les effets suivants sont ignorés** comme
-  après une attaque ratée. La Dérobade transforme « moitié » en « rien » et « plein » en « moitié ».
-- `scaling` : `{"table": "cantrip", "field"?: "damage" | "extra_damage"}`. Le nombre de dés suit le niveau de classe
-  (`rules.json › dice_scaling` : `cantrip` 1/2/3/4 dés aux niveaux 1/5/11/17, `sneak_attack` +1d6 tous les deux
-  niveaux).
-- `upcast` : dégâts ajoutés par niveau d'emplacement au-delà du niveau du sort.
-- `bonus_damage` : `[{"damage": "1d4", "damage_type": "fire"}]`, dégâts d'autres types ajoutés à une attaque ou à des
-  dégâts. Chaque partie est lancée séparément avec les défenses de son type. Une arme peut aussi en porter
-  (`equipment.json`, ex. la Langue de feu).
+- `resist` : `{"ability": "dex", "skill"?}`. La cible résiste : contre des dégâts, chaque succès retire un point
+  (Dérobade : deux) ; contre un autre effet, opposition avec la réserve d'incantation de l'acteur (ou `skill`) ; si
+  elle l'emporte ou fait jeu égal, l'effet et **les effets suivants sont ignorés**.
+- `scaling` : `{"table": "cantrip" | "sneak_attack", "class"?}`. Dés de dégâts en plus selon le niveau (de classe)
+  (`rules.json › dice_scaling` : tours de magie +1 dé aux niveaux 5, 11 et 17 ; Attaque sournoise +1 dé par palier).
+- `upcast` : dés de dégâts en plus par niveau d'emplacement au-delà du niveau du sort.
+- `bonus_damage` : `[{"dice": 2, "threshold": 5, "damage_type": "fire"}]`, dégâts d'autres types ajoutés à une
+  attaque ou à des dégâts. Chaque partie est lancée séparément avec les défenses de son type. Une arme peut aussi en
+  porter (`equipment.json`, ex. la Langue de feu).
 
 ### États (`status_effects.json`)
 
@@ -287,26 +293,23 @@ Les états se cumulent en charges. Leur mécanique est entièrement décrite dan
 
 | Champ | Effet |
 |---|---|
-| `tick_damage_per_stack` | Dégâts par charge au début du tour. Sans `tick_damage_type`, ils sont **bruts** (ils ignorent défenses et Protection) ; le Poison inflige des dégâts de poison |
+| `tick_damage` / `tick_damage_per_stack` | Dégâts au début du tour (fixes / par charge). Sans `tick_damage_type`, ils sont **bruts** (ils ignorent défenses et Protection) ; le Poison inflige 1 dégât de poison par tour |
 | `tick_max_hp_percent_per_stack` | Dégâts en % des PV max par charge (au moins 1 par charge), comme la Brûlure |
 | `tick_damage_type` | Type des dégâts de tick (les défenses s'appliquent alors) |
 | `skip_turn` | Passe son tour (Étourdi) |
-| `damage_dealt_per_stack` | Modifie les dégâts infligés (Affaibli : -1 par charge) |
+| `damage_dice_per_stack` | Dés de dégâts en plus ou en moins par charge (Affaibli : −1) |
 | `absorb` | Chaque charge absorbe 1 point de dégâts (Protection) |
 | `decay` / `decay_at` | Charges perdues par tour (un nombre, ou `all`), au début (`start`) ou à la fin (`end`) du tour |
 | `negative`, `death_cause`, `color` | État négatif (pour `cleanse`), texte de mort, couleur de la pastille |
-| `attack_advantage` / `attack_disadvantage` | Avantage / désavantage à ses jets d'attaque |
-| `attacked_advantage` / `attacked_disadvantage` | Avantage / désavantage pour qui l'attaque |
-| `attacked_critical` | Un coup qui le touche est un critique (Endormi, Paralysé) |
-| `save_disadvantage` / `auto_fail_saves` | Liste d'attributs : désavantage à ces sauvegardes / échec automatique |
-| `check_disadvantage`, `no_flee` | Désavantage à ses tests (fuite) ; fuite impossible |
+| `attack_disadvantage` | Difficulté +1 à ses attaques |
+| `attacked_advantage` / `attacked_disadvantage` | Difficulté −1 / +1 pour qui l'attaque |
+| `attack_surprise` / `unaware` | Ses attaques sont des surprises (caché) / il est pris par surprise (endormi, paralysé) |
+| `hidden` / `immobile` / `moving` | Couvert +1 / −1 / +1 contre les attaques à distance |
+| `resist_penalty` / `auto_fail_resist` | Liste d'attributs : un dé de moins pour résister / pas de résistance |
+| `check_disadvantage`, `no_flee` | Un dé de moins à ses tests (fuite) ; fuite impossible |
 | `no_hostile_actions` | Aucune action visant un ennemi (Charmé) |
 | `wake_on_damage` | L'état disparaît quand la créature subit des dégâts (Endormi) |
-
-**Avantage et désavantage** : on lance deux d20 et on garde le meilleur (avantage) ou le pire (désavantage) ; si les
-deux s'appliquent, ils s'annulent. Ils jouent sur les attaques (états de l'attaquant et de la cible), les jets de
-sauvegarde, la fuite, l'initiative (`initiative_advantage`) et les tests d'événement (`"advantage": true`,
-`"disadvantage": true` dans `check`, ou `skill_advantage` du personnage). Le plateau de dés grise le dé écarté.
+| `prepared` | Préparé : +2 dés au prochain jet de combat, puis l'état disparaît |
 
 ### Créatures (`creatures.json`)
 
@@ -314,11 +317,12 @@ Ce fichier regroupe les ennemis et les invocations.
 
 | Champ | Description |
 |---|---|
-| `ac`, `hp` | Classe d'armure, et PV sous forme d'expression de dés (`2d6+2`), tirés à chaque combat |
-| `abilities` | Attributs (la DEX sert à l'initiative et aux jets de sauvegarde) |
-| `saves`?, `save_dc`? | Bonus aux jets de sauvegarde (`{"dex": 2}`), et DD des sauvegardes que ses actions imposent (10 par défaut) |
+| `abilities`, `skills`? | Attributs (échelle 1-8, 4 par défaut) et rangs (sinon le rang de départ : 1, 2 si instinctive) |
+| `hp`? | PV fixes ; sans `hp`, Constitution × 1,414^taille comme un personnage |
+| `armor`?, `natural_armor`? | Points d'Armure ; `true` si c'est une armure naturelle (une attaque surprise ne l'ignore pas) |
+| `saves`?, `spell_ability`?, `actions_per_turn`? | Dés en plus pour résister (`{"dex": 1}`) ; attribut d'incantation (INT) ; actions par tour (2) |
 | `size` | Taille : places occupées et taille du sprite |
-| `actions` | `[{"name", "weight", "target", "prepared"?, "effects"}]` : l'IA tire une action selon les poids. `prepared` : annoncée un tour à l'avance |
+| `actions` | `[{"name", "weight", "target", "announced"?, "effects"}]` : l'IA tire une action selon les poids. `announced` : annoncée un tour à l'avance |
 | `xp`, `gold`?, `loot`? | Récompenses |
 | `defenses` | Résistances, immunités et vulnérabilités (voir Défenses) |
 | `death_cause` | Texte de l'écran de mort si la créature tue le héros |
@@ -329,7 +333,8 @@ Les compagnons sont des personnages : ils utilisent les actions de leur classe, 
 
 ### Expressions de dés
 
-Elles s'écrivent `XdY+Z`, et les termes peuvent se combiner : `2d6+3`, `1d8+1d6-1`, `5`.
+Hors règles (or trouvé : `"gold": "1d6"`), elles s'écrivent `XdY+Z` : `2d6+3`, `1d8+1d6-1`, `5`. Tous les jets de
+règles sont des réserves de d10 (voir [systeme_de_jeu.md](systeme_de_jeu.md)).
 
 ## Règles centralisées (scripts/rules/)
 
@@ -385,40 +390,40 @@ Les dons, les espèces et les équipements peuvent porter des `modifiers`. Ils s
 |---|---|---|
 | `ability` | `id`, `amount` | Bonus d'attribut. **Interdit pour une espèce** |
 | `skill_rank` | `id`, `amount` | Rangs en plus dans une compétence |
-| `hp_per_level` | `amount` | PV max en plus, à chaque niveau |
-| `initiative` | `amount` | Bonus d'initiative |
-| `ac` | `amount` | Bonus de CA |
-| `weapon_damage` | `amount` | Bonus aux dégâts des attaques d'arme |
-| `weapon_attack` | `amount` | Bonus aux jets d'attaque avec une arme |
-| `saving_throws` | `amount` | Bonus à tous les jets de sauvegarde |
+| `hp_per_level` / `max_hp` | `amount` | PV max en plus, à chaque niveau / une fois (Robuste +3, Amulette de vigueur +2) |
+| `initiative` | `amount` | Points d'initiative en plus |
+| `armor` / `natural_dodge` | `amount` | Points d'Armure / d'Esquive naturelle en plus |
+| `weapon_damage` | `amount` | Seuil des dégâts d'arme en plus |
+| `weapon_attack` | `amount` | Dés en plus aux attaques avec une arme |
+| `saving_throws` | `amount` | Dés en plus pour résister |
 | `resistance` / `immunity` / `vulnerability` | `damage_type` | Défense contre un type de dégâts |
 | `status_immunity` | `status` | Immunité à un état |
-| `save_proficiency` | `id` | +1 rang à un jet de sauvegarde |
+| `save_proficiency` | `id` | Un dé de plus pour résister avec un attribut |
 | `extra_attack` | `amount` | Attaques en plus pour l'action Attaque |
 | `uncanny_dodge` | — | Une fois par round, les dégâts d'une attaque reçue sont divisés par deux |
-| `evasion` | — | Sauvegarde de DEX pour moitié : rien si elle réussit, moitié si elle échoue |
-| `reliable_talent` | — | Test d'une compétence maîtrisée : un d20 de 9 ou moins compte comme 10 |
+| `evasion` | — | Résister à des dégâts avec la DEX : chaque succès retire deux points |
+| `reliable_talent` | — | Test d'une compétence entraînée : toujours au moins un succès |
 | `relentless_endurance` | — | Tombe à 1 PV au lieu de 0, tant qu'il reste la ressource `relentless_endurance` |
-| `critical_range` | `amount` | Critique à partir de 20 − amount (Champion) |
-| `save_advantage` | `id` | Avantage aux sauvegardes d'un attribut |
-| `initiative_proficiency`, `initiative_advantage` | — | Bonus de maîtrise / avantage à l'initiative |
-| `skill_advantage` | `id` | Avantage aux tests d'une compétence |
+| `critical_range` | `amount` | Succès supplémentaires comptés en plus pour le critique (Champion) |
+| `save_advantage` | `id` | Un dé de plus pour résister avec un attribut |
+| `initiative_proficiency`, `initiative_advantage` | — | Rang de Physique à l'initiative (Vigilant) / deux d10, le meilleur |
+| `skill_advantage` | `id` | Un dé de plus aux tests d'une compétence |
 | `spellcasting_ability` | `id` | Attribut d'incantation hors classe (Initié à la magie) |
 | `savage_attacker` | — | Une fois par tour, dés de dégâts d'arme lancés deux fois, le meilleur gardé |
 | `ignore_resistance` | `damage_type` | Les cibles ne résistent plus à ce type |
-| `ranged_attack`, `armored_ac`, `dueling` | `amount` | Styles Archerie (toucher à distance), Défense (CA en armure), Duel (dégâts à une main) |
-| `great_weapon_fighting` | — | À deux mains, 1 et 2 aux dés de dégâts comptent 3 |
+| `ranged_attack`, `armored`, `dueling` | `amount` | Styles Archerie (dés à distance), Défense (Armure en armure), Duel (seuil des dégâts à une main) |
+| `great_weapon_fighting` | — | À deux mains, on relance une fois les dés de dégâts ratés |
 | `armor_strength_reduction` | `amount` | Force conseillée des armures réduite |
-| `potent_cantrip`, `empowered_evocation` | — | Évocateur : tour de magie raté = moitié des dégâts ; + attribut aux dégâts d'évocation (effets `"school": "evocation"`) |
+| `potent_cantrip`, `empowered_evocation` | — | Évocateur : tour de magie raté = moitié des dégâts ; un dé de dégâts en plus aux sorts d'évocation (`"school": "evocation"`) |
 | `fast_hands`, `survivor` | — | Voleur : un objet par tour sans coût d'action ; Champion : regain de PV à moitié de vie |
 
 ### Équipement (`equipment.json`)
 
 | Catégorie | Champs |
 |---|---|
-| `weapon` | `damage`, `damage_type`, `properties` (`finesse`, `light`, `thrown`, `versatile`, `heavy`, `two_handed`, `ranged`), `versatile_damage` pour une arme polyvalente |
-| `armor` | `armor_type` (`clothing` et `light` : base + DEX, `medium` : base + DEX max 2, `heavy` : base seule), `base_ac`, `strength`? (Force requise, voir ci-dessous) |
-| `shield` | `ac_bonus` |
+| `weapon` | `damage` (`{"threshold"?: "weapon" \| "str" \| "dex" \| N, "bonus"?, "dice"?}`), `damage_type`, `properties` (`finesse`, `light`, `thrown`, `versatile` : +1 au seuil à deux mains, `heavy`, `two_handed`, `ranged`), `parry`? (`{"ability", "bonus"}`) |
+| `armor` | `armor_type` (`clothing`, `light`, `medium`, `heavy`), `armor` (points d'Armure), `strength`? (Force requise, voir ci-dessous) |
+| `shield` | `armor` (points d'Armure) ; permet de parer les attaques à distance |
 | `accessory` | `slot` : `head` (couvre-chef), `hands` (gants), `legs` (jambes), `feet` (chaussures), `neck` (collier) ou `ring` (anneau : `ring_1`, ou `ring_2` si le premier est pris) |
 
 Champs communs : `weight` (kg) ; facultatifs : `modifiers`, `rarity` (`common`, `uncommon`, `rare`, `very_rare`,
@@ -446,18 +451,18 @@ Champs communs : `weight` (kg) ; facultatifs : `modifiers`, `rarity` (`common`, 
 
 **Règles appliquées :**
 - Une arme de finesse utilise le meilleur de FOR et DEX, une arme à distance utilise la DEX.
-- Une arme polyvalente tenue sans bouclier fait ses dégâts à deux mains.
+- Une arme polyvalente tenue sans bouclier a +1 au seuil des dégâts.
 - Une arme à deux mains et un bouclier s'excluent.
 - L'entrée `unarmed` (mains nues) est obligatoire.
 - **Force et encombrement** (`rules.json › encumbrance`) : toute armure peut être portée. Le malus d'encombrement
-  s'applique à **tous les jets de FOR et de DEX** (attaques, sauvegardes, tests de compétence et d'attribut,
-  initiative, fuite). Il cumule, avec un maximum de `max_penalty` (5) :
-  - l'**armure** : chaque type a une Force conseillée (`armor_strength` : vêtements 0, légère 10, intermédiaire 12,
-    lourde 14 ; un objet peut la redéfinir avec `strength`) ; −1 par tranche de `armor_points_per_penalty` (2)
-    points de Force manquants ;
+  retire des **dés à tous les jets de FOR et de DEX** (attaques, résistances, tests de compétence et d'attribut,
+  fuite ; l'initiative perd autant de points). Il cumule, avec un maximum de `max_penalty` (3) :
+  - l'**armure** : chaque type a une Force conseillée (`armor_strength` : vêtements 0, légère 4, intermédiaire 5,
+    lourde 6 ; un objet peut la redéfinir avec `strength`) ; −1 dé par tranche de `armor_points_per_penalty` (1)
+    point de Force manquant ;
   - la **charge** : le groupe porte le sac et tout son équipement ; sa capacité est la somme de
-    `carry_per_strength` (7,5 kg) × Force de chaque membre ; au-delà, −1 par tranche de
-    `overload_percent_per_penalty` (10) % de surcharge, pour tout le groupe (`LifeState.refresh_load`).
+    `carry_per_strength` (18 kg) × Force de chaque membre ; au-delà, −1 dé par tranche de
+    `overload_percent_per_penalty` (25) % de surcharge, pour tout le groupe (`LifeState.refresh_load`).
   La fiche, l'inventaire (charge / capacité) et le combat en tiennent compte.
 
 ### Défenses
@@ -532,9 +537,9 @@ L'état des boutiques (stock, jour du dernier réassort) est sauvegardé avec la
 
 ### Recettes (`recipes.json`)
 
-`{"id", "result", "count"? (1), "station": "forge" | "alchemy", "materials": {id: quantité}, "gold"? (0), "dc"? (10)}`.
+`{"id", "result", "count"? (1), "station": "forge" | "alchemy", "materials": {id: quantité}, "gold"? (0), "difficulty"? (1)}`.
 Les matériaux et l'or sont pris dans le sac du groupe. **Test** (`rules.json › crafting`) : la compétence de la
-station (Artisanat avec la DEX à la forge, Potions et cuisine à l'alchimie) contre le DD ; un échec gâche
+station (Artisanat avec la DEX à la forge, Potions et cuisine à l'alchimie) contre la difficulté ; un échec gâche
 `failure_loss` (la moitié) des matériaux et l'or. Après `profession_threshold` objets à une station, la fiche
 affiche le **métier** qui se dessine (« Forgeronne (7 objets) »).
 
@@ -543,7 +548,7 @@ affiche le **métier** qui se dessine (« Forgeronne (7 objets) »).
 - Une arme, une armure (pas un vêtement) ou un bouclier **ordinaire** (sans rareté) devient +1, +2, +3 pour
   `upgrade_costs` po (50, 150, 400), avec la rareté `upgrade_rarities`.
 - L'objet amélioré a l'id `<base>@<rang>` (ex. `longsword@2`). `Equipment.def` le calcule à partir de la base : nom
-  « Épée longue +2 », bonus au toucher et aux dégâts (arme) ou à la CA, valeur augmentée. Il se sauvegarde,
+  « Épée longue +2 », dés au toucher et seuil des dégâts (arme) ou Armure en plus, valeur augmentée. Il se sauvegarde,
   s'équipe et se revend comme n'importe quel objet.
 - On peut améliorer un objet du sac ou un objet porté par un membre du groupe.
 
@@ -558,7 +563,7 @@ Le détail de conception est dans [social.md](social.md). Données : `npc_roles.
 | Fichier | Contenu |
 |---|---|
 | `npc_roles.json` | `{"id", "name", "location", "regular"? (habitué créé à la première visite), "searchable"? (on peut le chercher), "fixed"? ({name, species, gender, age}), "shop"? (sa boutique), "class"? (recrutable), "inventory"?, "gold"? (dés), "foreign_chance"?, "art"}` |
-| `traits.json` | `{"id", "name", "description", "hidden"?, "reactions": {action: {"dc"?, "gain"?}}, "refuses"?: [actions], "likes"?: [catégories], "jealousy"?}` |
+| `traits.json` | `{"id", "name", "description", "hidden"?, "reactions": {action: {"difficulty"?, "gain"?}}, "refuses"?: [actions], "likes"?: [catégories], "jealousy"?}` |
 | `npc_facts.json` | `{"id", "name", "values": [textes avec {npc}, {g:…}], "creates_relative"?}` |
 | `social_actions.json` | `{"id", "name", "category": friendly \| romantic \| hostile \| special, "requires"? ({friendship, love, trust, status, not_status}), "check"? ({skill, ability?, dc \| vs}), "romantic"?, "special"? (reveal_fact, trade, recruit, gestures, child, break_up), "success"/"failure" ({friendship, love, trust, reputation, set, fear}), "lines"}` |
 
@@ -601,21 +606,23 @@ Le détail de conception est dans [social.md](social.md). Données : `npc_roles.
 | `base_rank`, `caster_base_rank` | Rang de départ particulier (Magie : 0, ou 2 pour un lanceur de sorts) |
 
 - **Rang** = départ + 1 par passé qui donne la compétence + `classes.json › skill_ranks` + modificateurs
-  `skill_rank` (choix de classe, dons, Expertise, objets). Bonus d'un test = attribut + rang.
-- **Attaques** : attribut + rang de la compétence de l'arme (`Equipment.skills_for` : `skill` de l'arme, sinon
-  Armes de trait pour une arme à distance, Armes de mêlée sinon ; mains nues : le meilleur avec Physique). Sorts :
-  attribut d'incantation + rang de Magie ; DD des sorts = 8 + rang de Magie + attribut.
-- **Jets de sauvegarde** (provisoire) : attribut + rang (1, +1 si la classe le maîtrise, +1 par `save_proficiency`).
-- **Tests d'événement** : `{"skill": "persuasion", "ability"?: "str", "dc": 12}`. Option du joueur
-  (`Meta.settings.manual_skill_ability`) : de petits boutons par attribut à côté du choix.
-- **Créatures** : `"skills": {"stealth": 2}` (rang 0 si absente).
+  `skill_rank` (choix de classe, dons, Expertise, objets). Un test lance [rang] d10 contre l'attribut.
+- **Attaques** : [rang de la compétence de l'arme] d10 contre l'attribut (`Equipment.skills_for` : `skill` de l'arme,
+  sinon Armes de trait pour une arme à distance, Armes de mêlée sinon ; mains nues : le meilleur avec Physique).
+  Sorts : [rang de Magie] d10 contre l'attribut d'incantation.
+- **Résister** : `rules.json › dice › resist_skills` (Physique pour FOR, DEX, CON ; Perspicacité pour SAG ;
+  Érudition pour INT ; Persuasion pour CHA), +1 dé si la classe de départ maîtrise, +1 par `save_proficiency`.
+- **Tests d'événement** : `{"skill": "persuasion", "ability"?: "str", "difficulty": 2}`. Option du joueur
+  (`Meta.settings.manual_skill_ability`) : de petits boutons par attribut à côté du choix. Option `many_dice` : règle
+  des dés nombreux.
+- **Créatures** : `"skills": {"stealth": 2}` (sinon le rang de départ).
 - **Anciennes compétences** (Athlétisme, Arcanes…) : traduites automatiquement (`Skills.ALIASES`).
 - **Langues** (`rules.json › languages`) : le Commun est connu de tous ; une langue à choisir par rang de Langues
   (choix `skill/languages`, au hub).
-- **Conditions** : `{"type": "passive", "skill": "perception", "min": 13}` (10 + bonus).
-- **Actions communes** (`rules.json › common_actions`) : Se cacher, Intimider, Premiers soins, pour tous les
-  personnages ; elles reposent sur l'effet de combat `check` (test de compétence contre un DD ou contre une
-  sauvegarde de la cible ; raté, les effets suivants sont ignorés).
+- **Conditions** : `{"type": "passive", "skill": "perception", "min": 2}` (succès moyens de la réserve, arrondis).
+- **Actions communes** (`rules.json › common_actions`) : Se préparer, Se cacher, Intimider, Premiers soins, pour tous
+  les personnages ; elles reposent sur l'effet de combat `check` (test de compétence contre une difficulté ou contre
+  la résistance de la cible ; raté, les effets suivants sont ignorés).
 
 ## Choix du personnage (`choices`)
 

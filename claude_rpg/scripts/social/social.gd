@@ -108,7 +108,7 @@ static func generate(role_id: String, rng: RandomNumberGenerator, overrides := {
 	categories.erase(n.likes[0])
 	n.dislikes.append(_pick(categories, rng))
 	for ability in Abilities.ids():
-		n.abilities[ability] = rng.randi_range(8, 15)
+		n.abilities[ability] = rng.randi_range(3, 6)
 	if rng.randf() < float(role.get("foreign_chance", 0.0)):
 		var foreign: Array = Skills.languages().map(func(l): return l["id"]).filter(func(id): return id not in Skills.common_languages())
 		n.languages = [_pick(foreign, rng)]
@@ -174,9 +174,9 @@ static func change(n: Npc, gauge: String, amount: int) -> void:
 
 # --- Humeur et traits --------------------------------------------------------------------
 
-## Humeur du jour (déterministe pour un PNJ et un jour) : {"id", "name", "dc", "gain"}.
+## Humeur du jour (déterministe pour un PNJ et un jour) : {"id", "name", "difficulty", "gain"}.
 static func mood(n: Npc) -> Dictionary:
-	var moods: Array = setting("moods", [{"id": "neutral", "name": "neutre", "dc": 0, "gain": 1.0}])
+	var moods: Array = setting("moods", [{"id": "neutral", "name": "neutre", "difficulty": 0, "gain": 1.0}])
 	var weights: Array = moods.map(func(m): return float(m.get("weight", 1)))
 	var total := 0.0
 	for w in weights:
@@ -189,24 +189,25 @@ static func mood(n: Npc) -> Dictionary:
 	return moods.back()
 
 
-## Modificateur de DD et multiplicateur de gains d'une action selon les traits du PNJ.
+## Modificateur de difficulté et multiplicateur de gains d'une action selon les traits du PNJ.
 static func trait_reaction(n: Npc, action_id: String) -> Dictionary:
-	var dc := 0
+	var difficulty := 0
 	var gain := 1.0
 	for trait_id in n.traits:
 		var reaction: Dictionary = DB.traits.get(trait_id, {}).get("reactions", {}).get(action_id, {})
-		dc += int(reaction.get("dc", 0))
+		difficulty += int(reaction.get("difficulty", 0))
 		gain *= float(reaction.get("gain", 1.0))
-	return {"dc": dc, "gain": gain}
+	return {"difficulty": difficulty, "gain": gain}
 
 
 ## Perspicacité passive à la rencontre : humeur détectée, puis un trait caché révélé.
 ## Retourne {"mood": bool, "trait": id révélé ou ""}.
 static func read_npc(ch: Character, n: Npc) -> Dictionary:
 	var passive := ch.passive("insight")
-	var guard := 10 + n.skill_mod("persuasion")
+	var guard_pool := n.skill_pool("persuasion")
+	var guard := roundi(Dice.expected(int(guard_pool["count"]), int(guard_pool["threshold"])))
 	var result := {"mood": passive >= guard, "trait": ""}
-	if passive >= guard + 5:
+	if passive >= guard + 2:
 		for trait_id in n.traits:
 			if trait_id not in n.known_traits:
 				n.known_traits.append(trait_id)
@@ -312,31 +313,32 @@ static func unavailable_reason(action_id: String, n: Npc, life: LifeState, sessi
 	return ""
 
 
-## Test d'une action : compétence du héros contre un DD (+ traits et humeur du PNJ) ou contre la
-## Perspicacité du PNJ. Désavantage si on ne parle pas la même langue.
+## Test d'une action : [rang] d10 du héros contre une difficulté (+ traits et humeur du PNJ), ou en
+## opposition contre la compétence "vs" du PNJ (il faut plus de succès que lui ; ses traits et son humeur
+## lui ajoutent des dés). Un dé de moins si on ne parle pas la même langue.
 ## Retourne {"success", "text"}.
 static func check(spec: Dictionary, action_id: String, n: Npc, life: LifeState, session: Dictionary) -> Dictionary:
 	var ch := life.character
 	var skill: String = spec["skill"]
-	var mod := ch.skill_mod(skill, spec.get("ability", ""))
 	var language_barrier: bool = skill != "languages" and not shares_language(ch, n) and not session.get("understood", false)
-	var d20 := Dice.roll_d20(life.rng, -1 if language_barrier else 0)
-	var die := int(d20["die"])
-	var target := 0
+	var pool := ch.skill_pool(skill, spec.get("ability", ""), -1 if language_barrier else 0)
+	var roll := Dice.roll_pool(life.rng, int(pool["count"]), int(pool["threshold"]))
+	var successes := int(roll["successes"])
+	var modifier := int(trait_reaction(n, action_id)["difficulty"]) + int(mood(n).get("difficulty", 0))
+	var success := false
 	var against := ""
-	var reaction := trait_reaction(n, action_id)
 	if spec.has("vs"):
-		var npc_die := life.rng.randi_range(1, 20)
-		var npc_mod := n.skill_mod(spec["vs"]) + int(reaction["dc"]) + int(mood(n).get("dc", 0))
-		target = npc_die + npc_mod
-		against = Loc.ui("%s de %s : %d + %d = %d") % [Skills.name_of(spec["vs"]), n.name, npc_die, npc_mod, target]
+		var npc_pool := n.skill_pool(spec["vs"], "", modifier)
+		var npc_roll := Dice.roll_pool(life.rng, int(npc_pool["count"]), int(npc_pool["threshold"]))
+		success = successes > int(npc_roll["successes"])
+		against = Loc.ui("%s de %s : %d succès") % [Skills.name_of(spec["vs"]), n.name, int(npc_roll["successes"])]
 	else:
-		target = int(spec.get("dc", 10)) + int(reaction["dc"]) + int(mood(n).get("dc", 0))
-		against = Loc.ui("DD %d") % target
-	var success := die == 20 or (die != 1 and die + mod >= target)
-	var text := Loc.ui("%s%s : %d + %d = %d contre %s — %s") % [Skills.name_of(skill),
-		Loc.ui(" (barrière de la langue)") if language_barrier else "", die, mod, die + mod, against,
-		Loc.ui("réussi") if success else Loc.ui("raté")]
+		var difficulty := maxi(0, Dice.difficulty_of(spec) + modifier)
+		success = successes >= difficulty
+		against = Loc.ui("difficulté %d") % difficulty
+	var text := Loc.ui("%s%s (%s) : %d succès contre %s — %s") % [Skills.name_of(skill),
+		Loc.ui(" (barrière de la langue)") if language_barrier else "", Dice.pool_text(int(pool["count"]), int(pool["threshold"])),
+		successes, against, Loc.ui("réussi") if success else Loc.ui("raté")]
 	return {"success": success, "text": text}
 
 
@@ -760,7 +762,7 @@ static func initiative_event(life: LifeState) -> Dictionary:
 				"choices": [
 					{"id": "ignore", "text": Loc.ui("L'ignorer"), "outcome": {"text": Loc.ui("Vous passez votre chemin ; les témoins apprécient votre calme."),
 						"effects": [rel.call({"friendship": -2}), {"type": "reputation", "amount": 1, "location": n.location}]}},
-					{"id": "retort", "text": Loc.ui("Le remettre à sa place"), "check": {"skill": "persuasion", "ability": "str", "dc": 12},
+					{"id": "retort", "text": Loc.ui("Le remettre à sa place"), "check": {"skill": "persuasion", "ability": "str", "difficulty": 2},
 						"success": {"text": Loc.ui("%s recule, mal à l'aise.") % n.name, "effects": [rel.call({"trust": -3})]},
 						"failure": {"text": Loc.ui("%s ricane : la foule rit de vous.") % n.name,
 							"effects": [rel.call({"friendship": -5}), {"type": "reputation", "amount": -1, "location": n.location}]}}]}
@@ -768,7 +770,7 @@ static func initiative_event(life: LifeState) -> Dictionary:
 			return {"id": "npc_neglect_" + n.id, "title": Loc.ui("Des reproches"), "text": Loc.gendered(Loc.ui(
 				"%s vous attend, les bras croisés : « On ne te voit plus. Tu m'as oublié{g:|e|·e} ? »") % n.name, n.gender),
 				"choices": [
-					{"id": "reassure", "text": Loc.ui("Le rassurer"), "check": {"skill": "persuasion", "dc": 12},
+					{"id": "reassure", "text": Loc.ui("Le rassurer"), "check": {"skill": "persuasion", "difficulty": 2},
 						"success": {"text": Loc.ui("%s se radoucit et vous serre contre lui·elle.") % n.name, "effects": [rel.call({"love": 5, "trust": 3})]},
 						"failure": {"text": Loc.ui("Vos excuses sonnent creux."), "effects": [rel.call({"love": -5, "trust": -3})]}},
 					{"id": "time", "text": Loc.ui("Lui consacrer la journée"), "outcome": {"text": Loc.ui("Vous passez la journée ensemble."),

@@ -95,17 +95,20 @@ func _new_day() -> void:
 ## Modifie la valeur de base d'un attribut. Un attribut qui tombe à 0 tue le personnage.
 ## Les PV sont recalculés (la CON en dépend) : s'ils tombent à 0, le personnage meurt aussi.
 func change_ability(ability_id: String, amount: int, cause: String) -> void:
-	character.abilities[ability_id] = clampi(int(character.abilities.get(ability_id, 10)) + amount, 0, 30)
+	character.abilities[ability_id] = clampi(int(character.abilities.get(ability_id, 4)) + amount, 0, 20)
 	character.refresh_max_hp()
 	if character.ability_score(ability_id) <= 0 or character.hp <= 0:
 		die(cause)
 
 
-## Vieillesse : passé l'âge limite de l'espèce (aging_age), chaque nouvelle année retire 1
-## à un attribut tiré au hasard. Le personnage finit par mourir quand l'un d'eux atteint 0.
+## Vieillesse : passé l'âge limite de l'espèce (aging_age), chaque nouvelle année a une chance
+## (rules.json › aging_chance) de retirer 1 à un attribut tiré au hasard. Le personnage finit par
+## mourir quand l'un d'eux atteint 0.
 func _check_old_age() -> void:
 	var limit := int(DB.species[character.species_id].get("aging_age", 0))
 	if limit <= 0 or character.age_years() <= limit:
+		return
+	if rng.randf() >= float(DB.rules.get("aging_chance", 1.0)):
 		return
 	var ids := Abilities.ids()
 	var id: String = ids[rng.randi_range(0, ids.size() - 1)]
@@ -186,8 +189,9 @@ func use_item(item_id: String, member: Character) -> String:
 		return ""
 	character.remove_item(item_id)
 	var before := member.hp
-	var roll := Dice.roll_expr(String(Items.def(item_id)["use"]["heal"]), rng)
-	member.hp = mini(member.max_hp, member.hp + maxi(1, int(roll["total"])))
+	var heal: Dictionary = Items.def(item_id)["use"]["heal"]
+	var roll := Dice.roll_pool(rng, int(heal.get("dice", 1)), int(heal.get("threshold", 5)))
+	member.hp = mini(member.max_hp, member.hp + maxi(1, int(roll["successes"])))
 	return Loc.ui("%s : %s récupère %d PV.") % [Items.name_of(item_id), member.name, member.hp - before]
 
 
@@ -252,7 +256,7 @@ func craft(recipe_id: String) -> Dictionary:
 	for item_id: String in materials:
 		character.remove_item(item_id, ceili(int(materials[item_id]) * loss))
 	character.gold -= int(recipe.get("gold", 0))
-	var text: String = "%s : %d + %d = %d contre DD %d — " % [roll["stat"], roll["die"], roll["mod"], roll["total"], roll["dc"]]
+	var text: String = roll["text"] + " — "
 	if roll["success"]:
 		character.add_item(recipe["result"], int(recipe.get("count", 1)))
 		var station: String = recipe.get("station", "")

@@ -20,8 +20,10 @@ static func bbcode(ch: Character) -> String:
 		t += "[color=%s]%s[/color] %s   " % [gold, Loc.ui("Passé"), DB.backgrounds[ch.background_id]["name"]]
 	t += "[color=%s]%s[/color] %s\n" % [gold, Loc.ui("Taille"), DB.size_name(ch.size())]
 	t += Loc.ui("%d ans — %s") % [ch.age_years(), DB.life_stage_name(ch.life_stage())] + "\n\n"
-	t += "[color=%s]PV[/color] %d / %d    [color=%s]CA[/color] %d    [color=%s]%s[/color] %d po\n" % [
-		gold, ch.hp, ch.max_hp, gold, ch.armor_class(), gold, Loc.ui("Or"), ch.gold]
+	t += "[color=%s]PV[/color] %d / %d    [color=%s]%s[/color] %d    [color=%s]%s[/color] %d    [color=%s]%s[/color] %d po\n" % [
+		gold, ch.hp, ch.max_hp, gold, Loc.ui("Esquive naturelle"), ch.natural_dodge(), gold, Loc.ui("Armure"), ch.armor(),
+		gold, Loc.ui("Or"), ch.gold]
+	t += "[color=%s]%s[/color] %d (+1d10)\n" % [gold, Loc.ui("Initiative"), ch.initiative_base()]
 	t += "[color=%s]%s[/color] %d    [color=%s]XP[/color] %d\n" % [gold, Loc.ui("Niveau"), ch.level, gold, ch.xp]
 	var slots := PackedStringArray()
 	for resource_id: String in ch.max_resources():
@@ -35,17 +37,17 @@ static func bbcode(ch: Character) -> String:
 		t += "[color=%s]%s[/color] %s\n" % [gold, Loc.ui("Emplacements de sort"), " · ".join(slots)]
 	var saves := PackedStringArray()
 	for id in Abilities.ids():
-		var text := "%s %s" % [Abilities.short_of(id), signed(ch.save_mod(id))]
+		var pool := ch.resist_pool(id)
+		var text := "%s %s" % [Abilities.short_of(id), Dice.pool_text(int(pool["count"]), int(pool["threshold"]))]
 		saves.append(text if ch.is_proficient_save(id) else "[color=%s]%s[/color]" % [dim, text])
-	t += "[color=%s]%s[/color] %s\n" % [gold, Loc.ui("Sauvegardes"), " ".join(saves)]
+	t += "[color=%s]%s[/color] %s\n" % [gold, Loc.ui("Résister"), " · ".join(saves)]
 	t += "[color=%s]%s[/color] %s\n" % [gold, Loc.ui("Langues"),
 		", ".join(PackedStringArray(ch.known_languages().map(func(l): return Skills.language_name(l))))]
 	t += "\n"
 
 	t += "[table=3]"
 	for id in Abilities.ids():
-		t += "[cell][color=%s]%s[/color] %d (%s)  [/cell]" % [
-			gold, Abilities.short_of(id), ch.ability_score(id), signed(ch.ability_mod(id))]
+		t += "[cell][color=%s]%s[/color] %d  [/cell]" % [gold, Abilities.short_of(id), ch.ability_score(id)]
 	t += "[/table]\n\n"
 
 	# Équipement, dons, défenses.
@@ -67,18 +69,19 @@ static func bbcode(ch: Character) -> String:
 		t += "[color=%s]%s[/color] %s\n" % [gold, Loc.ui("Métier"), ", ".join(PackedStringArray(Game.life.professions()))]
 	if ch.is_encumbered():
 		t += "[color=%s]%s[/color]\n" % [UITheme.BAD.to_html(false),
-			Loc.ui("Encombré : −%d aux jets de FOR et DEX") % ch.encumbrance_penalty()]
+			Loc.ui("Encombré : −%d dé(s) aux jets de FOR et DEX") % ch.encumbrance_penalty()]
 	t += "\n"
 
-	# Compétences par catégorie : bonus (meilleur attribut) et rang ; entraînées en clair, les autres grisées.
-	t += "[color=%s]%s[/color]\n" % [gold, Loc.ui("Compétences (bonus · rang)")]
+	# Compétences par catégorie : réserve (rang d10 ≤ meilleur attribut) ; entraînées en clair, les autres grisées.
+	t += "[color=%s]%s[/color]\n" % [gold, Loc.ui("Compétences (rang d10 ≤ attribut)")]
 	for category: String in Skills.CATEGORY_NAMES:
 		var ids := Skills.ids_in(category)
 		if ids.is_empty():
 			continue
 		t += "[color=%s][i]%s[/i][/color]\n[table=2]" % [dim, Loc.ui(Skills.CATEGORY_NAMES[category])]
 		for id in ids:
-			var line := "%s %s · %d" % [Skills.name_of(id), signed(ch.skill_mod(id)), ch.skill_rank(id)]
+			var pool := ch.skill_pool(id)
+			var line := "%s %s" % [Skills.name_of(id), Dice.pool_text(int(pool["count"]), int(pool["threshold"]))]
 			t += "[cell]%s  [/cell]" % (line if ch.is_trained(id) else "[color=%s]%s[/color]" % [dim, line])
 		t += "[/table]\n"
 	t += "\n"
@@ -97,8 +100,8 @@ static func companions_bbcode(life: LifeState) -> String:
 		return ""
 	var t := "\n[color=%s]%s[/color]\n" % [UITheme.GOLD.to_html(false), Loc.ui("Compagnons")]
 	for c in life.companions:
-		t += "%s (%s %d) — %d / %d PV, CA %d\n" % [
-			c.name, c.classes_text(), c.level, c.hp, c.max_hp, c.armor_class()]
+		t += Loc.ui("%s (%s %d) — %d / %d PV, Esquive %d, Armure %d\n") % [
+			c.name, c.classes_text(), c.level, c.hp, c.max_hp, c.natural_dodge(), c.armor()]
 	return t
 
 

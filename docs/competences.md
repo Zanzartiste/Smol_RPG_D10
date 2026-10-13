@@ -6,7 +6,9 @@
 ## Règles générales
 
 - Une compétence dépend généralement d'**un attribut** , mais souvent peut être utilisée avec d'autres attributs dans certains contextes précis. Elle a un Rang qui lui est propre et témoigne de l'expertise ou non d'une créature dans cette compétence. Les compétences dites "instinctives" commencent avec un rang de 2, les autres ont un rang de 1.
-- **Test** : d20 + modificateur de l'attribut + bonus de la compétence, contre un DD. Un 20 naturel réussit toujours, un 1 naturel échoue toujours.
+- **Test** (système d10, voir [systeme_de_jeu.md](systeme_de_jeu.md)) : [rang de la compétence] d10 contre un
+  seuil égal à l'attribut ; chaque dé ≤ seuil est un succès (9 et 10 jamais, 1 toujours et relancé) ; réussi si
+  les succès atteignent la difficulté (1 à 8+).
 - **Bonus d'un rang** : +1 par rang (rang 2 = +2…). Les rangs remplacent le bonus de maîtrise de D&D pour les
   compétences et les attaques.
 - **Rangs de départ** : 1, ou 2 pour une compétence instinctive. Exception : **Magie**, au rang 0, sauf pour les
@@ -16,7 +18,8 @@
   les dons (Doué, Athlète…), l'Expertise du Roublard, certains objets (Bottes et Cape elfiques).
 - **Gagner des rangs en montant de niveau** : à définir plus tard (décision du 2026-10-13).
 
-- Les **jets de sauvegarde** sont à part : ils utilisent directement un attribut (voir [classes.md](classes.md)).
+- **Résister** (ex-jets de sauvegarde) : une compétence contre l'attribut : Physique (FOR, DEX, CON), Perspicacité
+  (SAG), Érudition (INT), Persuasion (CHA), +1 dé si la classe maîtrise cette résistance.
   En attendant leur refonte : un rang de 1 par attribut, 2 si la classe maîtrise cette sauvegarde (+1 avec le
   don Résistant).
 
@@ -69,7 +72,8 @@
 - Décrit : votre maîtrise des arcanes et des sorts.
 - **Attribut** : celui d'incantation de la classe (INT pour le Magicien), sinon le meilleur entre INT, SAG et CHA.
 - **Rang de départ** : 0, ou 2 pour un lanceur de sorts. Le don Initié à la magie donne +1 rang.
-- **Sert à** : les attaques de sort (attribut + rang de Magie) et le DD des sorts (8 + rang de Magie + attribut).
+- **Sert à** : les attaques de sort ([rang de Magie] d10 contre l'attribut d'incantation) et les sorts que la cible
+  doit repousser (opposition contre sa résistance).
 
 ## Social
 
@@ -108,8 +112,8 @@
 ### Furtivité (`stealth`) (instinctive)
 - Sert à : se cacher, se déplacer discrètement
 - Attribut : Dextérité en règle générale.
-- **En combat** : l'action **Se cacher** (Furtivité DD 13 : Invisible, donc avantage à la prochaine attaque et
-  désavantage pour qui vous attaque).
+- **En combat** : l'action **Se cacher** (Furtivité, difficulté 2 : caché, donc une attaque surprise ensuite, et
+  Couvert +1 contre les tirs).
 
 ### Perception (`perception`) (instinctive)
 
@@ -154,7 +158,8 @@
 
 - Décrit : votre capacité à soigner des blessures ou maladies, arrêter les hémorragies, recoudre des plaies... soigner, diagnostiquer, stabiliser un mourant.
 - **Attribut** : SAG, INT ou DEX.
-- **En combat** : l'action **Premiers soins** (Médecine DD 10 : soigne 1d6+1 PV à un allié, une fois par combat).
+- **En combat** : l'action **Premiers soins** (Médecine, difficulté 1 : soigne [rang de Médecine] d10 contre la
+  SAG, un PV par succès, à un allié, une fois par combat).
 
 
 

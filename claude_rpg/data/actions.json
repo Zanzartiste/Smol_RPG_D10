@@ -12,9 +12,8 @@
 		"name": "Second souffle",
 		"description": "Vous puisez dans vos réserves pour regagner des forces.",
 		"target": "self",
-		"bonus": true,
 		"per_combat": 1,
-		"effects": [{"type": "heal", "amount": "1d10+level"}]
+		"effects": [{"type": "heal", "amount": {"skill": "physique", "threshold": "con", "dice": 1}}]
 	},
 	{
 		"id": "defensive_stance",
@@ -22,7 +21,7 @@
 		"description": "Vous vous mettez en garde derrière votre arme.",
 		"target": "self",
 		"per_combat": 2,
-		"effects": [{"type": "status", "status": "shielded", "stacks": 5}]
+		"effects": [{"type": "status", "status": "shielded", "stacks": 2}]
 	},
 	{
 		"id": "pommel_strike",
@@ -37,14 +36,14 @@
 		"name": "Trait de feu",
 		"description": "Tour de magie : un trait de flammes jaillit de vos doigts.",
 		"target": "enemy",
-		"effects": [{"type": "attack", "ability": "spell", "damage": "1d10", "damage_type": "fire", "scaling": {"table": "cantrip"}, "cantrip": true, "school": "evocation"}]
+		"effects": [{"type": "attack", "ability": "spell", "damage": {"threshold": "spell", "bonus": 2}, "damage_type": "fire", "scaling": {"table": "cantrip"}, "cantrip": true, "school": "evocation"}]
 	},
 	{
 		"id": "ray_of_frost",
 		"name": "Rayon de givre",
 		"description": "Tour de magie : un rayon glacé qui engourdit la cible.",
 		"target": "enemy",
-		"effects": [{"type": "attack", "ability": "spell", "damage": "1d8", "damage_type": "cold", "scaling": {"table": "cantrip"}, "cantrip": true, "school": "evocation"}, {"type": "status", "status": "weakened", "stacks": 2}]
+		"effects": [{"type": "attack", "ability": "spell", "damage": {"threshold": "spell", "bonus": 1}, "damage_type": "cold", "scaling": {"table": "cantrip"}, "cantrip": true, "school": "evocation"}, {"type": "status", "status": "weakened", "stacks": 2}]
 	},
 	{
 		"id": "magic_missile",
@@ -53,7 +52,7 @@
 		"target": "enemy",
 		"cost": "spell_slot",
 		"spell_level": 1,
-		"effects": [{"type": "damage", "damage": "3d4+3", "damage_type": "force", "upcast": "1d4+1", "school": "evocation"}]
+		"effects": [{"type": "damage", "damage": {"dice": 3, "threshold": 6}, "damage_type": "force", "upcast": 1, "school": "evocation"}]
 	},
 	{
 		"id": "burning_hands",
@@ -62,7 +61,7 @@
 		"target": "all_enemies",
 		"cost": "spell_slot",
 		"spell_level": 1,
-		"effects": [{"type": "damage", "damage": "3d6", "damage_type": "fire", "save": {"ability": "dex", "half": true}, "upcast": "1d6", "school": "evocation"}, {"type": "status", "status": "burning", "stacks": 1}]
+		"effects": [{"type": "damage", "damage": {"skill": "magic", "dice": 1, "threshold": "spell"}, "damage_type": "fire", "resist": {"ability": "dex"}, "upcast": 1, "school": "evocation"}, {"type": "status", "status": "burning", "stacks": 1}]
 	},
 	{
 		"id": "sleep",
@@ -71,7 +70,7 @@
 		"target": "all_enemies",
 		"cost": "spell_slot",
 		"spell_level": 1,
-		"effects": [{"type": "status", "status": "asleep", "stacks": 2, "save": {"ability": "wis"}}]
+		"effects": [{"type": "status", "status": "asleep", "stacks": 2, "resist": {"ability": "wis"}}]
 	},
 	{
 		"id": "mage_shield",
@@ -80,7 +79,7 @@
 		"target": "self",
 		"cost": "spell_slot",
 		"spell_level": 1,
-		"effects": [{"type": "status", "status": "shielded", "stacks": 6}]
+		"effects": [{"type": "status", "status": "shielded", "stacks": 3}]
 	},
 	{
 		"id": "find_familiar",
@@ -97,7 +96,7 @@
 		"description": "Une attaque vicieuse qui frappe là où ça fait mal.",
 		"target": "enemy",
 		"per_combat": 2,
-		"effects": [{"type": "attack", "weapon": true, "extra_damage": "1d6", "scaling": {"table": "sneak_attack", "field": "extra_damage", "class": "rogue"}}]
+		"effects": [{"type": "attack", "weapon": true, "scaling": {"table": "sneak_attack", "class": "rogue"}}]
 	},
 	{
 		"id": "poisoned_blade",
@@ -112,14 +111,14 @@
 		"name": "Se cacher",
 		"description": "Vous vous fondez dans le décor pour frapper par surprise.",
 		"target": "self",
-		"effects": [{"type": "check", "skill": "stealth", "dc": 13}, {"type": "status", "status": "invisible", "stacks": 2}]
+		"effects": [{"type": "check", "skill": "stealth", "difficulty": 2}, {"type": "status", "status": "invisible", "stacks": 2}]
 	},
 	{
 		"id": "intimidate",
 		"name": "Intimider",
 		"description": "Un rugissement, une menace : la cible prend peur.",
 		"target": "enemy",
-		"effects": [{"type": "check", "skill": "persuasion", "ability": "str", "vs_save": "wis"}, {"type": "status", "status": "frightened", "stacks": 2}]
+		"effects": [{"type": "check", "skill": "persuasion", "ability": "str", "vs_resist": "wis"}, {"type": "status", "status": "frightened", "stacks": 2}]
 	},
 	{
 		"id": "first_aid",
@@ -127,7 +126,7 @@
 		"description": "Vous pansez en hâte les plaies d'un allié.",
 		"target": "ally",
 		"per_combat": 1,
-		"effects": [{"type": "check", "skill": "medicine", "dc": 10}, {"type": "heal", "amount": "1d6+1"}]
+		"effects": [{"type": "check", "skill": "medicine", "difficulty": 1}, {"type": "heal", "amount": {"skill": "medicine", "threshold": "wis"}}]
 	},
 	{
 		"id": "grapple",
@@ -153,10 +152,17 @@
 		"cost": "spell_slot",
 		"spell_level": 2,
 		"effects": [
-			{"type": "attack", "ability": "spell", "damage": "2d6", "damage_type": "fire", "school": "evocation"},
-			{"type": "attack", "ability": "spell", "damage": "2d6", "damage_type": "fire", "school": "evocation"},
-			{"type": "attack", "ability": "spell", "damage": "2d6", "damage_type": "fire", "school": "evocation"}
+			{"type": "attack", "ability": "spell", "damage": {"threshold": "spell", "bonus": 1}, "damage_type": "fire", "school": "evocation"},
+			{"type": "attack", "ability": "spell", "damage": {"threshold": "spell", "bonus": 1}, "damage_type": "fire", "school": "evocation"},
+			{"type": "attack", "ability": "spell", "damage": {"threshold": "spell", "bonus": 1}, "damage_type": "fire", "school": "evocation"}
 		]
+	},
+	{
+		"id": "prepare",
+		"name": "Se préparer",
+		"description": "Vous vous mettez en garde : +2 dés à votre prochain jet de combat (attaque, esquive, parade).",
+		"target": "self",
+		"effects": [{"type": "status", "status": "prepared", "stacks": 1}]
 	},
 	{
 		"id": "fireball",
@@ -165,6 +171,6 @@
 		"target": "all_enemies",
 		"cost": "spell_slot",
 		"spell_level": 3,
-		"effects": [{"type": "damage", "damage": "8d6", "damage_type": "fire", "save": {"ability": "dex", "half": true}, "upcast": "1d6", "school": "evocation"}]
+		"effects": [{"type": "damage", "damage": {"skill": "magic", "dice": 4, "threshold": "spell", "bonus": 1}, "damage_type": "fire", "resist": {"ability": "dex"}, "upcast": 1, "school": "evocation"}]
 	}
 ]

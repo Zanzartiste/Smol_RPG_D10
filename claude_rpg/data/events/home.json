@@ -20,17 +20,17 @@
 				"conditions": [{"type": "item", "id": "potion_heal"}],
 				"outcome": {
 					"text": "Le liquide rouge pique la gorge, mais vos plaies se referment à vue d'œil.",
-					"effects": [{"type": "remove_item", "id": "potion_heal"}, {"type": "hp", "amount": 7}]
+					"effects": [{"type": "remove_item", "id": "potion_heal"}, {"type": "hp", "amount": 3}]
 				}
 			},
 			{
 				"id": "poultice",
 				"text": "Préparer un cataplasme d'herbes",
 				"conditions": [{"type": "item", "id": "healing_herbs"}],
-				"check": {"skill": "medicine", "dc": 10},
+				"check": {"skill": "medicine", "difficulty": 1},
 				"success": {
 					"text": "Le cataplasme apaise vos blessures.",
-					"effects": [{"type": "remove_item", "id": "healing_herbs"}, {"type": "hp", "amount": 5}]
+					"effects": [{"type": "remove_item", "id": "healing_herbs"}, {"type": "hp", "amount": 2}]
 				},
 				"failure": {
 					"text": "Le mélange tourne en une bouillie inutilisable.",
@@ -51,7 +51,7 @@
 			{
 				"id": "calm",
 				"text": "Reprendre ses esprits",
-				"check": {"ability": "wis", "dc": 12},
+				"check": {"skill": "insight", "ability": "wis", "difficulty": 1},
 				"success": {
 					"text": "Vous chassez les images de votre esprit et vous rendormez.",
 					"effects": [{"type": "xp", "amount": 25}]
@@ -76,7 +76,7 @@
 				"text": "Accepter la soupe",
 				"outcome": {
 					"text": "Une soupe au lard comme on n'en fait plus. Vous vous sentez revigoré.",
-					"effects": [{"type": "hp", "amount": 3}]
+					"effects": [{"type": "hp", "amount": 1}]
 				}
 			},
 			{

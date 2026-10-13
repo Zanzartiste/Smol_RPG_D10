@@ -4,23 +4,21 @@
 		"skills": {"perception": 3, "stealth": 2, "physique": 2},
 		"name": "Loup",
 		"size": -1,
-		"ac": 13,
-		"hp": "2d6+2",
-		"abilities": {"str": 12, "dex": 15, "con": 12, "int": 3, "wis": 12, "cha": 6},
+		"abilities": {"str": 5, "dex": 6, "con": 5, "int": 1, "wis": 5, "cha": 2},
 		"actions": [
 			{
 				"name": "Morsure",
 				"weight": 3,
 				"target": "enemy",
-				"effects": [{"type": "attack", "to_hit": 4, "damage": "2d4", "damage_type": "piercing"}]
+				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str"}, "damage_type": "piercing"}]
 			},
 			{
 				"name": "Croc-en-jambe",
 				"weight": 1,
 				"target": "enemy",
 				"effects": [
-					{"type": "attack", "to_hit": 4, "damage": "1d4", "damage_type": "piercing"},
-					{"type": "status", "status": "stunned", "stacks": 1}
+					{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "bonus": -1}, "damage_type": "piercing"},
+					{"type": "status", "status": "prone", "stacks": 1}
 				]
 			}
 		],
@@ -34,20 +32,21 @@
 		"skills": {"perception": 3, "stealth": 2, "physique": 3},
 		"name": "Alpha des loups",
 		"size": 1,
-		"ac": 14,
-		"hp": "5d10+10",
-		"abilities": {"str": 17, "dex": 15, "con": 15, "int": 3, "wis": 12, "cha": 7},
+		"hp": 12,
+		"armor": 1,
+		"natural_armor": true,
+		"abilities": {"str": 7, "dex": 6, "con": 6, "int": 1, "wis": 5, "cha": 3},
 		"actions": [
 			{
 				"name": "Morsure brutale",
 				"weight": 3,
 				"target": "enemy",
-				"effects": [{"type": "attack", "to_hit": 5, "damage": "2d6+3", "damage_type": "piercing"}]
+				"effects": [{"type": "attack", "skill": "physique", "ability": "str", "damage": {"threshold": "str", "bonus": 1, "dice": 1}, "damage_type": "piercing"}]
 			},
 			{
 				"name": "Hurlement terrifiant",
 				"weight": 1,
-				"prepared": true,
+				"announced": true,
 				"target": "all_enemies",
 				"effects": [{"type": "status", "status": "weakened", "stacks": 2}]
 			}
@@ -60,25 +59,24 @@
 	{
 		"id": "bandit",
 		"skills": {"weapon_melee": 2, "stealth": 2, "persuasion": 2, "perception": 2, "physique": 2},
+		"armor": 1,
 		"name": "Brigand",
 		"size": 0,
-		"ac": 12,
-		"hp": "2d6+1",
-		"abilities": {"str": 11, "dex": 12, "con": 12, "int": 10, "wis": 10, "cha": 10},
+		"abilities": {"str": 4, "dex": 5, "con": 5, "int": 4, "wis": 4, "cha": 4},
 		"actions": [
 			{
 				"name": "Cimeterre",
 				"weight": 3,
 				"target": "enemy",
-				"effects": [{"type": "attack", "to_hit": 3, "weapon": "scimitar"}]
+				"effects": [{"type": "attack", "weapon": "scimitar"}]
 			},
 			{
 				"name": "Dague empoisonnée",
 				"weight": 1,
-				"prepared": true,
+				"announced": true,
 				"target": "enemy",
 				"effects": [
-					{"type": "attack", "to_hit": 3, "weapon": "dagger"},
+					{"type": "attack", "weapon": "dagger"},
 					{"type": "status", "status": "poisoned", "stacks": 3}
 				]
 			}
@@ -98,23 +96,21 @@
 		"skills": {"weapon_melee": 2, "physique": 3, "persuasion": 2},
 		"name": "Colosse tatoué",
 		"size": 1,
-		"ac": 11,
-		"hp": "3d8+3",
-		"abilities": {"str": 16, "dex": 10, "con": 13, "int": 8, "wis": 9, "cha": 8},
+		"abilities": {"str": 6, "dex": 4, "con": 5, "int": 3, "wis": 4, "cha": 3},
 		"actions": [
 			{
 				"name": "Coup de poing",
 				"weight": 3,
 				"target": "enemy",
-				"effects": [{"type": "attack", "to_hit": 4, "damage": "1d4+3", "damage_type": "bludgeoning"}]
+				"effects": [{"type": "attack", "skill": "physique", "ability": "str", "damage": {"threshold": "str"}, "damage_type": "bludgeoning"}]
 			},
 			{
 				"name": "Coup de tête",
 				"weight": 1,
-				"prepared": true,
+				"announced": true,
 				"target": "enemy",
 				"effects": [
-					{"type": "attack", "to_hit": 4, "damage": "1d6+3", "damage_type": "bludgeoning"},
+					{"type": "attack", "skill": "physique", "ability": "str", "damage": {"threshold": "str", "bonus": 1}, "damage_type": "bludgeoning"},
 					{"type": "status", "status": "stunned", "stacks": 1}
 				]
 			}
@@ -132,22 +128,20 @@
 		"id": "giant_rat",
 		"name": "Rat géant",
 		"size": -2,
-		"ac": 12,
-		"hp": "1d6+1",
-		"abilities": {"str": 7, "dex": 15, "con": 11, "int": 2, "wis": 10, "cha": 4},
+		"abilities": {"str": 3, "dex": 6, "con": 4, "int": 1, "wis": 4, "cha": 2},
 		"actions": [
 			{
 				"name": "Morsure",
 				"weight": 3,
 				"target": "enemy",
-				"effects": [{"type": "attack", "to_hit": 3, "damage": "1d4", "damage_type": "piercing"}]
+				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "bonus": 1}, "damage_type": "piercing"}]
 			},
 			{
 				"name": "Morsure infectée",
 				"weight": 1,
 				"target": "enemy",
 				"effects": [
-					{"type": "attack", "to_hit": 3, "damage": "1", "damage_type": "piercing"},
+					{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": 2}, "damage_type": "piercing"},
 					{"type": "status", "status": "poisoned", "stacks": 2}
 				]
 			}
@@ -161,15 +155,13 @@
 		"name": "Familier",
 		"summon": true,
 		"size": -3,
-		"ac": 13,
-		"hp": "5",
-		"abilities": {"str": 3, "dex": 15, "con": 8, "int": 2, "wis": 12, "cha": 7},
+		"abilities": {"str": 1, "dex": 6, "con": 3, "int": 1, "wis": 5, "cha": 3},
 		"actions": [
 			{
 				"name": "Coup de bec",
 				"weight": 2,
 				"target": "enemy",
-				"effects": [{"type": "attack", "to_hit": 4, "damage": "1d4", "damage_type": "piercing"}]
+				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "bonus": 1}, "damage_type": "piercing"}]
 			},
 			{
 				"name": "Distraction",
@@ -185,15 +177,13 @@
 		"name": "Loup spectral",
 		"summon": true,
 		"size": -1,
-		"ac": 12,
-		"hp": "8",
-		"abilities": {"str": 12, "dex": 15, "con": 12, "int": 3, "wis": 12, "cha": 6},
+		"abilities": {"str": 5, "dex": 6, "con": 5, "int": 1, "wis": 5, "cha": 2},
 		"actions": [
 			{
 				"name": "Morsure spectrale",
 				"weight": 1,
 				"target": "enemy",
-				"effects": [{"type": "attack", "to_hit": 4, "damage": "1d6+1", "damage_type": "force"}]
+				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "bonus": 1}, "damage_type": "force"}]
 			}
 		],
 		"art": {"type": "wolf", "fur": "#8fc3e8", "belly": "#d8ecf8", "eyes": "#ffffff"}

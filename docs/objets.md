@@ -42,7 +42,7 @@
 
 ### Potion de soins (`potion_heal`)
 
-- **Effet** : soigne 2d4+2 PV (en combat ou hors combat).
+- **Effet** : soigne 3d10 ≤ 7 PV (un par succès, au moins 1 ; en combat ou hors combat).
 - **Valeur** : 10 po.
 - **Poids** : 0.25 kg.
 - **Où le trouver** : vendu par Herboristerie de Maëlle, fabriqué (alchimie), départ : Guerrier, événement « Jour de marché », événement « Un visage familier ».

@@ -7,6 +7,9 @@ extends Control
 ##
 ## `roll` : {"dice": [{"sides": 20, "value": 14, "dropped"?: true}, ...], "mod": 2, "stat": "Athlétisme",
 ##           "dc": 13, "dc_label": "CA", "success": true}  (dc, dc_label, success et stat sont facultatifs)
+## Réserve de d10 (voir Dice) : {"pool": true, "dice": [{"sides": 10, "value", "success", "extra"?, "dropped"?}],
+##   "threshold", "successes", "auto"?, "difficulty"?, "dc_label"?, "success"?, "critical"?, "fumble"?, "stat"}
+##   Les succès sont en vert, les dés nés d'un 1 cerclés d'or, les dés relancés (critique) assombris.
 ## "per_die": true : chaque dé a son "label" (et son "total") et le verdict les liste au lieu de les additionner
 ## (initiative de tous les combattants).
 
@@ -21,6 +24,8 @@ const NUMBER_SIZE := 26
 
 const BODY := Color("#e9dcc0")
 const INK := Color("#3a1d14")
+const SUCCESS_BODY := Color("#9fd18b")
+const EXTRA_RING := Color("#e8c547")
 
 var _dice: Array[Dictionary] = []
 var _roll: Dictionary = {}
@@ -48,17 +53,24 @@ func play(roll: Dictionary, fast := false) -> void:
 	_result_time = 0.6 if fast else RESULT_TIME
 	_dice.clear()
 	var specs: Array = roll.get("dice", [])
+	var rows := maxi(1, int(_play_area().size.y / (DIE_RADIUS * 1.8)) + 1)
 	for i in specs.size():
 		var sides := int(specs[i]["sides"])
-		var lane := (i - (specs.size() - 1) / 2.0) * DIE_RADIUS * 1.8
+		var row := i % rows
+		var in_column := mini(rows, specs.size() - (i - row))
+		var lane := (row - (in_column - 1) / 2.0) * DIE_RADIUS * 1.8
 		_dice.append({
 			"sides": sides,
 			"value": int(specs[i]["value"]),
 			"label": specs[i].get("label", ""),
 			"total": int(specs[i].get("total", specs[i]["value"])),
-			"dropped": specs[i].get("dropped", false),  # dé écarté (avantage ou désavantage)
+			"dropped": specs[i].get("dropped", false),  # dé écarté (avantage, ou relancé par un critique)
+			"success": specs[i].get("success", false),  # réserve de d10 : succès
+			"extra": specs[i].get("extra", false),  # réserve de d10 : dé né d'un 1
+			"crit": specs[i].get("crit", false),  # réserve de d10 : dé relancé par un critique
 			"shown": _rng.randi_range(1, sides),
-			"pos": Vector2(_play_area().position.x, clampf(_play_area().get_center().y + lane,
+			"pos": Vector2(minf(_play_area().position.x + floori(float(i) / rows) * DIE_RADIUS * 2.0, _play_area().end.x),
+				clampf(_play_area().get_center().y + lane,
 				_play_area().position.y, _play_area().end.y)),
 			"vel": Vector2.from_angle(_rng.randf_range(-0.5, 0.5)) * _rng.randf_range(750.0, 1050.0),
 			"angle": _rng.randf_range(0.0, TAU),
@@ -192,6 +204,9 @@ func _draw() -> void:
 	if _roll.has("dc"):
 		draw_string(font, Vector2(0, 32), "%s %d" % [_roll.get("dc_label", Loc.ui("DD")), _roll["dc"]], HORIZONTAL_ALIGNMENT_RIGHT,
 			size.x - 16, 22, UITheme.GOLD)
+	elif _roll.has("difficulty"):
+		draw_string(font, Vector2(0, 32), "%s %d" % [_roll.get("dc_label", Loc.ui("Difficulté")), _roll["difficulty"]],
+			HORIZONTAL_ALIGNMENT_RIGHT, size.x - 16, 22, UITheme.GOLD)
 	for d in _dice:
 		_draw_die(d, font)
 	if _phase == 2:
@@ -206,6 +221,8 @@ func _draw_die(d: Dictionary, font: Font) -> void:
 	if d["settled"] and d["dropped"]:
 		body = BODY.darkened(0.55)
 		ink = INK.lightened(0.35)
+	elif d["settled"] and _roll.get("pool", false) and d["success"]:
+		body = SUCCESS_BODY
 	elif d["settled"] and sides == 20 and d["value"] == 20:
 		body = UITheme.GOLD.lightened(0.25)
 	elif d["settled"] and sides == 20 and d["value"] == 1:
@@ -222,6 +239,8 @@ func _draw_die(d: Dictionary, font: Font) -> void:
 	for segment in _facets(sides):
 		draw_line(segment[0], segment[1], body.darkened(0.3), 0.04, true)
 	draw_polyline(outline, ink, 0.07, true)
+	if d["settled"] and d["extra"] and not d["dropped"]:
+		draw_polyline(outline, EXTRA_RING, 0.09, true)
 
 	# Le chiffre tourne avec le dé, mais revient droit quand le dé s'immobilise sur une face.
 	var symmetry := TAU / shape.size()
@@ -240,6 +259,9 @@ func _draw_die(d: Dictionary, font: Font) -> void:
 
 
 func _draw_verdict(font: Font) -> void:
+	if _roll.get("pool", false):
+		_draw_pool_verdict(font)
+		return
 	if _roll.get("per_die", false):
 		var sorted := _dice.duplicate()
 		sorted.sort_custom(func(a, b): return a["total"] > b["total"])
@@ -278,8 +300,32 @@ func _draw_verdict(font: Font) -> void:
 			UITheme.GOOD if ok else UITheme.BAD)
 
 
-## Notation des dés lancés, ex. « Athlétisme : 1d20 + 2 ».
+## Verdict d'une réserve : « 3 succès » à gauche, « RÉUSSITE », « CRITIQUE 2 », « ÉCHEC CRITIQUE »… à droite.
+func _draw_pool_verdict(font: Font) -> void:
+	var y := size.y - 18.0
+	var successes := int(_roll.get("successes", 0))
+	var line := Loc.ui("%d succès") % successes
+	if int(_roll.get("auto", 0)) > 0:
+		line += Loc.ui(" (dont %d automatiques)") % int(_roll["auto"])
+	draw_string(font, Vector2(16, y), line, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, UITheme.TEXT)
+	if not _roll.has("success"):
+		return
+	var ok: bool = _roll["success"]
+	var verdict := Loc.ui("RÉUSSITE") if ok else Loc.ui("ÉCHEC")
+	if ok and int(_roll.get("critical", 0)) > 0:
+		var level := int(_roll["critical"])
+		verdict = Loc.ui("CRITIQUE !") if level == 1 else Loc.ui("CRITIQUE %d !") % level
+	elif not ok and _roll.get("fumble", false):
+		verdict = Loc.ui("ÉCHEC CRITIQUE")
+	draw_string(font, Vector2(0, y), verdict, HORIZONTAL_ALIGNMENT_RIGHT, size.x - 16, 30, UITheme.GOOD if ok else UITheme.BAD)
+
+
+## Notation des dés lancés, ex. « Athlétisme : 1d20 + 2 », « Physique : 3d10 ≤ 5 ».
 func _notation() -> String:
+	if _roll.get("pool", false):
+		var thrown := _dice.filter(func(d): return not d["extra"] and not d["crit"]).size()
+		var text := "%dd10 ≤ %d" % [thrown, int(_roll.get("threshold", 0))]
+		return "%s : %s" % [_roll["stat"], text] if _roll.has("stat") else text
 	var counts := {}
 	var dropped := 0
 	for d in _dice:

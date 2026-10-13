@@ -1,11 +1,18 @@
 {
-	"standard_array": [15, 14, 13, 12, 10, 8],
+	"standard_array": [6, 5, 5, 4, 4, 3],
 	"point_buy": {
-		"budget": 27,
-		"min": 8,
-		"max": 15,
-		"costs": {"8": 0, "9": 1, "10": 2, "11": 3, "12": 4, "13": 5, "14": 7, "15": 9},
-		"bonuses": [2, 1]
+		"_doc": "Attributs de 3 à 8 pour un humain (4 pour une personne ordinaire). Chaque attribut part de min ; le barème donne le coût total d'une valeur ; puis deux bonus de +1 sur des attributs différents.",
+		"budget": 10,
+		"min": 3,
+		"max": 6,
+		"costs": {"3": 0, "4": 1, "5": 2, "6": 4},
+		"bonuses": [1, 1]
+	},
+	"dice": {
+		"_doc": "Réserves de d10 : critical_step succès supplémentaires par niveau de réussite critique ; attribute_dice dés pour un test d'attribut sans compétence ; resist_skills : compétence utilisée pour résister selon l'attribut.",
+		"critical_step": 3,
+		"attribute_dice": 2,
+		"resist_skills": {"str": "physique", "dex": "physique", "con": "physique", "int": "lore", "wis": "insight", "cha": "persuasion"}
 	},
 	"genders": [{"id": "female", "name": "Femme"}, {"id": "male", "name": "Homme"}, {"id": "nonbinary", "name": "Non-binaire"}],
 	"sizes": [
@@ -22,20 +29,21 @@
 	],
 	"hit_points": {
 		"_doc": "PV max = Constitution × size_base ^ taille, arrondi (au moins 1), + modificateurs (don Robuste…). Ils ne dépendent ni de la classe ni du niveau (fragilité voulue).",
-		"size_base": 1.4142
+		"size_base": 1.4142,
+		"per_con": 1.0
 	},
 	"time_slots": [{"id": "morning", "name": "Matin"}, {"id": "afternoon", "name": "Après-midi"}, {"id": "evening", "name": "Soir"}],
 	"days_per_year": 365,
 	"majority_age": 18,
-	"common_actions": ["hide", "intimidate", "first_aid"],
+	"common_actions": ["prepare", "hide", "intimidate", "first_aid"],
 	"social": {
-		"_doc": "Interactions sociales : humeurs du jour (dc : modificateur du DD des tests contre le PNJ, gain : multiplicateur des gains de relation), saluts selon l'humeur, nombre de traits, chance qu'un partenaire jaloux apprenne une infidélité, durée d'une grossesse (jours), rencontres quotidiennes entre PNJ par lieu, seuil d'Amitié sous lequel un compagnon part.",
+		"_doc": "Interactions sociales : humeurs du jour (difficulty : modificateur de la difficulté des tests contre le PNJ, gain : multiplicateur des gains de relation), saluts selon l'humeur, nombre de traits, chance qu'un partenaire jaloux apprenne une infidélité, durée d'une grossesse (jours), rencontres quotidiennes entre PNJ par lieu, seuil d'Amitié sous lequel un compagnon part.",
 		"moods": [
-			{"id": "radiant", "name": "radieux", "dc": -2, "gain": 1.25, "weight": 1},
-			{"id": "good", "name": "de bonne humeur", "dc": -1, "gain": 1.1, "weight": 2},
-			{"id": "neutral", "name": "neutre", "dc": 0, "gain": 1.0, "weight": 3},
-			{"id": "sullen", "name": "maussade", "dc": 1, "gain": 0.8, "weight": 2},
-			{"id": "furious", "name": "furieux", "dc": 3, "gain": 0.5, "weight": 1}
+			{"id": "radiant", "name": "radieux", "difficulty": -1, "gain": 1.25, "weight": 1},
+			{"id": "good", "name": "de bonne humeur", "difficulty": 0, "gain": 1.1, "weight": 2},
+			{"id": "neutral", "name": "neutre", "difficulty": 0, "gain": 1.0, "weight": 3},
+			{"id": "sullen", "name": "maussade", "difficulty": 1, "gain": 0.8, "weight": 2},
+			{"id": "furious", "name": "furieux", "difficulty": 2, "gain": 0.5, "weight": 1}
 		],
 		"greetings": {
 			"radiant": ["« Quelle belle journée ! »", "« Ah, vous tombez bien ! »"],
@@ -109,7 +117,7 @@
 		]
 	},
 	"dice_scaling": {
-		"_doc": "Nombre de dés selon le niveau de classe (le palier le plus haut atteint).",
+		"_doc": "Dés de dégâts en plus selon le niveau de classe (le palier le plus haut atteint) : tours de magie (palier − 1) et Attaque sournoise (palier).",
 		"cantrip": {"1": 1, "5": 2, "11": 3, "17": 4},
 		"sneak_attack": {"1": 1, "3": 2, "5": 3, "7": 4, "9": 5, "11": 6, "13": 7, "15": 8, "17": 9, "19": 10}
 	},
@@ -122,14 +130,14 @@
 	],
 	"start_gold": 15,
 	"trade": {
-		"_doc": "Prix d'achat = valeur × price_rate de la boutique × (1 − remise) ; prix de revente = valeur × sell_rate × (1 + remise). La remise vaut percent_per_point % par point de la compétence price_skill du meilleur négociateur du groupe, entre −max_percent et +max_percent.",
+		"_doc": "Prix d'achat = valeur × price_rate de la boutique × (1 − remise) ; prix de revente = valeur × sell_rate × (1 + remise). La remise vaut percent_per_success % par succès moyen de la réserve de price_skill du meilleur négociateur du groupe, au plus max_percent.",
 		"sell_rate": 0.5,
 		"price_skill": "persuasion",
-		"percent_per_point": 3,
+		"percent_per_success": 5,
 		"max_percent": 15
 	},
 	"crafting": {
-		"_doc": "Fabriquer demande un test : compétence de la station (Artisanat à la forge, avec la DEX : on reproduit un objet connu ; Potions et cuisine à l'alchimie), contre le DD de la recette (10 par défaut). Un échec gâche failure_loss des matériaux (arrondi au supérieur) et l'or. Un métier apparaît sur la fiche après profession_threshold objets fabriqués à une station.",
+		"_doc": "Fabriquer demande un test : compétence de la station (Artisanat à la forge, avec la DEX : on reproduit un objet connu ; Potions et cuisine à l'alchimie), contre la difficulté de la recette (1 par défaut). Un échec gâche failure_loss des matériaux (arrondi au supérieur) et l'or. Un métier apparaît sur la fiche après profession_threshold objets fabriqués à une station.",
 		"station_skills": {"forge": {"skill": "crafting", "ability": "dex"}, "alchemy": {"skill": "potions_cooking"}},
 		"failure_loss": 0.5,
 		"professions": {"forge": "Forgeron{g:|ne|·ne}", "alchemy": "Alchimiste"},
@@ -141,21 +149,28 @@
 		"upgrade_rarities": ["uncommon", "rare", "very_rare"]
 	},
 	"encumbrance": {
-		"_doc": "Malus aux jets de FOR et de DEX (attaques, sauvegardes, tests, initiative, fuite) : 1 par tranche de armor_points_per_penalty points de Force manquants pour l'armure portée, + 1 par tranche de overload_percent_per_penalty % de charge au-delà de la capacité du groupe (somme de carry_per_strength kg par point de Force de chaque membre), au plus max_penalty.",
-		"armor_points_per_penalty": 2,
-		"carry_per_strength": 7.5,
-		"overload_percent_per_penalty": 10,
-		"max_penalty": 5
+		"_doc": "Dés en moins aux jets de FOR et de DEX (attaques, résistances, tests, fuite ; l'initiative perd autant de points) : 1 par tranche de armor_points_per_penalty points de Force manquants pour l'armure portée, + 1 par tranche de overload_percent_per_penalty % de charge au-delà de la capacité du groupe (somme de carry_per_strength kg par point de Force de chaque membre), au plus max_penalty.",
+		"armor_points_per_penalty": 1,
+		"carry_per_strength": 18,
+		"overload_percent_per_penalty": 25,
+		"max_penalty": 3
 	},
 	"armor_strength": {
 		"_doc": "Force conseillée pour une armure, selon son type (un objet peut la redéfinir avec \"strength\"). En dessous, l'armure reste portable mais encombre (voir encumbrance).",
 		"clothing": 0,
-		"light": 10,
-		"medium": 12,
-		"heavy": 14
+		"light": 4,
+		"medium": 5,
+		"heavy": 6
 	},
 	"max_companions": 3,
 	"combat": {
+		"_doc": "actions_per_turn : actions par tour (les actions gardées deviennent des réactions jusqu'au tour suivant ; s'il en reste au début de son tour, on devient Préparé). dodge_divisor : Esquive naturelle = DEX ÷ dodge_divisor (au moins 1). prepared_dice : dés en plus quand on est Préparé. surprise_crit_bonus : succès comptés en plus pour le critique d'une attaque surprise. cover : Couvert des attaques à distance (base, minimum).",
+		"actions_per_turn": 2,
+		"dodge_divisor": 3,
+		"prepared_dice": 2,
+		"surprise_crit_bonus": 2,
+		"flee_difficulty": 2,
+		"cover": {"base": 1, "min": 1},
 		"side_capacity": 4,
 		"size_slots": {"-4": 0.25, "-3": 0.25, "-2": 0.5, "-1": 0.5, "0": 1, "1": 1, "2": 2, "3": 3, "4": 4, "5": 4},
 		"sprite_scale": {"-4": 0.3, "-3": 0.35, "-2": 0.45, "-1": 0.6, "0": 1, "1": 1.3, "2": 1.8, "3": 2.3, "4": 2.6, "5": 2.8}
@@ -164,7 +179,8 @@
 	"proficiency_by_level": [2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6],
 	"advancement_levels": [4, 8, 12, 16, 20],
 	"advancement": {"ability_points": 1, "feats": 1},
-	"max_ability_score": 20,
+	"max_ability_score": 10,
+	"aging_chance": 0.4,
 	"creator_points": {
 		"xp_per_point": 100,
 		"min_per_life": 1,

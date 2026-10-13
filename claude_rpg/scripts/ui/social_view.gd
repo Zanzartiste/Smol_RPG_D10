@@ -203,7 +203,11 @@ func _check_hint(a: Dictionary) -> String:
 	var skill := Skills.name_of(spec["skill"])
 	if spec.has("vs"):
 		return tr("Test : %s contre la %s de %s") % [skill, Skills.name_of(spec["vs"]), npc.name]
-	return tr("Test : %s, DD %d") % [skill, int(spec.get("dc", 10))]
+	var difficulty := maxi(0, Dice.difficulty_of(spec) + int(Social.trait_reaction(npc, a.get("id", ""))["difficulty"])
+		+ int(Social.mood(npc).get("difficulty", 0)))
+	var pool := life.character.skill_pool(spec["skill"], spec.get("ability", ""))
+	return tr("Test : %s, difficulté %d (%d %%)") % [skill, difficulty,
+		roundi(Dice.chance(int(pool["count"]), int(pool["threshold"]), difficulty) * 100)]
 
 
 func _on_action(action_id: String) -> void:

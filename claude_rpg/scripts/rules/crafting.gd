@@ -3,11 +3,12 @@ extends RefCounted
 ## API de la fabrication (data/recipes.json) et de l'amélioration d'équipement (rules.json › forge).
 ##
 ## Recette : {"id", "result": id d'objet, "count"? (1), "station": "forge" | "alchemy",
-##            "materials": {id: quantité}, "gold"? (0), "dc"? (10)}
+##            "materials": {id: quantité}, "gold"? (0), "difficulty"? (1)}
 ## Fabriquer demande un test de la compétence de la station (rules.json › crafting).
 ## Amélioration : une arme, une armure ou un bouclier ordinaire devient « +1 », puis « +2 », « +3 ».
 ## L'objet amélioré a l'id "<base>@<rang>" (ex. "longsword@2"), décrit par Equipment.def :
-## bonus au toucher et aux dégâts pour une arme, à la CA pour une armure ou un bouclier.
+## un dé d'attaque et +1 au seuil des dégâts par rang pour une arme, +1 Armure par rang pour une armure
+## ou un bouclier.
 
 const UPGRADE_SEPARATOR := "@"
 
@@ -16,10 +17,10 @@ static func _crafting(key: String, default: Variant) -> Variant:
 	return DB.rules.get("crafting", {}).get(key, default)
 
 
-## Test d'une recette : {"skill", "ability"?, "dc"}.
+## Test d'une recette : {"skill", "ability"?, "difficulty"}.
 static func check_for(recipe_def: Dictionary) -> Dictionary:
 	var spec: Dictionary = _crafting("station_skills", {}).get(recipe_def.get("station", ""), {"skill": "crafting"}).duplicate()
-	spec["dc"] = int(recipe_def.get("dc", 10))
+	spec["difficulty"] = int(recipe_def.get("difficulty", 1))
 	return spec
 
 
@@ -122,6 +123,6 @@ static func upgraded_def(item_id: String) -> Dictionary:
 		mods.append({"type": "weapon_attack", "amount": rank})
 		mods.append({"type": "weapon_damage", "amount": rank})
 	else:
-		mods.append({"type": "ac", "amount": rank})
+		mods.append({"type": "armor", "amount": rank})
 	item["modifiers"] = mods
 	return item

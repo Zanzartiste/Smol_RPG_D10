@@ -193,9 +193,7 @@ func _show_result(result: Dictionary) -> void:
 	var roll: Dictionary = result["roll"]
 	if not roll.is_empty():
 		var color := UITheme.GOOD if roll["success"] else UITheme.BAD
-		text += "\n\n[color=%s]%s : %d %s %d = %d — %s[/color]" % [
-			color.to_html(false), roll["label"], roll["die"], "+" if roll["mod"] >= 0 else "−",
-			absi(roll["mod"]), roll["total"], tr("Réussite") if roll["success"] else tr("Échec")]
+		text += "\n\n[color=%s]%s[/color]" % [color.to_html(false), roll["text"]]
 	if not result["lines"].is_empty():
 		text += "\n\n[color=%s]%s[/color]" % [UITheme.GOLD.to_html(false), "\n".join(PackedStringArray(result["lines"]))]
 	body_text.text = text

@@ -1,21 +1,25 @@
 class_name Combat
 extends RefCounted
-## Combat au tour par tour façon D&D 5e simplifié. Aucune dépendance à l'interface : chaque action
-## retourne des « étapes » (texte + jet de dés) que l'interface anime, l'état étant déjà à jour.
+## Combat au tour par tour, en réserves de d10 à succès (voir docs/systeme_de_jeu.md). Aucune
+## dépendance à l'interface : chaque action retourne des « étapes » (texte + jet de dés) que
+## l'interface anime, l'état étant déjà à jour.
 ##
-## Déroulement : ordre d'initiative (d20 + DEX). Chaque tour commence par start_turn() (effets des
-## états, tour passé si étourdi), puis le combattant fait UNE action (plus s'il a une action en plus,
-## ex. Fougue : voir `actions_left`) :
+## Déroulement : ordre d'initiative (1d10 + DEX + INT ; égalité : DEX, puis INT, puis au hasard).
+## Chaque tour commence par start_turn() (états, réactions non utilisées -> Préparé), puis le combattant
+## dispose de deux actions (`actions_left`) :
 ##   - héros et compagnons (contrôlés par le joueur) : une action de classe (perform), un objet
 ##     (use_item) ou la fuite (flee) ;
-##   - créatures (ennemis, invocations) : ai_turn(). Un ennemi peut « préparer » une action annoncée.
-## end_turn() passe au suivant. Réglages : rules.json › combat.
+##   - créatures (ennemis, invocations) : ai_turn(). Un ennemi peut annoncer une action, jouée au tour suivant.
+## Les actions non utilisées deviennent des réactions (esquive, parade, contre-attaque) jusqu'au tour
+## suivant du combattant. end_turn() passe au suivant. Réglages : rules.json › combat.
+##
+## Attaque : [rang] d10 contre l'attribut, difficulté = Esquive naturelle de la cible (mêlée) ou son
+## Couvert (distance) ; les succès au-delà donnent un critique (relances des dés de dégâts ratés).
+## Dégâts : un succès = un point de dégâts ; l'Armure de la cible baisse le seuil des dégâts.
 ##
 ## Spécification (effet "combat" d'un événement) :
-##   {"enemies": ["wolf", ...], "flee": true, "flee_dc": 12, "on_defeat": "death" | "knockout",
-##    "victory": {text, effects}, "defeat": {text, effects}, "fled": {text, effects}}
-
-const DEFAULT_FLEE_DC := 12
+##   {"enemies": ["wolf", ...], "flee": true, "flee_difficulty": 2, "on_defeat": "death" | "knockout",
+##    "light"?: "dim" | "dark", "victory": {text, effects}, "defeat": {text, effects}, "fled": {text, effects}}
 
 var spec: Dictionary
 var life: LifeState
@@ -30,8 +34,7 @@ var hero: Combatant
 var initiative_roll: Dictionary = {}  # lancer d'initiative de tous les combattants, animé en une fois
 var hero_down_cause := ""  # cause de la mort si tout le groupe tombe après le héros
 var skipped := false  # le combattant actif passe son tour (étourdi, mort pendant ses états…)
-var actions_left := 1  # actions restantes au combattant actif pendant ce tour
-var bonus_left := 1  # actions bonus restantes au combattant actif pendant ce tour
+var actions_left := 2  # actions restantes au combattant actif pendant ce tour
 var _next_id := 0
 
 
@@ -65,7 +68,7 @@ func _init(combat_spec: Dictionary, life_state: LifeState) -> void:
 		var label := Creatures.name_of(id)
 		if enemy_ids.count(id) > 1:
 			label += " " + "ABCDEFGH"[enemy_ids.slice(0, i).count(id)]
-		_add(Combatant.from_creature(id, label, "enemy", rng))
+		_add(Combatant.from_creature(id, label, "enemy"))
 	_roll_initiative()
 
 
@@ -100,15 +103,23 @@ func can_flee_now(actor: Combatant) -> bool:
 	return can_flee() and not actor.has_status_flag("no_flee")
 
 
-## Avantage d'une attaque : états de l'attaquant et de la cible (+1, -1 ou 0).
-func attack_advantage(actor: Combatant, target: Combatant) -> int:
-	var advantages := (1 if actor.has_status_flag("attack_advantage") else 0) + (1 if target.has_status_flag("attacked_advantage") else 0)
-	var disadvantages := (1 if actor.has_status_flag("attack_disadvantage") else 0) + (1 if target.has_status_flag("attacked_disadvantage") else 0)
-	return Dice.combine_advantage(advantages, disadvantages)
+## Difficulté de la fuite : "flee_difficulty" (ou ancien "flee_dc" converti), 2 par défaut.
+func flee_difficulty() -> int:
+	if spec.has("flee_difficulty"):
+		return int(spec["flee_difficulty"])
+	if spec.has("flee_dc"):
+		return Dice.dc_to_difficulty(int(spec["flee_dc"]))
+	return int(setting("flee_difficulty", 2))
 
 
-func flee_dc() -> int:
-	return int(spec.get("flee_dc", DEFAULT_FLEE_DC))
+## Réserve de fuite : Physique (DEX), un dé de moins si l'état l'impose (Effrayé).
+func flee_pool(actor: Combatant) -> Dictionary:
+	return actor.skill_pool("physique", "dex", -1 if actor.has_status_flag("check_disadvantage") else 0)
+
+
+func flee_chance(actor: Combatant) -> float:
+	var pool := flee_pool(actor)
+	return Dice.chance(int(pool["count"]), int(pool["threshold"]), flee_difficulty())
 
 
 func capacity_used(side: String) -> float:
@@ -146,6 +157,53 @@ func targets(actor: Combatant, target: String) -> Array[Combatant]:
 	return none
 
 
+# --- Défenses : Esquive naturelle, Couvert, surprise ------------------------------------
+
+## Couvert d'une cible contre les attaques à distance : 1 par défaut (jamais moins) ; −1 par taille ≥ 2
+## et ≥ 4, −1 si elle est immobile ; +1 par taille ≤ −2 et ≤ −4, +1 si elle est cachée, +1 dans la
+## pénombre, +2 dans le noir (spécification "light"), +1 si elle est en mouvement.
+func cover(target: Combatant) -> int:
+	var rules: Dictionary = setting("cover", {})
+	var value := int(rules.get("base", 1))
+	var size := target.size()
+	value -= int(size >= 2) + int(size >= 4) + int(target.has_status_flag("immobile"))
+	value += int(size <= -2) + int(size <= -4) + int(target.has_status_flag("hidden")) + int(target.has_status_flag("moving"))
+	match spec.get("light", ""):
+		"dim":
+			value += 1
+		"dark":
+			value += 2
+	return maxi(int(rules.get("min", 1)), value)
+
+
+## Attaque surprise : l'attaquant est caché, ou la cible ignore sa présence (endormie, paralysée).
+func is_surprise(actor: Combatant, target: Combatant) -> bool:
+	return actor.has_status_flag("attack_surprise") or target.has_status_flag("unaware")
+
+
+## Difficulté d'une attaque : Couvert de la cible (distance) ; sinon son Esquive naturelle, ou 1 par
+## surprise. Les états la modifient (+1 si l'attaquant est aveuglé ou effrayé, −1 contre une cible à
+## terre ou entravée…).
+func attack_difficulty(actor: Combatant, target: Combatant, effect: Dictionary) -> int:
+	var difficulty := 0
+	if actor.is_ranged_attack(effect):
+		difficulty = cover(target)
+	elif is_surprise(actor, target):
+		difficulty = 1
+	else:
+		difficulty = target.natural_dodge()
+	difficulty += int(actor.has_status_flag("attack_disadvantage")) - int(target.has_status_flag("attacked_advantage")) \
+		+ int(target.has_status_flag("attacked_disadvantage"))
+	return maxi(0, difficulty)
+
+
+## Chance qu'une attaque touche (avant les réactions), pour l'interface et l'IA.
+func hit_chance(actor: Combatant, target: Combatant, effect: Dictionary) -> float:
+	var pool := actor.attack_pool(effect)
+	var bonus := int(setting("prepared_dice", 2)) if actor.is_prepared() else 0
+	return Dice.chance(int(pool["count"]) + bonus, int(pool["threshold"]), attack_difficulty(actor, target, effect))
+
+
 ## Actions d'un personnage pour l'interface : [{action, available, reason}]. Un sort qui s'améliore
 ## avec le niveau d'emplacement apparaît une fois par niveau disponible (voir Combatant.action_variants).
 func action_choices(actor: Combatant) -> Array[Dictionary]:
@@ -157,24 +215,21 @@ func action_choices(actor: Combatant) -> Array[Dictionary]:
 	return result
 
 
-## Le combattant actif peut-il encore agir pendant ce tour (action, ou action bonus disponible) ?
+## Le combattant actif peut-il encore agir pendant ce tour (une action, ou une action gratuite) ?
 func can_act_again() -> bool:
 	if is_over() or not current().is_alive():
 		return false
 	if actions_left > 0:
 		return true
-	return bonus_left > 0 and action_choices(current()).any(func(c): return c["available"])
+	return action_choices(current()).any(func(c): return c["available"])
 
 
 func action_unavailable_reason(actor: Combatant, action: Dictionary) -> String:
-	if actor == current() and not action.get("free", false):
-		if actor.is_bonus(action) and bonus_left <= 0:
-			return Loc.ui("action bonus déjà utilisée")
-		if not actor.is_bonus(action) and actions_left <= 0:
-			return Loc.ui("action déjà utilisée")
 	var reason := actor.unavailable_reason(action)
 	if reason != "":
 		return reason
+	if actor == current() and not actor.is_free(action) and actions_left <= 0:
+		return Loc.ui("plus d'action")
 	var target: String = action.get("target", "enemy")
 	if target in ["enemy", "all_enemies"] and living("enemy").is_empty():
 		return Loc.ui("aucune cible")
@@ -186,20 +241,27 @@ func action_unavailable_reason(actor: Combatant, action: Dictionary) -> String:
 
 # --- Tours -------------------------------------------------------------------
 
-## Début du tour du combattant actif : effets des états. Après l'appel, `skipped` indique si le
-## combattant passe son tour.
+## Début du tour du combattant actif : réactions non utilisées (-> Préparé), effets des états. Après
+## l'appel, `skipped` indique si le combattant passe son tour.
 func start_turn() -> Array[Dictionary]:
 	var actor := current()
 	var beats: Array[Dictionary] = []
 	skipped = false
-	actions_left = 1
-	bonus_left = 1
-	actor.reactions = 0
+	actions_left = actor.actions_per_turn()
+	for c in combatants:
+		c.parries_used = 0
 	actor.reaction_used = false
 	actor.savage_used = false
 	actor.fast_hands_used = false
+	actor.cunning_used = false
+	if actor.reactions > 0 and actor.is_alive() and not actor.is_prepared():
+		actor.become_prepared()
+		_beat(beats, Loc.ui("%s n'a pas eu à se défendre : préparé (+%d dés à son prochain jet de combat).") % [
+			actor.name, int(setting("prepared_dice", 2))])
+	actor.reactions = 0
 	if actor.has_modifier("survivor") and actor.is_alive() and actor.hp <= actor.max_hp() / 2.0:
-		var healed := mini(actor.max_hp() - actor.hp, 5 + actor.ability_mod("con"))
+		@warning_ignore("integer_division")
+		var healed := mini(actor.max_hp() - actor.hp, maxi(1, actor.ability_score("con") / 2))
 		actor.hp += healed
 		_beat(beats, Loc.ui("%s, survivant, récupère %d PV.") % [actor.name, healed])
 	for status_id: String in actor.statuses.keys():
@@ -221,13 +283,12 @@ func start_turn() -> Array[Dictionary]:
 	return beats
 
 
-## Passe au combattant vivant suivant (nouveau round après le dernier).
-## Fin du tour du combattant actif. Un personnage qui garde des actions (action, action bonus) peut
-## s'en servir pour esquiver ou parer jusqu'à son prochain tour (réactions).
+## Fin du tour du combattant actif. Les actions gardées deviennent des réactions (esquive, parade,
+## contre-attaque) jusqu'à son prochain tour. Puis on passe au combattant vivant suivant (nouveau round
+## après le dernier).
 func end_turn() -> void:
 	var actor := current()
-	if actor.character != null and actor.is_alive():
-		actor.reactions = maxi(0, actions_left) + maxi(0, bonus_left)
+	actor.reactions = maxi(0, actions_left) if actor.is_alive() and not skipped else 0
 	for status_id: String in actor.statuses.keys():
 		if StatusEffects.decays_at_end(status_id):
 			_decay(actor, status_id)
@@ -249,12 +310,11 @@ func end_turn() -> void:
 ## L'action Attaque frappe plusieurs fois avec Attaque supplémentaire : si la cible tombe, les coups
 ## suivants visent l'ennemi le plus faible.
 func perform(actor: Combatant, action: Dictionary, target: Combatant = null) -> Array[Dictionary]:
+	var free := actor.is_free(action)
+	if free and action.get("id", "") == "hide" and not action.get("free", false):
+		actor.cunning_used = true
 	actor.consume(action)
-	if action.get("free", false):
-		pass
-	elif actor.is_bonus(action):
-		bonus_left -= 1
-	else:
+	if not free:
 		actions_left -= 1
 	var beats: Array[Dictionary] = []
 	_beat(beats, Loc.ui("%s : %s.") % [actor.name, action["name"]])
@@ -281,7 +341,7 @@ func use_item(actor: Combatant, item_id: String, target: Combatant) -> Array[Dic
 	var item: Dictionary = Items.def(item_id)
 	life.character.remove_item(item_id)
 	if actor.has_modifier("fast_hands") and not actor.fast_hands_used:
-		actor.fast_hands_used = true  # Mains lestes : l'objet ne coûte pas l'action
+		actor.fast_hands_used = true  # Mains lestes : l'objet ne coûte pas d'action
 	else:
 		actions_left -= 1
 	var effects: Array = []
@@ -297,62 +357,68 @@ func use_item(actor: Combatant, item_id: String, target: Combatant) -> Array[Dic
 	return beats
 
 
-## Tentative de fuite du groupe : d20 + DEX contre le DD de fuite.
+## Tentative de fuite du groupe : Physique (DEX) contre la difficulté de fuite. Elle prend tout le tour.
 func flee(actor: Combatant) -> Array[Dictionary]:
-	var advantage := -1 if actor.has_status_flag("check_disadvantage") else 0
 	actions_left = 0
-	bonus_left = 0
-	var d20 := Dice.roll_d20(rng, advantage)
-	var die := int(d20["die"])
-	var mod := actor.check_mod("dex")
-	var success := die == 20 or (die != 1 and die + mod >= flee_dc())
-	actions_left = 0
+	var pool := flee_pool(actor)
+	var roll := Dice.roll_pool(rng, int(pool["count"]), int(pool["threshold"]))
+	var judged := Dice.judge(int(roll["successes"]), flee_difficulty())
 	var beats: Array[Dictionary] = []
-	_beat(beats, Loc.ui("%s tente de fuir : %s.") % [actor.name, Loc.ui("réussite") if success else Loc.ui("échec")],
-		{"dice": d20["dice"], "mod": mod, "dc": flee_dc(), "success": success, "advantage": advantage,
-		"stat": Loc.ui("Fuite (Dextérité)") + Dice.advantage_text(advantage)})
-	if success:
+	_beat(beats, Loc.ui("%s tente de fuir : %s.") % [actor.name, Dice.verdict(judged)],
+		_roll_info(Loc.ui("Fuite (Physique, DEX)"), roll, judged))
+	if judged["success"]:
 		outcome = "fled"
 	return beats
 
 
 # --- Tours de l'IA -----------------------------------------------------------
 
-## Tour d'une créature (ennemi ou invocation). Un ennemi qui a préparé une action l'exécute ; sinon il
-## en choisit une (pondérée) et, si elle est « préparée », se contente de l'annoncer.
+## Tour d'une créature (ennemi ou invocation) : elle joue ses actions, en gardant parfois la dernière
+## pour se défendre (rules.json › combat › ai_guard_chance). Une action annoncée au tour précédent est
+## jouée en premier ; une action « announced » est d'abord annoncée (elle coûte une action).
 func ai_turn(actor: Combatant) -> Array[Dictionary]:
 	var beats: Array[Dictionary] = []
-	var action: Dictionary
-	if not actor.intent.is_empty():
-		action = actor.intent
-		actor.intent = {}
-	else:
-		action = _pick_action(actor)
-		if action.is_empty():
-			_beat(beats, Loc.ui("%s ne fait rien.") % actor.name)
-			return beats
-		if action.get("prepared", false) and not actor.is_ally():
-			actor.intent = action
-			_beat(beats, Loc.ui("%s prépare : %s !") % [actor.name, action["name"]])
-			return beats
-	var target_mode: String = action.get("target", "enemy")
-	var chosen: Combatant = null
-	if target_mode in CombatEffects.CHOSEN_TARGETS:
-		var candidates := targets(actor, target_mode)
-		if candidates.is_empty():
-			return beats
-		candidates.sort_custom(func(a, b): return a.hp < b.hp)
-		# Les invocations alliées visent le plus faible, les ennemis choisissent au hasard.
-		chosen = candidates[0] if actor.is_ally() else candidates[rng.randi_range(0, candidates.size() - 1)]
-	_beat(beats, Loc.ui("%s : %s.") % [actor.name, action["name"]])
-	beats.append_array(_resolve(actor, action.get("effects", []), target_mode, chosen, not actor.is_ally()))
-	_check_end()
+	var keep := 1 if actions_left > 1 and rng.randf() < float(setting("ai_guard_chance", 0.25)) else 0
+	var intent_ready := not actor.intent.is_empty()
+	for guard in 8:
+		if actions_left <= keep or is_over() or not actor.is_alive():
+			break
+		var action: Dictionary
+		if intent_ready:
+			action = actor.intent
+			actor.intent = {}
+			intent_ready = false
+		else:
+			action = _pick_action(actor, actor.intent.is_empty() and not actor.is_ally())
+			if action.is_empty():
+				if beats.is_empty():
+					_beat(beats, Loc.ui("%s ne fait rien.") % actor.name)
+				break
+			if action.get("announced", false) and not actor.is_ally():
+				actor.intent = action
+				actions_left -= 1
+				_beat(beats, Loc.ui("%s s'apprête à : %s !") % [actor.name, action["name"]])
+				continue
+		actions_left -= 1
+		var target_mode: String = action.get("target", "enemy")
+		var chosen: Combatant = null
+		if target_mode in CombatEffects.CHOSEN_TARGETS:
+			var candidates := targets(actor, target_mode)
+			if candidates.is_empty():
+				break
+			candidates.sort_custom(func(a, b): return a.hp < b.hp)
+			# Les invocations alliées visent le plus faible, les ennemis choisissent au hasard.
+			chosen = candidates[0] if actor.is_ally() else candidates[rng.randi_range(0, candidates.size() - 1)]
+		_beat(beats, Loc.ui("%s : %s.") % [actor.name, action["name"]])
+		beats.append_array(_resolve(actor, action.get("effects", []), target_mode, chosen, not actor.is_ally()))
+		_check_end()
 	return beats
 
 
-func _pick_action(actor: Combatant) -> Dictionary:
+func _pick_action(actor: Combatant, allow_announced: bool) -> Dictionary:
 	var actions := actor.combat_actions().filter(func(a): return (a.get("target") == "none" \
-		or not targets(actor, a.get("target", "enemy")).is_empty()) and actor.unavailable_reason(a) == "")
+		or not targets(actor, a.get("target", "enemy")).is_empty()) and actor.unavailable_reason(a) == "" \
+		and (allow_announced or not a.get("announced", false)))
 	var total := 0.0
 	for a: Dictionary in actions:
 		total += float(a.get("weight", 1))
@@ -364,10 +430,11 @@ func _pick_action(actor: Combatant) -> Dictionary:
 	return actions.back() if not actions.is_empty() else {}
 
 
-## Joue automatiquement toutes les actions d'un personnage pour ce tour (tests, banc d'équilibrage).
+## Joue automatiquement toutes les actions d'un personnage pour ce tour (tests, banc d'équilibrage,
+## combat automatique).
 func auto_turn(actor: Combatant) -> Array[Dictionary]:
 	var beats: Array[Dictionary] = []
-	for guard in 5:
+	for guard in 6:
 		if not can_act_again():
 			break
 		var choice := auto_choice(actor)
@@ -377,9 +444,8 @@ func auto_turn(actor: Combatant) -> Array[Dictionary]:
 	return beats
 
 
-## Choix automatique pour un personnage (tests, banc d'équilibrage, futur combat automatique) :
-## l'action disponible la plus utile (dégâts attendus, soins ou protection si les PV sont bas),
-## contre l'ennemi le plus faible.
+## Choix automatique pour un personnage : l'action disponible la plus utile (dégâts attendus, soins ou
+## protection si les PV sont bas), contre l'ennemi le plus faible.
 func auto_choice(actor: Combatant) -> Dictionary:
 	var best: Dictionary = {}
 	var best_score := -1.0
@@ -404,34 +470,44 @@ func auto_choice(actor: Combatant) -> Dictionary:
 
 func _action_score(actor: Combatant, action: Dictionary) -> float:
 	var score := 0.0
-	var spread := living("enemy").size() if action.get("target") == "all_enemies" else 1
+	var foes := living("enemy" if actor.is_ally() else "ally")
+	var spread := foes.size() if action.get("target") == "all_enemies" else 1
 	var hurt := actor.hp < actor.max_hp() * 0.5
 	var attacks := 1 + (actor.extra_attacks() if action.get("attack_action", false) else 0)
+	var foe: Combatant = foes[0] if not foes.is_empty() else null
 	for e: Dictionary in action.get("effects", []):
 		match e.get("type"):
 			"attack":
-				var chance := clampf((21.0 - (12 - actor.attack_bonus(e))) / 20.0, 0.05, 0.95)
-				var average := Dice.average(actor.damage_expr(e))
+				var chance := hit_chance(actor, foe, e) if foe != null else 0.5
+				var pool := actor.damage_pool(e, actor.attack_pool(e))
+				var armor := foe.armor() if foe != null else 0
+				var average := Dice.expected(int(pool["count"]), maxi(1, int(pool["threshold"]) - armor))
 				for part: Dictionary in actor.bonus_damage(e):
-					average += Dice.average(part["damage"])
+					average += Dice.expected(int(part.get("dice", 1)), int(part.get("threshold", 5)))
 				score += average * chance * spread * attacks
 			"damage":
-				score += Dice.average(actor.damage_expr(e)) * spread * (0.75 if e.has("save") else 1.0)
+				var pool := actor.damage_pool(e)
+				score += Dice.expected(int(pool["count"]), int(pool["threshold"])) * spread * (0.7 if e.has("resist") else 1.0)
 			"extra_action":
-				score += 8.0
+				score += 2.0
 			"heal":
-				score += Dice.average(actor.heal_expr(String(e["amount"]))) if hurt else 0.0
+				var spec: Variant = e["amount"]
+				if spec is Dictionary and hurt:
+					var pool := actor.heal_pool(spec)
+					score += Dice.expected(int(pool["count"]), int(pool["threshold"]))
 			"status":
 				var stacks := int(e["stacks"])
 				match e["status"]:
 					"shielded":
 						score += stacks * (0.8 if hurt else 0.3)
-					"stunned":
-						score += 4.0 * spread
+					"prepared":
+						score += 0.4
+					"stunned", "asleep":
+						score += 1.5 * spread
 					_:
-						score += stacks * 1.2 * spread
+						score += stacks * 0.4 * spread
 			"summon":
-				score += 5.0
+				score += 2.0
 	# Les ressources limitées (emplacements, utilisations par combat) valent un peu moins, et un
 	# emplacement de niveau supérieur encore moins.
 	if action.has("cost") or action.has("per_combat"):
@@ -444,8 +520,8 @@ func _action_score(actor: Combatant, action: Dictionary) -> float:
 # --- Résolution des effets ---------------------------------------------------
 
 ## Applique une liste d'effets. `target_mode` : "enemy", "all_enemies", "ally", "all_allies", "self", "none".
-## Les effets qui suivent une attaque ratée ou un jet de sauvegarde réussi sont ignorés (jusqu'à
-## l'attaque ou la sauvegarde suivante).
+## Les effets qui suivent une attaque ratée, un test raté ou un effet auquel la cible a résisté sont
+## ignorés (jusqu'à l'attaque ou au test suivant).
 func _resolve(actor: Combatant, effects: Array, target_mode: String, chosen: Combatant, fast: bool) -> Array[Dictionary]:
 	var beats: Array[Dictionary] = []
 	var target_list: Array[Combatant] = []
@@ -462,8 +538,8 @@ func _resolve(actor: Combatant, effects: Array, target_mode: String, chosen: Com
 		for e: Dictionary in effects:
 			if e.get("type") in CombatEffects.UNTARGETED:
 				continue
-			if e.get("type") in ["attack", "check"] or e.has("save"):
-				if not target.is_alive():
+			if e.get("type") in ["attack", "check"] or e.has("resist"):
+				if not target.is_alive() or not actor.is_alive():
 					break
 				var result := _apply(actor, e, target, fast)
 				beats.append_array(result["beats"])
@@ -473,67 +549,41 @@ func _resolve(actor: Combatant, effects: Array, target_mode: String, chosen: Com
 	return beats
 
 
-## Applique un effet à une cible. Retourne {"beats", "hit"} (hit : attaque réussie ou sauvegarde ratée).
+## Applique un effet à une cible. Retourne {"beats", "hit"} (hit : attaque réussie, test réussi, ou
+## effet que la cible n'a pas su repousser).
 func _apply(actor: Combatant, e: Dictionary, target: Combatant, fast: bool) -> Dictionary:
 	var beats: Array[Dictionary] = []
 	var hit := true
-	var multiplier := 1.0
-	if e.has("save"):
-		var save: Dictionary = e["save"]
-		var saved := _saving_throw(actor, target, save, beats, fast)
-		hit = not saved
-		var half: bool = save.get("half", false) and e.get("type") == "damage"
-		var evasion: bool = half and save["ability"] == "dex" and target.has_modifier("evasion")
-		if saved:
-			multiplier = 0.0 if evasion or not half else 0.5
-		elif evasion:
-			multiplier = 0.5
-		if multiplier == 0.0:
+	if e.has("resist") and e.get("type") != "damage":
+		if _resists(actor, target, e["resist"], beats, fast):
 			_beat(beats, Loc.ui("%s n'est pas affecté.") % target.name)
-			return {"beats": beats, "hit": hit}
-		if saved and not half:
-			return {"beats": beats, "hit": hit}
+			return {"beats": beats, "hit": false}
 	match e.get("type"):
 		"attack":
-			var bonus := actor.attack_bonus(e)
-			var advantage := attack_advantage(actor, target)
-			var d20 := Dice.roll_d20(rng, advantage)
-			var die := int(d20["die"])
-			var ac := target.armor_class()
-			hit = die == 20 or (die != 1 and die + bonus >= ac)
-			var critical := hit and (die >= actor.critical_threshold() or target.has_status_flag("attacked_critical"))
-			var text := Loc.ui("%s attaque %s%s : %d + %d = %d contre CA %d — %s") % [
-				actor.name, target.name, Dice.advantage_text(advantage), die, bonus, die + bonus, ac,
-				Loc.ui("coup critique !") if critical else (Loc.ui("touché") if hit else Loc.ui("raté"))]
-			_beat(beats, text, {"dice": d20["dice"], "mod": bonus, "dc": ac, "dc_label": "CA", "advantage": advantage,
-				"success": hit, "stat": "%s → %s%s" % [actor.name, target.name, Dice.advantage_text(advantage)]}, fast)
-			if hit and die != 20:
-				hit = _defend(actor, target, e, die + bonus, beats, fast)
-			if hit:
-				var savage: bool = e.get("weapon") is bool and e.get("weapon") and actor.has_modifier("savage_attacker") \
-					and not actor.savage_used
-				if savage:
-					actor.savage_used = true
-				_roll_damage(actor, target, actor.damage_expr(e), actor.damage_type(e), critical, beats, 1.0, true, true,
-					savage, 3 if actor.great_weapon_fighting(e) else 0)
-				_roll_bonus_damage(actor, target, e, critical, beats, 1.0)
-			elif e.get("cantrip", false) and actor.has_modifier("potent_cantrip"):
-				_beat(beats, Loc.ui("Tour de magie puissant : la moitié des dégâts passe."))
-				_roll_damage(actor, target, actor.damage_expr(e), actor.damage_type(e), false, beats, 0.5)
+			hit = _attack(actor, target, e, beats, fast)
 		"damage":
-			_roll_damage(actor, target, actor.damage_expr(e), actor.damage_type(e), false, beats, multiplier)
-			_roll_bonus_damage(actor, target, e, false, beats, multiplier)
+			var pool := actor.damage_pool(e)
+			var dealt := _roll_damage(actor, target, pool, actor.damage_type(e), 0, beats, {"resist": e.get("resist", {})})
+			hit = dealt > 0 or not e.has("resist")
+			for part: Dictionary in actor.bonus_damage(e):
+				_roll_damage(actor, target, {"count": int(part.get("dice", 1)), "threshold": int(part.get("threshold", 5))},
+					part["damage_type"], 0, beats)
 		"heal":
-			var expr := actor.heal_expr(String(e["amount"]))
-			var roll := Dice.roll_expr(expr, rng)
+			var spec: Variant = e["amount"]
+			var pool := actor.heal_pool(spec if spec is Dictionary else {"dice": 1})
+			var roll := Dice.roll_pool(rng, int(pool["count"]), int(pool["threshold"]))
 			var before := target.hp
-			target.hp = mini(target.max_hp(), target.hp + maxi(1, int(roll["total"])))
+			target.hp = mini(target.max_hp(), target.hp + maxi(1, int(roll["successes"])))
 			_beat(beats, Loc.ui("%s récupère %d PV.") % [target.name, target.hp - before],
-				{"dice": roll["dice"], "mod": roll["bonus"], "stat": Loc.ui("Soins (%s)") % expr}, true)
+				_roll_info(Loc.ui("Soins"), roll), true)
 		"status":
 			var status: String = e["status"]
 			if target.defenses().is_immune_to_status(status):
 				_beat(beats, Loc.ui("%s est immunisé contre %s.") % [target.name, StatusEffects.name_of(status)])
+			elif StatusEffects.has_flag(status, "prepared"):
+				target.become_prepared()
+				_beat(beats, Loc.ui("%s est préparé (+%d dés à son prochain jet de combat).") % [target.name,
+					int(setting("prepared_dice", 2))])
 			else:
 				target.add_status(status, int(e["stacks"]))
 				_beat(beats, Loc.ui("%s : +%d %s (%d).") % [target.name, int(e["stacks"]), StatusEffects.name_of(status),
@@ -554,7 +604,7 @@ func _apply(actor: Combatant, e: Dictionary, target: Combatant, fast: bool) -> D
 		"summon":
 			var creature_id: String = e["creature"]
 			if can_add(actor.side, Creatures.size_of(creature_id)):
-				var summon := Combatant.from_creature(creature_id, Creatures.name_of(creature_id), actor.side, rng)
+				var summon := Combatant.from_creature(creature_id, Creatures.name_of(creature_id), actor.side)
 				summon.summoned = true
 				summon.initiative = actor.initiative
 				_add(summon)
@@ -563,29 +613,220 @@ func _apply(actor: Combatant, e: Dictionary, target: Combatant, fast: bool) -> D
 	return {"beats": beats, "hit": hit}
 
 
-## Lance et inflige des dégâts. `multiplier` : 0.5 pour une sauvegarde réussie (moitié, arrondie à
-## l'inférieur). `from_attack` : dégâts d'une attaque, que l'Esquive instinctive peut diviser par deux.
-## `savage` : les dés sont lancés deux fois et le meilleur total est gardé (Frappe brutale).
-## `min_face` : un dé sous cette valeur compte comme elle (style Armes à deux mains).
-func _roll_damage(actor: Combatant, target: Combatant, expr: String, type: String, critical: bool,
-		beats: Array[Dictionary], multiplier := 1.0, from_attack := false, main := true, savage := false,
-		min_face := 0) -> void:
-	if not target.is_alive():
-		return
-	var roll := Dice.roll_expr(expr, rng, critical, min_face)
-	if savage:
-		var second := Dice.roll_expr(expr, rng, critical, min_face)
-		if int(second["total"]) > int(roll["total"]):
-			roll = second
+## Attaque : jet contre l'Esquive naturelle (ou le Couvert), avec les réactions de la cible :
+## contre-attaque (avant le jet), esquive (après un jet réussi), parade (contre les dégâts). Un attaquant
+## caché se révèle. Retourne true si l'attaque touche.
+func _attack(actor: Combatant, target: Combatant, e: Dictionary, beats: Array[Dictionary], fast: bool) -> bool:
+	var hit := _attack_roll(actor, target, e, beats, fast)
+	_reveal(actor)
+	return hit
+
+
+func _attack_roll(actor: Combatant, target: Combatant, e: Dictionary, beats: Array[Dictionary], fast: bool) -> bool:
+	var surprise := is_surprise(actor, target)
+	var attack := actor.attack_pool(e)
+	var can_react := not surprise and target.reactions > 0
+	if can_react and _wants_counter(actor, target, e, attack):
+		return _counter(actor, target, e, attack, beats, fast)
+	var difficulty := attack_difficulty(actor, target, e)
+	var crit_bonus := actor.critical_bonus() + (int(setting("surprise_crit_bonus", 2)) if surprise else 0)
+	var bonus := actor.use_prepared()
+	var roll := Dice.roll_pool(rng, int(attack["count"]) + bonus, int(attack["threshold"]))
+	var judged := Dice.judge(int(roll["successes"]), difficulty, crit_bonus)
+	var against := Loc.ui("Couvert") if actor.is_ranged_attack(e) else Loc.ui("Esquive naturelle")
 	var notes := PackedStringArray()
+	if surprise:
+		notes.append(Loc.ui("surprise"))
+	if bonus > 0:
+		notes.append(Loc.ui("préparé"))
+	var note := (" (%s)" % ", ".join(notes)) if not notes.is_empty() else ""
+	_beat(beats, Loc.ui("%s attaque %s%s : %d succès contre %s %d — %s") % [actor.name, target.name, note,
+		int(roll["successes"]), against.to_lower(), difficulty, _attack_verdict(judged)],
+		_roll_info("%s → %s" % [actor.name, target.name], roll, judged, against), fast)
+	if not judged["success"]:
+		if e.get("cantrip", false) and actor.has_modifier("potent_cantrip"):
+			_beat(beats, Loc.ui("Tour de magie puissant : la moitié des dégâts passe."))
+			_roll_damage(actor, target, actor.damage_pool(e, attack), actor.damage_type(e), 0, beats,
+				{"armor": true, "multiplier": 0.5})
+		return false
+	if can_react and target.reactions > 0:
+		var dodged := _dodge(target, beats, fast)
+		if dodged > 0:
+			judged = Dice.judge(int(judged["successes"]) - dodged, difficulty, crit_bonus)
+			_beat(beats, Loc.ui("Il reste %d succès à %s — %s") % [int(judged["successes"]), actor.name, _attack_verdict(judged)])
+			if not judged["success"]:
+				return false
+	_hit(actor, target, e, attack, int(judged["critical"]), surprise, not surprise, beats, fast)
+	return true
+
+
+func _attack_verdict(judged: Dictionary) -> String:
+	if not judged["success"]:
+		return Loc.ui("raté")
+	var level := int(judged["critical"])
+	if level > 0:
+		return Loc.ui("critique !") if level == 1 else Loc.ui("critique %d !") % level
+	return Loc.ui("touché")
+
+
+## Esquive de la cible (une réaction) : Physique (DEX). Retourne ses succès, qui retirent autant de
+## succès à l'attaque.
+func _dodge(target: Combatant, beats: Array[Dictionary], fast: bool) -> int:
+	target.reactions -= 1
+	var pool := target.skill_pool("physique", "dex", target.use_prepared())
+	var roll := Dice.roll_pool(rng, int(pool["count"]), int(pool["threshold"]))
+	_beat(beats, Loc.ui("%s esquive : %d succès.") % [target.name, int(roll["successes"])],
+		_roll_info(Loc.ui("Esquive (%s)") % target.name, roll), fast)
+	return int(roll["successes"])
+
+
+## Faut-il contre-attaquer (réaction, avant le jet d'attaque) ? Seulement contre une attaque de mêlée,
+## avec une attaque à soi, et si l'on a de bonnes chances de l'emporter (plus de succès attendus).
+func _wants_counter(actor: Combatant, target: Combatant, e: Dictionary, attack: Dictionary) -> bool:
+	if actor.is_ranged_attack(e):
+		return false
+	var counter := _counter_effect(target)
+	if counter.is_empty():
+		return false
+	var mine := target.attack_pool(counter)
+	var bonus := int(setting("prepared_dice", 2))
+	var mine_expected := Dice.expected(int(mine["count"]) + (bonus if target.is_prepared() else 0), int(mine["threshold"]))
+	var theirs_expected := Dice.expected(int(attack["count"]) + (bonus if actor.is_prepared() else 0), int(attack["threshold"]))
+	return mine_expected > theirs_expected + 0.5
+
+
+## Attaque utilisée pour contre-attaquer : l'arme du personnage, ou la première attaque de la créature.
+func _counter_effect(c: Combatant) -> Dictionary:
+	if c.character != null:
+		return {"type": "attack", "weapon": true}
+	for action: Dictionary in c.combat_actions():
+		for e: Dictionary in action.get("effects", []):
+			if e.get("type") == "attack":
+				return e
+	return {}
+
+
+## Contre-attaque : les deux font un jet d'attaque en opposition (Esquive naturelle à 0) ; le plus de
+## succès touche, l'attaquant initial l'emportant en cas d'égalité ; le perdant ne peut ni esquiver ni
+## parer. Retourne true si l'attaque initiale touche.
+func _counter(actor: Combatant, target: Combatant, e: Dictionary, attack: Dictionary, beats: Array[Dictionary],
+		fast: bool) -> bool:
+	target.reactions -= 1
+	var counter_effect := _counter_effect(target)
+	var counter := target.attack_pool(counter_effect)
+	_beat(beats, Loc.ui("%s contre-attaque !") % target.name)
+	var a_roll := Dice.roll_pool(rng, int(attack["count"]) + actor.use_prepared(), int(attack["threshold"]))
+	var d_roll := Dice.roll_pool(rng, int(counter["count"]) + target.use_prepared(), int(counter["threshold"]))
+	_beat(beats, Loc.ui("%s : %d succès.") % [actor.name, int(a_roll["successes"])],
+		_roll_info(Loc.ui("Attaque (%s)") % actor.name, a_roll), fast)
+	_beat(beats, Loc.ui("%s : %d succès.") % [target.name, int(d_roll["successes"])],
+		_roll_info(Loc.ui("Contre-attaque (%s)") % target.name, d_roll), fast)
+	var a := int(a_roll["successes"])
+	var d := int(d_roll["successes"])
+	if a >= d:
+		var level := Dice.critical_level(a - d, actor.critical_bonus())
+		_beat(beats, Loc.ui("%s l'emporte%s.") % [actor.name, Loc.ui(" (critique %d)") % level if level > 0 else ""])
+		_hit(actor, target, e, attack, level, false, false, beats, fast)
+		return true
+	var counter_level := Dice.critical_level(d - a, target.critical_bonus())
+	_beat(beats, Loc.ui("%s l'emporte%s.") % [target.name, Loc.ui(" (critique %d)") % counter_level if counter_level > 0 else ""])
+	_hit(target, actor, counter_effect, counter, counter_level, false, false, beats, fast)
+	return false
+
+
+## Une attaque touche : dégâts (Armure de la cible, critiques), parade éventuelle, dégâts d'autres types.
+func _hit(actor: Combatant, target: Combatant, e: Dictionary, attack: Dictionary, critical: int, surprise: bool,
+		can_parry: bool, beats: Array[Dictionary], fast: bool) -> void:
+	var savage: bool = e.get("weapon") is bool and e.get("weapon") and actor.has_modifier("savage_attacker") \
+		and not actor.savage_used
+	if savage:
+		actor.savage_used = true
+	var ignore_armor := surprise and not target.has_natural_armor()
+	var rerolls := critical + (1 if actor.great_weapon_fighting(e) else 0)
+	var options := {"armor": not ignore_armor, "from_attack": true, "savage": savage}
+	if can_parry:
+		options["parry"] = {"attacker": actor, "effect": e, "fast": fast}
+	_roll_damage(actor, target, actor.damage_pool(e, attack), actor.damage_type(e), rerolls, beats, options)
+	for part: Dictionary in actor.bonus_damage(e):
+		_roll_damage(actor, target, {"count": int(part.get("dice", 1)), "threshold": int(part.get("threshold", 5))},
+			part["damage_type"], rerolls, beats, {"armor": not ignore_armor})
+
+
+## Parade (une réaction, une par main armée et par tour) : Armes de mêlée (arme, bouclier) ou Physique
+## (mains nues), DEX. Une attaque à distance ne se pare qu'avec un bouclier ; une attaque armée ne se
+## pare pas à mains nues. Retourne ses succès (0 si elle n'est pas possible).
+func _parry(attacker: Combatant, target: Combatant, e: Dictionary, beats: Array[Dictionary], fast: bool) -> int:
+	if target.reactions <= 0 or target.parries_used >= target.parries_per_turn():
+		return 0
+	if attacker.is_ranged_attack(e) and not target.has_shield():
+		return 0
+	if attacker.is_armed_attack(e) and not target.is_armed():
+		return 0
+	target.reactions -= 1
+	target.parries_used += 1
+	var pool := target.parry_pool(target.use_prepared())
+	var roll := Dice.roll_pool(rng, int(pool["count"]), int(pool["threshold"]))
+	_beat(beats, Loc.ui("%s pare : %d succès.") % [target.name, int(roll["successes"])],
+		_roll_info(Loc.ui("Parade (%s)") % target.name, roll), fast)
+	return int(roll["successes"])
+
+
+## Lance et inflige des dégâts : un succès = un point. `rerolls` : relances des dés ratés (critique).
+## Options : "armor" (l'Armure de la cible baisse le seuil, sans passer sous 1), "resist" ({"ability"} :
+## chaque succès de la cible retire un point ; Dérobade : deux), "multiplier" (0.5 : Tour de magie
+## puissant), "from_attack" (l'Esquive instinctive peut diviser par deux), "savage" (on lance deux fois et
+## on garde le meilleur : Frappe brutale), "parry" ({"attacker", "effect"} : la cible peut parer).
+## Retourne les dégâts infligés.
+func _roll_damage(actor: Combatant, target: Combatant, pool: Dictionary, type: String, rerolls: int,
+		beats: Array[Dictionary], options: Dictionary = {}) -> int:
+	if not target.is_alive():
+		return 0
+	var threshold := int(pool["threshold"])
+	var notes := PackedStringArray()
+	var armor := target.armor() if options.get("armor", false) else 0
+	if armor > 0:
+		var lowered := maxi(mini(1, threshold), threshold - armor)
+		notes.append(Loc.ui("armure : seuil %d → %d") % [threshold, lowered])
+		threshold = lowered
+	var roll := Dice.roll_pool(rng, int(pool["count"]), threshold, rerolls)
+	if options.get("savage", false):
+		var second := Dice.roll_pool(rng, int(pool["count"]), threshold, rerolls)
+		if int(second["successes"]) > int(roll["successes"]):
+			roll = second
+		notes.append(Loc.ui("frappe brutale"))
+	if rerolls > 0:
+		notes.append(Loc.ui("%d relance(s)") % rerolls)
+	var amount := int(roll["successes"])
+	var label := Loc.ui("Dégâts") + (" " + DamageTypes.name_of(type).to_lower() if type != "" else "")
+	_beat(beats, Loc.ui("%s : %d succès.") % [label, amount], _roll_info(label, roll), true)
+	var resist: Dictionary = options.get("resist", {})
+	if not resist.is_empty():
+		var ability: String = resist.get("ability", "dex")
+		var resisted := 0
+		if not target.has_status_flag("auto_fail_resist", ability):
+			var resist_pool := target.resist_pool(ability)
+			var resist_roll := Dice.roll_pool(rng, int(resist_pool["count"]), int(resist_pool["threshold"]))
+			resisted = int(resist_roll["successes"]) * (2 if ability == "dex" and target.has_modifier("evasion") else 1)
+			_beat(beats, Loc.ui("%s résiste : %d succès.") % [target.name, int(resist_roll["successes"])],
+				_roll_info(Loc.ui("Résister (%s)") % Abilities.name_of(ability), resist_roll), true)
+		if resisted > 0:
+			notes.append(Loc.ui("résiste : −%d") % mini(resisted, amount))
+			amount = maxi(0, amount - resisted)
+	var parry: Dictionary = options.get("parry", {})
+	if not parry.is_empty() and amount > 0:
+		var parried := _parry(parry["attacker"], target, parry["effect"], beats, parry.get("fast", false))
+		if parried > 0:
+			notes.append(Loc.ui("parade : −%d") % mini(parried, amount))
+			amount = maxi(0, amount - parried)
+	var multiplier := float(options.get("multiplier", 1.0))
 	if multiplier < 1.0:
+		amount = int(floor(amount * multiplier))
 		notes.append(Loc.ui("moitié"))
-	if from_attack and target.has_modifier("uncanny_dodge") and not target.reaction_used:
+	if options.get("from_attack", false) and amount > 1 and target.has_modifier("uncanny_dodge") and not target.reaction_used:
 		target.reaction_used = true
-		multiplier *= 0.5
+		@warning_ignore("integer_division")
+		amount = amount / 2
 		notes.append(Loc.ui("esquive instinctive"))
-	var amount := maxi(1, int(roll["total"]) + (actor.damage_modifier() if main else 0))
-	amount = maxi(1 if multiplier >= 1.0 else 0, int(floor(amount * multiplier)))
 	var dealt := _deal_damage(actor, target, amount, type, false, "")
 	var inflicted := _status_from_damage(target, type, dealt["amount"])
 	var text := Loc.ui("%s subit %d dégâts") % [target.name, dealt["amount"]]
@@ -594,15 +835,8 @@ func _roll_damage(actor: Combatant, target: Combatant, expr: String, type: Strin
 	if type != "":
 		text += " " + DamageTypes.bbcode_name(type)
 	text += dealt["suffix"] + inflicted
-	var label := Loc.ui("Dégâts (%s %s)") % [expr, DamageTypes.name_of(type).to_lower()] if type != "" else Loc.ui("Dégâts (%s)") % expr
-	_beat(beats, text, {"dice": roll["dice"], "mod": roll["bonus"], "stat": label}, true)
-
-
-## Dégâts d'autres types d'un effet (et de l'arme) : lancés séparément, chacun avec ses défenses.
-func _roll_bonus_damage(actor: Combatant, target: Combatant, e: Dictionary, critical: bool,
-		beats: Array[Dictionary], multiplier: float) -> void:
-	for part: Dictionary in actor.bonus_damage(e):
-		_roll_damage(actor, target, part["damage"], part["damage_type"], critical, beats, multiplier, false, false)
+	_beat(beats, text)
+	return int(dealt["amount"])
 
 
 ## Un type de dégâts peut infliger un état quand il blesse (le feu enflamme…). Retourne le texte ajouté.
@@ -616,84 +850,56 @@ func _status_from_damage(target: Combatant, type: String, dealt: int) -> String:
 	return " " + Loc.ui("%s : +%d %s.") % [target.name, int(status.get("stacks", 1)), StatusEffects.name_of(status["id"])]
 
 
-## Test de compétence de l'acteur, contre un DD ("dc") ou contre un jet de sauvegarde de la cible
-## ("vs_save"). Retourne true si l'acteur réussit.
+## Test de compétence de l'acteur, contre une difficulté ("difficulty") ou en opposition contre la
+## résistance de la cible ("vs_resist" : il faut plus de succès qu'elle ; à égalité, rien ne bouge).
+## Retourne true si l'acteur réussit.
 func _skill_check(actor: Combatant, target: Combatant, e: Dictionary, beats: Array[Dictionary], fast: bool) -> bool:
 	var skill: String = e["skill"]
-	var mod := actor.skill_mod(skill, e.get("ability", ""))
-	var d20 := Dice.roll_d20(rng, -1 if actor.has_status_flag("check_disadvantage") else 0)
-	var die := int(d20["die"])
-	var dc := int(e.get("dc", 10))
-	var against := ""
-	if e.has("vs_save"):
-		var save_die := rng.randi_range(1, 20)
-		dc = save_die + target.save_mod(e["vs_save"])
-		against = Loc.ui(" (%s : %d + %d)") % [target.name, save_die, target.save_mod(e["vs_save"])]
-	var success := die == 20 or (die != 1 and die + mod >= dc)
+	var pool := actor.skill_pool(skill, e.get("ability", ""), -1 if actor.has_status_flag("check_disadvantage") else 0)
+	var roll := Dice.roll_pool(rng, int(pool["count"]), int(pool["threshold"]))
 	var label := Skills.name_of(skill)
-	_beat(beats, Loc.ui("%s : %s %d + %d = %d contre %d%s — %s") % [actor.name, label, die, mod, die + mod, dc, against,
-		Loc.ui("réussi") if success else Loc.ui("raté")],
-		{"dice": d20["dice"], "mod": mod, "dc": dc, "success": success, "stat": "%s (%s)" % [label, actor.name]}, fast)
-	return success
+	if e.has("vs_resist") or e.has("vs_save"):
+		var ability: String = e.get("vs_resist", e.get("vs_save", "wis"))
+		var resist_pool := target.resist_pool(ability)
+		var resist_roll := Dice.roll_pool(rng, int(resist_pool["count"]), int(resist_pool["threshold"]))
+		var success := int(roll["successes"]) > int(resist_roll["successes"])
+		_beat(beats, Loc.ui("%s : %s, %d succès contre %d — %s") % [actor.name, label, int(roll["successes"]),
+			int(resist_roll["successes"]), Loc.ui("réussi") if success else Loc.ui("raté")],
+			_roll_info("%s (%s)" % [label, actor.name], roll), fast)
+		_beat(beats, Loc.ui("%s résiste : %d succès.") % [target.name, int(resist_roll["successes"])],
+			_roll_info(Loc.ui("Résister (%s)") % Abilities.name_of(ability), resist_roll), true)
+		return success
+	var judged := Dice.judge(int(roll["successes"]), Dice.difficulty_of(e))
+	_beat(beats, Loc.ui("%s : %s, %d succès / %d — %s") % [actor.name, label, int(roll["successes"]), int(judged["difficulty"]),
+		Dice.verdict(judged)], _roll_info("%s (%s)" % [label, actor.name], roll, judged), fast)
+	return judged["success"]
 
 
-## Réactions de la cible touchée : une esquive (Physique, DEX), puis une parade (Physique ou Armes de
-## mêlée, DEX ; une attaque à distance ne se pare qu'avec un bouclier), tant qu'il lui reste des
-## réactions. L'attaque ne touche que si son total dépasse le jet de défense. Un 20 naturel est imparable.
-## Retourne true si l'attaque touche toujours.
-func _defend(attacker: Combatant, target: Combatant, e: Dictionary, attack_total: int, beats: Array[Dictionary],
-		fast: bool) -> bool:
-	var ranged: bool = e.get("ability", "") == "spell" or e.get("ranged", false) \
-		or (e.get("weapon") is bool and e.get("weapon") and attacker.character != null
-			and Equipment.has_property(attacker.character.weapon_id(), "ranged")) \
-		or (e.get("weapon") is String and Equipment.has_property(e["weapon"], "ranged"))
-	var options: Array[Dictionary] = [{"name": Loc.ui("esquive"), "mod": target.skill_mod("physique", "dex")}]
-	if not ranged or target.has_shield():
-		options.append({"name": Loc.ui("parade"), "mod": maxi(target.skill_mod("physique", "dex"), target.skill_mod("weapon_melee", "dex"))})
-	for option in options:
-		if target.reactions <= 0:
-			break
-		target.reactions -= 1
-		var die := rng.randi_range(1, 20)
-		var total := die + int(option["mod"])
-		var stopped := attack_total <= total
-		_beat(beats, Loc.ui("%s tente une %s : %d + %d = %d contre %d — %s") % [target.name, option["name"], die, option["mod"],
-			total, attack_total, Loc.ui("réussie !") if stopped else Loc.ui("ratée")],
-			{"dice": [{"sides": 20, "value": die}], "mod": option["mod"], "dc": attack_total, "success": stopped,
-			"stat": "%s (%s)" % [String(option["name"]).capitalize(), target.name]}, fast)
-		if stopped:
-			return false
-	return true
-
-
-## Jet de sauvegarde de la cible contre le DD de l'acteur (ou "dc"). Inflexible relance un échec.
-## Retourne true si la sauvegarde réussit.
-func _saving_throw(actor: Combatant, target: Combatant, save: Dictionary, beats: Array[Dictionary], fast: bool) -> bool:
-	var ability: String = save["ability"]
-	var dc := int(save.get("dc", actor.save_dc()))
-	var bonus := target.save_mod(ability)
-	var label := Loc.ui("Sauvegarde de %s") % Abilities.name_of(ability)
-	if target.has_status_flag("auto_fail_saves", ability):
-		_beat(beats, Loc.ui("%s rate automatiquement sa %s.") % [target.name, label.to_lower()])
+## La cible résiste-t-elle à un effet ? Opposition : la réserve d'incantation de l'acteur (ou la
+## compétence "skill" de `resist`) contre la résistance de la cible ; il faut plus de succès qu'elle.
+## Paralysé : pas de résistance en FOR et DEX.
+func _resists(actor: Combatant, target: Combatant, resist: Dictionary, beats: Array[Dictionary], fast: bool) -> bool:
+	var ability: String = resist.get("ability", "con")
+	if target.has_status_flag("auto_fail_resist", ability):
+		_beat(beats, Loc.ui("%s ne peut pas résister.") % target.name)
 		return false
-	var advantage := Dice.combine_advantage(1 if target.has_save_advantage(ability) else 0,
-		1 if target.has_status_flag("save_disadvantage", ability) else 0)
-	var d20 := Dice.roll_d20(rng, advantage)
-	var die := int(d20["die"])
-	var saved := die == 20 or (die != 1 and die + bonus >= dc)
-	_beat(beats, Loc.ui("%s : %s%s %d + %d = %d contre DD %d — %s") % [target.name, label.to_lower(),
-		Dice.advantage_text(advantage), die, bonus, die + bonus, dc, Loc.ui("réussie") if saved else Loc.ui("ratée")],
-		{"dice": d20["dice"], "mod": bonus, "dc": dc, "success": saved, "advantage": advantage,
-		"stat": "%s (%s)" % [label, target.name]}, fast)
-	if not saved and target.character != null and int(target.character.resources.get("indomitable", 0)) > 0:
+	var pool := actor.spell_pool() if not resist.has("skill") else actor.skill_pool(resist["skill"], resist.get("with", ""))
+	var roll := Dice.roll_pool(rng, int(pool["count"]), int(pool["threshold"]))
+	var resist_pool := target.resist_pool(ability)
+	var resist_roll := Dice.roll_pool(rng, int(resist_pool["count"]), int(resist_pool["threshold"]))
+	var resisted := int(resist_roll["successes"]) >= int(roll["successes"])
+	_beat(beats, Loc.ui("%s : %d succès contre %d pour %s — %s") % [actor.name, int(roll["successes"]),
+		int(resist_roll["successes"]), target.name, Loc.ui("résisté") if resisted else Loc.ui("affecté")],
+		_roll_info(Loc.ui("Résister (%s, %s)") % [Abilities.name_of(ability), target.name], resist_roll), fast)
+	# Inflexible (Guerrier) : relance une résistance ratée.
+	if not resisted and target.character != null and int(target.character.resources.get("indomitable", 0)) > 0:
 		target.character.resources["indomitable"] = int(target.character.resources["indomitable"]) - 1
-		die = rng.randi_range(1, 20)
-		saved = die == 20 or (die != 1 and die + bonus >= dc)
-		_beat(beats, Loc.ui("%s est inflexible et relance : %d + %d = %d — %s") % [target.name, die, bonus, die + bonus,
-			Loc.ui("réussie") if saved else Loc.ui("ratée")],
-			{"dice": [{"sides": 20, "value": die}], "mod": bonus, "dc": dc, "success": saved, "stat": "%s (%s)" % [label, target.name]},
-			fast)
-	return saved
+		resist_roll = Dice.roll_pool(rng, int(resist_pool["count"]), int(resist_pool["threshold"]))
+		resisted = int(resist_roll["successes"]) >= int(roll["successes"])
+		_beat(beats, Loc.ui("%s est inflexible et relance : %d succès — %s") % [target.name, int(resist_roll["successes"]),
+			Loc.ui("résisté") if resisted else Loc.ui("affecté")],
+			_roll_info(Loc.ui("Résister (%s, %s)") % [Abilities.name_of(ability), target.name], resist_roll), fast)
+	return resisted
 
 
 ## Inflige des dégâts : défenses (sauf dégâts bruts), puis Protection (sauf dégâts bruts).
@@ -736,6 +942,7 @@ func _deal_damage(source: Combatant, target: Combatant, amount: int, type: Strin
 func _on_down(target: Combatant, attacker: Combatant, death_cause: String) -> String:
 	target.statuses.clear()
 	target.intent = {}
+	target.reactions = 0
 	if not target.is_ally():
 		return Loc.ui("%s est vaincu.") % target.name
 	if spec.get("on_defeat", "death") == "knockout" and not target.summoned:
@@ -750,6 +957,13 @@ func _on_down(target: Combatant, attacker: Combatant, death_cause: String) -> St
 	# Pas de jets contre la mort : tant qu'un allié tient debout, celui qui tombe est inconscient ;
 	# ses compagnons le ramèneront à lui après le combat. Si tout le groupe tombe, c'est la mort.
 	return Loc.ui("%s s'effondre, inconscient.") % target.name
+
+
+## Un attaquant caché se révèle en attaquant.
+func _reveal(actor: Combatant) -> void:
+	for status_id: String in actor.statuses.keys():
+		if StatusEffects.has_flag(status_id, "attack_surprise"):
+			actor.remove_status(status_id)
 
 
 func _decay(actor: Combatant, status_id: String) -> void:
@@ -783,6 +997,21 @@ func _beat(beats: Array[Dictionary], text: String, roll: Dictionary = {}, fast :
 	log.append(text)
 
 
+## Jet de réserve pour le plateau de dés : {"dice", "pool": true, "threshold", "successes", "stat",
+## "difficulty"?, "dc_label"?, "success"?, "critical"?, "fumble"?}.
+func _roll_info(stat: String, roll: Dictionary, judged: Dictionary = {}, against := "") -> Dictionary:
+	var info := {"dice": roll["dice"], "pool": true, "threshold": int(roll["threshold"]),
+		"successes": int(roll["successes"]), "auto": int(roll.get("auto", 0)), "stat": stat}
+	if not judged.is_empty():
+		info["difficulty"] = int(judged["difficulty"])
+		info["success"] = judged["success"]
+		info["critical"] = int(judged["critical"])
+		info["fumble"] = judged["fumble"]
+		if against != "":
+			info["dc_label"] = against
+	return info
+
+
 func _add(c: Combatant) -> void:
 	if c.id == "":
 		c.id = "%s_%d" % [c.side, _next_id]
@@ -798,19 +1027,36 @@ func _select(predicate: Callable) -> Array[Combatant]:
 	return result
 
 
-## Initiative de tous les combattants, lancée d'un coup : `initiative_roll` garde un d20 par combattant
-## (avec son nom et son total) pour que l'interface anime tous les dés ensemble.
+## Initiative de tous les combattants, lancée d'un coup : 1d10 + initiative de base (DEX + INT). Égalité :
+## la plus haute DEX, puis la plus haute INT, puis au hasard. `initiative_roll` garde un dé par
+## combattant (avec son nom et son total) pour que l'interface anime tous les dés ensemble.
 func _roll_initiative() -> void:
 	var parts := PackedStringArray()
 	var dice: Array[Dictionary] = []
+	var tiebreak := {}
 	for c in combatants:
-		var d20 := Dice.roll_d20(rng, 1 if c.has_modifier("initiative_advantage") else 0)
-		c.initiative = int(d20["die"]) + c.initiative_bonus()
-		dice.append({"sides": 20, "value": int(d20["die"]), "label": c.name, "total": c.initiative})
-	initiative_roll = {"dice": dice, "stat": Loc.ui("Initiative"), "per_die": true}
+		var die := rng.randi_range(1, 10)
+		var entry := {"sides": 10, "value": die}
+		if c.has_modifier("initiative_advantage"):
+			var other := rng.randi_range(1, 10)
+			if other > die:
+				die = other
+			entry = {"sides": 10, "value": die}
+		c.initiative = die + c.initiative_base()
+		tiebreak[c] = rng.randf()
+		entry["label"] = c.name
+		entry["total"] = c.initiative
+		dice.append(entry)
+	initiative_roll = {"dice": dice, "stat": Loc.ui("Initiative (1d10 + DEX + INT)"), "per_die": true}
 	order = combatants.duplicate()
-	order.sort_custom(func(a, b): return a.initiative > b.initiative \
-		or (a.initiative == b.initiative and a.ability_mod("dex") > b.ability_mod("dex")))
+	order.sort_custom(func(a, b):
+		if a.initiative != b.initiative:
+			return a.initiative > b.initiative
+		if a.ability_score("dex") != b.ability_score("dex"):
+			return a.ability_score("dex") > b.ability_score("dex")
+		if a.ability_score("int") != b.ability_score("int"):
+			return a.ability_score("int") > b.ability_score("int")
+		return tiebreak[a] > tiebreak[b])
 	for c in order:
 		parts.append("%s %d" % [c.name, c.initiative])
 	log.append(Loc.ui("Initiative : %s") % ", ".join(parts))
