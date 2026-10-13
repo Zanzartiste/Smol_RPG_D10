@@ -1,42 +1,69 @@
 class_name Spellcasting
 extends RefCounted
-## API de l'incantation (SRD 5.1) : emplacements de sort par niveau, DD des sorts, sorts lancés à un
-## niveau supérieur et dés qui augmentent avec le niveau. Réglages : data/rules.json
-##   spell_slots   : {"full": [...], "half": [...]} ; ligne n = niveau de classe n, colonne i = emplacements
-##                   de niveau i+1. Une classe s'y rattache par "spell_slots": "full" | "half".
-##   dice_scaling  : {"cantrip": {"1": 1, "5": 2, ...}} ; nombre de dés selon le niveau de classe.
+## API de l'incantation : emplacements de sort, sorts lancés à un niveau supérieur, dés qui augmentent
+## avec le niveau, sorts connus et équipés. Réglages : data/rules.json
+##   spell_slots   : {"full": [...], "half": [...]} ; ligne n = niveau de classe n, colonne i = nombre de
+##                   sorts de niveau i+1 dans la table du SRD. Une classe s'y rattache par
+##                   "spell_slots": "full" | "half".
+##   dice_scaling  : {"cantrip": {"1": 1, "5": 2, ...}} ; paliers selon le niveau de classe.
+##   spells        : {"equipped_base", "equipped_per_magic_rank"} : nombre de sorts équipés.
 ##
-## Les emplacements sont des ressources du personnage : "spell_slot_1" … "spell_slot_9".
-## Une action qui en consomme s'écrit {"cost": "spell_slot", "spell_level": 1} ; un effet peut
-## préciser "upcast": "1d6" (dégâts ajoutés par niveau d'emplacement au-delà de spell_level).
+## Emplacements simplifiés (décision du 2026-10-13) : une seule réserve, la ressource "spell_slot". Sa
+## taille vaut la somme de la table pondérée par le niveau (2 sorts de niveau 1 et 1 de niveau 2 font 4
+## emplacements) ; lancer un sort de niveau N coûte N emplacements. La table fixe aussi le niveau de sort
+## le plus haut qu'on peut lancer.
+## Une action qui en consomme s'écrit {"cost": "spell_slot", "spell_level": 1} ; un effet peut préciser
+## "upcast": 1 (dés de dégâts en plus par niveau au-delà de spell_level).
 
-const SLOT_PREFIX := "spell_slot_"
+const SLOT_KEY := "spell_slot"
 const MAX_SPELL_LEVEL := 9
 
 
-static func slot_key(spell_level: int) -> String:
-	return SLOT_PREFIX + str(spell_level)
-
-
 static func is_slot(resource_id: String) -> bool:
-	return resource_id.begins_with(SLOT_PREFIX)
+	return resource_id == SLOT_KEY
 
 
-static func slot_level(resource_id: String) -> int:
-	return int(resource_id.trim_prefix(SLOT_PREFIX))
-
-
-## Emplacements d'une progression ("full", "half") à un niveau de classe : {"spell_slot_1": 4, ...}.
-static func slots(progression: String, class_level: int) -> Dictionary:
-	var result := {}
+## Ligne de la table d'une progression à un niveau de classe (vide si aucun sort).
+static func _row(progression: String, class_level: int) -> Array:
 	var table: Array = DB.rules.get("spell_slots", {}).get(progression, [])
 	if table.is_empty() or class_level < 1:
-		return result
-	var row: Array = table[clampi(class_level - 1, 0, table.size() - 1)]
+		return []
+	return table[clampi(class_level - 1, 0, table.size() - 1)]
+
+
+## Emplacements d'une progression ("full", "half") à un niveau de classe : {"spell_slot": N} (vide si 0).
+static func slots(progression: String, class_level: int) -> Dictionary:
+	var total := 0
+	var row := _row(progression, class_level)
 	for i in row.size():
+		total += int(row[i]) * (i + 1)
+	return {SLOT_KEY: total} if total > 0 else {}
+
+
+## Niveau de sort le plus haut qu'une progression permet de lancer à un niveau de classe (0 : aucun).
+static func max_level(progression: String, class_level: int) -> int:
+	var row := _row(progression, class_level)
+	for i in range(row.size() - 1, -1, -1):
 		if int(row[i]) > 0:
-			result[slot_key(i + 1)] = int(row[i])
-	return result
+			return i + 1
+	return 0
+
+
+## Emplacements que coûte une action (le niveau auquel le sort est lancé).
+static func cost_of(action: Dictionary) -> int:
+	return int(action.get("slot_level", action.get("spell_level", 1)))
+
+
+## L'action est-elle un sort (tour de magie compris) ?
+static func is_spell(action: Dictionary) -> bool:
+	return action.has("spell_level") or action.get("cost", "") == SLOT_KEY \
+		or action.get("effects", []).any(func(e): return e.get("cantrip", false))
+
+
+## Nombre de sorts équipés possibles pour un rang de Magie.
+static func max_equipped(magic_rank: int) -> int:
+	var rules: Dictionary = DB.rules.get("spells", {})
+	return int(rules.get("equipped_base", 2)) + int(rules.get("equipped_per_magic_rank", 1)) * magic_rank
 
 
 static func progressions() -> Array:

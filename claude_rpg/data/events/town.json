@@ -55,7 +55,7 @@
 				"text": "« Marché conclu. »",
 				"outcome": {
 					"text": "Ysolde sourit. « Je tiens boutique près de la fontaine. Ne traînez pas trop. »",
-					"effects": [{"type": "set_flag", "id": "quest_herbs_accepted"}]
+					"effects": [{"type": "set_flag", "id": "quest_herbs_accepted"}, {"type": "quest", "id": "ysolde_herbs", "action": "start"}]
 				}
 			},
 			{
@@ -87,6 +87,7 @@
 						{"type": "gold", "amount": 30},
 						{"type": "xp", "amount": 150},
 						{"type": "set_flag", "id": "quest_herbs_done"},
+						{"type": "quest", "id": "ysolde_herbs", "action": "complete"},
 						{"type": "set_world_flag", "id": "ysolde_friend"}
 					]
 				}

@@ -30,6 +30,7 @@ const SCHEMA := {
 	"remove_defense": ["kind", "id"],
 	"npc_relation": ["npc"],  # {"npc", "friendship"?, "love"?, "trust"?} : relation du héros avec un PNJ
 	"reputation": ["amount"],  # {"amount", "location"?} : réputation dans un lieu (le lieu actuel par défaut)
+	"quest": ["id", "action"],  # {"id", "action": start | advance | complete | fail, "step"?} (voir Quests)
 }
 
 
@@ -145,6 +146,10 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 				lines.append(Loc.ui("Réputation %s") % ("+%d" % int(e["amount"]) if int(e["amount"]) > 0 else str(int(e["amount"]))))
 			"remove_defense":
 				ch.defenses.remove(e["kind"], e["id"])
+			"quest":
+				var line := Quests.apply(life, e["id"], e["action"], int(e.get("step", -1)))
+				if line != "":
+					lines.append(line)
 			_:
 				push_warning("Effet inconnu : %s" % e)
 		if not combat.is_empty():

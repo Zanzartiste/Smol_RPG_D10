@@ -2,8 +2,8 @@ class_name Actions
 extends RefCounted
 ## API des actions de combat des classes (attaques, sorts, capacités). Définitions : data/actions.json.
 ## Une action : {"id", "name", "description", "target", "effects": [...] (voir CombatEffects),
-##               "cost"?: ressource consommée, rechargée par un repos long ("spell_slot" : un emplacement
-##                        d'au moins "spell_level", voir Spellcasting),
+##               "cost"?: ressource consommée, rechargée par un repos long ("spell_slot" : autant
+##                        d'emplacements que le niveau du sort, voir Spellcasting),
 ##               "per_combat"?: nombre d'utilisations par combat,
 ##               "attack_action"?: true pour l'action Attaque (Attaque supplémentaire),
 ##               "free"?: true si l'action ne consomme pas l'action du tour (Fougue),
@@ -47,10 +47,8 @@ static func text_of(id: String) -> String:
 	return CombatEffects.describe_all(def(id).get("effects", []), target_of(id))
 
 
-## Nom lisible d'une ressource (ex. "spell_slot_2" -> « emplacement de sort de niveau 2 »).
+## Nom lisible d'une ressource (ex. "spell_slot" -> « emplacements de sort »).
 static func resource_name(resource_id: String) -> String:
-	if Spellcasting.is_slot(resource_id):
-		return Loc.ui("emplacement de sort de niveau %d") % Spellcasting.slot_level(resource_id)
-	return {"spell_slot": Loc.ui("emplacement de sort"), "indomitable": Loc.ui("Inflexible"),
+	return {"spell_slot": Loc.ui("emplacements de sort"), "indomitable": Loc.ui("Inflexible"),
 		"relentless_endurance": Loc.ui("Endurance implacable"),
 		"magic_initiate": Loc.ui("Initié à la magie")}.get(resource_id, resource_id)

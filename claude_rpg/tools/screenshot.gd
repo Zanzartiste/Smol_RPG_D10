@@ -39,6 +39,16 @@ func _ready() -> void:
 	var main: Control = load("res://scenes/main.tscn").instantiate()
 	add_child(main)
 	await _capture("2_hub.png")
+	# Tiroir latéral : chaque page (une quête en cours pour l'exemple).
+	Quests.apply(Game.life, "ysolde_herbs", "start")
+	main._refresh_sheet()
+	for page_id: String in SideDrawer.PAGES:
+		if main.drawer._tab_buttons[page_id].visible:
+			main.drawer._on_tab_pressed(page_id)  # épinglée : la souris de l'outil n'est pas sur le tiroir
+			await get_tree().create_timer(0.4).timeout
+			await _capture("2_drawer_%s.png" % page_id)
+	main.drawer.close()
+	await get_tree().create_timer(0.4).timeout
 	for item_id in ["longsword_plus_1", "ring_of_protection", "ring_fire_resistance", "potion_heal"]:
 		Game.life.character.add_item(item_id)
 	Game.life.companions.append(Character.create_companion("mira"))

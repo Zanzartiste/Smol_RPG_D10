@@ -29,16 +29,15 @@ static func announce(ch: Character, class_level: int, cls := "") -> Array[String
 	var class_id := cls if cls != "" else ch.class_id
 	for feature: Dictionary in at_level(class_id, class_level):
 		lines.append(Loc.ui("%s : nouvelle aptitude, %s.") % [ch.name, feature["name"]])
-	var before := Spellcasting.slots(DB.classes[class_id].get("spell_slots", ""), class_level - 1)
-	var after := Spellcasting.slots(DB.classes[class_id].get("spell_slots", ""), class_level)
+	var progression: String = DB.classes[class_id].get("spell_slots", "")
+	var before := Spellcasting.slots(progression, class_level - 1)
+	var after := Spellcasting.slots(progression, class_level)
 	if after != before:
-		lines.append(Loc.ui("%s : %s.") % [ch.name, slots_text(after)])
+		lines.append(Loc.ui("%s : %s.") % [ch.name, slots_text(int(after.get(Spellcasting.SLOT_KEY, 0)),
+			Spellcasting.max_level(progression, class_level))])
 	return lines
 
 
-## Ex. « emplacements de sort : niv. 1 ×4, niv. 2 ×2 ».
-static func slots_text(slots: Dictionary) -> String:
-	var parts := PackedStringArray()
-	for key: String in slots:
-		parts.append(Loc.ui("niv. %d ×%d") % [Spellcasting.slot_level(key), int(slots[key])])
-	return Loc.ui("emplacements de sort : %s") % ", ".join(parts)
+## Ex. « 8 emplacements de sort (sorts jusqu'au niveau 2) ».
+static func slots_text(total: int, max_level: int) -> String:
+	return Loc.ui("%d emplacements de sort (sorts jusqu'au niveau %d)") % [total, max_level]

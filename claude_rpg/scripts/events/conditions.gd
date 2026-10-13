@@ -13,7 +13,8 @@ const SCHEMA := {
 	"ability": ["id"],
 	"skill_proficient": ["id"],
 	"passive": ["skill", "min"],
-	"reputation": ["location"],  # {"location", "min"?, "max"?} : réputation du héros dans un lieu  # 10 + bonus de la compétence >= min (ex. Perception passive)
+	"reputation": ["location"],  # {"location", "min"?, "max"?} : réputation du héros dans un lieu
+	"quest": ["id"],  # {"id", "status"?: active | done | failed | none, "step"?: minimum} (voir Quests)
 	"species": ["in"],
 	"class": ["in"],
 	"background": ["in"],
@@ -61,6 +62,12 @@ static func check(c: Dictionary, life: LifeState, meta: MetaState) -> bool:
 		"reputation":
 			var value := int(life.reputation.get(c["location"], 0))
 			return value >= int(c.get("min", -100)) and value <= int(c.get("max", 100))
+		"quest":
+			var state: Dictionary = life.quests.get(c["id"], {})
+			var status: String = c.get("status", "active")
+			if status == "none":
+				return state.is_empty()
+			return state.get("status", "") == status and int(state.get("step", 0)) >= int(c.get("step", 0))
 		"species":
 			return ch.species_id in c["in"]
 		"class":

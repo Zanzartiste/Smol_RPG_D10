@@ -71,7 +71,7 @@
 		{"id": "infernal", "name": "Infernal"}
 	],
 	"spell_slots": {
-		"_doc": "Emplacements de sort par niveau de classe (SRD 5.1) : ligne n = niveau n, colonne i = emplacements de niveau i+1.",
+		"_doc": "Table SRD 5.1 par niveau de classe : ligne n = niveau n, colonne i = sorts de niveau i+1. Le jeu en fait une seule réserve d'emplacements (somme pondérée par le niveau ; un sort de niveau N coûte N emplacements) et le niveau de sort le plus haut lançable.",
 		"full": [
 				[2],
 				[3],
@@ -116,6 +116,11 @@
 				[4, 3, 3, 3, 2],
 				[4, 3, 3, 3, 2]
 		]
+	},
+	"spells": {
+		"_doc": "Sorts équipés (utilisables en combat) parmi les sorts connus : equipped_base + equipped_per_magic_rank × rang de Magie.",
+		"equipped_base": 2,
+		"equipped_per_magic_rank": 1
 	},
 	"dice_scaling": {
 		"_doc": "Dés de dégâts en plus selon le niveau de classe (le palier le plus haut atteint) : tours de magie (palier − 1) et Attaque sournoise (palier).",

@@ -1,0 +1,13 @@
+[
+	{
+		"id": "ysolde_herbs",
+		"name": "Des herbes pour Ysolde",
+		"giver": "Ysolde la marchande",
+		"location": "town",
+		"description": "Ysolde, une marchande de Brumeval, a besoin d'herbes médicinales de la Forêt des Murmures.",
+		"steps": [
+			"Cueillir trois brins d'herbes médicinales dans la forêt, puis les rapporter à Ysolde, près de la fontaine de Brumeval.",
+			"Ysolde a été payée de ses herbes."
+		]
+	}
+]

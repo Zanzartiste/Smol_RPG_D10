@@ -25,16 +25,14 @@ static func bbcode(ch: Character) -> String:
 		gold, Loc.ui("Or"), ch.gold]
 	t += "[color=%s]%s[/color] %d (+1d10)\n" % [gold, Loc.ui("Initiative"), ch.initiative_base()]
 	t += "[color=%s]%s[/color] %d    [color=%s]XP[/color] %d\n" % [gold, Loc.ui("Niveau"), ch.level, gold, ch.xp]
-	var slots := PackedStringArray()
 	for resource_id: String in ch.max_resources():
 		if Spellcasting.is_slot(resource_id):
-			slots.append(Loc.ui("niv. %d : %d/%d") % [Spellcasting.slot_level(resource_id), int(ch.resources.get(resource_id, 0)),
-				ch.max_resource(resource_id)])
+			t += "[color=%s]%s[/color] %d / %d (%s)\n" % [gold, Loc.ui("Emplacements de sort"),
+				int(ch.resources.get(resource_id, 0)), ch.max_resource(resource_id),
+				Loc.ui("sorts jusqu'au niveau %d") % ch.max_spell_level()]
 		else:
 			t += "[color=%s]%s[/color] %d / %d\n" % [gold, Actions.resource_name(resource_id),
 				int(ch.resources.get(resource_id, 0)), ch.max_resource(resource_id)]
-	if not slots.is_empty():
-		t += "[color=%s]%s[/color] %s\n" % [gold, Loc.ui("Emplacements de sort"), " · ".join(slots)]
 	var saves := PackedStringArray()
 	for id in Abilities.ids():
 		var pool := ch.resist_pool(id)

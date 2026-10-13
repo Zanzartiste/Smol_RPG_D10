@@ -211,31 +211,26 @@ func combat_actions() -> Array[Dictionary]:
 
 
 ## Variantes d'une action proposées au joueur : un sort amélioré à niveau supérieur ("upcast") existe
-## en une variante par niveau d'emplacement disponible ; les autres actions en une seule.
+## en une variante par niveau lançable (jusqu'au niveau de sort le plus haut du personnage) ; les autres
+## actions en une seule.
 func action_variants(action: Dictionary) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	if character != null and action.get("cost") == "spell_slot" and Spellcasting.can_upcast(action):
-		for level in range(int(action.get("spell_level", 1)), Spellcasting.MAX_SPELL_LEVEL + 1):
-			if int(character.resources.get(Spellcasting.slot_key(level), 0)) > 0:
-				result.append(Spellcasting.at_level(action, level))
+	if character != null and action.get("cost") == Spellcasting.SLOT_KEY and Spellcasting.can_upcast(action):
+		for level in range(int(action.get("spell_level", 1)), character.max_spell_level() + 1):
+			result.append(Spellcasting.at_level(action, level))
 	if result.is_empty():
 		result.append(action)
 	return result
 
 
-## Ressource consommée par une action ("" si aucune). Pour un sort : l'emplacement fixé par la
-## variante, sinon le plus bas disponible à partir du niveau du sort.
+## Ressource consommée par une action ("" si aucune).
 func resource_key(action: Dictionary) -> String:
-	var cost: String = action.get("cost", "")
-	if cost != "spell_slot":
-		return cost
-	if action.has("slot_level"):
-		return Spellcasting.slot_key(int(action["slot_level"]))
-	var base := int(action.get("spell_level", 1))
-	for level in range(base, Spellcasting.MAX_SPELL_LEVEL + 1):
-		if character != null and int(character.resources.get(Spellcasting.slot_key(level), 0)) > 0:
-			return Spellcasting.slot_key(level)
-	return Spellcasting.slot_key(base)
+	return action.get("cost", "")
+
+
+## Quantité de ressource consommée : le niveau du sort pour des emplacements, 1 sinon.
+func resource_amount(action: Dictionary) -> int:
+	return Spellcasting.cost_of(action) if resource_key(action) == Spellcasting.SLOT_KEY else 1
 
 
 ## L'action ne coûte-t-elle aucune action (Fougue ; Se cacher avec la Ruse, une fois par tour) ?
@@ -287,8 +282,11 @@ func unavailable_reason(action: Dictionary) -> String:
 	if action.has("per_combat") and int(uses.get(action.get("id", ""), 0)) <= 0:
 		return Loc.ui("déjà utilisée")
 	var key := resource_key(action)
-	if key != "" and character != null and int(character.resources.get(key, 0)) <= 0:
-		return Loc.ui("plus d'%s") % Actions.resource_name(key)
+	if key == Spellcasting.SLOT_KEY and character != null and Spellcasting.cost_of(action) > character.max_spell_level():
+		return Loc.ui("sort de niveau trop élevé")
+	if key != "" and character != null and int(character.resources.get(key, 0)) < resource_amount(action):
+		return Loc.ui("pas assez d'%s") % Actions.resource_name(key) if key == Spellcasting.SLOT_KEY \
+			else Loc.ui("plus d'%s") % Actions.resource_name(key)
 	return ""
 
 
@@ -298,7 +296,7 @@ func consume(action: Dictionary) -> void:
 		uses[action["id"]] = int(uses.get(action["id"], 0)) - 1
 	var key := resource_key(action)
 	if key != "" and character != null:
-		character.resources[key] = int(character.resources.get(key, 0)) - 1
+		character.resources[key] = int(character.resources.get(key, 0)) - resource_amount(action)
 
 
 # --- États -------------------------------------------------------------------

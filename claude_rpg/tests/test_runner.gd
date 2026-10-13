@@ -40,6 +40,8 @@ const TESTS := [
 	"_test_creation",
 	"_test_creator_points",
 	"_test_dice_tray",
+	"_test_quests",
+	"_test_side_drawer",
 	"_test_saves",
 	"_test_simulation",
 	"_test_art",
@@ -498,6 +500,63 @@ func _test_creator_points() -> bool:
 	return true
 
 
+func _test_quests() -> bool:
+	var life := _new_life("human", "fighter")
+	_expect(Quests.has("ysolde_herbs") and Conditions.check({"type": "quest", "id": "ysolde_herbs", "status": "none"}, life, Meta),
+		"quête pas encore commencée")
+	var res := Effects.apply_all([{"type": "quest", "id": "ysolde_herbs", "action": "start"}], life, Meta)
+	_expect(res["lines"] == ["Nouvelle quête : Des herbes pour Ysolde."] and Quests.with_status(life, "active") == ["ysolde_herbs"]
+		and Conditions.check({"type": "quest", "id": "ysolde_herbs"}, life, Meta), "commencer une quête")
+	Effects.apply_all([{"type": "quest", "id": "ysolde_herbs", "action": "advance"}], life, Meta)
+	_expect(int(life.quests["ysolde_herbs"]["step"]) == 1 and Conditions.check({"type": "quest", "id": "ysolde_herbs", "step": 1}, life, Meta),
+		"faire avancer une quête")
+	Effects.apply_all([{"type": "quest", "id": "ysolde_herbs", "action": "complete"}], life, Meta)
+	_expect(Quests.with_status(life, "done") == ["ysolde_herbs"] and Conditions.check({"type": "quest", "id": "ysolde_herbs", "status": "done"}, life, Meta),
+		"quête accomplie")
+	var saved := LifeState.from_dict(JSON.parse_string(JSON.stringify(life.to_dict())))
+	_expect(saved.quests == life.quests, "quêtes sauvegardées")
+	# L'événement d'Ysolde lance la quête.
+	life = _new_life("human", "fighter")
+	var ev: Dictionary = DB.events["town_merchant_meet"]
+	EventEngine.resolve_choice(ev, ev["choices"][0], life, Meta)
+	_expect(Quests.with_status(life, "active") == ["ysolde_herbs"], "accepter la commande d'Ysolde lance la quête")
+	return true
+
+
+func _test_side_drawer() -> bool:
+	_expect(SideDrawer.short_gold(950) == "950 po" and SideDrawer.short_gold(1000) == "1k po" and SideDrawer.short_gold(1250) == "1,2k po"
+		and SideDrawer.short_gold(3400000) == "3,4M po", "or abrégé")
+	Game.start_life(Character.create("human", "wizard", "Bergot", {"gender": "male"}), 171)
+	var life := Game.life
+	var drawer := SideDrawer.new()
+	drawer.life = life
+	drawer.size = Vector2(1280, 720)
+	add_child(drawer)
+	var hero := life.character
+	_expect(drawer._tab_buttons["character"].text == "PV %d/%d" % [hero.hp, hero.max_hp] and drawer._tab_buttons["inventory"].text == "15 po"
+		and drawer._tab_buttons["spells"].visible, "onglets : PV, or, sorts (lanceur)")
+	for page_id: String in SideDrawer.PAGES:
+		drawer.open(page_id)
+		_expect(drawer.is_open() and drawer._content.get_child_count() > 1, "page %s remplie" % page_id)
+	drawer.open("character")
+	var texts: Array = drawer._content.get_children().filter(func(c): return c is Label).map(func(c): return c.text)
+	_expect(texts.has("Bergot") and texts.has("Humain Homme") and texts.has("Magicien niv. 1")
+		and texts.has("Esquive naturelle : %d" % hero.natural_dodge()) and texts.has("Armure : 0"), "page personnage : nom, espèce, classes, défenses")
+	drawer.open("spells")
+	var checks: Array = drawer._content.get_children().filter(func(c): return c is CheckBox)
+	_expect(checks.size() == hero.known_spells().size(), "page des sorts : un sort connu par ligne")
+	var unchecked: CheckBox = checks.filter(func(c): return not c.button_pressed)[0]
+	_expect(unchecked.disabled, "sorts équipés au maximum : les autres sont grisés")
+	drawer.close()
+	_expect(not drawer.is_open(), "replier le tiroir")
+	var fighter_life := _new_life("human", "fighter")
+	drawer.life = fighter_life
+	drawer.refresh()
+	_expect(not drawer._tab_buttons["spells"].visible, "pas d'onglet Sorts sans lanceur de sorts")
+	drawer.free()
+	return true
+
+
 func _test_dice_tray() -> bool:
 	var tray := DiceTray.new()
 	tray.size = Vector2(800, 240)
@@ -720,11 +779,11 @@ func _test_actions() -> bool:
 	var missile := Actions.def("magic_missile")
 	await combat.perform(mage, missile, combat.living("enemy")[0])
 	await combat.perform(mage, missile, combat.living("enemy")[0] if not combat.living("enemy").is_empty() else null)
-	_expect(Game.life.character.resources["spell_slot_1"] == 0, "projectile magique : 2 emplacements dépensés")
-	_expect(combat.action_unavailable_reason(mage, missile) == "plus d'emplacement de sort de niveau 1", "plus d'emplacement")
+	_expect(Game.life.character.resources["spell_slot"] == 0, "projectile magique : 2 emplacements dépensés")
+	_expect(combat.action_unavailable_reason(mage, missile) == "pas assez d'emplacements de sort", "plus d'emplacement")
 	Game.finish_combat()
 	Effects.apply_all([{"type": "long_rest"}], Game.life, Meta)
-	_expect(Game.life.character.resources["spell_slot_1"] == 2, "repos long : emplacements restaurés")
+	_expect(Game.life.character.resources["spell_slot"] == 2, "repos long : emplacements restaurés")
 
 	# Deux actions par tour ; celles qu'on garde deviennent des réactions, puis Préparé.
 	Game.start_life(Character.create("human", "fighter", "Guerrier"), 8)
@@ -848,24 +907,39 @@ func _at_level(species: String, cls: String, level: int) -> Character:
 
 
 func _test_spell_progression() -> bool:
-	_expect(Spellcasting.slots("full", 1) == {"spell_slot_1": 2}
-		and Spellcasting.slots("full", 5) == {"spell_slot_1": 4, "spell_slot_2": 3, "spell_slot_3": 2}, "table SRD des emplacements")
-	_expect(Spellcasting.slots("half", 1).is_empty() and Spellcasting.slots("half", 5) == {"spell_slot_1": 4, "spell_slot_2": 2},
+	_expect(Spellcasting.slots("full", 1) == {"spell_slot": 2} and Spellcasting.slots("full", 5) == {"spell_slot": 4 + 3 * 2 + 2 * 3},
+		"une seule réserve : la table SRD pondérée par le niveau des sorts")
+	_expect(Spellcasting.slots("half", 1).is_empty() and Spellcasting.slots("half", 5) == {"spell_slot": 4 + 2 * 2},
 		"demi-lanceur : rien au niveau 1")
-	_expect(Spellcasting.slots("full", 20).size() == 9, "niveau 20 : emplacements jusqu'au 9e niveau")
+	_expect(Spellcasting.max_level("full", 5) == 3 and Spellcasting.max_level("full", 20) == 9 and Spellcasting.max_level("half", 1) == 0,
+		"niveau de sort le plus haut selon la table")
+	_expect(Spellcasting.cost_of({"spell_level": 2}) == 2 and Spellcasting.cost_of({"spell_level": 1, "slot_level": 3}) == 3,
+		"un sort de niveau N coûte N emplacements")
 
 	var mage := Character.create("goblin", "wizard", "Mage")
-	mage.resources["spell_slot_1"] = 0
+	mage.resources["spell_slot"] = 0
 	mage.add_xp(Progression.xp_for(3) - mage.xp)
 	_level_up(mage)
-	_expect(mage.resources["spell_slot_1"] == 2 and mage.resources["spell_slot_2"] == 2,
-		"montée de niveau : les emplacements gagnés sont disponibles, les dépensés le restent")
+	_expect(mage.resources["spell_slot"] == 6, "montée de niveau : les emplacements gagnés sont disponibles, les dépensés le restent")
 	mage.long_rest()
-	_expect(mage.resources == {"spell_slot_1": 4, "spell_slot_2": 2}, "repos long : tous les emplacements")
+	_expect(mage.resources == {"spell_slot": 8} and mage.max_spell_level() == 2, "repos long : tous les emplacements")
 	_expect(ClassFeatures.announce(mage, 3).size() == 3, "annonce : nouvelles aptitudes (sorts, tradition) et emplacements")
 
-	var old := Character.from_dict({"species_id": "goblin", "class_id": "wizard", "level": 1, "resources": {"spell_slot": 1}})
-	_expect(old.resources == {"spell_slot_1": 2}, "ancienne sauvegarde : ressources converties")
+	var old := Character.from_dict({"species_id": "goblin", "class_id": "wizard", "level": 1,
+		"resources": {"spell_slot_1": 1, "spell_slot_2": 1}})
+	_expect(old.resources == {"spell_slot": 3}, "ancienne sauvegarde : emplacements par niveau convertis")
+
+	# Sorts connus et équipés : seuls les sorts équipés sont proposés en combat.
+	var wizard := Character.create("human", "wizard", "W")
+	var known := wizard.known_spells()
+	_expect(known.size() == 7 and "weapon_attack" not in known and wizard.max_equipped_spells() == 2 + wizard.skill_rank("magic"),
+		"magicien : 7 sorts connus, 2 + rang de Magie équipés")
+	_expect(wizard.equipped_spells.size() == wizard.max_equipped_spells() and "sleep" not in wizard.combat_actions()
+		and "fire_bolt" in wizard.combat_actions() and "weapon_attack" in wizard.combat_actions(), "les sorts non équipés sont rangés")
+	_expect(not wizard.equip_spell("sleep") and wizard.unequip_spell("ray_of_frost") and wizard.equip_spell("sleep")
+		and "sleep" in wizard.combat_actions() and "ray_of_frost" not in wizard.combat_actions(), "changer de sort équipé")
+	var reloaded := Character.from_dict(JSON.parse_string(JSON.stringify(wizard.to_dict())))
+	_expect(reloaded.equipped_spells == wizard.equipped_spells, "sorts équipés sauvegardés")
 
 	# Tours de magie : un dé de dégâts de plus par palier ; sorts lancés à un niveau supérieur.
 	var hero := Combatant.from_character(Character.create("human", "wizard", "W"), true)
@@ -877,7 +951,10 @@ func _test_spell_progression() -> bool:
 	hero.character.level = 17
 	_expect(hero.damage_pool(bolt, hero.attack_pool(bolt))["count"] == rank + 3, "Trait de feu : +3 dés au niveau 17")
 
-	Game.start_life(_at_level("human", "wizard", 5), 21)
+	var evoker := _at_level("human", "wizard", 5)
+	evoker.unequip_spell("ray_of_frost")
+	evoker.equip_spell("fireball")
+	Game.start_life(evoker, 21)
 	var combat := Game.start_combat({"enemies": ["dire_wolf"]})
 	var missiles := combat.action_choices(combat.hero).filter(func(c): return c["action"]["id"] == "magic_missile")
 	_expect(missiles.size() == 3, "Projectile magique proposé aux niveaux 1, 2 et 3")
@@ -886,8 +963,7 @@ func _test_spell_progression() -> bool:
 		"niveau 3 : deux dés de plus")
 	_expect(Actions.def("magic_missile")["effects"][0]["damage"]["dice"] == 3, "l'action de base n'est pas modifiée")
 	await combat.perform(combat.hero, high, combat.living("enemy")[0])
-	_expect(Game.life.character.resources["spell_slot_3"] == 1 and Game.life.character.resources["spell_slot_1"] == 4,
-		"l'emplacement du niveau choisi est dépensé")
+	_expect(Game.life.character.resources["spell_slot"] == 16 - 3, "lancé au niveau 3 : 3 emplacements dépensés")
 	_expect(combat.action_choices(combat.hero).any(func(c): return c["action"]["id"] == "fireball"), "Boule de feu au niveau 5")
 	Game.combat = null
 	return true
@@ -1669,7 +1745,7 @@ func _test_multiclass_and_rest() -> bool:
 	var lines := hero.assign_class_level("wizard")
 	_expect(hero.class_level("wizard") == 1 and hero.has_class("wizard") and lines[0].contains("magicien de niveau 1"),
 		"un niveau de Magicien")
-	_expect(hero.is_caster() and hero.skill_rank("magic") == 2 and hero.max_resource("spell_slot_1") == 2
+	_expect(hero.is_caster() and hero.skill_rank("magic") == 2 and hero.max_resource("spell_slot") == 2
 		and "fire_bolt" in hero.combat_actions() and "second_wind" in hero.combat_actions(), "actions et sorts des deux classes")
 	hero.assign_class_level("fighter")
 	_expect(hero.class_levels == {"fighter": 2, "wizard": 1} and "action_surge" in hero.combat_actions()

@@ -503,6 +503,30 @@ Calcul des dégâts subis :
   touche que si son total dépasse le jet de défense. Automatique pour l'instant.
 - **IA par personnage** : `Character.auto_combat` (bouton « IA : oui/non » dans la barre d'actions).
 
+## Quêtes (`quests.json`)
+
+- `{"id", "name", "description", "giver"?, "location"?, "steps": ["texte de l'étape", ...]}`.
+- Avancement : `LifeState.quests` (id -> `{"status": "active" | "done" | "failed", "step"}`), sauvegardé.
+- Effet `{"type": "quest", "id", "action": "start" | "advance" | "complete" | "fail", "step"?}` ; condition
+  `{"type": "quest", "id", "status"?: "active" (par défaut) | "done" | "failed" | "none", "step"?: minimum}`.
+- Première quête : « Des herbes pour Ysolde » (événements `town_merchant_meet` et `town_merchant_return`).
+
+## Sorts : emplacements et sorts équipés
+
+- Ressource unique `spell_slot` : la table `rules.json › spell_slots` pondérée par le niveau des sorts ; un sort
+  de niveau N (ou lancé au niveau N : `slot_level`) coûte N emplacements ; `Character.max_spell_level()` borne les
+  variantes proposées. Les anciennes sauvegardes (`spell_slot_1`, `spell_slot_2`…) sont converties.
+- Sorts connus : les actions de classe et d'aptitude qui sont des sorts (`spell_level`, coût `spell_slot`, ou tour de
+  magie) ; équipés : `Character.equipped_spells` (au plus `rules.json › spells` : 2 + rang de Magie), seuls proposés
+  en combat. `seen_spells` retient les sorts déjà proposés : un sort appris est équipé d'office s'il reste de la place.
+
+## Interface : le tiroir latéral
+
+- `scripts/ui/side_drawer.gd` (`SideDrawer`) : onglets à droite (PV, or, quêtes, relations, sorts pour un lanceur) ;
+  survol = la page se déroule, clic = épinglée. Pages : personnage (identité, XP, Esquive naturelle, Armure,
+  initiative, attributs, compétences, aptitudes et dons, avec le détail des calculs au survol), inventaire et
+  équipement, quêtes, réputation et relations, sorts (emplacements, sorts équipés à cocher hors combat).
+
 ## Repos et multiclassage
 
 - **Repos** (`locations.json › rest`) : `{"type": camp | inn | home, "name", "cost"?, "event_chance"?}`. Le bouton

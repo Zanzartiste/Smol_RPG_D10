@@ -32,6 +32,7 @@ var _rest_button := Button.new()
 var _last_social_session: Dictionary = {}
 var _overlay: Control  # fenêtre ouverte par-dessus l'écran : inventaire ou boutique (null sinon)
 var _event_on_screen: Dictionary = {}  # événement dont les choix sont affichés (pour les réafficher en debug)
+var drawer := SideDrawer.new()  # tiroir latéral : personnage, inventaire, quêtes, relations, sorts
 
 
 func _ready() -> void:
@@ -52,9 +53,21 @@ func _ready() -> void:
 	_rest_button.pressed.connect(_on_rest, CONNECT_DEFERRED)
 	_rest_button.tooltip_text = tr("Repos long jusqu'au matin, selon le lieu (touche R)")
 	sheet_text.get_parent().add_child(_rest_button)
+	# La fiche détaillée vit dans le tiroir latéral : la colonne de gauche ne garde que le portrait et les
+	# boutons.
+	sheet_text.visible = false
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	sheet_text.get_parent().add_child(spacer)
+	sheet_text.get_parent().move_child(spacer, sheet_text.get_index())
+	sheet_text.get_parent().get_parent().custom_minimum_size.x = 220
 	if Game.life == null or Game.life.dead:
 		if not Saves.load_life():
 			Game.new_life()  # scène lancée directement, sans sauvegarde ni création
+	drawer.life = Game.life
+	drawer.inventory_requested.connect(open_inventory)
+	drawer.carnet_requested.connect(open_carnet)
+	add_child(drawer)
 	_refresh_sheet()
 	_show_hub()
 	# Un combat interrompu (jeu fermé pendant la bataille) reprend immédiatement.
@@ -485,6 +498,7 @@ func _can_open_overlay() -> bool:
 
 
 func _open_overlay(view: Control) -> void:
+	drawer.close()
 	_overlay = view
 	view.changed.connect(_refresh_sheet)
 	view.closed.connect(_on_overlay_closed)
@@ -505,6 +519,8 @@ func _run_combat(spec: Dictionary) -> void:
 	_inventory_button.disabled = true
 	_carnet_button.disabled = true
 	_rest_button.disabled = true
+	drawer.locked = true
+	drawer.refresh()
 	content_box.visible = false
 	combat_view.visible = true
 	var result: Dictionary = await combat_view.run(spec, illustration.texture)
@@ -513,6 +529,7 @@ func _run_combat(spec: Dictionary) -> void:
 	_inventory_button.disabled = false
 	_carnet_button.disabled = false
 	_rest_button.disabled = false
+	drawer.locked = false
 	_refresh_sheet()
 	title_label.text = {"victory": tr("Victoire"), "defeat": tr("Défaite"), "fled": tr("Fuite")}.get(result["outcome"], "")
 	_show_result(result)
@@ -523,7 +540,8 @@ func _refresh_sheet() -> void:
 	_rest_button.text = "%s (R)" % Game.rest_name()
 	portrait.texture = ArtProvider.portrait(ch)
 	name_label.text = ch.name
-	sheet_text.text = CharacterSheet.bbcode(ch) + CharacterSheet.companions_bbcode(Game.life)
+	drawer.life = Game.life
+	drawer.refresh()
 
 
 # --- Utilitaires -------------------------------------------------------------

@@ -159,7 +159,7 @@ func _action_label(actor: Combatant, action: Dictionary) -> String:
 	if key != "":
 		var left := int(actor.character.resources.get(key, 0))
 		if Spellcasting.is_slot(key):
-			label += tr(" [niv. %d : %d/%d]") % [Spellcasting.slot_level(key), left, actor.character.max_resource(key)]
+			label += tr(" [coût %d · %d/%d]") % [Spellcasting.cost_of(action), left, actor.character.max_resource(key)]
 		else:
 			label += " [%d/%d]" % [left, actor.character.max_resource(key)]
 	if action.has("per_combat"):

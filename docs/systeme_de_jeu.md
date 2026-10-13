@@ -176,6 +176,12 @@ chance de réussite (calculée exactement).
   d'incantation + bonus ; les sorts de zone se résistent (DEX : chaque succès retire un point).
 - **Paliers** : les tours de magie gagnent un dé de dégâts aux niveaux 5, 11 et 17 ; l'Attaque sournoise ajoute un
   dé de dégâts par palier (1 au niveau 1, 6 au niveau 11).
+- **Emplacements de sort** (décision du 2026-10-14) : une seule réserve d'emplacements « de niveau 1 » ; lancer un
+  sort de niveau N coûte N emplacements. La réserve vaut la table du SRD pondérée par le niveau des sorts (magicien :
+  2 au niveau 1, 8 au niveau 3, 16 au niveau 5) ; la table fixe aussi le niveau de sort le plus haut lançable.
+- **Sorts connus et équipés** : un lanceur connaît les sorts de sa classe, mais seuls les sorts **équipés** sont
+  utilisables en combat : 2 + rang de Magie (4 pour un magicien débutant). Un sort appris est équipé d'office s'il
+  reste de la place. On les change hors combat, dans l'onglet Sorts du tiroir.
 - **États** : Poison (1 dégât par tour, les charges sont la durée), Affaibli (un dé de dégâts de moins par charge),
   Protection (chaque charge absorbe 1 point), Endormi et Paralysé (pris par surprise), Invisible (caché : ses
   attaques sont des surprises, Couvert +1), Préparé (+2 dés).
@@ -228,3 +234,5 @@ chance de réussite (calculée exactement).
    Un guerrier peut ainsi passer de FOR 7 à 10 au niveau 4 (+1, puis +2 avec le don). Faut-il limiter (+1 par
    palier seulement, don d'amélioration à +1, plafond plus bas) ?
 2. **Test d'attribut sans compétence** : 2 dés contre l'attribut, ça te va ?
+3. **Sorts équipés** : 2 + rang de Magie, tours de magie compris. Faut-il compter les tours de magie à part
+   (toujours disponibles), ou changer la formule ?

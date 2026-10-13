@@ -505,8 +505,9 @@ func _class_info(cls: Dictionary) -> String:
 		_field(tr("Équipement :"), " · ".join(gear))] + "\n" + _field(tr("Actions :"),
 		", ".join(PackedStringArray(cls.get("actions", []).map(func(id): return Actions.name_of(id)))))
 	if cls.has("spell_slots"):
-		text += "\n" + _field(tr("Sorts :"), tr("emplacements de sort qui augmentent avec le niveau (%s)") %
-			ClassFeatures.slots_text(Spellcasting.slots(cls["spell_slots"], 1)))
+		text += "\n" + _field(tr("Sorts :"), tr("emplacements de sort qui augmentent avec le niveau (au niveau 1 : %s)") %
+			ClassFeatures.slots_text(int(Spellcasting.slots(cls["spell_slots"], 1).get(Spellcasting.SLOT_KEY, 0)),
+				Spellcasting.max_level(cls["spell_slots"], 1)))
 	var features := PackedStringArray()
 	for feature: Dictionary in ClassFeatures.of_class(cls["id"]):
 		features.append(tr("niv. %d : %s") % [int(feature["level"]), feature["name"]])

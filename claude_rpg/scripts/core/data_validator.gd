@@ -16,6 +16,7 @@ static func validate(db: Node) -> void:
 	_validate_damage_types(db, errors)
 	_validate_economy(db, errors)
 	_validate_social(db, errors)
+	_validate_quests(db, errors)
 	for id: String in db.events:
 		_validate_event(db, db.events[id], errors)
 
@@ -474,6 +475,10 @@ static func _validate_conditions(db: Node, conditions: Variant, ctx: String, err
 				_expect_ref(db.abilities, c["id"], "attribut", ctx, errors)
 			"skill_proficient":
 				_expect_ref(db.skills, c["id"], "compétence", ctx, errors)
+			"quest":
+				_expect_ref(db.quests, c["id"], "quête", ctx, errors)
+				if c.get("status", "active") not in Quests.STATUSES + ["none"]:
+					errors.append(ctx + " : statut de quête inconnu « %s »" % c.get("status"))
 			"species":
 				for id in c["in"]:
 					_expect_ref(db.species, id, "espèce", ctx, errors)
@@ -565,6 +570,10 @@ static func _validate_effects(db: Node, effects: Variant, ctx: String, errors: A
 				_expect_ref(db.events, e["event"], "événement", ctx, errors)
 			"unlock":
 				_validate_unlock_id(db, e["id"], ctx, errors)
+			"quest":
+				_expect_ref(db.quests, e["id"], "quête", ctx, errors)
+				if e["action"] not in Quests.ACTIONS:
+					errors.append(ctx + " : action de quête inconnue « %s » (%s)" % [e["action"], Quests.ACTIONS])
 
 
 static func _validate_defense_ref(db: Node, kind: String, id: String, ctx: String, errors: Array[String]) -> void:
@@ -623,6 +632,18 @@ static func _validate_damage_types(db: Node, errors: Array[String]) -> void:
 			var chance := float(status.get("chance", -1))
 			if chance < 0.0 or chance > 1.0:
 				errors.append(ctx + " : status.chance doit être entre 0 et 1")
+
+
+static func _validate_quests(db: Node, errors: Array[String]) -> void:
+	for quest: Dictionary in db.quests.values():
+		var ctx := "quests.json › %s" % quest["id"]
+		for key in ["name", "description", "steps"]:
+			if not quest.has(key):
+				errors.append(ctx + " : champ « %s » manquant" % key)
+		if quest.get("steps", []).is_empty():
+			errors.append(ctx + " : il faut au moins une étape")
+		if quest.has("location"):
+			_expect_ref(db.locations, quest["location"], "lieu", ctx, errors)
 
 
 static func _validate_economy(db: Node, errors: Array[String]) -> void:

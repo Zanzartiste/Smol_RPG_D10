@@ -31,7 +31,9 @@ var template_id := ""  # pour un compagnon : son id dans companions.json
 var npc_id := ""  # PNJ du monde lié à ce personnage (compagnon recruté, ou compagnon avec relation)
 var auto_combat := false  # en combat, l'IA joue ce personnage
 var load_penalty := 0  # malus de charge du groupe (calculé par LifeState.refresh_load, non sauvegardé)
-var resources: Dictionary = {}  # ressources restantes (spell_slot_1…, indomitable…), rechargées par un repos long
+var resources: Dictionary = {}  # ressources restantes (spell_slot, indomitable…), rechargées par un repos long
+var equipped_spells: Array[String] = []  # sorts équipés (utilisables en combat), parmi les sorts connus
+var seen_spells: Array[String] = []  # sorts déjà proposés (un sort appris est équipé d'office s'il reste de la place)
 
 
 ## Options : "abilities" (scores, sinon modèle de la classe), "background", "gender",
@@ -66,6 +68,7 @@ static func create(species: String, cls: String, char_name: String, options: Dic
 	c.max_hp = c.compute_max_hp()
 	c.hp = c.max_hp
 	c.resources = c.max_resources()
+	c.sync_spells()
 	c.gold = int(DB.rules.get("start_gold", 0)) + int(background.get("gold", 0))
 	for source: Dictionary in [class_data, background]:
 		var start_items: Dictionary = source.get("start_items", {})
@@ -104,6 +107,7 @@ static func create_companion(companion_id: String) -> Character:
 	c.class_levels = {c.class_id: c.level}
 	c.xp = Progression.xp_for(c.level)
 	c.complete_all_choices()  # un compagnon arrive avec ses choix déjà faits
+	c.sync_spells()
 	c.max_hp = c.compute_max_hp()
 	c.hp = c.max_hp
 	c.resources = c.max_resources()
@@ -180,6 +184,20 @@ func skill_rank(skill_id: String) -> int:
 	if id in DB.backgrounds.get(background_id, {}).get("skills", []):
 		rank += 1
 	return rank + Modifiers.sum(modifiers(), "skill_rank", id)
+
+
+## Détail du rang d'une compétence, pour l'affichage : [[source, rangs], ...].
+func skill_rank_parts(skill_id: String) -> Array:
+	var id := Skills.resolve(skill_id)
+	var parts: Array = [[Loc.ui("départ"), skill_base_rank(id)]]
+	if _class_skill_ranks(id) > 0:
+		parts.append([Loc.ui("classe"), _class_skill_ranks(id)])
+	if id in DB.backgrounds.get(background_id, {}).get("skills", []):
+		parts.append([Loc.ui("passé"), 1])
+	var bonus := Modifiers.sum(modifiers(), "skill_rank", id)
+	if bonus != 0:
+		parts.append([Loc.ui("choix, dons, aptitudes, objets"), bonus])
+	return parts
 
 
 ## Compétence entraînée : rang au-dessus du rang de départ (Expertise, Talent fiable).
@@ -552,6 +570,22 @@ func armor() -> int:
 	return maxi(0, total)
 
 
+## Détail de l'Armure, pour l'affichage : [[source, points], ...].
+func armor_parts() -> Array:
+	var parts: Array = []
+	for slot in ["armor", "off_hand"]:
+		var item_id: String = equipment.get(slot, "")
+		if Equipment.armor_value(item_id) > 0:
+			parts.append([Equipment.name_of(item_id), Equipment.armor_value(item_id)])
+	var mods := modifiers()
+	if Modifiers.sum(mods, "armor") != 0:
+		parts.append([Loc.ui("objets et dons"), Modifiers.sum(mods, "armor")])
+	var worn := Equipment.def(equipment.get("armor", ""))
+	if not worn.is_empty() and worn.get("armor_type") != "clothing" and Modifiers.sum(mods, "armored") != 0:
+		parts.append([Loc.ui("style Défense"), Modifiers.sum(mods, "armored")])
+	return parts
+
+
 ## Initiative de base : Dextérité + Intelligence (+ rang de Physique avec Vigilant, + modificateurs),
 ## moins l'encombrement. On y ajoute 1d10 en début de combat.
 func initiative_base() -> int:
@@ -667,21 +701,82 @@ func assign_class_level(cls: String) -> Array[String]:
 		lines.append(Loc.ui("%s : %s.") % [name, Progression.advancement_text()])
 	_sync_resources(previous_max)
 	refresh_max_hp()
+	sync_spells()
 	return lines
 
 
-## Emplacements de sort : ceux de sa classe de lanceur ; avec plusieurs, niveau de lanceur cumulé
+## Progression de lanceur : [progression, niveau]. Avec plusieurs classes de lanceur, niveau cumulé
 ## (lanceurs complets + demi-lanceurs / 2) sur la table des lanceurs complets, comme dans D&D.
-func spell_slots() -> Dictionary:
+func _caster_progression() -> Array:
 	var casters: Array = class_levels.keys().filter(func(cls): return DB.classes[cls].has("spell_slots"))
 	if casters.is_empty():
-		return {}
+		return ["", 0]
 	if casters.size() == 1:
-		return Spellcasting.slots(DB.classes[casters[0]]["spell_slots"], class_level(casters[0]))
+		return [DB.classes[casters[0]]["spell_slots"], class_level(casters[0])]
 	var caster_level := 0.0
 	for cls: String in casters:
 		caster_level += class_level(cls) * (1.0 if DB.classes[cls]["spell_slots"] == "full" else 0.5)
-	return Spellcasting.slots("full", int(caster_level))
+	return ["full", int(caster_level)]
+
+
+## Emplacements de sort : {"spell_slot": N} (voir Spellcasting).
+func spell_slots() -> Dictionary:
+	var progression := _caster_progression()
+	return Spellcasting.slots(progression[0], progression[1])
+
+
+## Niveau de sort le plus haut que le personnage peut lancer avec ses emplacements.
+func max_spell_level() -> int:
+	var progression := _caster_progression()
+	return Spellcasting.max_level(progression[0], progression[1])
+
+
+# --- Sorts connus et équipés -------------------------------------------------------
+
+## Sorts connus gérés par l'équipement (ceux des classes et aptitudes ; pas ceux d'un don comme Initié à
+## la magie, toujours disponibles).
+func known_spells() -> Array[String]:
+	var result: Array[String] = []
+	for action_id: String in _all_combat_actions():
+		if "|" not in action_id and Spellcasting.is_spell(Actions.def(action_id)):
+			result.append(action_id)
+	return result
+
+
+func max_equipped_spells() -> int:
+	return Spellcasting.max_equipped(skill_rank("magic"))
+
+
+func is_spell_equipped(action_id: String) -> bool:
+	return action_id in equipped_spells
+
+
+## Équipe un sort connu ; false s'il n'y a plus de place.
+func equip_spell(action_id: String) -> bool:
+	if action_id in equipped_spells or action_id not in known_spells() or equipped_spells.size() >= max_equipped_spells():
+		return false
+	equipped_spells.append(action_id)
+	return true
+
+
+func unequip_spell(action_id: String) -> bool:
+	if action_id not in equipped_spells:
+		return false
+	equipped_spells.erase(action_id)
+	return true
+
+
+## Met les sorts équipés à jour : oublie les sorts inconnus, et équipe d'office les sorts nouvellement
+## appris s'il reste de la place.
+func sync_spells() -> void:
+	var known := known_spells()
+	equipped_spells.assign(equipped_spells.filter(func(id): return id in known))
+	for action_id in known:
+		if action_id in seen_spells:
+			continue
+		seen_spells.append(action_id)
+		if equipped_spells.size() < max_equipped_spells():
+			equipped_spells.append(action_id)
 
 
 ## Ressources maximales : celles de l'espèce, de la classe, des aptitudes et des dons, plus les
@@ -716,6 +811,12 @@ func max_resource(resource_id: String) -> int:
 ## Actions de combat : celles de la classe, des aptitudes acquises, des dons et des choix
 ## (ids de actions.json, ou « action|ressource » pour un sort lancé grâce à un don).
 func combat_actions() -> Array:
+	var known := known_spells()
+	return _all_combat_actions().filter(func(id): return id not in known or id in equipped_spells)
+
+
+## Toutes les actions, sorts non équipés compris.
+func _all_combat_actions() -> Array:
 	var result: Array = DB.classes[class_id].get("actions", []).duplicate()
 	var granted: Array = []
 	for cls: String in class_levels:
@@ -839,7 +940,7 @@ func to_dict() -> Dictionary:
 		"pending_ability_points": pending_ability_points, "equipment": equipment, "defenses": defenses.to_dict(),
 		"level": level, "xp": xp, "hp": hp, "max_hp": max_hp, "gold": gold, "inventory": inventory,
 		"start_age": start_age, "age_days": age_days, "art_seed": art_seed, "template_id": template_id, "npc_id": npc_id, "auto_combat": auto_combat,
-		"resources": resources,
+		"resources": resources, "equipped_spells": equipped_spells, "seen_spells": seen_spells,
 	}
 
 
@@ -883,6 +984,16 @@ static func from_dict(data: Dictionary) -> Character:
 	c.npc_id = data.get("npc_id", "")
 	c.auto_combat = data.get("auto_combat", false)
 	c.resources = _int_dict(data.get("resources", {}))
+	# Anciennes sauvegardes : emplacements par niveau (spell_slot_2…) -> une seule réserve pondérée.
+	var old_slots := 0
+	for key: String in c.resources.keys():
+		if key.begins_with("spell_slot_"):
+			old_slots += int(c.resources[key]) * int(key.trim_prefix("spell_slot_"))
+			c.resources.erase(key)
+	if old_slots > 0:
+		c.resources[Spellcasting.SLOT_KEY] = old_slots
+	c.equipped_spells.assign(data.get("equipped_spells", []))
+	c.seen_spells.assign(data.get("seen_spells", []))
 	c.apply_default_choices(true)  # anciennes sauvegardes : compétences de classe par défaut
 	# Anciennes sauvegardes (ex. "spell_slot" unique) : on ne garde que les ressources connues.
 	var max_now := c.max_resources()
@@ -892,6 +1003,7 @@ static func from_dict(data: Dictionary) -> Character:
 	for id: String in c.resources.keys():
 		if not max_now.has(id):
 			c.resources.erase(id)
+	c.sync_spells()
 	return c
 
 

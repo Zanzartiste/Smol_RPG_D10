@@ -26,6 +26,7 @@ var npc_roles: Dictionary = {}  # rôles des PNJ (API Social)
 var traits: Dictionary = {}  # traits de personnalité des PNJ
 var npc_facts: Dictionary = {}  # faits révélables sur les PNJ
 var social_actions: Dictionary = {}  # actions de dialogue
+var quests: Dictionary = {}  # quêtes (API Quests)
 var locations: Dictionary = {}
 var location_order: Array[String] = []
 var events: Dictionary = {}
@@ -59,6 +60,7 @@ func load_all() -> void:
 	traits = _index_by_id(_load_json("traits.json", []), "traits.json")
 	npc_facts = _index_by_id(_load_json("npc_facts.json", []), "npc_facts.json")
 	social_actions = _index_by_id(_load_json("social_actions.json", []), "social_actions.json")
+	quests = _index_by_id(_load_json("quests.json", []), "quests.json")
 	locations = _index_by_id(_load_json("locations.json", []), "locations.json")
 	location_order.assign(locations.keys())
 
