@@ -327,7 +327,7 @@
 			{
 				"id": "burrow",
 				"text": "Vous glisser dans le terrier sous les racines",
-				"conditions": [{"type": "size", "in": ["tiny", "small"]}],
+				"conditions": [{"type": "size", "max": -1}],
 				"outcome": {
 					"text": "Vous êtes juste assez {g:petit|petite|petit·e} pour vous faufiler sous les racines. Au fond du terrier, une amulette ancienne vous attend. Le feu follet s'éteint, comme satisfait.",
 					"effects": [{"type": "add_item", "id": "old_amulet"}, {"type": "xp", "amount": 50}]

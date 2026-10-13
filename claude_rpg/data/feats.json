@@ -4,7 +4,7 @@
 		"name": "Vigilant",
 		"category": "origin",
 		"source": "SRD 5.2",
-		"description": "Toujours sur le qui-vive : vous ajoutez votre bonus de maîtrise à l'initiative.",
+		"description": "Toujours sur le qui-vive : vous ajoutez votre rang de Physique à l'initiative.",
 		"modifiers": [{"type": "initiative_proficiency"}]
 	},
 	{

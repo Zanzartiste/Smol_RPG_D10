@@ -141,8 +141,8 @@ func defenses() -> Defenses:
 	return character.all_defenses() if character != null else Defenses.from_dict(creature.get("defenses", {}))
 
 
-func size() -> String:
-	return character.size() if character != null else creature.get("size", "medium")
+func size() -> int:
+	return character.size() if character != null else int(creature.get("size", 0))
 
 
 ## Places occupées dans son camp (rules.json › combat.size_slots).

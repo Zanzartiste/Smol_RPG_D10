@@ -27,7 +27,7 @@ const SCHEMA := {
 	"relentless_endurance": [],
 	"critical_range": ["amount"],  # critique à partir de 20 − amount (Critique amélioré : 1)
 	"save_advantage": ["id"],  # avantage aux jets de sauvegarde d'un attribut
-	"initiative_proficiency": [],  # bonus de maîtrise à l'initiative (Vigilant)
+	"initiative_proficiency": [],  # rang de Physique ajouté à l'initiative (Vigilant)
 	"initiative_advantage": [],  # avantage à l'initiative (Champion)
 	"skill_advantage": ["id"],  # avantage aux tests d'une compétence
 	"spellcasting_ability": ["id"],  # attribut d'incantation hors classe (Initié à la magie)
@@ -121,7 +121,7 @@ static func describe(m: Dictionary) -> String:
 		"save_advantage":
 			return Loc.ui("Avantage aux sauvegardes de %s") % Abilities.name_of(m["id"])
 		"initiative_proficiency":
-			return Loc.ui("Maîtrise à l'initiative")
+			return Loc.ui("Rang de Physique à l'initiative")
 		"initiative_advantage":
 			return Loc.ui("Avantage à l'initiative")
 		"skill_advantage":

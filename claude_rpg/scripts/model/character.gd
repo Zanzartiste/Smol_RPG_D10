@@ -530,7 +530,7 @@ func initiative_bonus() -> int:
 	var mods := modifiers()
 	var bonus := ability_mod("dex") + Modifiers.sum(mods, "initiative") - roll_penalty("dex")
 	if has_modifier("initiative_proficiency"):
-		bonus += proficiency_bonus()  # Vigilant (bonus de maîtrise de D&D, provisoire)
+		bonus += skill_rank("physique")  # Vigilant
 	return bonus
 
 
@@ -652,9 +652,9 @@ func _sync_resources(previous_max: Dictionary) -> void:
 
 # --- Âge et taille -----------------------------------------------------------
 
-## Catégorie de taille, déterminée par l'espèce (tiny, small, medium, large).
-func size() -> String:
-	return DB.species[species_id].get("size", "medium")
+## Taille, déterminée par l'espèce : échelle de −4 (insecte) à 5+ (colosse), 0 pour un humain.
+func size() -> int:
+	return int(DB.species[species_id].get("size", 0))
 
 
 @warning_ignore("integer_division")
@@ -675,14 +675,13 @@ func life_stage() -> String:
 
 # --- PV et niveaux -----------------------------------------------------------
 
-## PV max façon D&D 5e : dé de vie complet + CON au niveau 1, puis (dé / 2 + 1) + CON par niveau,
-## au moins 1 PV par niveau ; + les PV par niveau des modificateurs (don Robuste…).
-@warning_ignore("integer_division")
+## PV max : Constitution × size_base ^ taille (rules.json › hit_points), au moins 1, + les PV des
+## modificateurs (don Robuste : par niveau). Ni la classe ni le niveau ne les font monter : un
+## personnage reste fragile.
 func compute_max_hp() -> int:
-	var hit_die := int(DB.classes[class_id]["hit_die"])
-	var con := ability_mod("con")
-	var bonus := Modifiers.sum(modifiers(), "hp_per_level") * level
-	return maxi(1, hit_die + con) + (level - 1) * maxi(1, hit_die / 2 + 1 + con) + bonus
+	var base := float(DB.rules.get("hit_points", {}).get("size_base", 1.4142))
+	var hp := maxi(1, roundi(ability_score("con") * pow(base, size())))
+	return hp + Modifiers.sum(modifiers(), "hp_per_level") * level
 
 
 ## Recalcule les PV max (après un changement de niveau, de Constitution ou de don).

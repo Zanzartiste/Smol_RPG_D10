@@ -28,6 +28,7 @@ var outcome := ""  # "" en cours, puis "victory", "defeat" ou "fled"
 var log: Array[String] = []
 var hero: Combatant
 var initiative_roll: Dictionary = {}  # lancer d'initiative de tous les combattants, animé en une fois
+var hero_down_cause := ""  # cause de la mort si tout le groupe tombe après le héros
 var skipped := false  # le combattant actif passe son tour (étourdi, mort pendant ses états…)
 var actions_left := 1  # actions restantes au combattant actif pendant ce tour
 var _next_id := 0
@@ -37,9 +38,14 @@ static func setting(key: String, default: Variant) -> Variant:
 	return DB.rules.get("combat", {}).get(key, default)
 
 
-## Places occupées par une créature d'une taille donnée.
-static func size_slots(size: String) -> float:
-	return float(setting("size_slots", {}).get(size, 1.0))
+## Places occupées par une créature d'une taille donnée (échelle de −4 à 5).
+static func size_slots(size: int) -> float:
+	return float(setting("size_slots", {}).get(str(clampi(size, -4, 5)), 1.0))
+
+
+## Échelle du sprite d'une créature d'une taille donnée.
+static func sprite_scale(size: int) -> float:
+	return float(setting("sprite_scale", {}).get(str(clampi(size, -4, 5)), 1.0))
 
 
 func _init(combat_spec: Dictionary, life_state: LifeState) -> void:
@@ -111,7 +117,7 @@ func capacity_used(side: String) -> float:
 	return used
 
 
-func can_add(side: String, size: String) -> bool:
+func can_add(side: String, size: int) -> bool:
 	return capacity_used(side) + size_slots(size) <= float(setting("side_capacity", 4)) + 0.001
 
 
@@ -681,12 +687,16 @@ func _on_down(target: Combatant, attacker: Combatant, death_cause: String) -> St
 		return Loc.ui("%s est vaincu.") % target.name
 	if spec.get("on_defeat", "death") == "knockout" and not target.summoned:
 		return Loc.ui("%s s'effondre, assommé.") % target.name
+	if target.summoned:
+		return Loc.ui("%s se dissipe.") % target.name
 	if target.is_hero():
 		var cause := death_cause
 		if cause == "" and attacker != null:
 			cause = attacker.creature.get("death_cause", Loc.ui("Tué par %s") % attacker.name)
-		life.die(cause if cause != "" else Loc.ui("Mort au combat"))
-	return Loc.ui("%s s'effondre.") % target.name
+		hero_down_cause = cause if cause != "" else Loc.ui("Mort au combat")
+	# Pas de jets contre la mort : tant qu'un allié tient debout, celui qui tombe est inconscient ;
+	# ses compagnons le ramèneront à lui après le combat. Si tout le groupe tombe, c'est la mort.
+	return Loc.ui("%s s'effondre, inconscient.") % target.name
 
 
 func _decay(actor: Combatant, status_id: String) -> void:
@@ -700,12 +710,19 @@ func _decay(actor: Combatant, status_id: String) -> void:
 func _check_end() -> void:
 	if outcome != "":
 		return
-	if life.dead or not hero.is_alive():
+	if life.dead or not _party_standing():
 		outcome = "defeat"
+		if spec.get("on_defeat", "death") != "knockout" and not life.dead:
+			life.die(hero_down_cause if hero_down_cause != "" else Loc.ui("Mort au combat"))
 	elif living("enemy").is_empty():
 		outcome = "victory"
 	if outcome != "":
 		log.append({"victory": Loc.ui("Victoire !"), "defeat": Loc.ui("Défaite…")}[outcome])
+
+
+## Un personnage du groupe (héros ou compagnon, pas une invocation) tient-il encore debout ?
+func _party_standing() -> bool:
+	return combatants.any(func(c): return c.is_ally() and c.character != null and c.is_alive())
 
 
 func _beat(beats: Array[Dictionary], text: String, roll: Dictionary = {}, fast := false) -> void:

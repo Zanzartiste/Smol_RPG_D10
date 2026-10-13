@@ -95,7 +95,15 @@ func life_stage_name(stage_id: String) -> String:
 	return _name_in("life_stages", stage_id)
 
 
-func size_name(size_id: String) -> String:
+## Nom d'une taille (échelle de −4 à 5, voir rules.json › sizes).
+func size_name(size: Variant) -> String:
+	for entry: Dictionary in rules.get("sizes", []):
+		if int(entry.get("value", 99)) == int(size):
+			return entry["name"]
+	return str(size)
+
+
+func _old_size_name(size_id: String) -> String:
 	return _name_in("sizes", size_id)
 
 

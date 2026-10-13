@@ -104,7 +104,7 @@ func _make_token(c: Combatant) -> Control:
 	var intent := _label("", 12, UITheme.BAD)
 	intent.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(intent)
-	var side := BASE_SPRITE * float(Combat.setting("sprite_scale", {}).get(c.size(), 1.0))
+	var side := BASE_SPRITE * Combat.sprite_scale(c.size())
 	var sprite := TextureRect.new()
 	sprite.texture = ArtProvider.combatant(c)
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST

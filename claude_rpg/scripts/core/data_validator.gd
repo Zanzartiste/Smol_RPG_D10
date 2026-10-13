@@ -157,12 +157,12 @@ static func _validate_defenses(db: Node, data: Variant, ctx: String, errors: Arr
 
 static func _validate_species(db: Node, errors: Array[String]) -> void:
 	var stage_ids := _ids(db.rules.get("life_stages", []))
-	var size_ids := _ids(db.rules.get("sizes", []))
+	var size_ids: Array = db.rules.get("sizes", []).map(func(s): return int(s.get("value", 0)))
 	for species: Dictionary in db.species.values():
 		var ctx := "species.json › %s" % species["id"]
 		if species.get("names", []).is_empty():
 			errors.append(ctx + " : liste de noms vide")
-		if species.get("size") not in size_ids:
+		if typeof(species.get("size")) not in [TYPE_INT, TYPE_FLOAT] or int(species.get("size")) not in size_ids:
 			errors.append(ctx + " : taille inconnue « %s » (voir rules.json › sizes)" % species.get("size"))
 		if not species.has("aging_age"):
 			errors.append(ctx + " : aging_age (âge à partir duquel on vieillit) manquant")
@@ -245,7 +245,7 @@ static func _validate_combat_data(db: Node, errors: Array[String]) -> void:
 	# Actions de classe (actions.json).
 	_validate_ai_actions(db, db.actions.values(), "actions.json", errors)
 
-	var size_ids := _ids(db.rules.get("sizes", []))
+	var size_ids: Array = db.rules.get("sizes", []).map(func(s): return int(s.get("value", 0)))
 	for creature: Dictionary in db.creatures.values():
 		var ctx := "creatures.json › %s" % creature["id"]
 		for key in ["name", "ac", "hp", "actions"]:
@@ -255,7 +255,7 @@ static func _validate_combat_data(db: Node, errors: Array[String]) -> void:
 			errors.append(ctx + " : PV invalides « %s »" % creature.get("hp"))
 		if creature.has("gold") and not Dice.is_valid_expr(creature["gold"]):
 			errors.append(ctx + " : or invalide « %s »" % creature["gold"])
-		if creature.get("size", "medium") not in size_ids:
+		if int(creature.get("size", 0)) not in size_ids:
 			errors.append(ctx + " : taille inconnue « %s »" % creature.get("size"))
 		_validate_ai_actions(db, creature.get("actions", []), ctx, errors)
 		if creature.has("defenses"):
@@ -476,8 +476,13 @@ static func _validate_conditions(db: Node, conditions: Variant, ctx: String, err
 			"background":
 				for id in c["in"]:
 					_expect_ref(db.backgrounds, id, "passé", ctx, errors)
-			"size", "gender", "life_stage":
-				var list_key: String = {"size": "sizes", "gender": "genders", "life_stage": "life_stages"}[type]
+			"size":
+				var sizes: Array = db.rules.get("sizes", []).map(func(s): return int(s.get("value", 0)))
+				for value in c.get("in", []):
+					if int(value) not in sizes:
+						errors.append(ctx + " : taille inconnue « %s » (échelle de −4 à 5)" % value)
+			"gender", "life_stage":
+				var list_key: String = {"gender": "genders", "life_stage": "life_stages"}[type]
 				for id in c["in"]:
 					if id not in _ids(db.rules.get(list_key, [])):
 						errors.append(ctx + " : valeur inconnue « %s » pour la condition « %s »" % [id, type])

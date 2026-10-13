@@ -16,7 +16,7 @@ const SCHEMA := {
 	"species": ["in"],
 	"class": ["in"],
 	"background": ["in"],
-	"size": ["in"],
+	"size": [],  # "in": [valeurs], ou "min" / "max" sur l'échelle de −4 à 5
 	"gender": ["in"],
 	"life_stage": ["in"],
 	"age": [],
@@ -64,7 +64,9 @@ static func check(c: Dictionary, life: LifeState, meta: MetaState) -> bool:
 		"background":
 			return ch.background_id in c["in"]
 		"size":
-			return ch.size() in c["in"]
+			if c.has("in"):
+				return ch.size() in c["in"].map(func(v): return int(v))
+			return ch.size() >= int(c.get("min", -99)) and ch.size() <= int(c.get("max", 99))
 		"gender":
 			return ch.gender in c["in"]
 		"life_stage":
@@ -118,7 +120,11 @@ static func describe(c: Dictionary) -> String:
 			return Loc.ui("Passé : %s") % " / ".join(PackedStringArray(c["in"].map(
 				func(id): return DB.backgrounds[id]["name"])))
 		"size":
-			return Loc.ui("Taille : %s") % " / ".join(PackedStringArray(c["in"].map(DB.size_name)))
+			if c.has("in"):
+				return Loc.ui("Taille : %s") % " / ".join(PackedStringArray(c["in"].map(DB.size_name)))
+			if c.has("max"):
+				return Loc.ui("Taille %s ou moins") % DB.size_name(c["max"]).to_lower()
+			return Loc.ui("Taille %s ou plus") % DB.size_name(c["min"]).to_lower()
 		"gender":
 			return " / ".join(PackedStringArray(c["in"].map(DB.gender_name)))
 		"life_stage":

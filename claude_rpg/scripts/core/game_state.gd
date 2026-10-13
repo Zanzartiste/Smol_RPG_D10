@@ -104,16 +104,21 @@ func finish_combat() -> Dictionary:
 		if xp > 0:
 			lines.push_front(Loc.ui("+%d XP") % xp)
 
-	# Compagnons à 0 PV : assommés si le combat n'était pas mortel, morts sinon.
+	# Les membres du groupe à 0 PV étaient inconscients : après une victoire ou une fuite (ou une bagarre),
+	# les autres les ramènent à eux (1 PV). Si tout le groupe est tombé dans un combat mortel, ils meurent.
+	var wiped: bool = c.outcome == "defeat" and not knockout
 	for companion in life.companions.duplicate():
 		if companion.hp <= 0:
-			if knockout:
-				companion.hp = 1
-			else:
+			if wiped:
 				life.companions.erase(companion)
 				lines.append(Loc.ui("%s a péri au combat.") % companion.name)
-	if knockout and life.character.hp <= 0:
+			else:
+				companion.hp = 1
+				lines.append(Loc.ui("%s reprend connaissance.") % companion.name)
+	if life.character.hp <= 0 and not life.dead:
 		life.character.hp = 1
+		if not knockout:
+			lines.append(Loc.ui("Vos compagnons vous ramènent à vous."))
 
 	var key := c.outcome
 	var outcome: Dictionary = c.spec.get(key, {})

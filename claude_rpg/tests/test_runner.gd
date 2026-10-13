@@ -49,7 +49,10 @@ func _ready() -> void:
 	Saves.enabled = false
 	Saves.directory = "user://test_saves"
 	Meta.reset()  # indépendant des sauvegardes éventuelles du joueur
+	var verbose := "--verbose" in OS.get_cmdline_user_args()  # godot … -- --verbose : nom de chaque test
 	for test: String in TESTS:
+		if verbose:
+			printerr("> " + test)
 		# Une erreur de script interrompt la fonction, qui retourne alors null au lieu de true.
 		_expect(call(test) == true, "%s s'exécute jusqu'au bout (voir les erreurs ci-dessus)" % test)
 	print("\n%d vérifications, %d échec(s)" % [_checks, _failures])
@@ -96,23 +99,24 @@ func _test_character() -> bool:
 		and not c.is_trained("physique"), "rangs de départ : instinctive 2, autre 1, Magie 2 pour un lanceur")
 	_expect(Character.create("goblin", "fighter", "F").skill_rank("magic") == 0, "Magie : 0 pour un non-lanceur")
 	_expect(c.skill_mod("athletics") == c.skill_mod("physique"), "ancien id (Athlétisme) traduit en Physique")
-	_expect(c.max_hp == 6 + 2, "PV : d6 + CON")
-	_expect(c.size() == "small" and Character.create("human", "wizard", "H").size() == "medium",
+	_expect(c.max_hp == roundi(15 * pow(1.4142, -1)), "PV : CON 15 × 1,414^taille (gobelin : −1)")
+	_expect(c.size() == -1 and Character.create("human", "wizard", "H").size() == 0 and DB.size_name(-1) == "Petite",
 		"la taille dépend de l'espèce")
 	_expect(c.age_years() == 18 and c.life_stage() == "adult", "gobelin de 18 ans adulte (majorité)")
 	_expect(Character.create("human", "fighter", "N", {"background": "noble"}).gold == 15 + 25, "or du passé Noble")
 
-	# PV : d10 + CON (+2) au niveau 1 pour un guerrier au modèle (CON 15).
+	# PV : Constitution × 1,414^taille ; humain (taille 0) au modèle du guerrier : CON 15.
 	var life := _new_life("human", "fighter")
 	var f := life.character
-	_expect(f.max_hp == 12 and f.hp == 12, "PV du guerrier : 10 + 2")
+	_expect(f.max_hp == 15 and f.hp == 15, "PV du guerrier humain : CON 15")
 	f.hp = 7
 	life.change_ability("con", -2, "test")
-	_expect(f.max_hp == 11 and f.hp == 6, "CON 15 -> 13 : PV max et actuels -1")
+	_expect(f.max_hp == 13 and f.hp == 5, "CON 15 -> 13 : PV max et actuels -2")
 	life.change_ability("con", 4, "test")
-	_expect(f.max_hp == 13 and f.hp == 8, "CON 13 -> 17 : PV max et actuels +2")
+	_expect(f.max_hp == 17 and f.hp == 9, "CON 13 -> 17 : PV max et actuels +4")
 	f.add_xp(300)
-	_expect(f.level == 2 and f.max_hp == 13 + 6 + 3, "niveau 2 : + (d10/2 + 1) + CON")
+	_expect(f.level == 2 and f.max_hp == 17, "niveau 2 : les PV ne montent pas avec le niveau")
+	_expect(Character.create("dwarf", "fighter", "N").max_hp == 11, "nain (taille −1) : CON 15 / 1,414 = 11 PV")
 	f.hp = 1
 	life.change_ability("con", -10, "Affaibli")
 	_expect(life.dead and life.death_cause == "Affaibli", "une baisse de CON qui vide les PV tue")
@@ -178,9 +182,9 @@ func _test_feats() -> bool:
 	var init := c.initiative_bonus()
 	Effects.apply_all([{"type": "add_feat", "id": "tough"}, {"type": "add_feat", "id": "alert"}], life, Meta)
 	_expect(c.max_hp == hp + 2 and c.hp == c.max_hp, "Robuste : +2 PV par niveau")
-	_expect(c.initiative_bonus() == init + c.proficiency_bonus(), "Vigilant : bonus de maîtrise à l'initiative")
+	_expect(c.initiative_bonus() == init + c.skill_rank("physique"), "Vigilant : rang de Physique à l'initiative")
 	c.add_xp(300)
-	_expect(c.max_hp == hp + 2 + 4 + 2 + 2, "Robuste suit les niveaux")
+	_expect(c.max_hp == hp + 2 * 2, "Robuste suit les niveaux (+2 par niveau)")
 	var str_before := c.ability_score("str")
 	c.add_feat("athlete")
 	_expect(c.choice_options("feat:athlete/ability") == ["str", "dex"] and c.choose("feat:athlete/ability", "str")
@@ -290,10 +294,11 @@ func _test_conditions() -> bool:
 	var life := _new_life()
 	var meta := MetaState.new()
 	_expect(Conditions.check({"type": "species", "in": ["goblin"]}, life, meta), "condition espèce")
-	_expect(Conditions.check({"type": "size", "in": ["small"]}, life, meta), "condition taille")
+	_expect(Conditions.check({"type": "size", "in": [-1]}, life, meta) and Conditions.check({"type": "size", "max": -1}, life, meta)
+		and not Conditions.check({"type": "size", "min": 0}, life, meta), "condition taille")
 	_expect(Conditions.check({"type": "gender", "in": ["nonbinary"]}, life, meta), "condition genre (par défaut)")
 	_expect(not Conditions.check({"type": "background", "in": ["sage"]}, life, meta), "condition passé")
-	_expect(Conditions.describe({"type": "size", "in": ["tiny", "small"]}) == "Taille : Très petite / Petite",
+	_expect(Conditions.describe({"type": "size", "in": [-2, -1]}) == "Taille : Très petite / Petite",
 		"description de la condition de taille")
 	_expect(Loc.gendered("Vous êtes {g:prêt|prête|prêt·e} !", "female") == "Vous êtes prête !", "accord féminin")
 	_expect(Loc.gendered("{g:il|elle|iel} et {g:un|une|un·e}", "nonbinary") == "iel et un·e", "accord neutre")
@@ -720,6 +725,8 @@ func _test_class_features() -> bool:
 	combat = Game.start_combat({"enemies": ["_target"]})
 	hero = combat.hero
 	var target := combat.enemies()[0]
+	hero.character.max_hp = 200
+	hero.hp = 200
 	var hp := hero.hp
 	combat._roll_damage(target, hero, "10", "", false, beats, 1.0, true)
 	combat._roll_damage(target, hero, "10", "", false, beats, 1.0, true)
@@ -895,7 +902,8 @@ func _test_new_species() -> bool:
 	combat._deal_damage(combat.enemies()[0], combat.hero, 999, "piercing", false, "")
 	_expect(combat.hero.hp == 1 and not Game.life.dead and orc.resources["relentless_endurance"] == 0, "Endurance implacable : reste à 1 PV")
 	combat._deal_damage(combat.enemies()[0], combat.hero, 999, "piercing", false, "")
-	_expect(Game.life.dead, "la deuxième fois, il tombe")
+	combat._check_end()
+	_expect(Game.life.dead, "la deuxième fois, il tombe (seul : mort)")
 	Game.combat = null
 
 	for species_id in ["dwarf", "orc", "tiefling"]:
@@ -1450,15 +1458,15 @@ func _test_combat_turns() -> bool:
 	var familiar := Actions.def("find_familiar")
 	combat.perform(combat.hero, familiar)
 	_expect(combat.living("ally").size() == 2 and combat.living("ally")[1].summoned, "Appel du familier : une invocation")
-	for i in 7:
+	for i in 15:
 		combat._apply(combat.hero, {"type": "summon", "creature": "familiar"}, null, false)
-	_expect(combat.living("ally").size() == 7 and combat.capacity_used("ally") == 4.0,
-		"6 familiers (½ place) + le héros = 4 places, pas plus")
+	_expect(combat.living("ally").size() == 13 and combat.capacity_used("ally") == 4.0,
+		"12 familiers (taille −3 : ¼ de place) + le héros = 4 places, pas plus")
 	_expect(combat.action_unavailable_reason(combat.hero, familiar) != "", "plus d'invocation sans place")
 	var summon := combat.living("ally")[1]
 	_expect(not summon.is_player_controlled() and not combat.ai_turn(summon).is_empty(), "l'invocation joue seule")
 	Game.combat = null
-	_expect(Combat.size_slots("large") == 2.0 and Combat.size_slots("small") == 0.5, "places selon la taille")
+	_expect(Combat.size_slots(2) == 2.0 and Combat.size_slots(-1) == 0.5 and Combat.size_slots(9) == 4.0, "places selon la taille")
 	return true
 
 
@@ -1483,12 +1491,21 @@ func _test_companions() -> bool:
 		"le compagnon a les actions de sa classe")
 	var choice := combat.auto_choice(ally)
 	_expect(not combat.perform(ally, choice["action"], choice["target"]).is_empty(), "le compagnon agit")
-	# Le compagnon tombe pendant un combat mortel : il meurt pour de bon.
+	# Le compagnon tombe pendant un combat mortel : inconscient, il est ramené à lui après la victoire.
 	ally.hp = 0
 	combat.enemies()[0].hp = 0
 	combat.outcome = "victory"
 	var result := Game.finish_combat()
-	_expect(life.companions.is_empty() and result["lines"].has("Mira a péri au combat."), "mort définitive du compagnon")
+	_expect(life.companions.size() == 1 and life.companions[0].hp == 1 and result["lines"].has("Mira reprend connaissance."),
+		"compagnon inconscient, ramené à lui après la victoire")
+	# Tout le groupe tombe dans un combat mortel : c'est la mort.
+	combat = Game.start_combat({"enemies": ["wolf"]})
+	combat.allies()[1].hp = 0
+	combat.hero.hp = 0
+	combat._check_end()
+	result = Game.finish_combat()
+	_expect(Game.life.dead and life.companions.is_empty() and result["lines"].has("Mira a péri au combat."),
+		"tout le groupe tombe : mort du héros et du compagnon")
 	_expect(not Conditions.check({"type": "companion", "id": "mira"}, life, Meta), "plus de compagnon")
 	return true
 

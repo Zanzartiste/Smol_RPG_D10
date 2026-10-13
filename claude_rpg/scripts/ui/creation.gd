@@ -483,7 +483,7 @@ func _species_info(species: Dictionary) -> String:
 	var stages: Dictionary = species.get("age_stages", {})
 	var text := "[i]%s[/i]\n%s   %s   %s" % [
 		species.get("description", ""),
-		_field(tr("Taille :"), DB.size_name(species.get("size", "medium"))),
+		_field(tr("Taille :"), DB.size_name(species.get("size", 0))),
 		_field(tr("Adulte à :"), tr("%d ans") % int(stages.get("adult", 0))),
 		_field(tr("Vieillit dès :"), tr("%d ans") % int(species.get("aging_age", 0)))]
 	if not species.get("modifiers", []).is_empty():

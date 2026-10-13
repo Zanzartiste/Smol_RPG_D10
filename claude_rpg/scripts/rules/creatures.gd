@@ -25,8 +25,8 @@ static func name_of(id: String) -> String:
 	return def(id).get("name", id)
 
 
-static func size_of(id: String) -> String:
-	return def(id).get("size", "medium")
+static func size_of(id: String) -> int:
+	return int(def(id).get("size", 0))
 
 
 static func actions_of(id: String) -> Array:
