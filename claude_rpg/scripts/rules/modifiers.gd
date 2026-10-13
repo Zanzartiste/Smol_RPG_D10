@@ -41,7 +41,8 @@ const SCHEMA := {
 	"potent_cantrip": [],  # tour de magie raté : moitié des dégâts (Évocateur)
 	"empowered_evocation": [],  # + modificateur d'incantation aux dégâts d'évocation
 	"fast_hands": [],  # utiliser un objet ne coûte pas l'action, une fois par tour (Voleur)
-	"survivor": [],  # début de tour à moitié de PV ou moins : récupère 5 + CON (Champion)  # tombe à 1 PV au lieu de 0 (ressource relentless_endurance, repos long)
+	"survivor": [],
+	"cunning_action": [],  # Se cacher devient une action bonus (Ruse du Roublard)  # début de tour à moitié de PV ou moins : récupère 5 + CON (Champion)  # tombe à 1 PV au lieu de 0 (ressource relentless_endurance, repos long)
 }
 
 ## Types de modificateurs qui deviennent des défenses (type -> sorte de Defenses).
@@ -150,6 +151,8 @@ static func describe(m: Dictionary) -> String:
 			return Loc.ui("Mains lestes")
 		"survivor":
 			return Loc.ui("Survivant")
+		"cunning_action":
+			return Loc.ui("Ruse : se cacher en action bonus")
 	return str(m)
 
 

@@ -615,10 +615,32 @@ func _test_actions() -> bool:
 	Game.start_life(Character.create("human", "fighter", "Guerrier"), 8)
 	combat = Game.start_combat({"enemies": ["wolf"]})
 	var wind := Actions.def("second_wind")
+	combat.turn = combat.order.find(combat.hero)
+	combat.start_turn()
 	combat.hero.hp = 3
 	combat.perform(combat.hero, wind)
-	_expect(combat.hero.hp > 3 and combat.action_unavailable_reason(combat.hero, wind) == "déjà utilisée",
-		"Second souffle : soigne, une fois par combat")
+	_expect(combat.hero.hp > 3 and combat.bonus_left == 0 and combat.actions_left == 1,
+		"Second souffle : une action bonus, l'action reste disponible")
+	_expect(combat.action_unavailable_reason(combat.hero, wind) != "" and combat.can_act_again(), "une seule fois")
+
+	# Réactions : les actions gardées à la fin du tour servent à esquiver puis parer.
+	combat.end_turn()
+	_expect(combat.hero.reactions == 1, "fin de tour avec l'action gardée : 1 réaction")
+	var beats: Array[Dictionary] = []
+	var wolf := combat.enemies()[0]
+	_expect(not combat._defend(wolf, combat.hero, {"type": "attack"}, -50, beats, true) and combat.hero.reactions == 0,
+		"esquive réussie : l'attaque est évitée")
+	combat.hero.reactions = 2
+	beats.clear()
+	_expect(combat._defend(wolf, combat.hero, {"type": "attack"}, 100, beats, true) and beats.size() == 2,
+		"esquive puis parade, toutes deux ratées")
+	combat.hero.reactions = 2
+	beats.clear()
+	combat.hero.character.unequip("off_hand")
+	combat._defend(wolf, combat.hero, {"type": "attack", "ranged": true}, 100, beats, true)
+	_expect(beats.size() == 1, "attaque à distance : pas de parade sans bouclier")
+	combat.hero.character.auto_combat = true
+	_expect(combat.hero.is_auto(), "IA activable par personnage")
 	Game.combat = null
 	_expect(Actions.text_of("pommel_strike") == "Attaque avec votre arme. Si elle touche : 1 Étourdi.",
 		"texte généré d'une action")

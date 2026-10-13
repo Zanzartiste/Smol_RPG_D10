@@ -20,6 +20,7 @@ var intent: Dictionary = {}  # action préparée, exécutée au prochain tour (e
 var uses: Dictionary = {}  # id d'action -> utilisations restantes dans ce combat (per_combat)
 var reaction_used := false  # réaction déjà utilisée ce round (Esquive instinctive…), rendue à son tour
 var savage_used := false  # Frappe brutale déjà utilisée ce tour
+var reactions := 0  # actions gardées à la fin de son tour : esquives et parades jusqu'à son prochain tour
 var fast_hands_used := false  # Mains lestes déjà utilisées ce tour
 var _hp := 0
 var _max_hp := 0
@@ -192,6 +193,21 @@ func resource_key(action: Dictionary) -> String:
 		if character != null and int(character.resources.get(Spellcasting.slot_key(level), 0)) > 0:
 			return Spellcasting.slot_key(level)
 	return Spellcasting.slot_key(base)
+
+
+## L'action est-elle une action bonus pour ce combattant (Second souffle ; Se cacher avec la Ruse) ?
+func is_bonus(action: Dictionary) -> bool:
+	return action.get("bonus", false) or (action.get("id", "") == "hide" and has_modifier("cunning_action"))
+
+
+## L'IA joue-t-elle ce personnage (option par personnage) ?
+func is_auto() -> bool:
+	return character != null and character.auto_combat
+
+
+## Le combattant a-t-il un bouclier (pour parer une attaque à distance) ?
+func has_shield() -> bool:
+	return character != null and Equipment.is_shield(character.equipment.get("off_hand", ""))
 
 
 ## Une action peut-elle être utilisée ? Retourne "" si oui, sinon la raison.

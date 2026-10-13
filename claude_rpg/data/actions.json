@@ -12,6 +12,7 @@
 		"name": "Second souffle",
 		"description": "Vous puisez dans vos réserves pour regagner des forces.",
 		"target": "self",
+		"bonus": true,
 		"per_combat": 1,
 		"effects": [{"type": "heal", "amount": "1d10+level"}]
 	},

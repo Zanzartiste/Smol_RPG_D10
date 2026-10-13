@@ -6,7 +6,8 @@ extends RefCounted
 ##                        d'au moins "spell_level", voir Spellcasting),
 ##               "per_combat"?: nombre d'utilisations par combat,
 ##               "attack_action"?: true pour l'action Attaque (Attaque supplémentaire),
-##               "free"?: true si l'action ne consomme pas l'action du tour (Fougue)}
+##               "free"?: true si l'action ne consomme pas l'action du tour (Fougue),
+##               "bonus"?: true pour une action bonus (une par tour, en plus de l'action)}
 ## Une action sans coût ni limite (attaque, tour de magie) est utilisable à volonté.
 
 

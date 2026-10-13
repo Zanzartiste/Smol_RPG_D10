@@ -27,6 +27,7 @@ var age_days := 0  # jours vécus depuis le début de la partie
 var art_seed := 0  # graine des variations du portrait procédural
 var template_id := ""  # pour un compagnon : son id dans companions.json
 var npc_id := ""  # PNJ du monde lié à ce personnage (compagnon recruté, ou compagnon avec relation)
+var auto_combat := false  # en combat, l'IA joue ce personnage
 var load_penalty := 0  # malus de charge du groupe (calculé par LifeState.refresh_load, non sauvegardé)
 var resources: Dictionary = {}  # ressources restantes (spell_slot_1…, indomitable…), rechargées par un repos long
 
@@ -739,7 +740,7 @@ func to_dict() -> Dictionary:
 		"gender": gender, "abilities": abilities, "feats": feats, "choices": choices, "pending_feats": pending_feats,
 		"pending_ability_points": pending_ability_points, "equipment": equipment, "defenses": defenses.to_dict(),
 		"level": level, "xp": xp, "hp": hp, "max_hp": max_hp, "gold": gold, "inventory": inventory,
-		"start_age": start_age, "age_days": age_days, "art_seed": art_seed, "template_id": template_id, "npc_id": npc_id,
+		"start_age": start_age, "age_days": age_days, "art_seed": art_seed, "template_id": template_id, "npc_id": npc_id, "auto_combat": auto_combat,
 		"resources": resources,
 	}
 
@@ -778,6 +779,7 @@ static func from_dict(data: Dictionary) -> Character:
 	c.art_seed = int(data.get("art_seed", 0))
 	c.template_id = data.get("template_id", "")
 	c.npc_id = data.get("npc_id", "")
+	c.auto_combat = data.get("auto_combat", false)
 	c.resources = _int_dict(data.get("resources", {}))
 	c.apply_default_choices(true)  # anciennes sauvegardes : compétences de classe par défaut
 	# Anciennes sauvegardes (ex. "spell_slot" unique) : on ne garde que les ressources connues.

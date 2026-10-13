@@ -96,6 +96,7 @@
 			{"level": 1, "id": "expertise", "name": "Expertise", "description": "+1 rang dans deux compétences déjà entraînées.",
 				"choices": [{"id": "skills", "name": "Expertise", "type": "skill", "count": 2, "from": "trained",
 					"modifiers": [{"type": "skill_rank", "id": "$", "amount": 1}], "default": ["stealth", "sleight_of_hand"]}]},
+			{"level": 2, "id": "cunning_action", "name": "Ruse", "description": "Se cacher devient une action bonus.", "modifiers": [{"type": "cunning_action"}]},
 			{"level": 3, "id": "sneak_attack_2", "name": "Attaque sournoise (2d6)", "description": "L'Attaque sournoise gagne un dé tous les deux niveaux (2d6 au niveau 3, 3d6 au niveau 5…)."},
 			{"level": 3, "id": "subclass", "name": "Archétype de roublard", "description": "Vous choisissez votre archétype (sous-classe).",
 				"choices": [{"id": "subclass", "name": "Archétype de roublard", "type": "option", "count": 1, "default": ["thief"], "options": [

@@ -31,6 +31,7 @@ var initiative_roll: Dictionary = {}  # lancer d'initiative de tous les combatta
 var hero_down_cause := ""  # cause de la mort si tout le groupe tombe après le héros
 var skipped := false  # le combattant actif passe son tour (étourdi, mort pendant ses états…)
 var actions_left := 1  # actions restantes au combattant actif pendant ce tour
+var bonus_left := 1  # actions bonus restantes au combattant actif pendant ce tour
 var _next_id := 0
 
 
@@ -156,12 +157,21 @@ func action_choices(actor: Combatant) -> Array[Dictionary]:
 	return result
 
 
-## Le combattant actif peut-il encore agir pendant ce tour ?
+## Le combattant actif peut-il encore agir pendant ce tour (action, ou action bonus disponible) ?
 func can_act_again() -> bool:
-	return actions_left > 0 and not is_over() and current().is_alive()
+	if is_over() or not current().is_alive():
+		return false
+	if actions_left > 0:
+		return true
+	return bonus_left > 0 and action_choices(current()).any(func(c): return c["available"])
 
 
 func action_unavailable_reason(actor: Combatant, action: Dictionary) -> String:
+	if actor == current() and not action.get("free", false):
+		if actor.is_bonus(action) and bonus_left <= 0:
+			return Loc.ui("action bonus déjà utilisée")
+		if not actor.is_bonus(action) and actions_left <= 0:
+			return Loc.ui("action déjà utilisée")
 	var reason := actor.unavailable_reason(action)
 	if reason != "":
 		return reason
@@ -183,6 +193,8 @@ func start_turn() -> Array[Dictionary]:
 	var beats: Array[Dictionary] = []
 	skipped = false
 	actions_left = 1
+	bonus_left = 1
+	actor.reactions = 0
 	actor.reaction_used = false
 	actor.savage_used = false
 	actor.fast_hands_used = false
@@ -210,8 +222,12 @@ func start_turn() -> Array[Dictionary]:
 
 
 ## Passe au combattant vivant suivant (nouveau round après le dernier).
+## Fin du tour du combattant actif. Un personnage qui garde des actions (action, action bonus) peut
+## s'en servir pour esquiver ou parer jusqu'à son prochain tour (réactions).
 func end_turn() -> void:
 	var actor := current()
+	if actor.character != null and actor.is_alive():
+		actor.reactions = maxi(0, actions_left) + maxi(0, bonus_left)
 	for status_id: String in actor.statuses.keys():
 		if StatusEffects.decays_at_end(status_id):
 			_decay(actor, status_id)
@@ -234,7 +250,11 @@ func end_turn() -> void:
 ## suivants visent l'ennemi le plus faible.
 func perform(actor: Combatant, action: Dictionary, target: Combatant = null) -> Array[Dictionary]:
 	actor.consume(action)
-	if not action.get("free", false):
+	if action.get("free", false):
+		pass
+	elif actor.is_bonus(action):
+		bonus_left -= 1
+	else:
 		actions_left -= 1
 	var beats: Array[Dictionary] = []
 	_beat(beats, Loc.ui("%s : %s.") % [actor.name, action["name"]])
@@ -280,6 +300,8 @@ func use_item(actor: Combatant, item_id: String, target: Combatant) -> Array[Dic
 ## Tentative de fuite du groupe : d20 + DEX contre le DD de fuite.
 func flee(actor: Combatant) -> Array[Dictionary]:
 	var advantage := -1 if actor.has_status_flag("check_disadvantage") else 0
+	actions_left = 0
+	bonus_left = 0
 	var d20 := Dice.roll_d20(rng, advantage)
 	var die := int(d20["die"])
 	var mod := actor.check_mod("dex")
@@ -485,6 +507,8 @@ func _apply(actor: Combatant, e: Dictionary, target: Combatant, fast: bool) -> D
 				Loc.ui("coup critique !") if critical else (Loc.ui("touché") if hit else Loc.ui("raté"))]
 			_beat(beats, text, {"dice": d20["dice"], "mod": bonus, "dc": ac, "dc_label": "CA", "advantage": advantage,
 				"success": hit, "stat": "%s → %s%s" % [actor.name, target.name, Dice.advantage_text(advantage)]}, fast)
+			if hit and die != 20:
+				hit = _defend(actor, target, e, die + bonus, beats, fast)
 			if hit:
 				var savage: bool = e.get("weapon") is bool and e.get("weapon") and actor.has_modifier("savage_attacker") \
 					and not actor.savage_used
@@ -611,6 +635,35 @@ func _skill_check(actor: Combatant, target: Combatant, e: Dictionary, beats: Arr
 		Loc.ui("réussi") if success else Loc.ui("raté")],
 		{"dice": d20["dice"], "mod": mod, "dc": dc, "success": success, "stat": "%s (%s)" % [label, actor.name]}, fast)
 	return success
+
+
+## Réactions de la cible touchée : une esquive (Physique, DEX), puis une parade (Physique ou Armes de
+## mêlée, DEX ; une attaque à distance ne se pare qu'avec un bouclier), tant qu'il lui reste des
+## réactions. L'attaque ne touche que si son total dépasse le jet de défense. Un 20 naturel est imparable.
+## Retourne true si l'attaque touche toujours.
+func _defend(attacker: Combatant, target: Combatant, e: Dictionary, attack_total: int, beats: Array[Dictionary],
+		fast: bool) -> bool:
+	var ranged: bool = e.get("ability", "") == "spell" or e.get("ranged", false) \
+		or (e.get("weapon") is bool and e.get("weapon") and attacker.character != null
+			and Equipment.has_property(attacker.character.weapon_id(), "ranged")) \
+		or (e.get("weapon") is String and Equipment.has_property(e["weapon"], "ranged"))
+	var options: Array[Dictionary] = [{"name": Loc.ui("esquive"), "mod": target.skill_mod("physique", "dex")}]
+	if not ranged or target.has_shield():
+		options.append({"name": Loc.ui("parade"), "mod": maxi(target.skill_mod("physique", "dex"), target.skill_mod("weapon_melee", "dex"))})
+	for option in options:
+		if target.reactions <= 0:
+			break
+		target.reactions -= 1
+		var die := rng.randi_range(1, 20)
+		var total := die + int(option["mod"])
+		var stopped := attack_total <= total
+		_beat(beats, Loc.ui("%s tente une %s : %d + %d = %d contre %d — %s") % [target.name, option["name"], die, option["mod"],
+			total, attack_total, Loc.ui("réussie !") if stopped else Loc.ui("ratée")],
+			{"dice": [{"sides": 20, "value": die}], "mod": option["mod"], "dc": attack_total, "success": stopped,
+			"stat": "%s (%s)" % [String(option["name"]).capitalize(), target.name]}, fast)
+		if stopped:
+			return false
+	return true
 
 
 ## Jet de sauvegarde de la cible contre le DD de l'acteur (ou "dc"). Inflexible relance un échec.

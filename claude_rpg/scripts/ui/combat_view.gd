@@ -49,7 +49,10 @@ func run(spec: Dictionary, background_texture: Texture2D) -> Dictionary:
 		if combat.is_over():
 			break
 		if not combat.skipped:
-			if actor.is_player_controlled():
+			if actor.is_player_controlled() and actor.is_auto():
+				await get_tree().create_timer(0.3).timeout
+				await _play(combat.auto_turn(actor))
+			elif actor.is_player_controlled():
 				_actor = actor
 				_refresh()
 				await _turn_finished
@@ -78,7 +81,8 @@ func _refresh() -> void:
 	if not _pending.is_empty():
 		hint_label.text = tr("Choisissez une cible sur le champ de bataille (Échap pour annuler).")
 	elif _actor != null and not _busy:
-		hint_label.text = tr("%s : choisissez une action.") % _actor.name
+		hint_label.text = tr("%s : action %d · action bonus %d") % [_actor.name, maxi(0, combat.actions_left),
+			maxi(0, combat.bonus_left)]
 	else:
 		hint_label.text = ""
 	_fill_action_bar()
@@ -113,7 +117,9 @@ func _fill_action_bar() -> void:
 	if combat.can_flee_now(_actor):
 		var chance := clampf((21 - (combat.flee_dc() - _actor.check_mod("dex"))) / 20.0, 0.05, 0.95)
 		_button(tr("Fuir (%d %%)") % roundi(chance * 100), _on_flee_pressed, enabled)
-	_button(tr("Passer"), _on_pass_pressed, enabled)
+	var auto := _button(tr("IA : %s") % (tr("oui") if _actor.is_auto() else tr("non")), _on_auto_toggled, enabled)
+	auto.tooltip_text = tr("Laisser l'IA jouer ce personnage (à partir de maintenant)")
+	_button(tr("Fin du tour"), _on_pass_pressed, enabled)
 
 
 ## Ex. « Attaque (Épée longue) — 1d10+3 tranchant, +5 », « Projectile magique — 3d4+3 force [2/2] ».
@@ -229,6 +235,17 @@ func _cancel_pending() -> void:
 func _on_flee_pressed() -> void:
 	if _actor != null and not _busy:
 		_act(combat.flee(_actor))
+
+
+func _on_auto_toggled() -> void:
+	if _actor == null or _busy:
+		return
+	_actor.character.auto_combat = not _actor.character.auto_combat
+	if _actor.character.auto_combat:
+		await _play(combat.auto_turn(_actor))
+		_turn_finished.emit()
+	else:
+		_refresh()
 
 
 func _on_pass_pressed() -> void:
