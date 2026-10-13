@@ -5,8 +5,7 @@ extends Control
 ## Usage : `await dice_tray.play(roll)`, ou `play(roll, true)` pour un lancer rapide (ennemis, dégâts).
 ## Un clic ou une touche accélère l'animation (voir skip()).
 ##
-## `roll` : {"dice": [{"sides": 20, "value": 14, "dropped"?: true}, ...], "mod": 2, "stat": "Athlétisme",
-##           "dc": 13, "dc_label": "CA", "success": true}  (dc, dc_label, success et stat sont facultatifs)
+## `roll` : {"dice": [{"sides": 10, "value": 7}, ...], "stat"?: "Initiative"} : les dés sont additionnés.
 ## Réserve de d10 (voir Dice) : {"pool": true, "dice": [{"sides": 10, "value", "success", "extra"?, "dropped"?}],
 ##   "threshold", "successes", "auto"?, "difficulty"?, "dc_label"?, "success"?, "critical"?, "fumble"?, "stat"}
 ##   Les succès sont en vert, les dés nés d'un 1 cerclés d'or, les dés relancés (critique) assombris.
@@ -64,7 +63,7 @@ func play(roll: Dictionary, fast := false) -> void:
 			"value": int(specs[i]["value"]),
 			"label": specs[i].get("label", ""),
 			"total": int(specs[i].get("total", specs[i]["value"])),
-			"dropped": specs[i].get("dropped", false),  # dé écarté (avantage, ou relancé par un critique)
+			"dropped": specs[i].get("dropped", false),  # dé relancé par un critique (assombri)
 			"success": specs[i].get("success", false),  # réserve de d10 : succès
 			"extra": specs[i].get("extra", false),  # réserve de d10 : dé né d'un 1
 			"crit": specs[i].get("crit", false),  # réserve de d10 : dé relancé par un critique
@@ -201,10 +200,7 @@ func _draw() -> void:
 	var font := get_theme_default_font()
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0.05, 0.04, 0.03, 0.75))
 	draw_string(font, Vector2(16, 32), _notation(), HORIZONTAL_ALIGNMENT_LEFT, -1, 22, UITheme.GOLD)
-	if _roll.has("dc"):
-		draw_string(font, Vector2(0, 32), "%s %d" % [_roll.get("dc_label", Loc.ui("DD")), _roll["dc"]], HORIZONTAL_ALIGNMENT_RIGHT,
-			size.x - 16, 22, UITheme.GOLD)
-	elif _roll.has("difficulty"):
+	if _roll.has("difficulty"):
 		draw_string(font, Vector2(0, 32), "%s %d" % [_roll.get("dc_label", Loc.ui("Difficulté")), _roll["difficulty"]],
 			HORIZONTAL_ALIGNMENT_RIGHT, size.x - 16, 22, UITheme.GOLD)
 	for d in _dice:
@@ -223,11 +219,6 @@ func _draw_die(d: Dictionary, font: Font) -> void:
 		ink = INK.lightened(0.35)
 	elif d["settled"] and _roll.get("pool", false) and d["success"]:
 		body = SUCCESS_BODY
-	elif d["settled"] and sides == 20 and d["value"] == 20:
-		body = UITheme.GOLD.lightened(0.25)
-	elif d["settled"] and sides == 20 and d["value"] == 1:
-		body = Color("#b8452f")
-		ink = Color("#fff3e0")
 	var shape := _shape(sides)
 	var outline := shape.duplicate()
 	outline.append(shape[0])
@@ -270,34 +261,11 @@ func _draw_verdict(font: Font) -> void:
 		return
 	var total := 0
 	var parts := PackedStringArray()
-	var kept: Array[Dictionary] = []
 	for d in _dice:
-		if d["dropped"]:
-			continue
-		kept.append(d)
 		total += int(d["value"])
 		parts.append(str(d["value"]))
-	var mod := int(_roll.get("mod", 0))
-	var line := " + ".join(parts)
-	if mod != 0:
-		line += (" + %d" if mod > 0 else " − %d") % absi(mod)
-	if mod != 0 or kept.size() > 1:
-		line += " = %d" % (total + mod)
-	var y := size.y - 18.0
-	draw_string(font, Vector2(16, y), line, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, UITheme.TEXT)
-	if _roll.has("success"):
-		var ok: bool = _roll["success"]
-		var is_attack: bool = _roll.get("dc_label", "") == "CA"
-		var verdict := Loc.ui("RÉUSSITE") if ok else Loc.ui("ÉCHEC")
-		if is_attack:
-			verdict = Loc.ui("TOUCHÉ") if ok else Loc.ui("RATÉ")
-		var natural: int = kept[0]["value"] if kept.size() == 1 and kept[0]["sides"] == 20 else 0
-		if natural == 20:
-			verdict = Loc.ui("CRITIQUE !") if is_attack else Loc.ui("20 NATUREL !")
-		elif natural == 1:
-			verdict = Loc.ui("1 NATUREL…")
-		draw_string(font, Vector2(0, y), verdict, HORIZONTAL_ALIGNMENT_RIGHT, size.x - 16, 30,
-			UITheme.GOOD if ok else UITheme.BAD)
+	var line := " + ".join(parts) + (" = %d" % total if parts.size() > 1 else "")
+	draw_string(font, Vector2(16, size.y - 18.0), line, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, UITheme.TEXT)
 
 
 ## Verdict d'une réserve : « 3 succès » à gauche, « RÉUSSITE », « CRITIQUE 2 », « ÉCHEC CRITIQUE »… à droite.
@@ -320,26 +288,19 @@ func _draw_pool_verdict(font: Font) -> void:
 	draw_string(font, Vector2(0, y), verdict, HORIZONTAL_ALIGNMENT_RIGHT, size.x - 16, 30, UITheme.GOOD if ok else UITheme.BAD)
 
 
-## Notation des dés lancés, ex. « Athlétisme : 1d20 + 2 », « Physique : 3d10 ≤ 5 ».
+## Notation des dés lancés, ex. « Physique : 3d10 ≤ 5 », « Initiative : 4d10 ».
 func _notation() -> String:
 	if _roll.get("pool", false):
 		var thrown := _dice.filter(func(d): return not d["extra"] and not d["crit"]).size()
 		var text := "%dd10 ≤ %d" % [thrown, int(_roll.get("threshold", 0))]
 		return "%s : %s" % [_roll["stat"], text] if _roll.has("stat") else text
 	var counts := {}
-	var dropped := 0
 	for d in _dice:
 		counts[d["sides"]] = int(counts.get(d["sides"], 0)) + 1
-		dropped += 1 if d["dropped"] else 0
 	var parts := PackedStringArray()
 	for sides in counts:
 		parts.append("%dd%d" % [counts[sides], sides])
 	var text := " + ".join(parts)
-	if dropped > 0:
-		text = Loc.ui("2d20, on garde le %s") % (Loc.ui("meilleur") if _roll.get("advantage", 0) > 0 else Loc.ui("pire"))
-	var mod := int(_roll.get("mod", 0))
-	if mod != 0:
-		text += (" + %d" if mod > 0 else " − %d") % absi(mod)
 	if _roll.has("stat"):
 		text = "%s : %s" % [_roll["stat"], text]
 	return text

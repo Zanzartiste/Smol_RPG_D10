@@ -6,7 +6,7 @@ extends RefCounted
 ##    "instinctive"?: true, "base_rank"?, "caster_base_rank"?}
 ## Chaque compétence a un **rang** : 1 au départ, 2 si elle est instinctive (Magie : 0, ou 2 pour un
 ## lanceur de sorts). Le passé, la classe, les dons et l'équipement ajoutent des rangs (modificateur
-## "skill_rank"). Un test vaut d20 + modificateur d'attribut + rang.
+## "skill_rank"). Un test lance [rang] d10 contre un seuil égal à l'attribut (voir Dice).
 
 const CATEGORY_NAMES := {"combat": "Combat", "social": "Social", "roguery": "Roublardise", "knowledge": "Connaissances et métiers"}
 ## Anciennes compétences (D&D) -> nouvelles, pour les anciennes sauvegardes et les anciens tests.

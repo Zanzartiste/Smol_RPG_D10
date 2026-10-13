@@ -27,8 +27,6 @@ static func _validate_rules(db: Node, errors: Array[String]) -> void:
 	if db.rules.get("standard_array", []).size() != db.abilities.size():
 		errors.append("rules.json : standard_array doit avoir une valeur par attribut")
 	var xp_table: Array = db.rules.get("xp_by_level", [])
-	if db.rules.get("proficiency_by_level", []).size() != xp_table.size():
-		errors.append("rules.json : proficiency_by_level doit avoir autant d'entrées que xp_by_level")
 	for level in db.rules.get("advancement_levels", []):
 		if int(level) < 2 or int(level) > xp_table.size():
 			errors.append("rules.json : niveau d'amélioration hors limites : %s" % level)
@@ -130,7 +128,7 @@ static func _validate_modifiers(db: Node, mods: Variant, ctx: String, errors: Ar
 				_expect_ref(db.abilities, m["id"], "attribut", ctx, errors)
 			"skill_rank":
 				_expect_ref(db.skills, m["id"], "compétence", ctx, errors)
-			"save_proficiency":
+			"resist_proficiency":
 				_expect_ref(db.abilities, m["id"], "attribut", ctx, errors)
 			"resistance", "immunity", "vulnerability":
 				_expect_ref(db.damage_types, m["damage_type"], "type de dégâts", ctx, errors)
@@ -185,8 +183,6 @@ static func _validate_classes(db: Node, errors: Array[String]) -> void:
 	var ability_ids: Array = db.abilities.keys()
 	for cls: Dictionary in db.classes.values():
 		var ctx := "classes.json › %s" % cls["id"]
-		if not cls.has("hit_die"):
-			errors.append(ctx + " : hit_die manquant")
 		var priority: Array = cls.get("ability_priority", [])
 		if priority.size() != ability_ids.size() or ability_ids.any(func(a): return a not in priority):
 			errors.append(ctx + " : ability_priority doit contenir chaque attribut une fois")
@@ -202,8 +198,8 @@ static func _validate_classes(db: Node, errors: Array[String]) -> void:
 		_validate_choices(db, cls.get("choices", []), ctx, errors)
 		for skill_id: String in cls.get("skill_ranks", {}):
 			_expect_ref(db.skills, skill_id, "compétence (skill_ranks)", ctx, errors)
-		for ability_id in cls.get("saving_throws", []):
-			_expect_ref(db.abilities, ability_id, "attribut (saving_throws)", ctx, errors)
+		for ability_id in cls.get("resist_proficiencies", []):
+			_expect_ref(db.abilities, ability_id, "attribut (resist_proficiencies)", ctx, errors)
 		if cls.has("spell_slots") and cls["spell_slots"] not in Spellcasting.progressions():
 			errors.append(ctx + " : spell_slots « %s » inconnu (rules.json › spell_slots : %s)" % [
 				cls["spell_slots"], Spellcasting.progressions()])

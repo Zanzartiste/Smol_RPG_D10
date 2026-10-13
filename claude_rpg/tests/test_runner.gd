@@ -502,9 +502,9 @@ func _test_dice_tray() -> bool:
 	var tray := DiceTray.new()
 	tray.size = Vector2(800, 240)
 	add_child(tray)
-	tray.play({"dice": [{"sides": 20, "value": 17}, {"sides": 6, "value": 3}, {"sides": 8, "value": 8}],
-		"mod": 2, "dc": 12, "success": true, "stat": "Test"})
-	_expect(tray.is_playing() and tray._notation() == "Test : 1d20 + 1d6 + 1d8 + 2", "dés : notation")
+	tray.play({"dice": [{"sides": 10, "value": 7, "label": "A", "total": 15}, {"sides": 10, "value": 3, "label": "B", "total": 9},
+		{"sides": 10, "value": 8, "label": "C", "total": 12}], "stat": "Initiative", "per_die": true})
+	_expect(tray.is_playing() and tray._notation() == "Initiative : 3d10", "dés : notation")
 	var elapsed := 0.0
 	var on_tray := true
 	while tray.is_playing() and elapsed < 10.0:
@@ -514,7 +514,7 @@ func _test_dice_tray() -> bool:
 		elapsed += 1.0 / 60.0
 	_expect(on_tray, "dés : restent sur le plateau")
 	_expect(not tray.is_playing() and elapsed < 5.0, "dés : l'animation se termine (%.1f s)" % elapsed)
-	_expect(tray._dice.map(func(d): return d["shown"]) == [17, 3, 8], "dés : affichent les valeurs tirées")
+	_expect(tray._dice.map(func(d): return d["shown"]) == [7, 3, 8], "dés : affichent les valeurs tirées")
 
 	# Réserve de d10 : notation (sans les dés nés d'un 1), verdict en succès, beaucoup de dés.
 	var rng := RandomNumberGenerator.new()
@@ -616,8 +616,6 @@ func _test_dice_expressions() -> bool:
 	_expect(Dice.judge(3, 2, 2)["critical"] == 1 and Dice.judge(0, 1, 0, ten)["fumble"] and not Dice.judge(0, 1, 0, nine)["fumble"]
 		and not Dice.judge(1, 2, 0, ten)["fumble"],
 		"surprise : critique dès 1 succès supplémentaire ; échec critique : aucun succès et un 10")
-	_expect(Dice.dc_to_difficulty(10) == 1 and Dice.dc_to_difficulty(13) == 2 and Dice.dc_to_difficulty(15) == 3
-		and Dice.dc_to_difficulty(20) == 4, "anciens DD convertis en difficulté")
 	Meta.settings["many_dice"] = true
 	var many := Dice.roll_pool(rng, 12, 5)
 	_expect(many["auto"] == 6 and many["count"] == 2 and many["successes"] >= 6, "option dés nombreux : 10 dés = 6 succès au seuil 5")

@@ -16,20 +16,19 @@ const SCHEMA := {
 	"natural_dodge": ["amount"],  # Esquive naturelle en plus
 	"weapon_damage": ["amount"],  # dés de dégâts d'arme en plus
 	"weapon_attack": ["amount"],  # dés en plus aux attaques avec une arme
-	"saving_throws": ["amount"],  # dés en plus pour résister
+	"resist_dice": ["amount"],  # dés en plus pour résister
 	"resistance": ["damage_type"],
 	"immunity": ["damage_type"],
 	"vulnerability": ["damage_type"],
 	"status_immunity": ["status"],
-	"save_proficiency": ["id"],  # un dé de plus pour résister avec un attribut
+	"resist_proficiency": ["id"],  # un dé de plus pour résister avec un attribut
 	"extra_attack": ["amount"],  # attaques en plus pour l'action Attaque
 	"uncanny_dodge": [],  # une fois par round, dégâts d'une attaque divisés par deux
 	"evasion": [],  # résister aux dégâts avec la DEX : chaque succès retire deux points
 	"reliable_talent": [],  # test d'une compétence entraînée : au moins un succès
 	"relentless_endurance": [],
 	"critical_range": ["amount"],  # succès comptés en plus pour le critique (Critique amélioré : 1)
-	"save_advantage": ["id"],  # un dé de plus pour résister avec un attribut
-	"initiative_proficiency": [],  # rang de Physique ajouté à l'initiative (Vigilant)
+	"initiative_rank": [],  # rang de Physique ajouté à l'initiative (Vigilant)
 	"initiative_advantage": [],  # deux d10 à l'initiative, on garde le meilleur (Champion)
 	"skill_advantage": ["id"],  # un dé de plus aux tests d'une compétence
 	"spellcasting_ability": ["id"],  # attribut d'incantation hors classe (Initié à la magie)
@@ -101,7 +100,7 @@ static func describe(m: Dictionary) -> String:
 			return Loc.ui("%s dé(s) de dégâts d'arme") % signed
 		"weapon_attack":
 			return Loc.ui("%s dé(s) aux attaques d'arme") % signed
-		"saving_throws":
+		"resist_dice":
 			return Loc.ui("%s dé(s) pour résister") % signed
 		"resistance":
 			return Loc.ui("Résistance : %s") % DamageTypes.name_of(m["damage_type"])
@@ -111,7 +110,7 @@ static func describe(m: Dictionary) -> String:
 			return Loc.ui("Vulnérabilité : %s") % DamageTypes.name_of(m["damage_type"])
 		"status_immunity":
 			return Loc.ui("Immunité à l'état : %s") % StatusEffects.name_of(m["status"])
-		"save_proficiency":
+		"resist_proficiency":
 			return Loc.ui("+1 dé pour résister (%s)") % Abilities.name_of(m["id"])
 		"extra_attack":
 			return Loc.ui("%s attaque(s) par action Attaque") % signed
@@ -125,9 +124,7 @@ static func describe(m: Dictionary) -> String:
 			return Loc.ui("Endurance implacable")
 		"critical_range":
 			return Loc.ui("Critique : %s succès compté(s) en plus") % signed
-		"save_advantage":
-			return Loc.ui("+1 dé pour résister (%s)") % Abilities.name_of(m["id"])
-		"initiative_proficiency":
+		"initiative_rank":
 			return Loc.ui("Rang de Physique à l'initiative")
 		"initiative_advantage":
 			return Loc.ui("Initiative : deux d10, le meilleur")

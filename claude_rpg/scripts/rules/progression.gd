@@ -1,8 +1,7 @@
 class_name Progression
 extends RefCounted
-## API de la progression : niveaux, XP, bonus de maîtrise et améliorations. Réglages : data/rules.json
+## API de la progression : niveaux, XP et améliorations. Réglages : data/rules.json
 ##   xp_by_level            : XP nécessaire pour chaque niveau (sa longueur fixe le niveau maximum)
-##   proficiency_by_level   : bonus de maîtrise par niveau
 ##   advancement_levels     : niveaux qui donnent une amélioration (par défaut tous les 4 niveaux)
 ##   advancement            : contenu d'une amélioration, ex. {"ability_points": 1, "feats": 1}
 ##   max_ability_score      : plafond d'un attribut augmenté par une amélioration
@@ -15,11 +14,6 @@ static func max_level() -> int:
 ## XP totale nécessaire pour atteindre un niveau.
 static func xp_for(level: int) -> int:
 	var table: Array = DB.rules.get("xp_by_level", [0])
-	return int(table[clampi(level - 1, 0, table.size() - 1)])
-
-
-static func proficiency_bonus(level: int) -> int:
-	var table: Array = DB.rules.get("proficiency_by_level", [2])
 	return int(table[clampi(level - 1, 0, table.size() - 1)])
 
 

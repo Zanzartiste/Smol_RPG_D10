@@ -189,19 +189,14 @@ static func pool_text(count: int, threshold: int) -> String:
 
 # --- Tests (événements, actions sociales, fabrication) -------------------------------------
 
-## Difficulté d'un test ("difficulty", ou ancien "dc" converti), avec avantage (−1) et désavantage (+1).
+## Difficulté d'un test ("difficulty", 1 par défaut), avec avantage (−1) et désavantage (+1).
 static func difficulty_of(check: Dictionary) -> int:
-	var difficulty := int(check.get("difficulty", dc_to_difficulty(int(check.get("dc", 10)))))
+	var difficulty := int(check.get("difficulty", 1))
 	if check.get("advantage", false):
 		difficulty -= 1
 	if check.get("disadvantage", false):
 		difficulty += 1
 	return maxi(0, difficulty)
-
-
-## Ancien DD (d20) -> difficulté : 11 ou moins -> 1, 12-14 -> 2, 15-17 -> 3, 18-20 -> 4, 21+ -> 5.
-static func dc_to_difficulty(dc: int) -> int:
-	return clampi(int(floor((dc - 9) / 3.0)) + 1, 1, 8)
 
 
 ## Attributs entre lesquels le joueur peut choisir pour ce test (vide si l'attribut est imposé ou unique).

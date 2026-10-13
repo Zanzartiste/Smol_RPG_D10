@@ -3,9 +3,8 @@
 		"id": "fighter",
 		"name": "Guerrier",
 		"description": "Maître des armes et des armures, il règle les problèmes de front.",
-		"hit_die": 10,
 		"ability_priority": ["str", "con", "dex", "wis", "cha", "int"],
-		"saving_throws": ["str", "con"],
+		"resist_proficiencies": ["str", "con"],
 		"choices": [
 			{"id": "skills", "name": "Compétences de classe", "type": "skill", "count": 2, "at_creation": true,
 				"options": ["physique", "animal_handling", "lore", "insight", "persuasion", "perception", "survival"],
@@ -21,17 +20,17 @@
 			{"level": 3, "id": "subclass", "name": "Archétype martial", "description": "Vous choisissez votre archétype martial (sous-classe).",
 				"choices": [{"id": "subclass", "name": "Archétype martial", "type": "option", "count": 1, "default": ["champion"], "options": [
 					{"id": "champion", "name": "Champion", "description": "La force brute et la précision font de vous une machine de guerre.", "features": [
-						{"level": 3, "id": "improved_critical", "name": "Critique amélioré", "description": "Vos attaques font un critique sur 19 ou 20.", "modifiers": [{"type": "critical_range", "amount": 1}]},
-						{"level": 3, "id": "remarkable_athlete", "name": "Athlète remarquable", "description": "Avantage à l'initiative et aux tests de Physique.", "modifiers": [{"type": "initiative_advantage"}, {"type": "skill_advantage", "id": "physique"}]},
+						{"level": 3, "id": "improved_critical", "name": "Critique amélioré", "description": "Un succès supplémentaire de plus compte pour atteindre un critique.", "modifiers": [{"type": "critical_range", "amount": 1}]},
+						{"level": 3, "id": "remarkable_athlete", "name": "Athlète remarquable", "description": "Deux d10 à l'initiative (le meilleur compte) et un dé de plus aux tests de Physique.", "modifiers": [{"type": "initiative_advantage"}, {"type": "skill_advantage", "id": "physique"}]},
 						{"level": 7, "id": "additional_fighting_style", "name": "Style de combat supplémentaire", "description": "Vous choisissez un second style de combat.",
 							"choices": [{"id": "style", "name": "Style de combat", "type": "feat", "category": "fighting_style", "count": 1, "default": ["dueling"]}]},
 						{"level": 10, "id": "heroic_warrior", "name": "Guerrier héroïque", "description": "Vous puisez dans votre héroïsme (pas encore de mécanique : il faudra le système d'Inspiration héroïque)."},
-						{"level": 15, "id": "superior_critical", "name": "Critique supérieur", "description": "Vos attaques font un critique sur 18, 19 ou 20.", "modifiers": [{"type": "critical_range", "amount": 1}]},
-						{"level": 18, "id": "survivor", "name": "Survivant", "description": "Au début de votre tour, si vous avez la moitié de vos PV ou moins, vous récupérez 5 + CON PV.", "modifiers": [{"type": "survivor"}]}
+						{"level": 15, "id": "superior_critical", "name": "Critique supérieur", "description": "Encore un succès supplémentaire de plus compte pour atteindre un critique.", "modifiers": [{"type": "critical_range", "amount": 1}]},
+						{"level": 18, "id": "survivor", "name": "Survivant", "description": "Au début de votre tour, si vous avez la moitié de vos PV ou moins, vous récupérez la moitié de votre CON en PV (au moins 1).", "modifiers": [{"type": "survivor"}]}
 					]}
 				]}]},
 			{"level": 5, "id": "extra_attack", "name": "Attaque supplémentaire", "description": "L'action Attaque frappe deux fois.", "modifiers": [{"type": "extra_attack", "amount": 1}]},
-			{"level": 9, "id": "indomitable", "name": "Inflexible", "description": "Une fois par repos long, vous relancez automatiquement un jet de sauvegarde raté.", "resources": {"indomitable": 1}},
+			{"level": 9, "id": "indomitable", "name": "Inflexible", "description": "Une fois par repos long, vous relancez automatiquement une résistance ratée.", "resources": {"indomitable": 1}},
 			{"level": 11, "id": "extra_attack_2", "name": "Attaque supplémentaire (2)", "description": "L'action Attaque frappe trois fois.", "modifiers": [{"type": "extra_attack", "amount": 1}]},
 			{"level": 13, "id": "indomitable_2", "name": "Inflexible (2 utilisations)", "description": "Deux relances par repos long.", "resources": {"indomitable": 1}},
 			{"level": 17, "id": "indomitable_3", "name": "Inflexible (3 utilisations)", "description": "Trois relances par repos long.", "resources": {"indomitable": 1}},
@@ -44,9 +43,8 @@
 		"id": "wizard",
 		"name": "Magicien",
 		"description": "Érudit des arcanes, fragile mais redoutable.",
-		"hit_die": 6,
 		"ability_priority": ["int", "con", "dex", "wis", "cha", "str"],
-		"saving_throws": ["int", "wis"],
+		"resist_proficiencies": ["int", "wis"],
 		"choices": [
 			{"id": "skills", "name": "Compétences de classe", "type": "skill", "count": 2, "at_creation": true,
 				"options": ["lore", "insight", "perception", "medicine", "languages", "potions_cooking"],
@@ -64,12 +62,12 @@
 						{"level": 3, "id": "potent_cantrip", "name": "Tour de magie puissant", "description": "Quand un de vos tours de magie rate sa cible, elle subit quand même la moitié des dégâts.", "modifiers": [{"type": "potent_cantrip"}]},
 						{"level": 3, "id": "evocation_savant", "name": "Savant de l'évocation", "description": "Vous maîtrisez les sorts d'évocation (pas encore de mécanique : le choix des sorts appris viendra plus tard)."},
 						{"level": 6, "id": "sculpt_spells", "name": "Sculpture des sorts", "description": "Vos sorts de zone épargnent vos alliés (c'est déjà le cas dans le jeu)."},
-						{"level": 10, "id": "empowered_evocation", "name": "Évocation renforcée", "description": "Vos sorts d'évocation ajoutent votre modificateur d'Intelligence à leurs dégâts.", "modifiers": [{"type": "empowered_evocation"}]},
+						{"level": 10, "id": "empowered_evocation", "name": "Évocation renforcée", "description": "Vos sorts d'évocation lancent un dé de dégâts de plus.", "modifiers": [{"type": "empowered_evocation"}]},
 						{"level": 14, "id": "overchannel", "name": "Surcharge", "description": "Vous pouvez pousser un sort à son maximum (pas encore de mécanique)."}
 					]}
 				]}]},
 			{"level": 5, "id": "spells_level_3", "name": "Sorts du 3e niveau", "description": "Vous apprenez Boule de feu.", "actions": ["fireball"]},
-			{"level": 5, "id": "cantrip_2", "name": "Tours de magie renforcés", "description": "Vos tours de magie lancent deux dés de dégâts (trois au niveau 11, quatre au niveau 17)."}
+			{"level": 5, "id": "cantrip_2", "name": "Tours de magie renforcés", "description": "Vos tours de magie gagnent un dé de dégâts (puis un autre aux niveaux 11 et 17)."}
 		],
 		"start_items": {},
 		"art": {"headgear": "wizard_hat", "outfit": "#3b3a7a", "accent": "#d4b06a"}
@@ -81,9 +79,8 @@
 		"locked": true,
 		"unlock_hint": "Réussir un larcin audacieux à Brumeval.",
 		"unlock_cost": 10,
-		"hit_die": 8,
 		"ability_priority": ["dex", "con", "cha", "wis", "int", "str"],
-		"saving_throws": ["dex", "int"],
+		"resist_proficiencies": ["dex", "int"],
 		"choices": [
 			{"id": "skills", "name": "Compétences de classe", "type": "skill", "count": 4, "at_creation": true,
 				"options": ["physique", "persuasion", "insight", "perception", "sleight_of_hand", "stealth", "languages"],
@@ -97,13 +94,13 @@
 				"choices": [{"id": "skills", "name": "Expertise", "type": "skill", "count": 2, "from": "trained",
 					"modifiers": [{"type": "skill_rank", "id": "$", "amount": 1}], "default": ["stealth", "sleight_of_hand"]}]},
 			{"level": 2, "id": "cunning_action", "name": "Ruse", "description": "Se cacher devient une action bonus.", "modifiers": [{"type": "cunning_action"}]},
-			{"level": 3, "id": "sneak_attack_2", "name": "Attaque sournoise (2d6)", "description": "L'Attaque sournoise gagne un dé tous les deux niveaux (2d6 au niveau 3, 3d6 au niveau 5…)."},
+			{"level": 3, "id": "sneak_attack_2", "name": "Attaque sournoise (+2 dés)", "description": "L'Attaque sournoise gagne un dé de dégâts tous les deux niveaux (2 au niveau 3, 3 au niveau 5…)."},
 			{"level": 3, "id": "subclass", "name": "Archétype de roublard", "description": "Vous choisissez votre archétype (sous-classe).",
 				"choices": [{"id": "subclass", "name": "Archétype de roublard", "type": "option", "count": 1, "default": ["thief"], "options": [
 					{"id": "thief", "name": "Voleur", "description": "Cambrioleur, pickpocket et chasseur de trésors.", "features": [
 						{"level": 3, "id": "fast_hands", "name": "Mains lestes", "description": "Une fois par tour, utiliser un objet ne vous coûte pas votre action.", "modifiers": [{"type": "fast_hands"}]},
 						{"level": 3, "id": "second_story_work", "name": "Monte-en-l'air", "description": "Vous grimpez et sautez avec aisance (+1 rang en Physique).", "modifiers": [{"type": "skill_rank", "id": "physique", "amount": 1}]},
-						{"level": 9, "id": "supreme_sneak", "name": "Furtivité suprême", "description": "Avantage aux tests de Furtivité.", "modifiers": [{"type": "skill_advantage", "id": "stealth"}]},
+						{"level": 9, "id": "supreme_sneak", "name": "Furtivité suprême", "description": "Un dé de plus aux tests de Furtivité.", "modifiers": [{"type": "skill_advantage", "id": "stealth"}]},
 						{"level": 13, "id": "use_magic_device", "name": "Utilisation d'objets magiques", "description": "Vous savez vous servir de n'importe quel objet magique (pas encore de mécanique)."},
 						{"level": 17, "id": "thiefs_reflexes", "name": "Réflexes de voleur", "description": "Vous agissez deux fois au premier round (pas encore de mécanique)."}
 					]}
@@ -112,8 +109,8 @@
 			{"level": 6, "id": "expertise_2", "name": "Expertise (2)", "description": "+1 rang dans deux autres compétences déjà entraînées.",
 				"choices": [{"id": "skills", "name": "Expertise", "type": "skill", "count": 2, "from": "trained",
 					"modifiers": [{"type": "skill_rank", "id": "$", "amount": 1}], "default": ["physique", "perception"]}]},
-			{"level": 7, "id": "evasion", "name": "Dérobade", "description": "Contre un effet qui permet un jet de Dextérité pour réduire les dégâts de moitié : aucun dégât en cas de réussite, la moitié en cas d'échec.", "modifiers": [{"type": "evasion"}]},
-			{"level": 11, "id": "reliable_talent", "name": "Talent fiable", "description": "Pour un test d'une compétence entraînée, un résultat de 9 ou moins au d20 compte comme un 10.", "modifiers": [{"type": "reliable_talent"}]}
+			{"level": 7, "id": "evasion", "name": "Dérobade", "description": "Quand vous résistez à des dégâts avec la Dextérité, chaque succès en retire deux.", "modifiers": [{"type": "evasion"}]},
+			{"level": 11, "id": "reliable_talent", "name": "Talent fiable", "description": "Un test d'une compétence entraînée a toujours au moins un succès.", "modifiers": [{"type": "reliable_talent"}]}
 		],
 		"start_items": {},
 		"art": {"headgear": "hood", "outfit": "#3a4a2e", "accent": "#6b4a2a"}

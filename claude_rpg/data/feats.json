@@ -5,7 +5,7 @@
 		"category": "origin",
 		"source": "SRD 5.2",
 		"description": "Toujours sur le qui-vive : vous ajoutez votre rang de Physique à l'initiative.",
-		"modifiers": [{"type": "initiative_proficiency"}]
+		"modifiers": [{"type": "initiative_rank"}]
 	},
 	{
 		"id": "magic_initiate",
@@ -140,10 +140,10 @@
 		"id": "resilient",
 		"name": "Résistant",
 		"category": "general",
-		"description": "+1 à un attribut, et +1 rang à ses jets de sauvegarde.",
+		"description": "+1 à un attribut, et un dé de plus pour résister avec lui.",
 		"choices": [
 			{"id": "ability", "name": "Attribut", "type": "ability", "count": 1,
-				"modifiers": [{"type": "ability", "id": "$", "amount": 1}, {"type": "save_proficiency", "id": "$"}], "default": ["con"]}
+				"modifiers": [{"type": "ability", "id": "$", "amount": 1}, {"type": "resist_proficiency", "id": "$"}], "default": ["con"]}
 		]
 	},
 	{
@@ -176,7 +176,7 @@
 		"name": "Style : Archerie",
 		"category": "fighting_style",
 		"source": "SRD 5.2",
-		"description": "+2 aux jets d'attaque avec une arme à distance.",
+		"description": "Un dé de plus aux attaques avec une arme à distance.",
 		"modifiers": [{"type": "ranged_attack", "amount": 1}]
 	},
 	{
@@ -184,7 +184,7 @@
 		"name": "Style : Défense",
 		"category": "fighting_style",
 		"source": "SRD 5.2",
-		"description": "+1 CA tant que vous portez une armure (pas de simples vêtements).",
+		"description": "+1 Armure tant que vous portez une armure (pas de simples vêtements).",
 		"modifiers": [{"type": "armored", "amount": 1}]
 	},
 	{
@@ -192,14 +192,14 @@
 		"name": "Style : Armes à deux mains",
 		"category": "fighting_style",
 		"source": "SRD 5.2",
-		"description": "Avec une arme tenue à deux mains, chaque 1 ou 2 sur un dé de dégâts compte comme un 3.",
+		"description": "Avec une arme tenue à deux mains, vous relancez une fois les dés de dégâts ratés.",
 		"modifiers": [{"type": "great_weapon_fighting"}]
 	},
 	{
 		"id": "dueling",
 		"name": "Style : Duel",
 		"category": "fighting_style",
-		"description": "+2 aux dégâts avec une arme de corps à corps tenue à une main.",
+		"description": "Un dé de dégâts de plus avec une arme de corps à corps tenue à une main.",
 		"modifiers": [{"type": "dueling", "amount": 1}]
 	}
 ]

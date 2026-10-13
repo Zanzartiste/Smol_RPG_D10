@@ -497,11 +497,10 @@ func _class_info(cls: Dictionary) -> String:
 	for slot in Equipment.SLOTS:
 		if equipment.has(slot):
 			gear.append(Equipment.describe(equipment[slot]))
-	var saves := PackedStringArray(cls.get("saving_throws", []).map(func(id): return Abilities.short_of(id)))
-	var text := "[i]%s[/i]\n%s   %s\n%s\n%s" % [
+	var saves := PackedStringArray(cls.get("resist_proficiencies", []).map(func(id): return Abilities.short_of(id)))
+	var text := "[i]%s[/i]\n%s\n%s\n%s" % [
 		cls.get("description", ""),
-		_field(tr("Dé de vie :"), "d%d" % int(cls["hit_die"])),
-		_field(tr("Sauvegardes :"), ", ".join(saves)),
+		_field(tr("Résistances maîtrisées :"), ", ".join(saves)),
 		_field(tr("Maîtrises :"), tr("au choix, ci-dessous")),
 		_field(tr("Équipement :"), " · ".join(gear))] + "\n" + _field(tr("Actions :"),
 		", ".join(PackedStringArray(cls.get("actions", []).map(func(id): return Actions.name_of(id)))))

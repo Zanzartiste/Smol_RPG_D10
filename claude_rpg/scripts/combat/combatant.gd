@@ -116,8 +116,6 @@ func skill_pool(skill_id: String, ability := "", bonus := 0) -> Dictionary:
 func resist_pool(ability_id: String, bonus := 0) -> Dictionary:
 	if has_status_flag("resist_penalty", ability_id):
 		bonus -= 1
-	if has_save_advantage(ability_id):
-		bonus += 1
 	if character != null:
 		return character.resist_pool(ability_id, bonus)
 	var skill: String = Dice.setting("resist_skills", {}).get(ability_id, "physique")
@@ -173,11 +171,6 @@ func has_modifier(type: String) -> bool:
 ## Succès comptés en plus pour atteindre un critique (Critique amélioré : 1 par aptitude).
 func critical_bonus() -> int:
 	return Modifiers.sum(character.modifiers(), "critical_range") if character != null else 0
-
-
-## Un dé de plus pour résister avec cet attribut (modificateur "save_advantage").
-func has_save_advantage(ability_id: String) -> bool:
-	return character != null and Modifiers.grants(character.modifiers(), "save_advantage", ability_id)
 
 
 ## Attaques en plus pour l'action Attaque (Attaque supplémentaire).

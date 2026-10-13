@@ -112,13 +112,9 @@ func can_flee_now(actor: Combatant) -> bool:
 	return can_flee() and not actor.has_status_flag("no_flee")
 
 
-## Difficulté de la fuite : "flee_difficulty" (ou ancien "flee_dc" converti), 2 par défaut.
+## Difficulté de la fuite : "flee_difficulty" du combat, sinon rules.json (2).
 func flee_difficulty() -> int:
-	if spec.has("flee_difficulty"):
-		return int(spec["flee_difficulty"])
-	if spec.has("flee_dc"):
-		return Dice.dc_to_difficulty(int(spec["flee_dc"]))
-	return int(setting("flee_difficulty", 2))
+	return int(spec.get("flee_difficulty", setting("flee_difficulty", 2)))
 
 
 ## Réserve de fuite : Physique (DEX), un dé de moins si l'état l'impose (Effrayé).

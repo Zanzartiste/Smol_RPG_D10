@@ -233,7 +233,7 @@ d'emplacement disponible (« Projectile magique (niv. 3) »), avec `upcast` ajou
 Chaque classe déclare :
 - `actions` : ses actions dès le niveau 1 ;
 - `features` : ses aptitudes par niveau (voir ci-dessous) ;
-- `saving_throws` : ses deux résistances maîtrisées (un dé de plus pour résister avec ces attributs) ;
+- `resist_proficiencies` : ses deux résistances maîtrisées (un dé de plus pour résister avec ces attributs) ;
 - `equipment` : son équipement ;
 - `spellcasting` : l'attribut d'incantation (pour les sorts, `"ability": "spell"`) ;
 - `spell_slots` : `full` (lanceur complet) ou `half` (demi-lanceur), qui renvoie aux tables de
@@ -354,7 +354,7 @@ suivent automatiquement.
 | `StatusEffects` | `status_effects.json` | `ids()`, `name_of(id)`, `tick_damage()`, `skips_turn()`, `absorbs()`… |
 | `Actions` | `actions.json` | `def(id)`, `name_of(id)`, `text_of(id)`, `resource_name(id)` |
 | `Creatures` | `creatures.json` | `def(id)`, `name_of(id)`, `size_of(id)`, `actions_of(id)` |
-| `Progression` | `rules.json` | `xp_for(niveau)`, `proficiency_bonus(niveau)`, `advancement_levels()` |
+| `Progression` | `rules.json` | `xp_for(niveau)`, `advancement_levels()` |
 | `Spellcasting` | `rules.json` | `slots(progression, niveau)`, `save_dc(personnage)`, `dice_count(table, niveau)`, `at_level(action, niveau)` |
 | `ClassFeatures` | `classes.json` | `of_class(id)`, `up_to(id, niveau)`, `at_level(id, niveau)`, `announce(personnage, niveau)` |
 | `Modifiers` | — | `sum(...)`, `grants(...)`, `defenses(...)`, `describe(...)` : interprète les modificateurs |
@@ -396,18 +396,17 @@ Les dons, les espèces et les équipements peuvent porter des `modifiers`. Ils s
 | `armor` / `natural_dodge` | `amount` | Points d'Armure / d'Esquive naturelle en plus |
 | `weapon_damage` | `amount` | Dés de dégâts d'arme en plus |
 | `weapon_attack` | `amount` | Dés en plus aux attaques avec une arme |
-| `saving_throws` | `amount` | Dés en plus pour résister |
+| `resist_dice` | `amount` | Dés en plus pour résister |
 | `resistance` / `immunity` / `vulnerability` | `damage_type` | Défense contre un type de dégâts |
 | `status_immunity` | `status` | Immunité à un état |
-| `save_proficiency` | `id` | Un dé de plus pour résister avec un attribut |
+| `resist_proficiency` | `id` | Un dé de plus pour résister avec un attribut |
 | `extra_attack` | `amount` | Attaques en plus pour l'action Attaque |
 | `uncanny_dodge` | — | Une fois par round, les dégâts d'une attaque reçue sont divisés par deux |
 | `evasion` | — | Résister à des dégâts avec la DEX : chaque succès retire deux points |
 | `reliable_talent` | — | Test d'une compétence entraînée : toujours au moins un succès |
 | `relentless_endurance` | — | Tombe à 1 PV au lieu de 0, tant qu'il reste la ressource `relentless_endurance` |
 | `critical_range` | `amount` | Succès supplémentaires comptés en plus pour le critique (Champion) |
-| `save_advantage` | `id` | Un dé de plus pour résister avec un attribut |
-| `initiative_proficiency`, `initiative_advantage` | — | Rang de Physique à l'initiative (Vigilant) / deux d10, le meilleur |
+| `initiative_rank`, `initiative_advantage` | — | Rang de Physique à l'initiative (Vigilant) / deux d10, le meilleur |
 | `skill_advantage` | `id` | Un dé de plus aux tests d'une compétence |
 | `spellcasting_ability` | `id` | Attribut d'incantation hors classe (Initié à la magie) |
 | `savage_attacker` | — | Une fois par tour, dés de dégâts d'arme lancés deux fois, le meilleur gardé |
@@ -432,7 +431,7 @@ Champs communs : `weight` (kg) ; facultatifs : `modifiers`, `rarity` (`common`, 
 
 **Objets magiques** : ce sont des équipements avec des `modifiers`. Par exemple, une épée +1 porte
 `[{"type": "weapon_attack", "amount": 1}, {"type": "weapon_damage", "amount": 1}]`, et l'Anneau de protection
-`[{"type": "ac", "amount": 1}, {"type": "saving_throws", "amount": 1}]`.
+`[{"type": "armor", "amount": 1}, {"type": "resist_dice", "amount": 1}]`.
 
 **Emplacements** (`Equipment.SLOTS`) : `main_hand`, `off_hand`, `head`, `armor` (torse), `hands`, `legs`, `feet`,
 `neck`, `ring_1`, `ring_2`. Les anciennes sauvegardes sont converties (`amulet` → `neck`, `ring` → `ring_1`).
@@ -612,7 +611,7 @@ Le détail de conception est dans [social.md](social.md). Données : `npc_roles.
   sinon Armes de trait pour une arme à distance, Armes de mêlée sinon ; mains nues : le meilleur avec Physique).
   Sorts : [rang de Magie] d10 contre l'attribut d'incantation.
 - **Résister** : `rules.json › dice › resist_skills` (Physique pour FOR, DEX, CON ; Perspicacité pour SAG ;
-  Érudition pour INT ; Persuasion pour CHA), +1 dé si la classe de départ maîtrise, +1 par `save_proficiency`.
+  Érudition pour INT ; Persuasion pour CHA), +1 dé si la classe de départ maîtrise, +1 par `resist_proficiency`.
 - **Tests d'événement** : `{"skill": "persuasion", "ability"?: "str", "difficulty": 2}`. Option du joueur
   (`Meta.settings.manual_skill_ability`) : de petits boutons par attribut à côté du choix. Option `many_dice` : règle
   des dés nombreux.
@@ -666,7 +665,7 @@ Une espèce, une classe, une aptitude (y compris de sous-classe) ou un don peut 
   - `modifiers`? : ses traits (résistances, immunités, `relentless_endurance`…) ;
   - `resources`? : ressources rechargées par un repos long (ex. `{"relentless_endurance": 1}` pour l'orc) ;
   - `bonus_feats`? : dons en plus à choisir au début de la partie (1 pour l'humain).
-- **Classe** : `hit_die` (dé de vie), `saving_throws`, `choices` (dont les compétences de classe) et `features`
+- **Classe** : `resist_proficiencies`, `choices` (dont les compétences de classe) et `features`
   (aptitudes par niveau, dont la sous-classe). `ability_priority` donne le **modèle
   d'attributs** proposé : la répartition standard (15, 14, 13, 12, 10, 8) dans cet ordre, puis +2 sur le premier
   attribut et +1 sur le second.

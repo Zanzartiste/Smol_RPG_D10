@@ -34,7 +34,3 @@ static func short_of(id: String) -> String:
 static func description_of(id: String) -> String:
 	return DB.abilities.get(id, {}).get("description", "")
 
-
-## Modificateur d'une valeur d'attribut : (valeur - 10) / 2, arrondi à l'inférieur.
-static func modifier(score: int) -> int:
-	return floori((score - 10) / 2.0)

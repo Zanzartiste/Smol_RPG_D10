@@ -219,22 +219,22 @@ func ability_pool(ability_id: String, bonus := 0) -> Dictionary:
 		"threshold": ability_score(ability_id), "ability": ability_id}
 
 
-## Maîtrise d'une sauvegarde (classe de départ, ou Résistant) : un dé de plus pour résister.
+## Résistance maîtrisée (classe de départ, ou Résistant) : un dé de plus pour résister.
 func is_proficient_save(ability_id: String) -> bool:
-	return ability_id in DB.classes[class_id].get("saving_throws", []) \
-		or Modifiers.grants(modifiers(), "save_proficiency", ability_id)
+	return ability_id in DB.classes[class_id].get("resist_proficiencies", []) \
+		or Modifiers.grants(modifiers(), "resist_proficiency", ability_id)
 
 
 ## Résister à un effet (poison, sort, peur…) : la compétence liée à l'attribut (rules.json › dice ›
 ## resist_skills : Physique pour FOR, DEX et CON, Perspicacité pour SAG…), contre un seuil égal à
-## l'attribut ; +1 dé par maîtrise (classe de départ, Résistant) et par modificateur "saving_throws".
+## l'attribut ; +1 dé par maîtrise (classe de départ, Résistant) et par modificateur "resist_dice".
 func resist_pool(ability_id: String, bonus := 0) -> Dictionary:
 	var skill: String = Dice.setting("resist_skills", {}).get(ability_id, "physique")
-	var dice := skill_rank(skill) + bonus + Modifiers.sum(modifiers(), "saving_throws")
-	if ability_id in DB.classes[class_id].get("saving_throws", []):
+	var dice := skill_rank(skill) + bonus + Modifiers.sum(modifiers(), "resist_dice")
+	if ability_id in DB.classes[class_id].get("resist_proficiencies", []):
 		dice += 1
 	for m: Dictionary in modifiers():
-		if m.get("type") == "save_proficiency" and m.get("id") == ability_id:
+		if m.get("type") == "resist_proficiency" and m.get("id") == ability_id:
 			dice += 1
 	return {"count": dice - roll_penalty(ability_id), "threshold": ability_score(ability_id), "ability": ability_id}
 
@@ -556,7 +556,7 @@ func armor() -> int:
 ## moins l'encombrement. On y ajoute 1d10 en début de combat.
 func initiative_base() -> int:
 	var base := ability_score("dex") + ability_score("int") + Modifiers.sum(modifiers(), "initiative") - roll_penalty("dex")
-	if has_modifier("initiative_proficiency"):
+	if has_modifier("initiative_rank"):
 		base += skill_rank("physique")  # Vigilant
 	return base
 
