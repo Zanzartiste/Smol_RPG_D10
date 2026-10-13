@@ -161,7 +161,7 @@ func _fill_sell() -> void:
 	for item_id: String in _sorted(life.inventory().keys()):
 		if Shops.buys(shop_id, item_id):
 			_row("%s ×%d" % [Items.bbcode_name(item_id), life.character.item_count(item_id)], Items.summary(item_id),
-				tr("Vendre (%d po)") % Shops.sell_price(item_id, life), _on_sell.bind(item_id))
+				tr("Vendre (%d po)") % Shops.sell_price(item_id, life, Shops.def(shop_id).get("location", "")), _on_sell.bind(item_id))
 
 
 func _fill_craft() -> void:
@@ -172,7 +172,8 @@ func _fill_craft() -> void:
 			detail += "\n[color=%s]%s[/color]" % [UITheme.BAD.to_html(false), missing]
 		var count := int(recipe.get("count", 1))
 		var button := _row(Items.bbcode_name(recipe["result"]) + (" ×%d" % count if count > 1 else ""), detail,
-			tr("Fabriquer"), _on_craft.bind(recipe["id"]))
+			tr("Fabriquer (%s, DD %d)") % [Skills.name_of(Crafting.check_for(recipe)["skill"]), int(recipe.get("dc", 10))],
+			_on_craft.bind(recipe["id"]))
 		button.disabled = missing != ""
 
 
@@ -205,14 +206,15 @@ func _on_buy(item_id: String) -> void:
 
 
 func _on_sell(item_id: String) -> void:
-	var price := Shops.sell_price(item_id, life)
+	var price := Shops.sell_price(item_id, life, Shops.def(shop_id).get("location", ""))
 	if life.sell(shop_id, item_id):
 		_after(tr("Vendu : %s (+%d po).") % [Items.name_of(item_id), price])
 
 
 func _on_craft(recipe_id: String) -> void:
-	if life.craft(recipe_id):
-		_after(tr("Fabriqué : %s.") % Items.name_of(Crafting.recipe(recipe_id)["result"]))
+	var result := life.craft(recipe_id)
+	if result["ok"]:
+		_after(result["text"])
 
 
 func _on_upgrade(item_id: String, member: Character, slot: String) -> void:

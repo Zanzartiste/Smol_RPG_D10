@@ -49,7 +49,9 @@
 		"gestation_days": 270,
 		"daily_pairs": 2,
 		"leave_threshold": -50,
-		"companion_start_friendship": 20
+		"companion_start_friendship": 20,
+		"initiative_chance": 0.3,
+		"neglect_days": 7
 	},
 	"languages": [
 		{"id": "common", "name": "Commun", "known_by_all": true},
@@ -125,6 +127,13 @@
 		"price_skill": "persuasion",
 		"percent_per_point": 3,
 		"max_percent": 15
+	},
+	"crafting": {
+		"_doc": "Fabriquer demande un test : compétence de la station (Artisanat à la forge, avec la DEX : on reproduit un objet connu ; Potions et cuisine à l'alchimie), contre le DD de la recette (10 par défaut). Un échec gâche failure_loss des matériaux (arrondi au supérieur) et l'or. Un métier apparaît sur la fiche après profession_threshold objets fabriqués à une station.",
+		"station_skills": {"forge": {"skill": "crafting", "ability": "dex"}, "alchemy": {"skill": "potions_cooking"}},
+		"failure_loss": 0.5,
+		"professions": {"forge": "Forgeron{g:|ne|·ne}", "alchemy": "Alchimiste"},
+		"profession_threshold": 5
 	},
 	"forge": {
 		"_doc": "Amélioration d'une arme, d'une armure ou d'un bouclier : coût en po de chaque rang (+1, +2, +3) et rareté obtenue.",

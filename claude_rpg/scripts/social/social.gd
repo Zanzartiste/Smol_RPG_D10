@@ -135,6 +135,14 @@ static func _pick(list: Array, rng: RandomNumberGenerator) -> Variant:
 
 # --- Relation avec le héros ------------------------------------------------------------
 
+## Première rencontre : la réputation du héros dans le lieu colore l'accueil (Amitié de départ).
+static func meet(n: Npc, life: LifeState) -> void:
+	if n.player.get("met", false):
+		return
+	n.player["met"] = true
+	n.player["last_seen"] = Meta.world_day
+	change(n, "friendship", int(life.reputation.get(n.location, 0)) / 4)
+
 static func status(n: Npc) -> String:
 	if n.player.get("status", "") in ROMANTIC_STATUSES:
 		return n.player["status"]
@@ -271,6 +279,8 @@ static func unavailable_reason(action_id: String, n: Npc, life: LifeState, sessi
 	for gauge in GAUGES:
 		if req.has(gauge) and int(n.player[gauge]) < int(req[gauge]):
 			return Loc.ui("%s %d requise") % [Loc.ui(GAUGE_NAMES[gauge]), int(req[gauge])]
+	if a.has("gold") and life.character.gold < int(a["gold"]):
+		return Loc.ui("%d po requises") % int(a["gold"])
 	var current := status(n)
 	if req.has("status") and current not in req["status"] and not (n.player.get("open") and "open" in req["status"]):
 		return Loc.ui("pas avec ce statut")
@@ -335,8 +345,12 @@ static func perform(action_id: String, n: Npc, life: LifeState, session: Diction
 	var a := action(action_id)
 	var lines: Array[String] = []
 	var result := {"lines": lines, "open_trade": false}
-	n.player["met"] = true
+	meet(n, life)
 	session["acted"] = true
+	n.player["last_seen"] = Meta.world_day
+	if a.has("gold"):
+		life.character.gold -= int(a["gold"])
+	session["extra_time"] = int(session.get("extra_time", 0)) + int(a.get("extra_time", 0))
 	var success := true
 	if a.has("check"):
 		var outcome := check(a["check"], action_id, n, life, session)
@@ -501,12 +515,12 @@ static func friendship_discount(n: Npc) -> float:
 
 
 static func buy_price(n: Npc, item_id: String, life: LifeState) -> int:
-	var base := Shops.buy_price(n.role_def().get("shop", ""), item_id, life)
+	var base := Shops.buy_price(n.role_def().get("shop", ""), item_id, life, n.location)
 	return maxi(1, roundi(base * (1.0 - friendship_discount(n))))
 
 
 static func sell_price(n: Npc, item_id: String, life: LifeState) -> int:
-	return roundi(Shops.sell_price(item_id, life) * (1.0 + friendship_discount(n)))
+	return roundi(Shops.sell_price(item_id, life, n.location) * (1.0 + friendship_discount(n)))
 
 
 ## Achat auprès d'un PNJ ; son or augmente (sauf boutique).
@@ -640,6 +654,11 @@ static func _npc_interact(a: Npc, b: Npc, life: LifeState) -> void:
 		rel["friendship"] = clampi(int(rel["friendship"]) + delta, -100, 100)
 		if rel.get("kind") == "friend" and int(rel["friendship"]) <= -30:
 			rel["kind"] = "rival"
+	# Entre amis, on s'offre parfois des objets.
+	if int(a.relations[b.id]["friendship"]) >= 40 and not a.inventory.is_empty() and life.rng.randf() < 0.1:
+		var item_id: String = _pick(a.inventory.keys(), life.rng)
+		_move(a.inventory, b.inventory, item_id)
+		b.relations[a.id]["friendship"] = clampi(int(b.relations[a.id]["friendship"]) + 3, -100, 100)
 	var rel_ab: Dictionary = a.relations[b.id]
 	var single: bool = a.partners().is_empty() and b.partners().is_empty() and a.player.get("status", "") == "" \
 		and b.player.get("status", "") == ""
@@ -696,6 +715,65 @@ static func on_new_life() -> void:
 		if n.location == "party":
 			n.location = DB.location_order[0]
 		n.player = Npc.new_player_relation()
+
+
+# --- Initiatives des PNJ ----------------------------------------------------------------------
+
+## Un PNJ connu vient parfois voir le héros (au plus une fois par jour) : un ami demande un service, un
+## rival provoque, un partenaire délaissé se plaint. Retourne un événement (même format que les
+## événements des données), ou {}.
+static func initiative_event(life: LifeState) -> Dictionary:
+	if life.last_initiative_day == Meta.world_day or life.rng.randf() >= float(setting("initiative_chance", 0.3)):
+		return {}
+	life.last_initiative_day = Meta.world_day
+	var candidates: Array = []
+	for n in known_npcs():
+		if n.location == "party":
+			continue
+		var neglected: bool = status(n) in ROMANTIC_STATUSES and Meta.world_day - int(n.player.get("last_seen", Meta.world_day)) >= int(setting("neglect_days", 7))
+		if neglected:
+			candidates.append(["neglect", n])
+		elif status(n) in ["friend", "close_friend"]:
+			candidates.append(["favor", n])
+		elif status(n) in ["rival", "enemy"]:
+			candidates.append(["rival", n])
+	if candidates.is_empty():
+		return {}
+	var picked: Array = _pick(candidates, life.rng)
+	var n: Npc = picked[1]
+	var rel := func(changes: Dictionary) -> Dictionary:
+		var e := {"type": "npc_relation", "npc": n.id}
+		e.merge(changes)
+		return e
+	match picked[0]:
+		"favor":
+			return {"id": "npc_favor_" + n.id, "title": Loc.ui("Un service"), "text": Loc.gendered(Loc.ui(
+				"%s vient vous trouver : « Tu aurais un moment ? J'aurais besoin d'un coup de main. »") % n.name, n.gender),
+				"choices": [
+					{"id": "help", "text": Loc.ui("Lui rendre service"), "outcome": {"text": Loc.ui("Vous passez du temps à aider %s, qui vous en est reconnaissant·e.") % n.name,
+						"effects": [rel.call({"friendship": 8, "trust": 5}), {"type": "xp", "amount": 10}]}},
+					{"id": "refuse", "text": Loc.ui("Refuser poliment"), "outcome": {"text": Loc.ui("%s cache mal sa déception.") % n.name,
+						"effects": [rel.call({"friendship": -3})]}}]}
+		"rival":
+			return {"id": "npc_rival_" + n.id, "title": Loc.ui("Une provocation"), "text": Loc.ui(
+				"%s vous bouscule exprès : « Tiens, regardez qui voilà… »") % n.name,
+				"choices": [
+					{"id": "ignore", "text": Loc.ui("L'ignorer"), "outcome": {"text": Loc.ui("Vous passez votre chemin ; les témoins apprécient votre calme."),
+						"effects": [rel.call({"friendship": -2}), {"type": "reputation", "amount": 1, "location": n.location}]}},
+					{"id": "retort", "text": Loc.ui("Le remettre à sa place"), "check": {"skill": "persuasion", "ability": "str", "dc": 12},
+						"success": {"text": Loc.ui("%s recule, mal à l'aise.") % n.name, "effects": [rel.call({"trust": -3})]},
+						"failure": {"text": Loc.ui("%s ricane : la foule rit de vous.") % n.name,
+							"effects": [rel.call({"friendship": -5}), {"type": "reputation", "amount": -1, "location": n.location}]}}]}
+		"neglect":
+			return {"id": "npc_neglect_" + n.id, "title": Loc.ui("Des reproches"), "text": Loc.gendered(Loc.ui(
+				"%s vous attend, les bras croisés : « On ne te voit plus. Tu m'as oublié{g:|e|·e} ? »") % n.name, n.gender),
+				"choices": [
+					{"id": "reassure", "text": Loc.ui("Le rassurer"), "check": {"skill": "persuasion", "dc": 12},
+						"success": {"text": Loc.ui("%s se radoucit et vous serre contre lui·elle.") % n.name, "effects": [rel.call({"love": 5, "trust": 3})]},
+						"failure": {"text": Loc.ui("Vos excuses sonnent creux."), "effects": [rel.call({"love": -5, "trust": -3})]}},
+					{"id": "time", "text": Loc.ui("Lui consacrer la journée"), "outcome": {"text": Loc.ui("Vous passez la journée ensemble."),
+						"effects": [rel.call({"love": 4, "friendship": 2}), {"type": "pass_time", "slots": 2}]}}]}
+	return {}
 
 
 ## Ligne d'accueil : salutation selon l'humeur, et parfois un souvenir d'une vie passée.

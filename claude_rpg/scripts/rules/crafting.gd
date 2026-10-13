@@ -3,12 +3,31 @@ extends RefCounted
 ## API de la fabrication (data/recipes.json) et de l'amélioration d'équipement (rules.json › forge).
 ##
 ## Recette : {"id", "result": id d'objet, "count"? (1), "station": "forge" | "alchemy",
-##            "materials": {id: quantité}, "gold"? (0)}
+##            "materials": {id: quantité}, "gold"? (0), "dc"? (10)}
+## Fabriquer demande un test de la compétence de la station (rules.json › crafting).
 ## Amélioration : une arme, une armure ou un bouclier ordinaire devient « +1 », puis « +2 », « +3 ».
 ## L'objet amélioré a l'id "<base>@<rang>" (ex. "longsword@2"), décrit par Equipment.def :
 ## bonus au toucher et aux dégâts pour une arme, à la CA pour une armure ou un bouclier.
 
 const UPGRADE_SEPARATOR := "@"
+
+
+static func _crafting(key: String, default: Variant) -> Variant:
+	return DB.rules.get("crafting", {}).get(key, default)
+
+
+## Test d'une recette : {"skill", "ability"?, "dc"}.
+static func check_for(recipe_def: Dictionary) -> Dictionary:
+	var spec: Dictionary = _crafting("station_skills", {}).get(recipe_def.get("station", ""), {"skill": "crafting"}).duplicate()
+	spec["dc"] = int(recipe_def.get("dc", 10))
+	return spec
+
+
+## Métier qui se dessine à force de fabriquer à une station (« Forgeronne ») : "" sous le seuil.
+static func profession(station: String, crafted: int, gender: String) -> String:
+	if crafted < int(_crafting("profession_threshold", 5)):
+		return ""
+	return Loc.gendered(String(_crafting("professions", {}).get(station, "")), gender)
 
 
 static func recipes_for(station: String) -> Array:

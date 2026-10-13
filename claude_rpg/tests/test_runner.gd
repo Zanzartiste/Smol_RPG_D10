@@ -33,6 +33,7 @@ const TESTS := [
 	"_test_skill_ranks",
 	"_test_social",
 	"_test_multiclass_and_rest",
+	"_test_social_life",
 	"_test_combat",
 	"_test_combat_turns",
 	"_test_companions",
@@ -1036,8 +1037,22 @@ func _test_economy() -> bool:
 	_expect(Crafting.missing_for(recipe, life) == "il manque : Minerai de fer ×2, 1 po", "fabrication : ce qui manque")
 	hero.gold = 5
 	hero.add_item("iron_ore", 2)
-	_expect(life.craft("craft_longsword") and hero.item_count("iron_ore") == 0 and hero.gold == 4
-		and hero.item_count("longsword") == 1, "fabrication : matériaux et or dépensés")
+	DB.recipes["craft_longsword"]["dc"] = -100  # réussite assurée (sauf 1 naturel : on rejoue)
+	var crafted := life.craft("craft_longsword")
+	_expect(crafted["ok"] and (not crafted["success"] or (hero.item_count("iron_ore") == 0 and hero.gold == 4
+		and hero.item_count("longsword") == 1)), "fabrication réussie : matériaux et or dépensés")
+	DB.recipes["craft_longsword"]["dc"] = 100  # échec assuré (sauf 20 naturel)
+	hero.add_item("iron_ore", 2)
+	hero.gold = 5
+	var failed := life.craft("craft_longsword")
+	_expect(failed["ok"] and (failed["success"] or (hero.item_count("iron_ore") == 1 and hero.gold == 4)),
+		"fabrication ratée : la moitié des matériaux gâchée")
+	DB.recipes["craft_longsword"].erase("dc")
+	_expect(Crafting.check_for(Crafting.recipe("craft_longsword")) == {"skill": "crafting", "ability": "dex", "dc": 10},
+		"test d'Artisanat (DEX) pour la forge")
+	life.crafted["forge"] = 5
+	hero.gender = "female"
+	_expect(life.professions() == ["Forgeronne (5 objets)"], "métier qui se dessine (accordé au genre)")
 
 	# Amélioration à la forge.
 	_expect(Crafting.can_upgrade("longsword") and not Crafting.can_upgrade("robe") and not Crafting.can_upgrade("flame_tongue")
@@ -1494,6 +1509,70 @@ func _life_of(ch: Character) -> LifeState:
 	var life := LifeState.new()
 	life.character = ch
 	return life
+
+
+func _test_social_life() -> bool:
+	var backup := Meta.to_dict()
+	Meta.npcs.clear()
+	Game.start_life(Character.create("human", "fighter", "Héros"), 161)
+	var life := Game.life
+	var rng := life.rng
+	var friend := Social.generate("villager", rng)
+	friend.languages = ["common"]
+	var session := {"acted": false, "understood": false}
+
+	# Activités : coût en or et en temps.
+	friend.player["friendship"] = 20
+	life.character.gold = 3
+	_expect(Social.unavailable_reason("dinner", friend, life, session) == "5 po requises", "dîner : il faut 5 po")
+	life.character.gold = 10
+	Social.perform("dinner", friend, life, session)
+	_expect(life.character.gold == 5 and session["extra_time"] == 1 and int(friend.player["friendship"]) > 20,
+		"dîner : 5 po, un créneau de plus, amitié")
+
+	# Réputation : accueil à la rencontre, prix, condition d'événement.
+	life.reputation["town"] = 40
+	var stranger := Social.generate("villager", rng)
+	Social.meet(stranger, life)
+	_expect(int(stranger.player["friendship"]) == 10, "réputation : meilleur accueil (Amitié + réputation / 4)")
+	_expect(Shops.reputation_bonus("town", life) == 0.05 and Conditions.check({"type": "reputation", "location": "town", "min": 30}, life, Meta),
+		"réputation : remise et condition")
+	Effects.apply_all([{"type": "reputation", "amount": -50, "location": "town"}, {"type": "npc_relation", "npc": friend.id, "trust": 10}], life, Meta)
+	_expect(life.reputation["town"] == -10 and int(friend.player["trust"]) >= 10, "effets : réputation et relation")
+
+	# Initiatives : un ami demande un service.
+	Meta.npcs.clear()
+	friend = Social.generate("villager", rng)
+	friend.player["met"] = true
+	friend.player["friendship"] = 40
+	Meta.npcs[friend.id] = friend
+	var visit := {}
+	for i in 30:
+		life.last_initiative_day = -1
+		visit = Social.initiative_event(life)
+		if not visit.is_empty():
+			break
+	_expect(visit.get("id", "").begins_with("npc_favor_") and visit["choices"].size() == 2, "un ami vient demander un service")
+	var help: Dictionary = visit["choices"][0]
+	var result := EventEngine.resolve_choice(visit, help, life, Meta)
+	_expect(int(friend.player["friendship"]) == 48 and result["lines"].size() >= 1, "rendre service : Amitié +8")
+	_expect(Social.initiative_event(life).is_empty(), "au plus une visite par jour")
+	friend.player["status"] = "dating"
+	friend.player["last_seen"] = Meta.world_day - 10
+	life.last_initiative_day = -1
+	for i in 30:
+		life.last_initiative_day = -1
+		visit = Social.initiative_event(life)
+		if not visit.is_empty():
+			break
+	_expect(visit.get("id", "").begins_with("npc_neglect_"), "un partenaire délaissé se plaint")
+
+	# Enfant d'un héros : mentionné dans la fiche.
+	var child := Social.generate("villager", rng, {"age": 5})
+	child.parents.assign(["hero:Héros"])
+	_expect(SocialView.describe(child, life, false).contains("Enfant de"), "enfant d'un héros : mentionné")
+	Meta.load_dict(backup)
+	return true
 
 
 func _test_combat_turns() -> bool:

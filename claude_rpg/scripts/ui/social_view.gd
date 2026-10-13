@@ -81,7 +81,7 @@ func _ready() -> void:
 
 	# Rencontre : Perspicacité passive (humeur, trait caché), salut.
 	var first_time: bool = not npc.player.get("met", false)
-	npc.player["met"] = true
+	Social.meet(npc, life)
 	var read := Social.read_npc(life.character, npc)
 	session["mood_known"] = read["mood"]
 	_say(Social.greeting(npc, life))
@@ -142,6 +142,9 @@ static func describe(n: Npc, life: LifeState, mood_known: bool) -> String:
 		t += "\n[color=%s]%s[/color]\n" % [gold, Loc.ui("Ce que vous savez")]
 		for fact: String in n.facts.values():
 			t += "• %s\n" % fact
+	for parent: String in n.parents:
+		if parent.begins_with("hero:"):
+			t += "[color=%s]%s[/color] %s\n" % [gold, Loc.ui("Enfant de"), parent.trim_prefix("hero:")]
 	var partners := n.partners()
 	if not partners.is_empty():
 		t += "[color=%s]%s[/color] %s\n" % [gold, Loc.ui("En couple avec"),

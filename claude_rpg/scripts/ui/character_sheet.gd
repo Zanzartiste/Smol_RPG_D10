@@ -63,6 +63,8 @@ static func bbcode(ch: Character) -> String:
 	var defenses := ch.all_defenses()
 	if not defenses.is_empty():
 		t += defenses.describe() + "\n"
+	if Game.life != null and Game.life.character == ch and not Game.life.professions().is_empty():
+		t += "[color=%s]%s[/color] %s\n" % [gold, Loc.ui("Métier"), ", ".join(PackedStringArray(Game.life.professions()))]
 	if ch.is_encumbered():
 		t += "[color=%s]%s[/color]\n" % [UITheme.BAD.to_html(false),
 			Loc.ui("Encombré : −%d aux jets de FOR et DEX") % ch.encumbrance_penalty()]

@@ -624,6 +624,8 @@ static func _validate_economy(db: Node, errors: Array[String]) -> void:
 			errors.append(ctx + " : aucun matériau")
 		for item_id: String in recipe.get("materials", {}):
 			_expect_item(db, item_id, ctx, errors)
+		if not db.rules.get("crafting", {}).get("station_skills", {}).has(recipe.get("station")):
+			errors.append(ctx + " : station sans compétence (rules.json › crafting › station_skills)")
 		if not stations.has(recipe.get("station")):
 			errors.append(ctx + " : aucune boutique n'a la station « %s » (shops.json › crafting)" % recipe.get("station"))
 	for key in ["sell_rate", "price_skill", "percent_per_point", "max_percent"]:

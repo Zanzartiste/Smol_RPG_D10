@@ -29,6 +29,7 @@ var _debug_badge := Label.new()
 var _inventory_button := Button.new()
 var _carnet_button := Button.new()
 var _rest_button := Button.new()
+var _last_social_session: Dictionary = {}
 var _overlay: Control  # fenêtre ouverte par-dessus l'écran : inventaire ou boutique (null sinon)
 var _event_on_screen: Dictionary = {}  # événement dont les choix sont affichés (pour les réafficher en debug)
 
@@ -121,6 +122,10 @@ func _show_hub() -> void:
 			_show_feat_choice(member)
 			return
 	var life := Game.life
+	var visit := Social.initiative_event(life)  # un PNJ vient parfois vous voir
+	if not visit.is_empty():
+		_show_event(visit)
+		return
 	illustration.texture = ArtProvider.location_image("town", life)
 	title_label.text = tr("Jour %d — %s") % [life.day, life.slot_name()]
 	var text := ""
@@ -366,6 +371,7 @@ func open_social(n: Npc) -> void:
 	if not _can_open_overlay():
 		return
 	var view := SocialView.new(Game.life, n)
+	_last_social_session = view.session
 	_overlay = view
 	view.changed.connect(_refresh_sheet)
 	view.trade_requested.connect(_open_npc_trade.bind(view))
@@ -383,7 +389,7 @@ func _open_npc_trade(n: Npc, social: SocialView) -> void:
 func _on_social_closed(acted: bool, location_id: String) -> void:
 	_overlay = null
 	if acted:
-		Game.end_interaction()
+		Game.end_interaction(int(_last_social_session.get("extra_time", 0)))
 	_refresh_sheet()
 	if Game.life.dead:
 		_show_death()

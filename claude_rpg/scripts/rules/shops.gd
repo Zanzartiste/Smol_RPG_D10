@@ -61,15 +61,28 @@ static func discount(life: LifeState) -> float:
 	return clampf(mod * float(_trade("percent_per_point", 3)), -limit, limit) / 100.0
 
 
-## Prix d'achat d'un objet dans une boutique (au moins 1 po).
-static func buy_price(shop_id: String, item_id: String, life: LifeState) -> int:
-	var price := Items.value_of(item_id) * float(def(shop_id).get("price_rate", 1.0)) * (1.0 - discount(life))
+## Effet de la réputation du héros dans un lieu sur les prix : +5 % s'il est respecté, −10 % s'il est honni.
+static func reputation_bonus(location_id: String, life: LifeState) -> float:
+	var value := int(life.reputation.get(location_id, 0))
+	if value >= 20:
+		return 0.05
+	if value <= -20:
+		return -0.10
+	return 0.0
+
+
+## Prix d'achat d'un objet dans une boutique (au moins 1 po). `location_id` : lieu du vendeur sans boutique.
+static func buy_price(shop_id: String, item_id: String, life: LifeState, location_id := "") -> int:
+	var loc: String = def(shop_id).get("location", location_id)
+	var rate := 1.0 - discount(life) - reputation_bonus(loc, life)
+	var price := Items.value_of(item_id) * float(def(shop_id).get("price_rate", 1.0)) * rate
 	return maxi(1, ceili(price))
 
 
 ## Prix de revente d'un objet (au moins 1 po s'il a de la valeur).
-static func sell_price(item_id: String, life: LifeState) -> int:
+static func sell_price(item_id: String, life: LifeState, location_id := "") -> int:
 	if Items.value_of(item_id) <= 0:
 		return 0
-	var price := Items.value_of(item_id) * float(_trade("sell_rate", 0.5)) * (1.0 + discount(life))
+	var rate := 1.0 + discount(life) + reputation_bonus(location_id, life)
+	var price := Items.value_of(item_id) * float(_trade("sell_rate", 0.5)) * rate
 	return maxi(1, floori(price))

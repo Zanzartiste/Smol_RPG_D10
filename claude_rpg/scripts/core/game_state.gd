@@ -178,8 +178,8 @@ func rest_name() -> String:
 
 
 ## Fin d'une interaction sociale : elle a pris un créneau de la journée.
-func end_interaction() -> void:
-	life.advance_time(1)
+func end_interaction(extra_time := 0) -> void:
+	life.advance_time(1 + extra_time)
 	_after_change()
 	Saves.save_all()
 

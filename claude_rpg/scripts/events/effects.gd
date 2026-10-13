@@ -28,6 +28,8 @@ const SCHEMA := {
 	"equip": ["id"],
 	"add_defense": ["kind", "id"],
 	"remove_defense": ["kind", "id"],
+	"npc_relation": ["npc"],  # {"npc", "friendship"?, "love"?, "trust"?} : relation du héros avec un PNJ
+	"reputation": ["amount"],  # {"amount", "location"?} : réputation dans un lieu (le lieu actuel par défaut)
 }
 
 
@@ -130,6 +132,17 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 			"add_defense":
 				ch.defenses.add(e["kind"], e["id"])
 				lines.append(Modifiers.describe({"type": e["kind"], "damage_type": e["id"], "status": e["id"]}))
+			"npc_relation":
+				var n := Social.npc(e["npc"])
+				if n != null:
+					for gauge in Social.GAUGES:
+						if e.has(gauge):
+							Social.change(n, gauge, int(e[gauge]))
+					n.player["last_seen"] = Meta.world_day
+			"reputation":
+				var loc: String = e.get("location", life.location if life.location != "" else DB.location_order[0])
+				Social.change_reputation(life, loc, int(e["amount"]))
+				lines.append(Loc.ui("Réputation %s") % ("+%d" % int(e["amount"]) if int(e["amount"]) > 0 else str(int(e["amount"]))))
 			"remove_defense":
 				ch.defenses.remove(e["kind"], e["id"])
 			_:

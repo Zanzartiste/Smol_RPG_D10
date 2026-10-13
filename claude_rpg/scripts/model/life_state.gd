@@ -17,6 +17,8 @@ var recorded := false  # déjà inscrite dans la chronique
 var notices: Array[String] = []  # messages à afficher au prochain retour au hub
 var reputation: Dictionary = {}  # id de lieu -> réputation du héros (−100 à 100)
 var location := ""  # dernier lieu visité (où l'on se repose)
+var crafted: Dictionary = {}  # station -> objets fabriqués (le métier se dessine)
+var last_initiative_day := -1  # dernier jour du monde où un PNJ est venu vous voir
 ## Combat déclenché mais pas encore terminé : il reprend au chargement d'une sauvegarde
 ## (quitter le jeu ne permet pas d'esquiver un combat).
 var pending_combat: Dictionary = {}
@@ -230,25 +232,46 @@ func sell(shop_id: String, item_id: String) -> bool:
 	if character.item_count(item_id) <= 0 or not Shops.buys(shop_id, item_id):
 		return false
 	var stock := shop_stock(shop_id)
-	character.gold += Shops.sell_price(item_id, self)
+	character.gold += Shops.sell_price(item_id, self, Shops.def(shop_id).get("location", ""))
 	character.remove_item(item_id)
 	stock[item_id] = int(stock.get(item_id, 0)) + 1
 	refresh_load()
 	return true
 
 
-## Fabrique une recette avec les matériaux et l'or du sac.
-func craft(recipe_id: String) -> bool:
+## Fabrique une recette avec les matériaux et l'or du sac : test de la compétence de la station (voir
+## Crafting.check_for). Un échec gâche une partie des matériaux et l'or.
+## Retourne {"ok": possible, "success", "text"}.
+func craft(recipe_id: String) -> Dictionary:
 	var recipe := Crafting.recipe(recipe_id)
 	if recipe.is_empty() or Crafting.missing_for(recipe, self) != "":
-		return false
+		return {"ok": false, "success": false, "text": ""}
+	var roll := Dice.roll_check(character, Crafting.check_for(recipe), rng)
 	var materials: Dictionary = recipe.get("materials", {})
+	var loss := 1.0 if roll["success"] else float(DB.rules.get("crafting", {}).get("failure_loss", 0.5))
 	for item_id: String in materials:
-		character.remove_item(item_id, int(materials[item_id]))
+		character.remove_item(item_id, ceili(int(materials[item_id]) * loss))
 	character.gold -= int(recipe.get("gold", 0))
-	character.add_item(recipe["result"], int(recipe.get("count", 1)))
+	var text: String = "%s : %d + %d = %d contre DD %d — " % [roll["stat"], roll["die"], roll["mod"], roll["total"], roll["dc"]]
+	if roll["success"]:
+		character.add_item(recipe["result"], int(recipe.get("count", 1)))
+		var station: String = recipe.get("station", "")
+		crafted[station] = int(crafted.get(station, 0)) + 1
+		text += Loc.ui("réussi : %s.") % Items.name_of(recipe["result"])
+	else:
+		text += Loc.ui("raté, une partie des matériaux est gâchée.")
 	refresh_load()
-	return true
+	return {"ok": true, "success": roll["success"], "text": text}
+
+
+## Métiers qui se dessinent (« Forgeronne (7 objets) »).
+func professions() -> Array[String]:
+	var result: Array[String] = []
+	for station: String in crafted:
+		var title := Crafting.profession(station, int(crafted[station]), character.gender)
+		if title != "":
+			result.append(Loc.ui("%s (%d objets)") % [title, int(crafted[station])])
+	return result
 
 
 ## Améliore à la forge un objet du sac, ou porté par un membre du groupe (`member`, `slot`).
@@ -280,6 +303,7 @@ func to_dict() -> Dictionary:
 		"day": day, "slot": slot, "flags": flags, "seen": seen, "last_seen_day": last_seen_day,
 		"dead": dead, "death_cause": death_cause, "recorded": recorded, "notices": notices,
 		"pending_combat": pending_combat, "shops": shops, "reputation": reputation, "location": location,
+		"crafted": crafted, "last_initiative_day": last_initiative_day,
 	}
 
 
@@ -301,6 +325,8 @@ static func from_dict(data: Dictionary) -> LifeState:
 	life.notices.assign(data.get("notices", []))
 	life.reputation = Character._int_dict(data.get("reputation", {}))
 	life.location = data.get("location", "")
+	life.crafted = Character._int_dict(data.get("crafted", {}))
+	life.last_initiative_day = int(data.get("last_initiative_day", -1))
 	life.pending_combat = data.get("pending_combat", {})
 	var saved_shops: Dictionary = data.get("shops", {})
 	for shop_id: String in saved_shops:
