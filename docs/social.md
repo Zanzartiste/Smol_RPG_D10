@@ -402,9 +402,8 @@
 
 ## Questions ouvertes
 
-1. **Mort des PNJ** : de vieillesse, en combat, par des événements ? Et le deuil (souvenirs, réputation) ?
-2. **Usure des relations** : à réactiver plus tard (avec le temps long) ?
-3. **Les enfants du héros** : ils grandissent dans le monde ; faut-il pouvoir les retrouver dans une vie suivante
-   (« le fils d'un ancien héros ») ?
-4. **Échanges entre PNJ** : les PNJ achètent-ils, se volent-ils, s'offrent-ils des objets entre eux ?
-5. **Réputation** : quels autres effets (prix, gardes plus méfiants, événements) ?
+1. **Mort des PNJ** (décidée, à implémenter avec le temps long) : de vieillesse, en combat, par des événements ?
+   Quel deuil (souvenirs, humeur des proches, réputation) ?
+2. **Usure des relations** : écartée pour l'instant ; à réactiver avec le temps long ?
+3. **Échanges entre PNJ** : les cadeaux existent ; faut-il aussi des achats et des vols entre PNJ ?
+4. **Réputation** : les gardes doivent-ils pouvoir arrêter un héros honni (prison, amende) ?
