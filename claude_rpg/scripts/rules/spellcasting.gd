@@ -43,9 +43,9 @@ static func progressions() -> Array:
 	return DB.rules.get("spell_slots", {}).keys().filter(func(k): return not k.begins_with("_"))
 
 
-## DD des sorts d'un personnage : 8 + maîtrise + modificateur de l'attribut d'incantation.
+## DD des sorts d'un personnage : 8 + rang de Magie + modificateur de l'attribut d'incantation.
 static func save_dc(ch: Character) -> int:
-	return 8 + ch.proficiency_bonus() + ch.ability_mod(ch.action_ability("spell"))
+	return 8 + ch.skill_rank("magic") + ch.ability_mod(ch.action_ability("spell"))
 
 
 # --- Dés qui augmentent avec le niveau ----------------------------------------

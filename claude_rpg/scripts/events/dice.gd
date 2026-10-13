@@ -2,7 +2,8 @@ class_name Dice
 extends RefCounted
 ## Tests de caractéristique façon d20 : d20 + modificateur >= DD.
 ## Comme dans Baldur's Gate 3, un 20 naturel réussit toujours et un 1 naturel échoue toujours.
-## Un test s'écrit {"skill": "athletics", "dc": 12}, {"ability": "dex", "dc": 12}
+## Un test s'écrit {"skill": "physique", "dc": 12} (avec le meilleur attribut de la compétence),
+## {"skill": "persuasion", "ability": "str", "dc": 12} (attribut imposé : intimider), {"ability": "dex", "dc": 12}
 ## ou {"save": "con", "dc": 12} (jet de sauvegarde : maîtrise si la classe le maîtrise).
 ## "advantage": true / "disadvantage": true : on lance deux d20 et on garde le meilleur / le pire
 ## (les deux s'annulent, comme dans D&D).
@@ -96,6 +97,14 @@ static func advantage_text(advantage: int) -> String:
 	return ""
 
 
+## Attributs entre lesquels le joueur peut choisir pour ce test (vide si l'attribut est imposé ou unique).
+static func ability_options(check: Dictionary) -> Array:
+	if not check.has("skill") or check.has("ability"):
+		return []
+	var abilities := Skills.abilities_of(check["skill"])
+	return abilities if abilities.size() > 1 else []
+
+
 ## Avantage d'un test d'événement (champs "advantage" / "disadvantage", et avantage de compétence
 ## du personnage, ex. Athlète remarquable).
 static func check_advantage(check: Dictionary, ch: Character = null) -> int:
@@ -107,7 +116,7 @@ static func check_advantage(check: Dictionary, ch: Character = null) -> int:
 
 static func modifier(ch: Character, check: Dictionary) -> int:
 	if check.has("skill"):
-		return ch.skill_mod(check["skill"])
+		return ch.skill_mod(check["skill"], check.get("ability", ""))
 	if check.has("save"):
 		return ch.save_mod(check["save"])
 	return ch.check_mod(check.get("ability", "str"))
@@ -115,7 +124,7 @@ static func modifier(ch: Character, check: Dictionary) -> int:
 
 ## Talent fiable : un test de compétence maîtrisée ne descend jamais sous 10 au d20.
 static func minimum_die(ch: Character, check: Dictionary) -> int:
-	if check.has("skill") and ch.is_proficient(check["skill"]) and ch.has_modifier("reliable_talent"):
+	if check.has("skill") and ch.is_trained(check["skill"]) and ch.has_modifier("reliable_talent"):
 		return 10
 	return 1
 
@@ -127,6 +136,8 @@ static func label(check: Dictionary) -> String:
 ## Nom de la compétence ou de l'attribut testé.
 static func stat_name(check: Dictionary) -> String:
 	if check.has("skill"):
+		if check.has("ability"):
+			return "%s (%s)" % [Skills.name_of(check["skill"]), Abilities.short_of(check["ability"])]
 		return Skills.name_of(check["skill"])
 	if check.has("save"):
 		return Loc.ui("Sauvegarde de %s") % Abilities.name_of(check["save"])

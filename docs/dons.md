@@ -20,7 +20,7 @@
 - Un don ne se prend qu'une fois.
 - Ce qu'un don peut faire aujourd'hui :
   - bonus d'attribut, de CA, d'initiative, de PV par niveau, aux dégâts ou au toucher avec une arme, aux sauvegardes ;
-  - maîtrise ou expertise d'une compétence, maîtrise d'une sauvegarde ;
+  - rangs de compétence, rang de sauvegarde ;
   - résistance, immunité ou vulnérabilité à un type de dégâts, immunité à un état.
 
   Il peut aussi donner des **actions de combat** (Empoignade) et des **sorts** utilisables une fois par repos long
@@ -59,7 +59,7 @@
 - **Catégorie** : origine (SRD 5.2).
 - **Prérequis** : aucun.
 - **Effet** : Vous avez appris deux tours de magie et un sort du 1er niveau, que vous pouvez lancer une fois par repos long sans emplacement.
-- **Détail** : au choix : 1 attribut(s) parmi : Intelligence, Sagesse, Charisme ; au choix : 2 parmi : Trait de feu, Rayon de givre ; au choix : 1 parmi : Projectile magique, Mains brûlantes, Sommeil, Bouclier, Appel du familier ; une utilisation par repos long.
+- **Détail** : +1 rang en Magie ; au choix : 1 attribut(s) parmi : Intelligence, Sagesse, Charisme ; au choix : 2 parmi : Trait de feu, Rayon de givre ; au choix : 1 parmi : Projectile magique, Mains brûlantes, Sommeil, Bouclier, Appel du familier ; une utilisation par repos long.
 - **Obtenu par** : don de l'humain.
 
 ### Frappe brutale (`savage_attacker`)
@@ -74,8 +74,8 @@
 
 - **Catégorie** : origine (SRD 5.2).
 - **Prérequis** : aucun.
-- **Effet** : Vous maîtrisez trois compétences de votre choix.
-- **Détail** : au choix : 3 compétence(s) au choix.
+- **Effet** : +1 rang dans trois compétences de votre choix.
+- **Détail** : au choix : +1 rang dans 3 compétence(s) au choix.
 - **Obtenu par** : passé Noble, don de l'humain.
 
 ### Robuste (`tough`)
@@ -91,7 +91,7 @@
 - **Catégorie** : origine.
 - **Prérequis** : aucun.
 - **Effet** : Vous savez panser les plaies du corps comme celles de l'âme.
-- **Détail** : +1 SAG ; maîtrise de Médecine.
+- **Détail** : +1 SAG ; +1 rang en Médecine.
 - **Obtenu par** : passé Acolyte, don de l'humain.
 
 ### Artisan accompli (`crafter`)
@@ -99,7 +99,7 @@
 - **Catégorie** : origine.
 - **Prérequis** : aucun.
 - **Effet** : Un œil exercé repère la moindre malfaçon… et le moindre détail suspect.
-- **Détail** : maîtrise de Artisanat ; maîtrise de Investigation.
+- **Détail** : +1 rang en Artisanat ; +1 rang en Perception.
 - **Obtenu par** : passé Artisan, don de l'humain.
 
 ### Langue d'argent (`silver_tongue`)
@@ -107,7 +107,7 @@
 - **Catégorie** : origine.
 - **Prérequis** : aucun.
 - **Effet** : Vous trouvez toujours les mots, surtout ceux qui ne sont pas vrais.
-- **Détail** : +1 CHA ; maîtrise de Persuasion.
+- **Détail** : +1 CHA ; +1 rang en Persuasion.
 - **Obtenu par** : passé Charlatan, don de l'humain.
 
 ### Musicien (`musician`)
@@ -115,7 +115,7 @@
 - **Catégorie** : origine.
 - **Prérequis** : aucun.
 - **Effet** : Votre talent apaise les foules et vous ouvre bien des portes.
-- **Détail** : +1 CHA ; maîtrise de Arts.
+- **Détail** : +1 CHA ; +1 rang en Arts.
 - **Obtenu par** : passé Saltimbanque, don de l'humain.
 
 ### Athlète (`athlete`)
@@ -123,7 +123,7 @@
 - **Catégorie** : origine.
 - **Prérequis** : aucun.
 - **Effet** : Un entraînement physique rigoureux a forgé votre corps.
-- **Détail** : maîtrise de Athlétisme ; au choix : 1 attribut(s) parmi : Force, Dextérité.
+- **Détail** : +1 rang en Physique ; au choix : 1 attribut(s) parmi : Force, Dextérité.
 - **Obtenu par** : passé Sauvageon, don de l'humain.
 
 ### Érudit des arcanes (`scholar`)
@@ -131,7 +131,7 @@
 - **Catégorie** : origine.
 - **Prérequis** : aucun.
 - **Effet** : Des nuits entières passées sur les grimoires ont aiguisé votre esprit.
-- **Détail** : +1 INT ; maîtrise de Nature.
+- **Détail** : +1 INT ; +1 rang en Érudition.
 - **Obtenu par** : passé Érudit, don de l'humain.
 
 ### Agile (`nimble`)
@@ -139,12 +139,20 @@
 - **Catégorie** : origine.
 - **Prérequis** : aucun.
 - **Effet** : Les ruelles vous ont appris à esquiver, sauter et filer.
-- **Détail** : +1 DEX ; maîtrise de Acrobaties.
+- **Détail** : +1 DEX ; +1 rang en Physique.
 - **Obtenu par** : passé Gamin des rues, don de l'humain.
 
 ---
 
 ## Dons généraux (implémentés)
+
+### Amélioration d'attribut (`ability_score_improvement`)
+
+- **Catégorie** : général (SRD 5.2).
+- **Prérequis** : niveau 4.
+- **Effet** : +2 à un attribut, ou +1 à deux attributs (20 au maximum).
+- **Détail** : au choix : 2 attribut(s) parmi : n'importe quel attribut.
+- **Obtenu par** : montée de niveau (4, 8, 12, 16, 20).
 
 ### Lutteur (`grappler`)
 
@@ -166,7 +174,7 @@
 
 - **Catégorie** : général.
 - **Prérequis** : aucun.
-- **Effet** : +1 à un attribut, et vous maîtrisez ses jets de sauvegarde.
+- **Effet** : +1 à un attribut, et +1 rang à ses jets de sauvegarde.
 - **Détail** : au choix : 1 attribut(s) parmi : n'importe quel attribut.
 - **Obtenu par** : montée de niveau (4, 8, 12, 16, 20).
 

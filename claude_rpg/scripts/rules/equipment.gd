@@ -106,6 +106,19 @@ static func slots_for(id: String) -> Array:
 	return SLOT_GROUPS.get(slot, [slot])
 
 
+## Compétences d'attaque d'une arme ("skill" de l'arme, sinon : à distance -> Armes de trait,
+## mains nues -> Armes de mêlée ou Physique, le reste -> Armes de mêlée).
+static func skills_for(id: String) -> Array:
+	var weapon := def(id)
+	if weapon.has("skill"):
+		return [weapon["skill"]]
+	if id == UNARMED:
+		return ["weapon_melee", "physique"]
+	if has_property(id, "ranged"):
+		return ["weapon_ranged"]
+	return ["weapon_melee"]
+
+
 ## Poids en kg.
 static func weight_of(id: String) -> float:
 	return float(def(id).get("weight", 0.0))

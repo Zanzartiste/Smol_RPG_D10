@@ -12,6 +12,7 @@ const SCHEMA := {
 	"seen": ["event"],
 	"ability": ["id"],
 	"skill_proficient": ["id"],
+	"passive": ["skill", "min"],  # 10 + bonus de la compétence >= min (ex. Perception passive)
 	"species": ["in"],
 	"class": ["in"],
 	"background": ["in"],
@@ -54,6 +55,8 @@ static func check(c: Dictionary, life: LifeState, meta: MetaState) -> bool:
 			return _in_range(ch.ability_score(c["id"]), c)
 		"skill_proficient":
 			return ch.is_proficient(c["id"])
+		"passive":
+			return ch.passive(c["skill"]) >= int(c["min"])
 		"species":
 			return ch.species_id in c["in"]
 		"class":

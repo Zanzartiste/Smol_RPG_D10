@@ -8,9 +8,10 @@
 		"saving_throws": ["str", "con"],
 		"choices": [
 			{"id": "skills", "name": "Compétences de classe", "type": "skill", "count": 2, "at_creation": true,
-				"options": ["acrobatics", "animal_handling", "athletics", "history", "insight", "intimidation", "perception", "survival"],
-				"modifiers": [{"type": "skill_proficiency", "id": "$"}], "default": ["athletics", "perception"]}
+				"options": ["physique", "animal_handling", "lore", "insight", "persuasion", "perception", "survival"],
+				"modifiers": [{"type": "skill_rank", "id": "$", "amount": 1}], "default": ["physique", "perception"]}
 		],
+		"skill_ranks": {"weapon_melee": 1, "weapon_ranged": 1},
 		"equipment": {"main_hand": "longsword", "armor": "chain_mail"},
 		"actions": ["weapon_attack", "second_wind", "defensive_stance", "pommel_strike"],
 		"features": [
@@ -21,7 +22,7 @@
 				"choices": [{"id": "subclass", "name": "Archétype martial", "type": "option", "count": 1, "default": ["champion"], "options": [
 					{"id": "champion", "name": "Champion", "description": "La force brute et la précision font de vous une machine de guerre.", "features": [
 						{"level": 3, "id": "improved_critical", "name": "Critique amélioré", "description": "Vos attaques font un critique sur 19 ou 20.", "modifiers": [{"type": "critical_range", "amount": 1}]},
-						{"level": 3, "id": "remarkable_athlete", "name": "Athlète remarquable", "description": "Avantage à l'initiative et aux tests d'Athlétisme.", "modifiers": [{"type": "initiative_advantage"}, {"type": "skill_advantage", "id": "athletics"}]},
+						{"level": 3, "id": "remarkable_athlete", "name": "Athlète remarquable", "description": "Avantage à l'initiative et aux tests de Physique.", "modifiers": [{"type": "initiative_advantage"}, {"type": "skill_advantage", "id": "physique"}]},
 						{"level": 7, "id": "additional_fighting_style", "name": "Style de combat supplémentaire", "description": "Vous choisissez un second style de combat.",
 							"choices": [{"id": "style", "name": "Style de combat", "type": "feat", "category": "fighting_style", "count": 1, "default": ["dueling"]}]},
 						{"level": 10, "id": "heroic_warrior", "name": "Guerrier héroïque", "description": "Vous puisez dans votre héroïsme (pas encore de mécanique : il faudra le système d'Inspiration héroïque)."},
@@ -48,8 +49,8 @@
 		"saving_throws": ["int", "wis"],
 		"choices": [
 			{"id": "skills", "name": "Compétences de classe", "type": "skill", "count": 2, "at_creation": true,
-				"options": ["arcana", "history", "insight", "investigation", "medicine", "nature", "religion"],
-				"modifiers": [{"type": "skill_proficiency", "id": "$"}], "default": ["arcana", "investigation"]}
+				"options": ["lore", "insight", "perception", "medicine", "languages", "potions_cooking"],
+				"modifiers": [{"type": "skill_rank", "id": "$", "amount": 1}], "default": ["lore", "perception"]}
 		],
 		"equipment": {"main_hand": "quarterstaff", "armor": "robe"},
 		"spellcasting": "int",
@@ -85,32 +86,33 @@
 		"saving_throws": ["dex", "int"],
 		"choices": [
 			{"id": "skills", "name": "Compétences de classe", "type": "skill", "count": 4, "at_creation": true,
-				"options": ["acrobatics", "athletics", "deception", "insight", "intimidation", "investigation", "perception", "persuasion", "sleight_of_hand", "stealth"],
-				"modifiers": [{"type": "skill_proficiency", "id": "$"}], "default": ["stealth", "sleight_of_hand", "acrobatics", "perception"]}
+				"options": ["physique", "persuasion", "insight", "perception", "sleight_of_hand", "stealth", "languages"],
+				"modifiers": [{"type": "skill_rank", "id": "$", "amount": 1}], "default": ["stealth", "sleight_of_hand", "physique", "perception"]}
 		],
+		"skill_ranks": {"weapon_melee": 1, "weapon_ranged": 1},
 		"equipment": {"main_hand": "rapier", "armor": "leather"},
 		"actions": ["weapon_attack", "sneak_attack", "poisoned_blade"],
 		"features": [
-			{"level": 1, "id": "expertise", "name": "Expertise", "description": "Bonus de maîtrise doublé dans deux compétences maîtrisées.",
-				"choices": [{"id": "skills", "name": "Expertise", "type": "skill", "count": 2, "from": "proficient",
-					"modifiers": [{"type": "skill_expertise", "id": "$"}], "default": ["stealth", "sleight_of_hand"]}]},
+			{"level": 1, "id": "expertise", "name": "Expertise", "description": "+1 rang dans deux compétences déjà entraînées.",
+				"choices": [{"id": "skills", "name": "Expertise", "type": "skill", "count": 2, "from": "trained",
+					"modifiers": [{"type": "skill_rank", "id": "$", "amount": 1}], "default": ["stealth", "sleight_of_hand"]}]},
 			{"level": 3, "id": "sneak_attack_2", "name": "Attaque sournoise (2d6)", "description": "L'Attaque sournoise gagne un dé tous les deux niveaux (2d6 au niveau 3, 3d6 au niveau 5…)."},
 			{"level": 3, "id": "subclass", "name": "Archétype de roublard", "description": "Vous choisissez votre archétype (sous-classe).",
 				"choices": [{"id": "subclass", "name": "Archétype de roublard", "type": "option", "count": 1, "default": ["thief"], "options": [
 					{"id": "thief", "name": "Voleur", "description": "Cambrioleur, pickpocket et chasseur de trésors.", "features": [
 						{"level": 3, "id": "fast_hands", "name": "Mains lestes", "description": "Une fois par tour, utiliser un objet ne vous coûte pas votre action.", "modifiers": [{"type": "fast_hands"}]},
-						{"level": 3, "id": "second_story_work", "name": "Monte-en-l'air", "description": "Vous grimpez et sautez avec aisance (maîtrise d'Athlétisme).", "modifiers": [{"type": "skill_proficiency", "id": "athletics"}]},
-						{"level": 9, "id": "supreme_sneak", "name": "Furtivité suprême", "description": "Avantage aux tests de Discrétion.", "modifiers": [{"type": "skill_advantage", "id": "stealth"}]},
+						{"level": 3, "id": "second_story_work", "name": "Monte-en-l'air", "description": "Vous grimpez et sautez avec aisance (+1 rang en Physique).", "modifiers": [{"type": "skill_rank", "id": "physique", "amount": 1}]},
+						{"level": 9, "id": "supreme_sneak", "name": "Furtivité suprême", "description": "Avantage aux tests de Furtivité.", "modifiers": [{"type": "skill_advantage", "id": "stealth"}]},
 						{"level": 13, "id": "use_magic_device", "name": "Utilisation d'objets magiques", "description": "Vous savez vous servir de n'importe quel objet magique (pas encore de mécanique)."},
 						{"level": 17, "id": "thiefs_reflexes", "name": "Réflexes de voleur", "description": "Vous agissez deux fois au premier round (pas encore de mécanique)."}
 					]}
 				]}]},
 			{"level": 5, "id": "uncanny_dodge", "name": "Esquive instinctive", "description": "Une fois par round, les dégâts d'une attaque qui vous touche sont divisés par deux.", "modifiers": [{"type": "uncanny_dodge"}]},
-			{"level": 6, "id": "expertise_2", "name": "Expertise (2)", "description": "Bonus de maîtrise doublé dans deux autres compétences maîtrisées.",
-				"choices": [{"id": "skills", "name": "Expertise", "type": "skill", "count": 2, "from": "proficient",
-					"modifiers": [{"type": "skill_expertise", "id": "$"}], "default": ["acrobatics", "perception"]}]},
+			{"level": 6, "id": "expertise_2", "name": "Expertise (2)", "description": "+1 rang dans deux autres compétences déjà entraînées.",
+				"choices": [{"id": "skills", "name": "Expertise", "type": "skill", "count": 2, "from": "trained",
+					"modifiers": [{"type": "skill_rank", "id": "$", "amount": 1}], "default": ["physique", "perception"]}]},
 			{"level": 7, "id": "evasion", "name": "Dérobade", "description": "Contre un effet qui permet un jet de Dextérité pour réduire les dégâts de moitié : aucun dégât en cas de réussite, la moitié en cas d'échec.", "modifiers": [{"type": "evasion"}]},
-			{"level": 11, "id": "reliable_talent", "name": "Talent fiable", "description": "Pour un test d'une compétence maîtrisée, un résultat de 9 ou moins au d20 compte comme un 10.", "modifiers": [{"type": "reliable_talent"}]}
+			{"level": 11, "id": "reliable_talent", "name": "Talent fiable", "description": "Pour un test d'une compétence entraînée, un résultat de 9 ou moins au d20 compte comme un 10.", "modifiers": [{"type": "reliable_talent"}]}
 		],
 		"start_items": {},
 		"art": {"headgear": "hood", "outfit": "#3a4a2e", "accent": "#6b4a2a"}

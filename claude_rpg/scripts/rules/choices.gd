@@ -3,10 +3,10 @@ extends RefCounted
 ## API des choix à faire par le joueur : compétences de classe, ascendance, style de combat,
 ## sous-classe, options d'un don… Ils sont décrits dans les données ("choices") d'une espèce, d'une
 ## classe, d'une aptitude de classe (ou de sous-classe) ou d'un don :
-##   {"id", "name", "type": "skill" | "ability" | "damage_type" | "feat" | "action" | "option",
+##   {"id", "name", "type": "skill" | "ability" | "damage_type" | "feat" | "action" | "option" | "language",
 ##    "count"? (1), "options"? (ids, ou objets pour "option"), "default"? (ids),
 ##    "modifiers"? : modèles de modificateurs, "$" étant remplacé par la valeur choisie,
-##    "from"? : "proficient" (compétences déjà maîtrisées, pour l'Expertise),
+##    "from"? : "trained" (compétences déjà entraînées, pour l'Expertise),
 ##    "category"? : catégorie de don (type "feat"), "cost"? : ressource des actions choisies (type "action"),
 ##    "allow_repeat"? : la même valeur peut être choisie plusieurs fois (Amélioration d'attribut),
 ##    "at_creation"? : proposé à l'écran de création (sinon au hub, à la première occasion)}
@@ -47,6 +47,8 @@ static func value_name(spec: Dictionary, value: String) -> String:
 			return Feats.name_of(value)
 		"action":
 			return Actions.name_of(value)
+		"language":
+			return Skills.language_name(value)
 		"option":
 			return option(spec, value).get("name", value)
 	return value
@@ -83,15 +85,18 @@ static func options_for(spec: Dictionary, ch: Character, taken: Array) -> Array[
 			candidates = spec.get("options", [])
 		"option":
 			candidates = spec.get("options", []).map(func(o): return o["id"])
+		"language":
+			candidates = Skills.languages().map(func(l): return l["id"]).filter(func(id): return id not in Skills.common_languages())
 	var result: Array[String] = []
 	for value: String in candidates:
 		if value in taken and not spec.get("allow_repeat", false):
 			continue
 		if spec.get("type") == "skill":
-			var grants_proficiency: bool = spec.get("modifiers", []).any(func(m): return m.get("type") == "skill_proficiency")
-			if grants_proficiency and ch.is_proficient(value):
+			# Une compétence déjà donnée par le passé ne se choisit pas comme compétence de classe.
+			if spec.get("id") == "skills" and spec.get("from", "") == "" \
+					and value in DB.backgrounds.get(ch.background_id, {}).get("skills", []):
 				continue
-			if spec.get("from") == "proficient" and (not ch.is_proficient(value) or ch.has_expertise(value)):
+			if spec.get("from") == "trained" and not ch.is_trained(value):
 				continue
 		result.append(value)
 	return result

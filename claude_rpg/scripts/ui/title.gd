@@ -25,7 +25,44 @@ func _ready() -> void:
 	quit_button.pressed.connect(func(): get_tree().quit())
 	quit_button.visible = not OS.has_feature("web")
 	reset_button.pressed.connect(_on_reset)
+	var options_button := Button.new()
+	options_button.text = tr("Options")
+	options_button.pressed.connect(open_options, CONNECT_DEFERRED)
+	quit_button.get_parent().add_child(options_button)
+	quit_button.get_parent().move_child(options_button, quit_button.get_index())
 	_refresh()
+
+
+## Fenêtre des options (réglages enregistrés dans la méta).
+func open_options() -> void:
+	var overlay := ColorRect.new()
+	overlay.color = Color(0, 0, 0, 0.65)
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.add_child(center)
+	var panel := PanelContainer.new()
+	center.add_child(panel)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 12)
+	panel.add_child(box)
+	var title := Label.new()
+	title.text = tr("Options")
+	title.theme_type_variation = &"TitleLabel"
+	box.add_child(title)
+	var manual := CheckBox.new()
+	manual.text = tr("Choisir soi-même l'attribut des tests de compétence")
+	manual.tooltip_text = tr("Sinon, le meilleur attribut est utilisé automatiquement.")
+	manual.button_pressed = Meta.settings.get("manual_skill_ability", false)
+	manual.toggled.connect(func(on: bool):
+		Meta.settings["manual_skill_ability"] = on
+		Saves.save_meta())
+	box.add_child(manual)
+	var close := Button.new()
+	close.text = tr("Fermer")
+	close.pressed.connect(overlay.queue_free)
+	box.add_child(close)
+	add_child(overlay)
 
 
 func _refresh() -> void:

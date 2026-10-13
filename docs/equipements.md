@@ -323,7 +323,7 @@
 ### Cape elfique (`elven_cloak`)
 
 - **Emplacement** : cape.
-- **Effets** : maîtrise de Discrétion, expertise en Discrétion.
+- **Effets** : +2 rang en Furtivité.
 - **Poids** : 0.5 kg.
 - **Rareté** : peu commun.
 - **Valeur** : 100 po.
@@ -373,7 +373,7 @@
 ### Bottes elfiques (`elven_boots`)
 
 - **Emplacement** : chaussures.
-- **Effets** : maîtrise de Discrétion.
+- **Effets** : +1 rang en Furtivité.
 - **Poids** : 0.5 kg.
 - **Rareté** : peu commun.
 - **Valeur** : 100 po.

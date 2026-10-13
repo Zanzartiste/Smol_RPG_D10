@@ -74,7 +74,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	var index: int = key.keycode - KEY_1
 	if index >= 0 and index < choices_box.get_child_count():
-		var button := choices_box.get_child(index) as Button
+		var child := choices_box.get_child(index)
+		var button := (child if child is Button else child.get_child(0)) as Button
 		if not button.disabled:
 			button.pressed.emit()
 			accept_event()
@@ -129,7 +130,33 @@ func _show_event_choices(ev: Dictionary) -> void:
 			label += "   [%s — %d %%]" % [Dice.label(choice["check"]), roundi(chance * 100)]
 		if not entry["available"]:
 			label += "   (%s)" % entry["reason"]
-		_add_choice(label, _on_choice.bind(choice), entry["available"])
+		var button := _add_choice(label, _on_choice.bind(choice), entry["available"])
+		if entry["available"] and choice.has("check") and Meta.settings.get("manual_skill_ability", false):
+			_add_ability_buttons(button, choice)
+
+
+## Option « choisir l'attribut » : de petits boutons, un par attribut possible, accolés au choix ;
+## le choix lui-même utilise le meilleur attribut.
+func _add_ability_buttons(button: Button, choice: Dictionary) -> void:
+	var abilities := Dice.ability_options(choice["check"])
+	if abilities.is_empty():
+		return
+	var row := HBoxContainer.new()
+	choices_box.add_child(row)
+	choices_box.move_child(row, button.get_index())
+	choices_box.remove_child(button)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(button)
+	for ability: String in abilities:
+		var check: Dictionary = choice["check"].duplicate()
+		check["ability"] = ability
+		var forced := choice.duplicate()
+		forced["check"] = check
+		var small := Button.new()
+		small.text = "%s %d %%" % [Abilities.short_of(ability), roundi(Dice.success_chance(Game.life.character, check) * 100)]
+		small.tooltip_text = tr("Faire le test avec : %s") % Abilities.name_of(ability)
+		small.pressed.connect(_on_choice.bind(forced), CONNECT_DEFERRED)
+		row.add_child(small)
 
 
 func _show_result(result: Dictionary) -> void:

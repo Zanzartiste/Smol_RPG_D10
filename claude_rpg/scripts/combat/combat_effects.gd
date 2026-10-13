@@ -11,6 +11,9 @@ extends RefCounted
 ##   {"type": "cleanse", "status": "poisoned" | "negative"}        retire un état, ou tous les négatifs
 ##   {"type": "summon", "creature": "familiar"}                    invoque une créature dans son camp
 ##   {"type": "extra_action"}                                     une action de plus ce tour (Fougue)
+##   {"type": "check", "skill": "stealth", "dc": 13}               test de compétence de l'acteur contre un DD,
+##   {"type": "check", "skill": "persuasion", "ability": "str", "vs_save": "wis"}  ou contre un jet de
+##        sauvegarde de la cible. Raté : les effets suivants sont ignorés (comme après une attaque ratée).
 ## Champs communs facultatifs :
 ##   "save": {"ability": "dex", "half"?: true, "dc"?: N}  la cible fait un jet de sauvegarde contre le DD
 ##        des sorts (ou "dc", ou le save_dc de la créature) ; réussi : rien (ou moitié des dégâts si
@@ -30,6 +33,7 @@ const SCHEMA := {
 	"cleanse": ["status"],
 	"summon": ["creature"],
 	"extra_action": [],
+	"check": ["skill"],
 }
 ## Cibles possibles d'une action (actions.json, actions des créatures).
 const TARGETS := ["enemy", "all_enemies", "ally", "all_allies", "self", "none"]
@@ -51,12 +55,15 @@ const TARGET_PREFIX := {
 static func describe_all(effects: Array, target := "enemy") -> String:
 	var sentences := PackedStringArray()
 	var after_attack := false
+	var after_check := false
 	for e: Dictionary in effects:
 		var text := describe(e)
-		if after_attack and e.get("type") != "attack" and e.get("type") not in UNTARGETED:
-			text = Loc.ui("Si elle touche : %s") % text.substr(0, 1).to_lower() + text.substr(1)
-		if e.get("type") == "attack":
+		if after_attack and e.get("type") not in ["attack", "check"] and e.get("type") not in UNTARGETED:
+			var lead := Loc.ui("Si c'est réussi : %s") if after_check else Loc.ui("Si elle touche : %s")
+			text = lead % text.substr(0, 1).to_lower() + text.substr(1)
+		if e.get("type") in ["attack", "check"]:
 			after_attack = true
+			after_check = e.get("type") == "check"
 		sentences.append(text)
 	return Loc.ui(TARGET_PREFIX.get(target, "")) + ". ".join(sentences) + "."
 
@@ -90,6 +97,11 @@ static func describe(e: Dictionary) -> String:
 			return Loc.ui("Invoque : %s") % Creatures.name_of(e["creature"])
 		"extra_action":
 			return Loc.ui("Une action de plus ce tour")
+		"check":
+			var skill := Skills.name_of(e["skill"]) + (" (%s)" % Abilities.short_of(e["ability"]) if e.has("ability") else "")
+			if e.has("vs_save"):
+				return Loc.ui("Test de %s contre la %s de la cible") % [skill, Abilities.name_of(e["vs_save"])]
+			return Loc.ui("Test de %s (DD %d)") % [skill, int(e.get("dc", 10))]
 	return str(e)
 
 

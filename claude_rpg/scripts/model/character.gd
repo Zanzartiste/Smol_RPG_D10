@@ -152,23 +152,52 @@ func proficiency_bonus() -> int:
 	return Progression.proficiency_bonus(level)
 
 
-## Compétences maîtrisées : passé, et modificateurs (choix de classe, dons…).
+# --- Compétences : rangs ---------------------------------------------------------------
+# Rang = rang de départ (1, 2 si instinctive ; Magie : 0, ou 2 pour un lanceur de sorts)
+#        + 1 par passé qui la donne + rangs de la classe (skill_ranks) + modificateurs "skill_rank"
+#        (choix de classe, dons, Expertise, équipement…).
+# Test = d20 + modificateur d'attribut + rang.
+
+## Le personnage lance-t-il des sorts par sa classe ?
+func is_caster() -> bool:
+	return DB.classes[class_id].has("spellcasting")
+
+
+func skill_base_rank(skill_id: String) -> int:
+	return Skills.base_rank(Skills.resolve(skill_id), is_caster())
+
+
+func skill_rank(skill_id: String) -> int:
+	var id := Skills.resolve(skill_id)
+	var rank := skill_base_rank(id) + int(DB.classes[class_id].get("skill_ranks", {}).get(id, 0))
+	if id in DB.backgrounds.get(background_id, {}).get("skills", []):
+		rank += 1
+	return rank + Modifiers.sum(modifiers(), "skill_rank", id)
+
+
+## Compétence entraînée : rang au-dessus du rang de départ (Expertise, Talent fiable).
+func is_trained(skill_id: String) -> bool:
+	return skill_rank(skill_id) > skill_base_rank(skill_id)
+
+
+## Ancien nom : « maîtrisée » = entraînée (conditions skill_proficient).
 func is_proficient(skill_id: String) -> bool:
-	return skill_id in DB.backgrounds.get(background_id, {}).get("skills", []) \
-		or Modifiers.grants(modifiers(), "skill_proficiency", skill_id)
+	return is_trained(skill_id)
 
 
-## Expertise : bonus de maîtrise doublé dans la compétence.
-func has_expertise(skill_id: String) -> bool:
-	return is_proficient(skill_id) and Modifiers.grants(modifiers(), "skill_expertise", skill_id)
+## Meilleur attribut utilisable pour une compétence (encombrement compris).
+func best_skill_ability(skill_id: String) -> String:
+	var best := ""
+	for ability: String in Skills.abilities_of(Skills.resolve(skill_id)):
+		if best == "" or check_mod(ability) > check_mod(best):
+			best = ability
+	return best
 
 
-func skill_mod(skill_id: String) -> int:
-	var proficiency := 0
-	if is_proficient(skill_id):
-		proficiency = proficiency_bonus() * (2 if has_expertise(skill_id) else 1)
-	var ability := Skills.ability_of(skill_id)
-	return ability_mod(ability) + proficiency - roll_penalty(ability)
+## Bonus d'un test de compétence : modificateur de l'attribut (imposé, ou le meilleur) + rang.
+func skill_mod(skill_id: String, ability := "") -> int:
+	var used := ability if ability != "" else best_skill_ability(skill_id)
+	return check_mod(used) + skill_rank(skill_id)
 
 
 ## Test d'attribut (événements) : modificateur moins l'encombrement pour FOR et DEX.
@@ -176,14 +205,39 @@ func check_mod(ability_id: String) -> int:
 	return ability_mod(ability_id) - roll_penalty(ability_id)
 
 
-## Jets de sauvegarde maîtrisés : ceux de la classe et des modificateurs.
+## Jets de sauvegarde (provisoire, en attendant leur refonte) : un rang par attribut, 1 au départ,
+## +1 si la classe le maîtrise, +1 par modificateur "save_proficiency" (don Résistant).
 func is_proficient_save(ability_id: String) -> bool:
-	return ability_id in DB.classes[class_id].get("saving_throws", []) 		or Modifiers.grants(modifiers(), "save_proficiency", ability_id)
+	return ability_id in DB.classes[class_id].get("saving_throws", []) \
+		or Modifiers.grants(modifiers(), "save_proficiency", ability_id)
+
+
+func save_rank(ability_id: String) -> int:
+	var rank := 1 + (1 if ability_id in DB.classes[class_id].get("saving_throws", []) else 0)
+	for m: Dictionary in modifiers():
+		if m.get("type") == "save_proficiency" and m.get("id") == ability_id:
+			rank += 1
+	return rank
 
 
 func save_mod(ability_id: String) -> int:
-	return ability_mod(ability_id) + (proficiency_bonus() if is_proficient_save(ability_id) else 0) \
-		+ Modifiers.sum(modifiers(), "saving_throws") - roll_penalty(ability_id)
+	return ability_mod(ability_id) + save_rank(ability_id) + Modifiers.sum(modifiers(), "saving_throws") \
+		- roll_penalty(ability_id)
+
+
+## Perception passive : 10 + bonus de Perception (repérer sans lancer de dé).
+func passive(skill_id: String) -> int:
+	return 10 + skill_mod(skill_id)
+
+
+# --- Langues --------------------------------------------------------------------------
+
+## Langues connues : celles connues de tous (Commun) et celles choisies (une par rang de Langues).
+func known_languages() -> Array[String]:
+	var result := Skills.common_languages()
+	for id: String in choices.get("skill/languages", []):
+		result.append(id)
+	return result
 
 
 # --- Dons --------------------------------------------------------------------
@@ -241,7 +295,20 @@ func choice_specs() -> Array[Dictionary]:
 	for feat_id in feats:
 		for spec: Dictionary in DB.feats.get(feat_id, {}).get("choices", []):
 			result.append({"key": "feat:%s/%s" % [feat_id, spec["id"]], "spec": spec, "source": Feats.name_of(feat_id)})
+	# Langues : une langue à choisir par rang de la compétence Langues.
+	var language_count := _languages_rank()
+	if language_count > 0:
+		result.append({"key": "skill/languages", "source": Skills.name_of("languages"), "spec": {
+			"id": "languages", "name": Loc.ui("Langues apprises"), "type": "language", "count": language_count}})
 	return result
+
+
+## Rang de Langues, lu sans passer par les choix (pour éviter une boucle choix -> modificateurs).
+func _languages_rank() -> int:
+	var rank := skill_base_rank("languages") + int(DB.classes[class_id].get("skill_ranks", {}).get("languages", 0))
+	if "languages" in DB.backgrounds.get(background_id, {}).get("skills", []):
+		rank += 1
+	return rank
 
 
 func _choice_entry(key: String) -> Dictionary:
@@ -462,7 +529,7 @@ func initiative_bonus() -> int:
 	var mods := modifiers()
 	var bonus := ability_mod("dex") + Modifiers.sum(mods, "initiative") - roll_penalty("dex")
 	if has_modifier("initiative_proficiency"):
-		bonus += proficiency_bonus()  # Vigilant
+		bonus += proficiency_bonus()  # Vigilant (bonus de maîtrise de D&D, provisoire)
 	return bonus
 
 
@@ -481,9 +548,24 @@ func action_ability(ability: String) -> String:
 	return ability
 
 
-func attack_bonus(ability: String) -> int:
+## Bonus d'attaque : attribut + rang de la compétence. "weapon" : l'arme en main (compétence de son
+## type, voir Equipment.skills_for) ; "spell" : Magie ; un attribut : l'arme `weapon` donnée.
+func attack_bonus(ability: String, weapon := "") -> int:
 	var used := action_ability(ability)
-	return ability_mod(used) + proficiency_bonus() - roll_penalty(used)
+	var rank := 0
+	if ability == "spell":
+		rank = skill_rank("magic")
+	else:
+		rank = weapon_rank(weapon if weapon != "" else weapon_id())
+	return ability_mod(used) + rank - roll_penalty(used)
+
+
+## Rang d'attaque avec une arme : le meilleur rang parmi ses compétences (mains nues : mêlée ou Physique).
+func weapon_rank(weapon: String) -> int:
+	var best := 0
+	for skill_id: String in Equipment.skills_for(weapon):
+		best = maxi(best, skill_rank(skill_id))
+	return best
 
 
 # --- Aptitudes de classe et ressources -----------------------------------------
@@ -543,6 +625,7 @@ func combat_actions() -> Array:
 		granted.append_array(DB.feats.get(feat_id, {}).get("actions", []))
 	for entry: Dictionary in choice_specs():
 		granted.append_array(Choices.actions_from(entry["spec"], choices.get(entry["key"], [])))
+	granted.append_array(DB.rules.get("common_actions", []))  # Se cacher, Intimider, Premiers soins
 	for action_id: String in granted:
 		if action_id not in result and action_id.split("|")[0] not in result:
 			result.append(action_id)
@@ -672,6 +755,9 @@ static func from_dict(data: Dictionary) -> Character:
 	c.abilities = _int_dict(data.get("abilities", {}))
 	c.feats.assign(data.get("feats", []))
 	c.choices = data.get("choices", {})
+	# Anciennes sauvegardes : compétences D&D fusionnées dans les nouvelles.
+	for key: String in c.choices.keys():
+		c.choices[key] = c.choices[key].map(func(v): return Skills.resolve(v) if Skills.ALIASES.has(v) else v)
 	c.pending_feats = int(data.get("pending_feats", 0))
 	c.pending_ability_points = int(data.get("pending_ability_points", 0))
 	c.equipment = data.get("equipment", {})

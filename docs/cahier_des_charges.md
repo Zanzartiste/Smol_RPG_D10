@@ -314,6 +314,11 @@ Le détail est dans les catalogues ([equipements.md](equipements.md), [objets.md
     qui en dépendent, sort Sommeil ; système de choix (création et hub) : compétences de classe, ascendance du
     tieffelin, don de l'humain, dons à options, Style de combat ; dons du SRD 5.2 en version complète ;
     sous-classes au niveau 3 (Champion, Évocateur, Voleur) ; emplacement de cape rétabli.
+14 bis. ~~**Refonte des compétences**~~ : 19 compétences à rangs (départ 1, 2 si instinctive, Magie 0 hors lanceurs),
+    plusieurs attributs possibles (le meilleur par défaut, option pour choisir), compétences d'armes et de Magie
+    pour les attaques et le DD des sorts, langues, Perception passive, actions communes (Se cacher, Intimider,
+    Premiers soins), rangs des créatures. Détail dans [competences.md](competences.md).
+14 ter. **Interactions sociales** : à concevoir (questions posées le 2026-10-13).
 15. **Temps long** : événement voyage (durée, transport, événements en route, se perdre), activités de 1, 2, 5 ou
     10 ans, journal de la vie.
 16. **PNJ générés progressivement** et relations : faits enregistrés, jauges, interactions sociales.

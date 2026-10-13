@@ -35,10 +35,11 @@ static func bbcode(ch: Character) -> String:
 		t += "[color=%s]%s[/color] %s\n" % [gold, Loc.ui("Emplacements de sort"), " · ".join(slots)]
 	var saves := PackedStringArray()
 	for id in Abilities.ids():
-		if ch.is_proficient_save(id):
-			saves.append("%s %s" % [Abilities.short_of(id), signed(ch.save_mod(id))])
-	if not saves.is_empty():
-		t += "[color=%s]%s[/color] %s\n" % [gold, Loc.ui("Sauvegardes maîtrisées"), ", ".join(saves)]
+		var text := "%s %s" % [Abilities.short_of(id), signed(ch.save_mod(id))]
+		saves.append(text if ch.is_proficient_save(id) else "[color=%s]%s[/color]" % [dim, text])
+	t += "[color=%s]%s[/color] %s\n" % [gold, Loc.ui("Sauvegardes"), " ".join(saves)]
+	t += "[color=%s]%s[/color] %s\n" % [gold, Loc.ui("Langues"),
+		", ".join(PackedStringArray(ch.known_languages().map(func(l): return Skills.language_name(l))))]
 	t += "\n"
 
 	t += "[table=3]"
@@ -67,12 +68,18 @@ static func bbcode(ch: Character) -> String:
 			Loc.ui("Encombré : −%d aux jets de FOR et DEX") % ch.encumbrance_penalty()]
 	t += "\n"
 
-	# Compétences : maîtrisées en clair, les autres grisées.
-	t += "[color=%s]%s[/color]\n[table=2]" % [gold, Loc.ui("Compétences")]
-	for id in Skills.ids():
-		var line := "%s %s" % [Skills.name_of(id), signed(ch.skill_mod(id))]
-		t += "[cell]%s  [/cell]" % (line if ch.is_proficient(id) else "[color=%s]%s[/color]" % [dim, line])
-	t += "[/table]\n\n"
+	# Compétences par catégorie : bonus (meilleur attribut) et rang ; entraînées en clair, les autres grisées.
+	t += "[color=%s]%s[/color]\n" % [gold, Loc.ui("Compétences (bonus · rang)")]
+	for category: String in Skills.CATEGORY_NAMES:
+		var ids := Skills.ids_in(category)
+		if ids.is_empty():
+			continue
+		t += "[color=%s][i]%s[/i][/color]\n[table=2]" % [dim, Loc.ui(Skills.CATEGORY_NAMES[category])]
+		for id in ids:
+			var line := "%s %s · %d" % [Skills.name_of(id), signed(ch.skill_mod(id)), ch.skill_rank(id)]
+			t += "[cell]%s  [/cell]" % (line if ch.is_trained(id) else "[color=%s]%s[/color]" % [dim, line])
+		t += "[/table]\n"
+	t += "\n"
 
 	t += "[color=%s]%s[/color]\n" % [gold, Loc.ui("Inventaire")]
 	if ch.inventory.is_empty():

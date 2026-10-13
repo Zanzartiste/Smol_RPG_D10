@@ -362,7 +362,7 @@ suivent automatiquement.
 	"name": "Athlète",
 	"description": "…",
 	"prerequisites": [{"type": "ability", "id": "dex", "min": 13}],
-	"modifiers": [{"type": "ability", "id": "str", "amount": 1}, {"type": "skill_proficiency", "id": "athletics"}]
+	"modifiers": [{"type": "ability", "id": "str", "amount": 1}, {"type": "skill_rank", "id": "physique", "amount": 1}]
 }
 ```
 
@@ -384,7 +384,7 @@ Les dons, les espèces et les équipements peuvent porter des `modifiers`. Ils s
 | type | Champs | Effet |
 |---|---|---|
 | `ability` | `id`, `amount` | Bonus d'attribut. **Interdit pour une espèce** |
-| `skill_proficiency` | `id` | Maîtrise d'une compétence |
+| `skill_rank` | `id`, `amount` | Rangs en plus dans une compétence |
 | `hp_per_level` | `amount` | PV max en plus, à chaque niveau |
 | `initiative` | `amount` | Bonus d'initiative |
 | `ac` | `amount` | Bonus de CA |
@@ -393,8 +393,7 @@ Les dons, les espèces et les équipements peuvent porter des `modifiers`. Ils s
 | `saving_throws` | `amount` | Bonus à tous les jets de sauvegarde |
 | `resistance` / `immunity` / `vulnerability` | `damage_type` | Défense contre un type de dégâts |
 | `status_immunity` | `status` | Immunité à un état |
-| `skill_expertise` | `id` | Expertise : bonus de maîtrise doublé dans une compétence maîtrisée |
-| `save_proficiency` | `id` | Maîtrise d'un jet de sauvegarde |
+| `save_proficiency` | `id` | +1 rang à un jet de sauvegarde |
 | `extra_attack` | `amount` | Attaques en plus pour l'action Attaque |
 | `uncanny_dodge` | — | Une fois par round, les dégâts d'une attaque reçue sont divisés par deux |
 | `evasion` | — | Sauvegarde de DEX pour moitié : rien si elle réussit, moitié si elle échoue |
@@ -524,6 +523,36 @@ Les API correspondantes sont `Shops` (boutiques et prix), `Crafting` (recettes e
 - Pour une quête, on pose un flag `<quête>_accepted` au départ, puis `<quête>_done` à la fin. Les événements suivants
   utilisent `flag` et `not` → `flag`.
 
+## Compétences (`skills.json`) et rangs
+
+```json
+{"id": "physique", "name": "Physique", "category": "combat", "instinctive": true, "abilities": ["str", "dex", "con"]}
+```
+
+| Champ | Description |
+|---|---|
+| `category` | `combat`, `social`, `roguery` (Roublardise), `knowledge` (Connaissances et métiers) |
+| `abilities` | Attributs utilisables ; un test sans attribut imposé prend le meilleur (encombrement compris) |
+| `instinctive` | Rang de départ 2 au lieu de 1 |
+| `base_rank`, `caster_base_rank` | Rang de départ particulier (Magie : 0, ou 2 pour un lanceur de sorts) |
+
+- **Rang** = départ + 1 par passé qui donne la compétence + `classes.json › skill_ranks` + modificateurs
+  `skill_rank` (choix de classe, dons, Expertise, objets). Bonus d'un test = attribut + rang.
+- **Attaques** : attribut + rang de la compétence de l'arme (`Equipment.skills_for` : `skill` de l'arme, sinon
+  Armes de trait pour une arme à distance, Armes de mêlée sinon ; mains nues : le meilleur avec Physique). Sorts :
+  attribut d'incantation + rang de Magie ; DD des sorts = 8 + rang de Magie + attribut.
+- **Jets de sauvegarde** (provisoire) : attribut + rang (1, +1 si la classe le maîtrise, +1 par `save_proficiency`).
+- **Tests d'événement** : `{"skill": "persuasion", "ability"?: "str", "dc": 12}`. Option du joueur
+  (`Meta.settings.manual_skill_ability`) : de petits boutons par attribut à côté du choix.
+- **Créatures** : `"skills": {"stealth": 2}` (rang 0 si absente).
+- **Anciennes compétences** (Athlétisme, Arcanes…) : traduites automatiquement (`Skills.ALIASES`).
+- **Langues** (`rules.json › languages`) : le Commun est connu de tous ; une langue à choisir par rang de Langues
+  (choix `skill/languages`, au hub).
+- **Conditions** : `{"type": "passive", "skill": "perception", "min": 13}` (10 + bonus).
+- **Actions communes** (`rules.json › common_actions`) : Se cacher, Intimider, Premiers soins, pour tous les
+  personnages ; elles reposent sur l'effet de combat `check` (test de compétence contre un DD ou contre une
+  sauvegarde de la cible ; raté, les effets suivants sont ignorés).
+
 ## Choix du personnage (`choices`)
 
 Une espèce, une classe, une aptitude (y compris de sous-classe) ou un don peut déclarer des **choix** à faire
@@ -531,8 +560,8 @@ Une espèce, une classe, une aptitude (y compris de sous-classe) ou un don peut 
 
 ```json
 {"id": "skills", "name": "Compétences de classe", "type": "skill", "count": 2, "at_creation": true,
- "options": ["athletics", "perception", "survival"], "modifiers": [{"type": "skill_proficiency", "id": "$"}],
- "default": ["athletics", "perception"]}
+ "options": ["physique", "perception", "survival"], "modifiers": [{"type": "skill_rank", "id": "$", "amount": 1}],
+ "default": ["physique", "perception"]}
 ```
 
 | Champ | Description |

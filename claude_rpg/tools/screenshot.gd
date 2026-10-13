@@ -58,6 +58,7 @@ func _ready() -> void:
 		await _capture("2d_forge_%s.png" % tab)
 	main._overlay.close_view()
 	main._show_hub()
+	Meta.settings["manual_skill_ability"] = true  # pour montrer les boutons d'attribut
 	main._on_location_chosen("forest")
 	await _capture("3_event.png")
 	Game.toggle_debug()

@@ -107,6 +107,28 @@
 		"effects": [{"type": "attack", "weapon": true}, {"type": "status", "status": "poisoned", "stacks": 3}]
 	},
 	{
+		"id": "hide",
+		"name": "Se cacher",
+		"description": "Vous vous fondez dans le décor pour frapper par surprise.",
+		"target": "self",
+		"effects": [{"type": "check", "skill": "stealth", "dc": 13}, {"type": "status", "status": "invisible", "stacks": 2}]
+	},
+	{
+		"id": "intimidate",
+		"name": "Intimider",
+		"description": "Un rugissement, une menace : la cible prend peur.",
+		"target": "enemy",
+		"effects": [{"type": "check", "skill": "persuasion", "ability": "str", "vs_save": "wis"}, {"type": "status", "status": "frightened", "stacks": 2}]
+	},
+	{
+		"id": "first_aid",
+		"name": "Premiers soins",
+		"description": "Vous pansez en hâte les plaies d'un allié.",
+		"target": "ally",
+		"per_combat": 1,
+		"effects": [{"type": "check", "skill": "medicine", "dc": 10}, {"type": "heal", "amount": "1d6+1"}]
+	},
+	{
 		"id": "grapple",
 		"name": "Empoignade",
 		"description": "Un coup de poing suivi d'une prise : la cible est entravée.",

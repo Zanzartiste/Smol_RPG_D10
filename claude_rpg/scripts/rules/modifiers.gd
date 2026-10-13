@@ -8,7 +8,7 @@ extends RefCounted
 ## type -> champs obligatoires (utilisé par DataValidator)
 const SCHEMA := {
 	"ability": ["id", "amount"],  # bonus à un attribut
-	"skill_proficiency": ["id"],  # maîtrise d'une compétence
+	"skill_rank": ["id", "amount"],  # rangs en plus dans une compétence
 	"hp_per_level": ["amount"],  # PV max en plus, par niveau
 	"initiative": ["amount"],  # bonus d'initiative
 	"ac": ["amount"],  # bonus de CA
@@ -19,12 +19,11 @@ const SCHEMA := {
 	"immunity": ["damage_type"],
 	"vulnerability": ["damage_type"],
 	"status_immunity": ["status"],
-	"skill_expertise": ["id"],  # bonus de maîtrise doublé dans une compétence maîtrisée
-	"save_proficiency": ["id"],  # maîtrise d'un jet de sauvegarde
+	"save_proficiency": ["id"],  # +1 rang à un jet de sauvegarde
 	"extra_attack": ["amount"],  # attaques en plus pour l'action Attaque
 	"uncanny_dodge": [],  # une fois par round, dégâts d'une attaque divisés par deux
 	"evasion": [],  # sauvegarde de DEX pour moitié : 0 si réussie, moitié si ratée
-	"reliable_talent": [],  # test d'une compétence maîtrisée : un d20 sous 10 compte comme 10
+	"reliable_talent": [],  # test d'une compétence entraînée : un d20 sous 10 compte comme 10
 	"relentless_endurance": [],
 	"critical_range": ["amount"],  # critique à partir de 20 − amount (Critique amélioré : 1)
 	"save_advantage": ["id"],  # avantage aux jets de sauvegarde d'un attribut
@@ -83,8 +82,8 @@ static func describe(m: Dictionary) -> String:
 	match m.get("type"):
 		"ability":
 			return "%s %s" % [signed, Abilities.short_of(m["id"])]
-		"skill_proficiency":
-			return Loc.ui("Maîtrise : %s") % Skills.name_of(m["id"])
+		"skill_rank":
+			return Loc.ui("%s rang en %s") % [signed, Skills.name_of(m["id"])]
 		"hp_per_level":
 			return Loc.ui("%s PV par niveau") % signed
 		"initiative":
@@ -105,10 +104,8 @@ static func describe(m: Dictionary) -> String:
 			return Loc.ui("Vulnérabilité : %s") % DamageTypes.name_of(m["damage_type"])
 		"status_immunity":
 			return Loc.ui("Immunité à l'état : %s") % StatusEffects.name_of(m["status"])
-		"skill_expertise":
-			return Loc.ui("Expertise : %s") % Skills.name_of(m["id"])
 		"save_proficiency":
-			return Loc.ui("Maîtrise des sauvegardes : %s") % Abilities.name_of(m["id"])
+			return Loc.ui("+1 rang aux sauvegardes de %s") % Abilities.name_of(m["id"])
 		"extra_attack":
 			return Loc.ui("%s attaque(s) par action Attaque") % signed
 		"uncanny_dodge":

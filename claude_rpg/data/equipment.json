@@ -49,7 +49,7 @@
 		"modifiers": [{"type": "ac", "amount": 1}, {"type": "saving_throws", "amount": 1}]},
 	{"id": "elven_cloak", "weight": 0.5, "name": "Cape elfique", "category": "accessory", "slot": "cloak",
 		"rarity": "uncommon", "value": 100, "description": "Son capuchon se fond dans l'ombre et le feuillage.",
-		"modifiers": [{"type": "skill_proficiency", "id": "stealth"}, {"type": "skill_expertise", "id": "stealth"}]},
+		"modifiers": [{"type": "skill_rank", "id": "stealth", "amount": 2}]},
 	{"id": "ring_of_protection", "weight": 0, "name": "Anneau de protection", "category": "accessory", "slot": "ring",
 		"rarity": "uncommon", "value": 150, "description": "Un anneau d'argent qui détourne les coups et les sortilèges.",
 		"modifiers": [{"type": "ac", "amount": 1}, {"type": "saving_throws", "amount": 1}]},
@@ -64,5 +64,5 @@
 		"modifiers": [{"type": "ability", "id": "str", "amount": 2}]},
 	{"id": "elven_boots", "weight": 0.5, "name": "Bottes elfiques", "category": "accessory", "slot": "feet",
 		"rarity": "uncommon", "value": 100, "description": "Des bottes souples dont les pas ne font aucun bruit.",
-		"modifiers": [{"type": "skill_proficiency", "id": "stealth"}]}
+		"modifiers": [{"type": "skill_rank", "id": "stealth", "amount": 1}]}
 ]

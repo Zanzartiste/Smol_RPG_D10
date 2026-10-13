@@ -36,6 +36,12 @@ func save_all() -> void:
 		delete_life()
 
 
+## Sauvegarde seulement la méta (réglages, monde), sans toucher à la vie en cours.
+func save_meta() -> void:
+	if enabled:
+		_write(meta_path(), Meta.to_dict())
+
+
 func load_meta() -> void:
 	var data := _read(meta_path())
 	if not data.is_empty():

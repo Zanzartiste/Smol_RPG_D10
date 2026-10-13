@@ -86,7 +86,7 @@
 				"id": "spell",
 				"text": "Lancer un trait de feu",
 				"conditions": [{"type": "class", "in": ["wizard"]}],
-				"check": {"skill": "arcana", "dc": 11},
+				"check": {"skill": "lore", "dc": 11},
 				"success": {
 					"text": "Le trait de feu atteint le loup en plein flanc. Il ne se relève pas.",
 					"effects": [{"type": "add_item", "id": "wolf_pelt"}, {"type": "xp", "amount": 100}]
@@ -99,7 +99,7 @@
 			{
 				"id": "scare",
 				"text": "Hurler et agiter les bras",
-				"check": {"skill": "intimidation", "dc": 12},
+				"check": {"skill": "persuasion", "ability": "str", "dc": 12},
 				"success": {
 					"text": "Le loup recule, puis disparaît dans les fourrés.",
 					"effects": [{"type": "xp", "amount": 25}]
@@ -237,7 +237,7 @@
 				"id": "decipher_known",
 				"text": "Prononcer la formule lue dans le grimoire",
 				"conditions": [{"type": "flag", "id": "knows_shrine_rune"}],
-				"check": {"skill": "arcana", "dc": 10},
+				"check": {"skill": "lore", "dc": 10},
 				"success": {
 					"text": "Les runes s'embrasent. Une voix ancienne murmure votre nom. Les elfes se souviendront de ce jour.",
 					"effects": [
@@ -255,7 +255,7 @@
 				"id": "pray",
 				"text": "Se recueillir comme on vous l'a appris au temple",
 				"conditions": [{"type": "background", "in": ["acolyte"]}],
-				"check": {"skill": "religion", "dc": 13},
+				"check": {"skill": "lore", "dc": 13},
 				"success": {
 					"text": "Votre prière trouve un écho dans les pierres. Les runes s'embrasent doucement. Les elfes se souviendront de ce jour.",
 					"effects": [
@@ -272,7 +272,7 @@
 			{
 				"id": "decipher",
 				"text": "Tenter de comprendre les runes",
-				"check": {"skill": "arcana", "dc": 17},
+				"check": {"skill": "lore", "dc": 17},
 				"success": {
 					"text": "Contre toute attente, vous saisissez le sens des runes. Elles s'embrasent. Les elfes se souviendront de ce jour.",
 					"effects": [

@@ -30,6 +30,7 @@ const TESTS := [
 	"_test_economy",
 	"_test_advantage",
 	"_test_choices",
+	"_test_skill_ranks",
 	"_test_combat",
 	"_test_combat_turns",
 	"_test_companions",
@@ -85,10 +86,15 @@ func _test_character() -> bool:
 	# Passé Érudit -> don « Érudit des arcanes » : +1 INT (17 -> 18) et maîtrise de Nature.
 	_expect(c.has_feat("scholar") and c.ability_score("int") == 18, "don du passé appliqué à la création")
 	_expect(c.ability_mod("int") == 4 and c.ability_mod("str") == -1, "modificateurs")
-	_expect(c.skill_mod("arcana") == 6, "Arcanes maîtrisé (classe) : +4 +2")
-	_expect(c.is_proficient("history") and c.skill_mod("history") == 6, "Histoire maîtrisée (passé Érudit)")
-	_expect(c.is_proficient("nature"), "Nature maîtrisée (don du passé)")
-	_expect(c.skill_mod("athletics") == -1, "Athlétisme non maîtrisé : -1")
+	_expect(c.skill_rank("lore") == 3 and c.skill_mod("lore") == 4 + 3,
+		"Érudition : rang 1 + passé Érudit + don Érudit des arcanes, avec INT")
+	_expect(c.skill_rank("perception") == 3 and c.skill_mod("perception") == 4 + 3,
+		"Perception : instinctive (2) + choix de classe, avec le meilleur attribut (INT)")
+	_expect(c.skill_mod("perception", "wis") == c.ability_mod("wis") + 3, "attribut imposé par le test")
+	_expect(c.skill_rank("physique") == 2 and c.skill_rank("sleight_of_hand") == 1 and c.skill_rank("magic") == 2
+		and not c.is_trained("physique"), "rangs de départ : instinctive 2, autre 1, Magie 2 pour un lanceur")
+	_expect(Character.create("goblin", "fighter", "F").skill_rank("magic") == 0, "Magie : 0 pour un non-lanceur")
+	_expect(c.skill_mod("athletics") == c.skill_mod("physique"), "ancien id (Athlétisme) traduit en Physique")
 	_expect(c.max_hp == 6 + 2, "PV : d6 + CON")
 	_expect(c.size() == "small" and Character.create("human", "wizard", "H").size() == "medium",
 		"la taille dépend de l'espèce")
@@ -120,16 +126,18 @@ func _test_rule_apis() -> bool:
 	_expect(Abilities.ids() == ["str", "dex", "con", "int", "wis", "cha"], "attributs dans l'ordre du JSON")
 	_expect(Abilities.name_of("wis") == "Sagesse" and Abilities.short_of("wis") == "SAG", "noms d'attributs")
 	_expect(Abilities.modifier(8) == -1 and Abilities.modifier(15) == 2 and Abilities.modifier(1) == -5, "modificateurs")
-	_expect(Skills.ids().size() == 21 and Skills.ability_of("stealth") == "dex", "compétences")
-	_expect(Skills.names_of(["arcana", "history"]) == "Arcanes, Histoire", "noms de compétences")
+	_expect(Skills.ids().size() == 19 and Skills.ability_of("stealth") == "dex" and Skills.abilities_of("physique") == ["str", "dex", "con"],
+		"compétences")
+	_expect(Skills.names_of(["lore", "physique"]) == "Érudition, Physique" and Skills.resolve("intimidation") == "persuasion",
+		"noms de compétences, anciens ids")
 	_expect(DamageTypes.ids().size() == 12 and not DamageTypes.has("acid") and DamageTypes.name_of("fire") == "Feu", "types de dégâts")
 	_expect(DamageTypes.is_physical("slashing") and not DamageTypes.is_physical("fire"), "dégâts physiques")
 	_expect(StatusEffects.name_of("poisoned") == "Poison" and StatusEffects.name_of("burning") == "Brûlure", "états")
 
 	# Ajouter un attribut ou une compétence dans les données se répercute partout.
-	DB.skills["_cooking"] = {"id": "_cooking", "name": "Cuisine", "ability": "wis"}
+	DB.skills["_cooking"] = {"id": "_cooking", "name": "Cuisine", "abilities": ["wis"], "category": "knowledge"}
 	var c := Character.create("human", "fighter", "Chef")
-	_expect(c.skill_mod("_cooking") == c.ability_mod("wis") and "Cuisine" in CharacterSheet.bbcode(c),
+	_expect(c.skill_mod("_cooking") == c.ability_mod("wis") + 1 and "Cuisine" in CharacterSheet.bbcode(c),
 		"une nouvelle compétence est utilisable et affichée sans autre modification")
 	DB.skills.erase("_cooking")
 	return true
@@ -696,8 +704,8 @@ func _test_class_features() -> bool:
 
 	# Roublard : Expertise, Attaque sournoise, Esquive instinctive, Dérobade, Talent fiable.
 	var rogue := _at_level("goblin", "rogue", 11)
-	_expect(rogue.skill_mod("stealth") == rogue.ability_mod("dex") + 2 * rogue.proficiency_bonus() - rogue.roll_penalty("dex"),
-		"Expertise : maîtrise doublée")
+	_expect(rogue.skill_rank("stealth") == 4 and rogue.skill_mod("stealth") == rogue.check_mod("dex") + 4,
+		"Expertise : instinctive 2 + choix de classe + Expertise")
 	var sneak := Combatant.from_character(rogue, true)
 	_expect(sneak.damage_expr(Actions.def("sneak_attack")["effects"][0]).ends_with("+6d6"), "Attaque sournoise : 6d6 au niveau 11")
 	var rng := RandomNumberGenerator.new()
@@ -843,8 +851,8 @@ func _test_armor_strength() -> bool:
 	# Malus : 1 par tranche de 2 points de Force manquants (6 -> 3), sur tous les jets de FOR et DEX.
 	_expect(fighter.encumbrance_penalty() == 3 and fighter.roll_penalty("dex") == 3 and fighter.roll_penalty("int") == 0,
 		"malus proportionnel au manque de Force")
-	_expect(fighter.initiative_bonus() == fighter.ability_mod("dex") - 3 and fighter.save_mod("dex") == fighter.ability_mod("dex") - 3
-		and fighter.skill_mod("acrobatics") == fighter.ability_mod("dex") - 3
+	_expect(fighter.initiative_bonus() == fighter.ability_mod("dex") - 3 and fighter.save_mod("dex") == fighter.ability_mod("dex") + 1 - 3
+		and fighter.skill_mod("stealth") == fighter.ability_mod("dex") - 3 + 2
 		and fighter.attack_bonus("weapon") == fighter.ability_mod("str") + 2 - 3, "initiative, sauvegarde, compétence, attaque")
 	_expect(Dice.modifier(fighter, {"ability": "str", "dc": 10}) == fighter.ability_mod("str") - 3
 		and Dice.modifier(fighter, {"ability": "int", "dc": 10}) == fighter.ability_mod("int"), "tests d'attribut")
@@ -944,15 +952,17 @@ func _test_economy() -> bool:
 		"wis": 12, "cha": 10}})
 	Game.start_life(hero, 101)
 	var life := Game.life
-	_expect(Shops.discount(life) == 0.0, "CHA 10 sans Persuasion : pas de remise")
+	_expect(is_equal_approx(Shops.discount(life), 0.06), "CHA 10, Persuasion instinctive (rang 2) : 6 %")
 	_expect(Shops.buy_price("apothecary", "potion_heal", life) == 10 and Shops.sell_price("potion_heal", life) == 5,
 		"prix : valeur à l'achat, moitié à la revente")
-	hero.abilities["cha"] = 20  # +5 sans maîtrise : 15 %
+	hero.abilities["cha"] = 20  # +5 et rang 2 : plafonné à 15 %
 	_expect(is_equal_approx(Shops.discount(life), 0.15) and Shops.buy_price("apothecary", "potion_heal", life) == 9
 		and Shops.sell_price("potion_heal", life) == 5, "Persuasion : remise plafonnée à 15 %")
 	hero.abilities["cha"] = 6
-	_expect(is_equal_approx(Shops.discount(life), -0.06) and Shops.buy_price("apothecary", "potion_heal", life) == 11,
-		"mauvais négociateur : prix plus élevés")
+	_expect(is_equal_approx(Shops.discount(life), 0.0) and Shops.buy_price("apothecary", "potion_heal", life) == 10,
+		"CHA 6 : le rang compense le malus")
+	hero.abilities["cha"] = 3
+	_expect(Shops.discount(life) < 0.0 and Shops.buy_price("apothecary", "potion_heal", life) == 11, "mauvais négociateur : prix plus élevés")
 	var mira := Character.create_companion("mira")
 	mira.abilities["cha"] = 18
 	life.companions.append(mira)
@@ -1087,13 +1097,13 @@ func _test_advantage() -> bool:
 func _test_choices() -> bool:
 	# Compétences de classe : au choix à la création, sinon par défaut ; pas une compétence du passé.
 	var fighter := Character.create("human", "fighter", "G", {"background": "sage",
-		"choices": {"class/skills": ["history", "survival"]}})
-	_expect("history" not in fighter.choices["class/skills"] and fighter.choices["class/skills"] == ["survival", "athletics"],
+		"choices": {"class/skills": ["lore", "survival"]}})
+	_expect("lore" not in fighter.choices["class/skills"] and fighter.choices["class/skills"] == ["survival", "physique"],
 		"compétence déjà donnée par le passé : refusée, complétée par une valeur par défaut")
-	fighter = Character.create("goblin", "fighter", "G", {"background": "acolyte", "choices": {"class/skills": ["intimidation", "survival"]}})
-	_expect(fighter.is_proficient("intimidation") and fighter.is_proficient("survival") and not fighter.is_proficient("athletics"),
-		"compétences de classe choisies")
-	_expect(Character.create("goblin", "fighter", "D").choices["class/skills"] == ["athletics", "perception"], "valeurs par défaut")
+	fighter = Character.create("goblin", "fighter", "G", {"background": "acolyte", "choices": {"class/skills": ["persuasion", "survival"]}})
+	_expect(fighter.skill_rank("persuasion") == 3 and fighter.skill_rank("survival") == 2 and not fighter.is_trained("physique"),
+		"compétences de classe choisies : +1 rang")
+	_expect(Character.create("goblin", "fighter", "D").choices["class/skills"] == ["physique", "perception"], "valeurs par défaut")
 
 	# Ascendance du tieffelin.
 	var tiefling := Character.create("tiefling", "wizard", "T", {"choices": {"species/ancestry": ["cold"]}})
@@ -1117,15 +1127,18 @@ func _test_choices() -> bool:
 	var champion := Combatant.from_character(fighter, true)
 	_expect(champion.critical_threshold() == 19 and fighter.features().any(func(f): return f["id"] == "remarkable_athlete"),
 		"Champion : critique sur 19-20, Athlète remarquable")
-	_expect(Dice.check_advantage({"skill": "athletics", "dc": 10}, fighter) == 1, "Athlète remarquable : avantage en Athlétisme")
+	_expect(Dice.check_advantage({"skill": "physique", "dc": 10}, fighter) == 1, "Athlète remarquable : avantage en Physique")
 	_expect(CharacterSheet.bbcode(fighter).contains("Guerrier (Champion)"), "fiche : sous-classe affichée")
 
 	# Doué (Noble) : trois compétences au choix.
 	var noble := Character.create("goblin", "wizard", "N", {"background": "noble"})
-	_expect(noble.pending_choice().get("key") == "feat:skilled/skills", "Doué : choix en attente")
-	for skill in ["stealth", "athletics", "survival"]:
+	_expect(noble.choices.get("feat:skilled/skills", []).is_empty() and "stealth" in noble.choice_options("feat:skilled/skills"),
+		"Doué : choix proposé")
+	for skill in ["stealth", "physique", "survival"]:
 		noble.choose("feat:skilled/skills", skill)
-	_expect(noble.is_proficient("stealth") and noble.is_proficient("survival") and noble.pending_choice().is_empty(), "Doué : 3 maîtrises")
+	_expect(noble.skill_rank("stealth") == 3 and noble.skill_rank("survival") == 2 and noble.choices["feat:skilled/skills"].size() == 3
+		and not noble.choose("feat:skilled/skills", "arts"),
+		"Doué : +1 rang dans 3 compétences")
 
 	# Amélioration d'attribut : deux fois le même attribut = +2.
 	var str_score := noble.ability_score("str")
@@ -1178,6 +1191,79 @@ func _test_choices() -> bool:
 	_expect(mira.pending_choice().is_empty() and mira.choices.has("species/versatile"), "compagnon : choix complétés")
 	var saved := Character.from_dict(JSON.parse_string(JSON.stringify(fighter.to_dict())))
 	_expect(saved.choices == fighter.choices and saved.armor_class() == fighter.armor_class(), "choix sauvegardés")
+	return true
+
+
+func _test_skill_ranks() -> bool:
+	# Attaques : attribut + rang de la compétence de l'arme ; sorts : rang de Magie.
+	var fighter := Character.create("goblin", "fighter", "G")
+	_expect(fighter.skill_rank("weapon_melee") == 2 and fighter.attack_bonus("weapon") == fighter.ability_mod("str") + 2,
+		"Guerrier : Armes de mêlée 1 + 1 (classe)")
+	var mage := Character.create("goblin", "wizard", "M")
+	_expect(mage.attack_bonus("weapon") == mage.ability_mod("str") + 1 and mage.attack_bonus("spell") == mage.ability_mod("int") + 2,
+		"Magicien : bâton au rang 1, sorts au rang de Magie 2")
+	_expect(Spellcasting.save_dc(mage) == 8 + 2 + mage.ability_mod("int"), "DD des sorts : 8 + Magie + INT")
+	_expect(Equipment.skills_for("longbow") == ["weapon_ranged"] and Equipment.skills_for("unarmed") == ["weapon_melee", "physique"],
+		"compétence de l'arme (mains nues : mêlée ou Physique)")
+	_expect(fighter.weapon_rank("unarmed") == maxi(fighter.skill_rank("weapon_melee"), fighter.skill_rank("physique")),
+		"mains nues : le meilleur rang")
+
+	# Jets de sauvegarde (provisoire) : rang 1, 2 si la classe le maîtrise.
+	_expect(fighter.save_rank("con") == 2 and fighter.save_rank("dex") == 1, "rangs de sauvegarde")
+
+	# Langues : une langue à choisir par rang de Langues, en plus du Commun.
+	_expect(fighter.known_languages() == ["common"] and fighter.choice_options("skill/languages").size() == 5, "langues à choisir")
+	fighter.choose("skill/languages", "elvish")
+	_expect(fighter.known_languages() == ["common", "elvish"] and not fighter.choose("skill/languages", "orc"), "rang 1 : une langue")
+	var sage := Character.create("human", "wizard", "S", {"background": "sage"})
+	_expect(sage.skill_rank("languages") == 2 and sage.choice_options("skill/languages").size() == 5, "passé Érudit : deux langues")
+
+	# Perception passive (condition d'événement).
+	var life := LifeState.new()
+	life.character = fighter
+	_expect(fighter.passive("perception") == 10 + fighter.skill_mod("perception")
+		and Conditions.check({"type": "passive", "skill": "perception", "min": 5}, life, null)
+		and not Conditions.check({"type": "passive", "skill": "perception", "min": 40}, life, null), "Perception passive")
+
+	# Test d'événement : attribut imposé ou meilleur attribut ; choix proposés au joueur.
+	_expect(Dice.ability_options({"skill": "physique", "dc": 10}) == ["str", "dex", "con"]
+		and Dice.ability_options({"skill": "persuasion", "ability": "str", "dc": 10}).is_empty()
+		and Dice.ability_options({"skill": "stealth", "dc": 10}).is_empty(), "attributs proposés au joueur")
+	_expect(Dice.modifier(fighter, {"skill": "persuasion", "ability": "str", "dc": 10}) == fighter.check_mod("str") + fighter.skill_rank("persuasion"),
+		"intimider : Persuasion avec la FOR")
+
+	# Créatures : rang listé, 0 sinon.
+	DB.creatures["_target"] = {"id": "_target", "name": "Cible", "ac": 10, "hp": "200", "abilities": {"wis": 10, "dex": 14},
+		"skills": {"stealth": 3}, "actions": [{"name": "Rien", "weight": 1, "target": "self", "effects": [{"type": "status", "status": "shielded", "stacks": 0}]}]}
+	Game.start_life(fighter, 131)
+	var combat := Game.start_combat({"enemies": ["_target"]})
+	var target := combat.enemies()[0]
+	_expect(target.skill_mod("stealth") == 2 + 3 and target.skill_mod("persuasion") == 0, "créature : rangs listés, sinon 0")
+
+	# Actions communes : Se cacher, Intimider, Premiers soins.
+	_expect(["hide", "intimidate", "first_aid"].all(func(id): return id in fighter.combat_actions()), "actions communes")
+	var beats: Array[Dictionary] = []
+	combat._resolve(combat.hero, [{"type": "check", "skill": "stealth", "dc": -100}, {"type": "status", "status": "invisible", "stacks": 2}],
+		"self", null, true)
+	_expect(combat.hero.stacks("invisible") == 2 and combat.attack_advantage(combat.hero, target) == 1, "Se cacher : invisible, avantage")
+	combat.hero.statuses.clear()
+	combat._resolve(combat.hero, [{"type": "check", "skill": "stealth", "dc": 100}, {"type": "status", "status": "invisible", "stacks": 2}],
+		"self", null, true)
+	_expect(combat.hero.stacks("invisible") == 0, "test raté : pas d'effet")
+	_expect(Actions.text_of("intimidate") == "Test de Persuasion (FOR) contre la Sagesse de la cible. Si c'est réussi : 2 Effrayé.",
+		"texte d'Intimider")
+	Game.combat = null
+	DB.creatures.erase("_target")
+
+	# Réglages : conservés en effaçant le monde.
+	Meta.settings["manual_skill_ability"] = true
+	Meta.reset()
+	_expect(Meta.settings["manual_skill_ability"], "réglages conservés quand on efface le monde")
+	var meta := MetaState.new()
+	meta.load_dict(Meta.to_dict())
+	_expect(meta.settings["manual_skill_ability"], "réglages sauvegardés")
+	meta.free()
+	Meta.settings["manual_skill_ability"] = false
 	return true
 
 

@@ -57,8 +57,18 @@ static func _validate_rule_tables(db: Node, errors: Array[String]) -> void:
 		if not ability.has("name") or not ability.has("short"):
 			errors.append("abilities.json › %s : name et short obligatoires" % ability["id"])
 	for skill: Dictionary in db.skills.values():
-		if not db.abilities.has(skill.get("ability")):
-			errors.append("skills.json › %s : attribut inconnu « %s »" % [skill["id"], skill.get("ability")])
+		var abilities: Variant = skill.get("abilities", [])
+		if typeof(abilities) != TYPE_ARRAY or abilities.is_empty():
+			errors.append("skills.json › %s : « abilities » doit être une liste d'attributs non vide" % skill["id"])
+		else:
+			for ability_id in abilities:
+				_expect_ref(db.abilities, ability_id, "attribut", "skills.json › %s" % skill["id"], errors)
+		if skill.get("category") not in Skills.CATEGORY_NAMES:
+			errors.append("skills.json › %s : catégorie inconnue « %s » (%s)" % [skill["id"], skill.get("category"),
+				Skills.CATEGORY_NAMES.keys()])
+	for language: Dictionary in db.rules.get("languages", []):
+		if not language.has("id") or not language.has("name"):
+			errors.append("rules.json › languages : chaque langue a un id et un name")
 
 	for feat: Dictionary in db.feats.values():
 		var ctx := "feats.json › %s" % feat["id"]
@@ -117,9 +127,7 @@ static func _validate_modifiers(db: Node, mods: Variant, ctx: String, errors: Ar
 				if not abilities_allowed:
 					errors.append(ctx + " : une espèce ne doit pas modifier les attributs")
 				_expect_ref(db.abilities, m["id"], "attribut", ctx, errors)
-			"skill_proficiency":
-				_expect_ref(db.skills, m["id"], "compétence", ctx, errors)
-			"skill_expertise":
+			"skill_rank":
 				_expect_ref(db.skills, m["id"], "compétence", ctx, errors)
 			"save_proficiency":
 				_expect_ref(db.abilities, m["id"], "attribut", ctx, errors)
@@ -191,6 +199,8 @@ static func _validate_classes(db: Node, errors: Array[String]) -> void:
 			elif slot not in Equipment.slots_for(equipment[slot]):
 				errors.append(ctx + " : « %s » ne va pas dans l'emplacement « %s »" % [equipment[slot], slot])
 		_validate_choices(db, cls.get("choices", []), ctx, errors)
+		for skill_id: String in cls.get("skill_ranks", {}):
+			_expect_ref(db.skills, skill_id, "compétence (skill_ranks)", ctx, errors)
 		for ability_id in cls.get("saving_throws", []):
 			_expect_ref(db.abilities, ability_id, "attribut (saving_throws)", ctx, errors)
 		if cls.has("spell_slots") and cls["spell_slots"] not in Spellcasting.progressions():
@@ -249,6 +259,10 @@ static func _validate_combat_data(db: Node, errors: Array[String]) -> void:
 		_validate_ai_actions(db, creature.get("actions", []), ctx, errors)
 		if creature.has("defenses"):
 			_validate_defenses(db, creature["defenses"], ctx, errors)
+		for skill_id: String in creature.get("skills", {}):
+			_expect_ref(db.skills, skill_id, "compétence", ctx, errors)
+		for action_id in db.rules.get("common_actions", []):
+			_expect_ref(db.actions, action_id, "action commune", "rules.json › common_actions", errors)
 		for loot: Dictionary in creature.get("loot", []):
 			_expect_item(db, loot.get("item"), ctx, errors)
 
@@ -358,6 +372,10 @@ static func _validate_combat_effects(db: Node, effects: Variant, ctx: String, er
 					_expect_ref(db.status_effects, e["status"], "état", ctx, errors)
 			"summon":
 				_expect_ref(db.creatures, e["creature"], "créature", ctx, errors)
+			"check":
+				_expect_ref(db.skills, e["skill"], "compétence", ctx, errors)
+				if e.has("vs_save"):
+					_expect_ref(db.abilities, e["vs_save"], "attribut", ctx, errors)
 
 
 static func _validate_skills_and_items(db: Node, entry: Dictionary, ctx: String, errors: Array[String]) -> void:

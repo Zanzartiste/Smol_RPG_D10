@@ -161,7 +161,7 @@
 			{
 				"id": "intimidate",
 				"text": "Le fixer droit dans les yeux",
-				"check": {"skill": "intimidation", "dc": 14},
+				"check": {"skill": "persuasion", "ability": "str", "dc": 14},
 				"success": {
 					"text": "Il blêmit, bredouille une excuse et vous paie une chope.",
 					"effects": [{"type": "xp", "amount": 50}]
@@ -247,7 +247,7 @@
 				"id": "read",
 				"text": "Tenter de déchiffrer les runes",
 				"conditions": [{"type": "ability", "id": "int", "min": 12}],
-				"check": {"skill": "arcana", "dc": 13},
+				"check": {"skill": "lore", "dc": 13},
 				"success": {
 					"text": "Les runes décrivent un sanctuaire caché au cœur de la Forêt des Murmures, et la formule pour l'éveiller.",
 					"effects": [{"type": "xp", "amount": 100}, {"type": "set_flag", "id": "knows_shrine_rune"}]

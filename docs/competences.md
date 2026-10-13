@@ -5,235 +5,196 @@
 
 ## Règles générales
 
-- Une compétence dépend d'**un attribut** (Athlétisme → Force…).
-- **Test** : d20 + modificateur de l'attribut + bonus de maîtrise si la compétence est maîtrisée, contre un DD. Un 20
-  naturel réussit toujours, un 1 naturel échoue toujours.
-- **Maîtrise** : elle vient de la classe (le joueur choisit 2 compétences, 4 pour le Roublard, dans la liste de sa
-  classe, à la création), du passé ou d'un don. Une compétence déjà donnée par le passé ne peut pas être choisie
-  en plus : on en prend une autre.
-- **Expertise** : bonus de maîtrise doublé, dans des compétences maîtrisées choisies (Roublard, niveaux 1 et 6).
-- **Avantage** : certaines aptitudes donnent l'avantage à une compétence (Athlète remarquable du Champion :
-  Athlétisme ; Furtivité suprême du Voleur : Discrétion).
-- **Talent fiable** : pour une compétence maîtrisée, un d20 sous 10 compte comme 10 (Roublard, niveau 11).
-- Aujourd'hui, les compétences servent aux **tests des événements**. Le combat n'en utilise aucune.
+- Une compétence dépend généralement d'**un attribut** , mais souvent peut être utilisée avec d'autres attributs dans certains contextes précis. Elle a un Rang qui lui est propre et témoigne de l'expertise ou non d'une créature dans cette compétence. Les compétences dites "instinctives" commencent avec un rang de 2, les autres ont un rang de 1.
+- **Test** : d20 + modificateur de l'attribut + bonus de la compétence, contre un DD. Un 20 naturel réussit toujours, un 1 naturel échoue toujours.
+- **Bonus d'un rang** : +1 par rang (rang 2 = +2…). Les rangs remplacent le bonus de maîtrise de D&D pour les
+  compétences et les attaques.
+- **Rangs de départ** : 1, ou 2 pour une compétence instinctive. Exception : **Magie**, au rang 0, sauf pour les
+  lanceurs de sorts (rang 2).
+- **Rangs en plus** (implémenté) : +1 par passé qui donne la compétence, +1 par compétence de classe choisie à la
+  création, des rangs fixes de classe (le Guerrier et le Roublard ont +1 en Armes de mêlée et Armes de trait),
+  les dons (Doué, Athlète…), l'Expertise du Roublard, certains objets (Bottes et Cape elfiques).
+- **Gagner des rangs en montant de niveau** : à définir plus tard (décision du 2026-10-13).
+
 - Les **jets de sauvegarde** sont à part : ils utilisent directement un attribut (voir [classes.md](classes.md)).
+  En attendant leur refonte : un rang de 1 par attribut, 2 si la classe maîtrise cette sauvegarde (+1 avec le
+  don Résistant).
+
+- Lorsque plusieurs attributs peuvent être utilisés dans une même situation, on prend le plus élevé par défaut automatiquement. Dans le menu des options, on doit pouvoir cocher un paramètre qui permet de faire ce choix manuellement (si on souhaite pour des raisons de flavor utiliser une stat inférieure lors d'un jet par exemple)
+  → **Implémenté** : option « Choisir soi-même l'attribut des tests de compétence » (écran titre › Options). Le
+  bouton du choix lance le test avec le meilleur attribut, et de petits boutons accolés (« SAG 55 % », « DEX 45 % »)
+  le lancent avec l'attribut choisi. Quand le test impose un attribut (intimider : Persuasion avec la FOR), il n'y
+  a pas de choix.
+- **Créatures** : elles ont des rangs elles aussi (`skills` dans le bestiaire) ; une compétence non listée est au
+  rang 0.
 
 ---
 
 ## Modèle de fiche (à copier)
 
 ```markdown
-### <Nom> (`<id>`)
+### <Nom> (`<id>`) (instinctive ?)
 
-- **Attribut** : FOR / DEX / CON / INT / SAG / CHA.
+- **Décrit** : …
+- **Attribut** : FOR / DEX / CON / INT / SAG / CHA (plusieurs possibles).
 - **Sert à** : exemples de situations.
-- **Maîtrisée par** : classes, passés, dons.
+- **Rang de départ** : 1 (2 si instinctive).
 - **Usages prévus** : événements, combat, métiers, social…
 - **Notes** : …
 ```
 
 ---
 
-## Compétences implémentées (les 18 du SRD)
+## Compétences implémentées
 
-### Force
+## Combat
 
-### Athlétisme (`athletics`)
+## Armes de mêlée (`weapon_melee`)
+## Armes de trait (`weapon_ranged`)
+## Armes à poudre (`weapon_firearms`)
+## Machines de guerre (`weapon_siege`)
+- Ces compétences permettent d'utiliser certaines armes en combat
+- **Implémenté** : bonus d'attaque = attribut de l'arme + rang de sa compétence. Toutes commencent au rang 1. Les
+  armes à distance utilisent Armes de trait, les autres Armes de mêlée ; les mains nues prennent le meilleur rang
+  entre Armes de mêlée et Physique. Aucune arme à poudre ni machine de guerre n'existe encore.
 
-- **Attribut** : FOR.
-- **Sert à** : grimper, nager, sauter, forcer une porte, tenir une prise.
-- **Maîtrisée par** : au choix pour Guerrier, Roublard ; passés Sauvageon, Soldat ; dons Athlète ; don Doué (au choix).
-- **Usages actuels** : aucun test d'événement pour l'instant.
+### Physique (`physique`) (instinctive)
+- Décrit : si votre personnage est plutôt sportif ou non.
+- sert à : se bagarrer à main nue, lancer des objets, grimper, nager, sauter, forcer une porte..., faire des acrobaties, garder l'équilibre, esquiver, tenir longtemps en apnée... faire de l'équitation...
+- Attribut : Force si cela requiert de la force, Dextérité s'il s'agît de souplesse ou de coordination, Constitution s'il s'agît d'endurance. Il arrive qu'un jet prenne la meilleure valeur entre Force et Dextérité (un jet de Physique pour donner un coup de poing par exemple.).
+- **En combat** : l'Empoignade (don Lutteur) ; les attaques à mains nues.
+- Remplace Athlétisme et Acrobaties.
 
-### Dextérité
+### Magie (`magic`)
+- Décrit : votre maîtrise des arcanes et des sorts.
+- **Attribut** : celui d'incantation de la classe (INT pour le Magicien), sinon le meilleur entre INT, SAG et CHA.
+- **Rang de départ** : 0, ou 2 pour un lanceur de sorts. Le don Initié à la magie donne +1 rang.
+- **Sert à** : les attaques de sort (attribut + rang de Magie) et le DD des sorts (8 + rang de Magie + attribut).
 
-### Acrobaties (`acrobatics`)
+## Social
 
-- **Attribut** : DEX.
-- **Sert à** : garder l'équilibre, esquiver, faire des cabrioles.
-- **Maîtrisée par** : au choix pour Guerrier, Roublard ; passés Saltimbanque ; dons Agile ; don Doué (au choix).
-- **Usages actuels** : aucun test d'événement pour l'instant.
+### Langues (`languages`)
+- **Attribut** : CHA ou INT
+- **Sert à** : vous faire comprendre d'un peuple avec qui vous ne partagez pas une langue connue, via des signes, sons basiques...
+- Chaque rang permet de maîtriser une langue supplémentaire.
+- Le commun est maîtrisé au niveau 0 et est la langue majoritairement utilisée.
+- **Implémenté** : le Commun est connu de tous ; au rang 1, on choisit une langue (au hub), au rang 2 une deuxième…
+  Langues provisoires : Commun, Elfique, Nain, Gobelin, Orque, Infernal (`rules.json › languages`). Elles
+  dépendent des cultures et des régions, pas de l'espèce.
+- **À venir** (avec les interactions sociales) : quand un PNJ parle une langue inconnue, son texte est « crypté », et
+  certains caractères se déchiffrent selon le rang de Langues ; un jet de Langues permet de se faire comprendre
+  (demander son chemin…) ; une langue maîtrisée permet une interaction sociale normale.
 
+### Persuasion (`persuasion`) (instinctive)
+
+- **Attribut** : CHA, Intimider se fait avec FOR
+- **Sert à** : convaincre, négocier, séduire, marchander, tromper, mentir, manipuler
+- **Notes** : servira aux prix des boutiques (achat et vente)
+- **Implémenté** : prix des boutiques ; en combat, l'action **Intimider** (Persuasion avec la FOR contre la Sagesse
+  de la cible : Effrayé). Remplace Tromperie et Intimidation.
+
+### Perspicacité (`insight`) (instinctive)
+
+- **Attribut** : SAG ou CHA
+- **Sert à** : deviner les intentions, déceler un mensonge, détecter un sentiment caché, l'état mental de quelqu'un...
+
+
+## Roublardise
 ### Escamotage (`sleight_of_hand`)
+- Décrit : 
+- Sert à : Voler à la tire, crocheter une porte, cacher un objet sur soit lors d'un contrôle, 
+- Attribut : Dextérité en règle générale.
 
-- **Attribut** : DEX.
-- **Sert à** : voler à la tire, crocheter, glisser un objet discrètement.
-- **Maîtrisée par** : au choix pour Roublard ; passés Charlatan, Gamin des rues ; don Doué (au choix).
-- **Usages actuels** : 1 test d'événement.
+### Furtivité (`stealth`) (instinctive)
+- Sert à : se cacher, se déplacer discrètement
+- Attribut : Dextérité en règle générale.
+- **En combat** : l'action **Se cacher** (Furtivité DD 13 : Invisible, donc avantage à la prochaine attaque et
+  désavantage pour qui vous attaque).
 
-### Discrétion (`stealth`)
+### Perception (`perception`) (instinctive)
 
-- **Attribut** : DEX.
-- **Sert à** : se cacher, suivre quelqu'un, passer inaperçu.
-- **Maîtrisée par** : au choix pour Roublard ; passés Criminel, Gamin des rues ; don Doué (au choix).
-- **Usages actuels** : 3 tests d'événements.
+- **Attribut** : INT ou SAG
+- **Sert à** : chercher des indices, déduire, repérer un mécanisme, trouver des objets cachés, repérer, entendre, sentir (odorat ou instinct), suivre une piste
+- **Implémenté** : la **Perception passive** (10 + bonus) est utilisable dans les conditions des événements
+  (`{"type": "passive", "skill": "perception", "min": 13}`), pour repérer une embuscade sans lancer de dé.
+  Remplace Investigation.
 
-### Intelligence
 
-### Arcanes (`arcana`)
+## Connaissances & Métiers
 
-- **Attribut** : INT.
-- **Sert à** : reconnaître la magie, les sorts, les objets enchantés, les créatures surnaturelles.
-- **Maîtrisée par** : au choix pour Magicien ; passés Érudit ; don Doué (au choix).
-- **Usages actuels** : 4 tests d'événements.
+### Érudition (`lore`)
 
-### Histoire (`history`)
-
-- **Attribut** : INT.
-- **Sert à** : se souvenir des événements passés, des lignées, des légendes.
-- **Maîtrisée par** : au choix pour Guerrier, Magicien ; passés Noble, Érudit ; don Doué (au choix).
-- **Usages actuels** : aucun test d'événement pour l'instant.
-- **Notes** : idéale pour la chronique des vies passées (reconnaître la tombe d'un ancien personnage…).
-
-### Investigation (`investigation`)
-
-- **Attribut** : INT.
-- **Sert à** : chercher des indices, déduire, repérer un mécanisme.
-- **Maîtrisée par** : au choix pour Magicien, Roublard ; dons Artisan accompli ; don Doué (au choix).
-- **Usages actuels** : aucun test d'événement pour l'instant.
-
-### Nature (`nature`)
-
-- **Attribut** : INT.
-- **Sert à** : connaître plantes, animaux, terrain et météo.
-- **Maîtrisée par** : au choix pour Magicien ; dons Érudit des arcanes ; don Doué (au choix).
-- **Usages actuels** : aucun test d'événement pour l'instant.
-
-### Religion (`religion`)
-
-- **Attribut** : INT.
-- **Sert à** : connaître les dieux, les rites, les morts-vivants et les êtres divins.
-- **Maîtrisée par** : au choix pour Magicien ; passés Acolyte ; don Doué (au choix).
-- **Usages actuels** : 1 test d'événement.
-
-### Sagesse
-
-### Dressage (`animal_handling`)
-
-- **Attribut** : SAG.
-- **Sert à** : calmer, monter ou dresser un animal.
-- **Maîtrisée par** : au choix pour Guerrier ; passés Héros du peuple ; don Doué (au choix).
-- **Usages actuels** : aucun test d'événement pour l'instant.
-- **Notes** : utile pour les voyages (montures) et les compagnons animaux.
-
-### Médecine (`medicine`)
-
-- **Attribut** : SAG.
-- **Sert à** : soigner, diagnostiquer, stabiliser un mourant.
-- **Maîtrisée par** : au choix pour Magicien ; dons Guérisseur ; don Doué (au choix).
-- **Usages actuels** : 2 tests d'événements.
-
-### Perception (`perception`)
-
-- **Attribut** : SAG.
-- **Sert à** : repérer, entendre, sentir le danger.
-- **Maîtrisée par** : au choix pour Guerrier, Roublard ; don Doué (au choix).
-- **Usages actuels** : 1 test d'événement.
-
-### Perspicacité (`insight`)
-
-- **Attribut** : SAG.
-- **Sert à** : deviner les intentions, déceler un mensonge.
-- **Maîtrisée par** : au choix pour Guerrier, Magicien, Roublard ; passés Acolyte, Artisan ; don Doué (au choix).
-- **Usages actuels** : aucun test d'événement pour l'instant.
-
-### Survie (`survival`)
-
-- **Attribut** : SAG.
-- **Sert à** : pister, s'orienter, chasser, trouver un abri.
-- **Maîtrisée par** : au choix pour Guerrier ; passés Héros du peuple, Sauvageon ; don Doué (au choix).
-- **Usages actuels** : 1 test d'événement.
-- **Notes** : centrale pour les voyages (se perdre ou non).
-
-### Charisme
-
-### Intimidation (`intimidation`)
-
-- **Attribut** : CHA.
-- **Sert à** : menacer, impressionner, faire plier.
-- **Maîtrisée par** : au choix pour Guerrier, Roublard ; passés Soldat ; don Doué (au choix).
-- **Usages actuels** : 2 tests d'événements.
-
-### Persuasion (`persuasion`)
-
-- **Attribut** : CHA.
-- **Sert à** : convaincre, négocier, séduire.
-- **Maîtrisée par** : au choix pour Roublard ; passés Artisan, Noble ; dons Langue d'argent ; don Doué (au choix).
-- **Usages actuels** : 3 tests d'événements.
-- **Notes** : servira aux prix des boutiques et aux relations sociales.
-
-### Représentation (`performance`)
-
-- **Attribut** : CHA.
-- **Sert à** : chanter, jouer, conter, divertir une foule.
-- **Maîtrisée par** : passés Saltimbanque ; don Doué (au choix).
-- **Usages actuels** : aucun test d'événement pour l'instant.
-- **Notes** : un métier possible (barde de taverne).
-
-### Tromperie (`deception`)
-
-- **Attribut** : CHA.
-- **Sert à** : mentir, se déguiser, bluffer.
-- **Maîtrisée par** : au choix pour Roublard ; passés Charlatan, Criminel ; don Doué (au choix).
-- **Usages actuels** : aucun test d'événement pour l'instant.
-
----
-
-## Compétences de métier (ajoutées le 2026-10-13)
-
-Elles existent dans le jeu ; aucune classe ni aucun passé ne les maîtrise encore, et la fabrication ne les teste pas
-encore (ce sera fait avec les métiers).
+- Décrit : vos connaissances générales, votre "culture G".
+- **Sert à :** reconnaître des créatures, sorts, objets, lieux, dieux...
+- Attribut : Int
+- Remplace Arcanes, Histoire, Nature et Religion.
 
 ### Artisanat (`crafting`)
 
-- **Attribut** : INT (à confirmer).
+- Décrit : votre aptitude à créer des objets, forger, bricoler...
+- **Attribut** : Dextérité pour la réalisation d'un objet que vous connaissez, que vous avez pu observer (exemple reforger une épée), un jet réussi de Int est requis pour créer des plans au préalable et comprendre comment réaliser l'objet. Pour des objets complexes et composites (ex : construire une maison), plusieurs jets différents peuvent être requis pour réaliser chaque parties.
 - **Sert à** : créer des objets « utiles » : armes, armures, outils, meubles…
-- **Maîtrisée par** : dons Artisan accompli ; don Doué (au choix).
-- **Usages prévus** : fabrication à la forge, métiers d'artisan.
 
 ### Arts (`arts`)
 
-- **Attribut** : CHA (à confirmer).
+- **Attribut** : La valeur la plus élevée entre CHA et DEX. Avec CHA, l'oeuvre communiquera plutôt les émotions de son créateur, tandis qu'avec DEX il s'agîra plutôt d'une prouesse technique (une statue réaliste)
 - **Sert à** : réaliser des objets ou des prestations « agréables » : peindre, chanter, sculpter, jouer…
-- **Maîtrisée par** : dons Musicien ; don Doué (au choix).
 - **Usages prévus** : métiers d'artiste, revenus en taverne, relations sociales.
-- **Notes** : recoupe Représentation ; faut-il fusionner les deux ?
+- Remplace Représentation.
+
 
 ### Potions et cuisine (`potions_cooking`)
 
-- **Attribut** : SAG (à confirmer).
-- **Sert à** : cuisiner, préparer des recettes alchimiques (potions, remèdes, poisons).
-- **Maîtrisée par** : don Doué (au choix).
-- **Usages prévus** : alchimie chez l'herboriste, cuisine, métiers.
+- Décrit : votre capacité à reconnaître des ingrédients, à cuisiner, à préparer des recettes alchimiques (potions, remèdes, poisons, drogues)
+- **Attribut** : SAG, INT ou DEX.
+- **Sert à** : On peut utiliser cette compétence avec INT ou SAG pour trouver des ingrédients dans la nature (herbes...). Puis on peut réaliser des recettes ou plats connus avec des jets (DEX, INT ou SAG). Il est aussi possible d'inventer des plats / potions... en réalisant des jets d'INT ou SAG. On peut aussi utiliser cette compétence avec INT ou SAG pour détecter un poison ou un aliment spécifique dans un plat ou une boisson (avarié, ou un aliment auquel vous seriez allergique)...
+
+
+### Médecine (`medicine`)
+
+- Décrit : votre capacité à soigner des blessures ou maladies, arrêter les hémorragies, recoudre des plaies... soigner, diagnostiquer, stabiliser un mourant.
+- **Attribut** : SAG, INT ou DEX.
+- **En combat** : l'action **Premiers soins** (Médecine DD 10 : soigne 1d6+1 PV à un allié, une fois par combat).
+
+
+
+### Survie (`survival`)
+
+- Décrit : votre capacité à survivre dans un milieu sauvage, en vous procurant de la nourriture par la chasse/cueillette/pêche, en vous fabriquant un abri, en vous orientant... Vous pouvez aussi l'utiliser pour trouver des ingrédients en lieu et place de Potions / Cuisine ou pister quelqu'un ou quelque chose
+- **Attribut** : SAG, INT et DEX
+
+
+### Dressage (`animal_handling`)
+
+- **Attribut** : SAG
+- **Sert à** : calmer, monter ou dresser un animal.
+- **Usages actuels** : aucun test d'événement pour l'instant.
+- **Notes** : utile pour les voyages (montures) et les compagnons animaux.
+
 
 ---
 
 ## Compétences candidates (à compléter)
 
-### Commerce
-
-- **Attribut** : CHA ou INT ?
-- **Sert à** : acheter et vendre au meilleur prix, tenir une boutique (aujourd'hui, c'est la Persuasion).
-
-### Équitation / Conduite
-
-- **Attribut** : DEX ou SAG ?
-- **Sert à** : montures et attelages pendant les voyages.
-
----
 
 ## Décisions (2026-10-13)
 
-- **Métiers** : trois compétences génériques plutôt qu'une par métier : **Artisanat**, **Arts**, **Potions et
-  cuisine** (ajoutées).
 - **Progression** : pas par la pratique ; plutôt liée à l'XP et à la montée de niveau. Solution à trouver, puisque
   dans D&D une compétence est seulement maîtrisée ou non.
-- **Choix à la création** : oui, le joueur choisit ses compétences de classe (fait).
+- **Rangs** : départ à 1 (2 si instinctive), +1 de bonus par rang ; on gagnera des rangs à certains niveaux ou à la
+  création (à définir) ; pas de plafond pour l'instant.
+- **Classe et passé** : comme avant (compétences de classe au choix, deux compétences de passé), mais en rangs.
+- **Bonus de maîtrise** : remplacé par les rangs (compétences, attaques) ; les jets de sauvegarde seront adaptés.
+- **Dons et Expertise** : ils donnent des rangs.
+- **Armes** : une compétence par famille d'armes ; mains nues et lancer : le meilleur entre l'arme et Physique.
+- **Plusieurs compétences pour une même action** : c'est voulu (Survie ou Potions et cuisine pour trouver des
+  ingrédients…).
 
 ## Questions ouvertes
 
-1. **Compétences en combat** : lesquelles ? (à retravailler avec les compétences en général)
-2. **Attributs des nouvelles compétences** : Artisanat (INT), Arts (CHA), Potions et cuisine (SAG), ça te va ?
-3. **Arts et Représentation** : on fusionne ?
-4. **Progression des compétences** : quel système, au-delà de « maîtrisée ou non » (rangs de maîtrise, points à
-   répartir en montant de niveau…) ?
+1. **Progression des rangs** : à quels niveaux, combien, et à la création ?
+2. **Jets de sauvegarde** : quel système, puisque le bonus de maîtrise disparaît ?
+3. **Vigilant** ajoute encore le bonus de maîtrise de D&D à l'initiative, et les **soins** (Second souffle : 1d10 +
+   niveau) suivent toujours le niveau. On garde ces deux exceptions ?
+4. **Attaques et niveau** : sans bonus de maîtrise, une attaque ne progresse plus avec le niveau tant que les rangs ne
+   le font pas. C'est à garder en tête pour la progression des rangs.

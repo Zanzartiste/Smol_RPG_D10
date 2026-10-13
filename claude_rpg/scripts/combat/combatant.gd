@@ -83,6 +83,19 @@ func ability_mod(ability_id: String) -> int:
 	return Abilities.modifier(int(creature.get("abilities", {}).get(ability_id, 10)))
 
 
+## Bonus d'un test de compétence. Créature : attribut (imposé, ou le meilleur de la compétence) + son
+## rang dans "skills" (0 si la compétence n'est pas listée).
+func skill_mod(skill_id: String, ability := "") -> int:
+	if character != null:
+		return character.skill_mod(skill_id, ability)
+	var used := ability
+	if used == "":
+		for candidate: String in Skills.abilities_of(skill_id):
+			if used == "" or ability_mod(candidate) > ability_mod(used):
+				used = candidate
+	return ability_mod(used) + int(creature.get("skills", {}).get(Skills.resolve(skill_id), 0))
+
+
 ## Jet de sauvegarde : modificateur d'attribut (+ maîtrise pour un personnage, + "saves" pour une créature).
 func save_mod(ability_id: String) -> int:
 	if character != null:
@@ -248,6 +261,8 @@ func attack_bonus(effect: Dictionary) -> int:
 		if Equipment.has_property(character.weapon_id(), "ranged"):
 			bonus += Modifiers.sum(mods, "ranged_attack")  # style Archerie
 		return bonus
+	if effect.get("weapon") is String:
+		return character.attack_bonus(String(effect.get("ability", "str")), effect["weapon"])
 	return character.attack_bonus(String(effect.get("ability", "weapon")))
 
 

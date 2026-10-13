@@ -9,7 +9,8 @@
 - Niveaux 1 à 20. La progression suit pour l'instant le **SRD 5.1** : emplacements de sorts, aptitudes, bonus de
   maîtrise.
 - Améliorations aux niveaux 4, 8, 12, 16 et 20 : +1 à un attribut **et** un don (`rules.json › advancement`).
-- Chaque classe maîtrise **deux jets de sauvegarde**.
+- Chaque classe maîtrise **deux jets de sauvegarde** (provisoirement : rang 2 au lieu de 1).
+- **Compétences** : les rangs remplacent le bonus de maîtrise (voir [competences.md](competences.md)).
 - **Multiclassage** prévu : les niveaux d'amélioration et d'aptitudes se compteront par classe.
 - **Armures** : aucune restriction par classe ; toute armure peut être portée. Chaque type a une Force conseillée
   (vêtements 0, légère 10, intermédiaire 12, lourde 14) : en dessous, le personnage est encombré et subit des malus
@@ -67,8 +68,8 @@
 - **Dé de vie** : d10.
 - **Priorité des attributs** : FOR > CON > DEX > SAG > CHA > INT.
 - **Jets de sauvegarde maîtrisés** : Force, Constitution.
-- **Compétences** : 2 au choix parmi Acrobaties, Dressage, Athlétisme, Histoire, Perspicacité, Intimidation,
-  Perception, Survie.
+- **Compétences** : +1 rang dans 2 compétences au choix parmi Physique, Dressage, Érudition, Perspicacité,
+  Persuasion, Perception, Survie ; +1 rang en Armes de mêlée et en Armes de trait.
 - **Équipement de départ** : épée longue, cotte de mailles, une potion de soins.
 - **Lanceur de sorts** : non.
 - **Actions de départ** : Attaque, Second souffle, Posture défensive, Coup de pommeau.
@@ -87,7 +88,7 @@
 
 **Sous-classe : Champion** (SRD 5.2, implémentée)
 
-- Niveau 3 : Critique amélioré (critique sur 19-20) ; Athlète remarquable (avantage à l'initiative et en Athlétisme).
+- Niveau 3 : Critique amélioré (critique sur 19-20) ; Athlète remarquable (avantage à l'initiative et en Physique).
 - Niveau 7 : Style de combat supplémentaire.
 - Niveau 10 : Guerrier héroïque (pas encore de mécanique).
 - Niveau 15 : Critique supérieur (critique sur 18-20).
@@ -100,7 +101,8 @@
 - **Dé de vie** : d6.
 - **Priorité des attributs** : INT > CON > DEX > SAG > CHA > FOR.
 - **Jets de sauvegarde maîtrisés** : Intelligence, Sagesse.
-- **Compétences** : 2 au choix parmi Arcanes, Histoire, Perspicacité, Investigation, Médecine, Nature, Religion.
+- **Compétences** : +1 rang dans 2 compétences au choix parmi Érudition, Perspicacité, Perception, Médecine,
+  Langues, Potions et cuisine ; Magie au rang 2 (lanceur de sorts).
 - **Équipement de départ** : bâton, robe d'érudit (vêtement).
 - **Lanceur de sorts** : complet, Intelligence.
 - **Actions de départ** :
@@ -133,8 +135,8 @@ appris.
 - **Dé de vie** : d8.
 - **Priorité des attributs** : DEX > CON > CHA > SAG > INT > FOR.
 - **Jets de sauvegarde maîtrisés** : Dextérité, Intelligence.
-- **Compétences** : 4 au choix parmi Acrobaties, Athlétisme, Tromperie, Perspicacité, Intimidation,
-  Investigation, Perception, Persuasion, Escamotage, Discrétion.
+- **Compétences** : +1 rang dans 4 compétences au choix parmi Physique, Persuasion, Perspicacité, Perception,
+  Escamotage, Furtivité, Langues ; +1 rang en Armes de mêlée et en Armes de trait.
 - **Équipement de départ** : rapière, armure de cuir (Force 10 conseillée : avec le modèle de la classe, FOR 8, il est
   encombré).
 - **Lanceur de sorts** : non.
@@ -142,19 +144,19 @@ appris.
 
 **Progression** (implémentée)
 
-- Niveau 1 : Expertise dans deux compétences maîtrisées au choix ; Attaque sournoise à 1d6.
+- Niveau 1 : Expertise : +1 rang dans deux compétences déjà entraînées ; Attaque sournoise à 1d6.
 - Niveau 3 : Archétype de roublard (sous-classe).
 - Niveaux 3, 5, 7… 19 : l'Attaque sournoise gagne 1d6 (10d6 au niveau 19).
 - Niveau 5 : Esquive instinctive (une attaque par round divisée par deux).
-- Niveau 6 : Expertise dans deux autres compétences maîtrisées.
+- Niveau 6 : Expertise : +1 rang dans deux autres compétences entraînées.
 - Niveau 7 : Dérobade (sauvegarde de DEX : rien si réussie, moitié si ratée).
-- Niveau 11 : Talent fiable (pas moins de 10 au d20 pour une compétence maîtrisée).
+- Niveau 11 : Talent fiable (pas moins de 10 au d20 pour une compétence entraînée).
 
 **Sous-classe : Voleur** (SRD 5.2, implémentée)
 
-- Niveau 3 : Mains lestes (une fois par tour, utiliser un objet ne coûte pas l'action) ; Monte-en-l'air (maîtrise
-  d'Athlétisme).
-- Niveau 9 : Furtivité suprême (avantage en Discrétion).
+- Niveau 3 : Mains lestes (une fois par tour, utiliser un objet ne coûte pas l'action) ; Monte-en-l'air (+1 rang en
+  Physique).
+- Niveau 9 : Furtivité suprême (avantage en Furtivité).
 - Niveau 13 : Utilisation d'objets magiques (pas encore de mécanique).
 - Niveau 17 : Réflexes de voleur (pas encore de mécanique).
 

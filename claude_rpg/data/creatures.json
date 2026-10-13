@@ -1,6 +1,7 @@
 [
 	{
 		"id": "wolf",
+		"skills": {"perception": 3, "stealth": 2, "physique": 2},
 		"name": "Loup",
 		"size": "medium",
 		"ac": 13,
@@ -30,6 +31,7 @@
 	},
 	{
 		"id": "dire_wolf",
+		"skills": {"perception": 3, "stealth": 2, "physique": 3},
 		"name": "Alpha des loups",
 		"size": "large",
 		"ac": 14,
@@ -57,6 +59,7 @@
 	},
 	{
 		"id": "bandit",
+		"skills": {"weapon_melee": 2, "stealth": 2, "persuasion": 2, "perception": 2, "physique": 2},
 		"name": "Brigand",
 		"size": "medium",
 		"ac": 12,
@@ -92,6 +95,7 @@
 	},
 	{
 		"id": "brute",
+		"skills": {"weapon_melee": 2, "physique": 3, "persuasion": 2},
 		"name": "Colosse tatoué",
 		"size": "medium",
 		"ac": 11,

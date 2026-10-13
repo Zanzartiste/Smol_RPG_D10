@@ -14,6 +14,7 @@
 		"source": "SRD 5.2",
 		"description": "Vous avez appris deux tours de magie et un sort du 1er niveau, que vous pouvez lancer une fois par repos long sans emplacement.",
 		"resources": {"magic_initiate": 1},
+		"modifiers": [{"type": "skill_rank", "id": "magic", "amount": 1}],
 		"choices": [
 			{"id": "ability", "name": "Attribut d'incantation", "type": "ability", "count": 1, "options": ["int", "wis", "cha"],
 				"modifiers": [{"type": "spellcasting_ability", "id": "$"}], "default": ["int"]},
@@ -36,10 +37,10 @@
 		"name": "Doué",
 		"category": "origin",
 		"source": "SRD 5.2",
-		"description": "Vous maîtrisez trois compétences de votre choix.",
+		"description": "+1 rang dans trois compétences de votre choix.",
 		"choices": [
-			{"id": "skills", "name": "Compétences", "type": "skill", "count": 3, "modifiers": [{"type": "skill_proficiency", "id": "$"}],
-				"default": ["insight", "persuasion", "history"]}
+			{"id": "skills", "name": "Compétences", "type": "skill", "count": 3, "modifiers": [{"type": "skill_rank", "id": "$", "amount": 1}],
+				"default": ["insight", "persuasion", "lore"]}
 		]
 	},
 	{
@@ -54,35 +55,35 @@
 		"name": "Guérisseur",
 		"category": "origin",
 		"description": "Vous savez panser les plaies du corps comme celles de l'âme.",
-		"modifiers": [{"type": "ability", "id": "wis", "amount": 1}, {"type": "skill_proficiency", "id": "medicine"}]
+		"modifiers": [{"type": "ability", "id": "wis", "amount": 1}, {"type": "skill_rank", "id": "medicine", "amount": 1}]
 	},
 	{
 		"id": "crafter",
 		"name": "Artisan accompli",
 		"category": "origin",
 		"description": "Un œil exercé repère la moindre malfaçon… et le moindre détail suspect.",
-		"modifiers": [{"type": "skill_proficiency", "id": "crafting"}, {"type": "skill_proficiency", "id": "investigation"}]
+		"modifiers": [{"type": "skill_rank", "id": "crafting", "amount": 1}, {"type": "skill_rank", "id": "perception", "amount": 1}]
 	},
 	{
 		"id": "silver_tongue",
 		"name": "Langue d'argent",
 		"category": "origin",
 		"description": "Vous trouvez toujours les mots, surtout ceux qui ne sont pas vrais.",
-		"modifiers": [{"type": "ability", "id": "cha", "amount": 1}, {"type": "skill_proficiency", "id": "persuasion"}]
+		"modifiers": [{"type": "ability", "id": "cha", "amount": 1}, {"type": "skill_rank", "id": "persuasion", "amount": 1}]
 	},
 	{
 		"id": "musician",
 		"name": "Musicien",
 		"category": "origin",
 		"description": "Votre talent apaise les foules et vous ouvre bien des portes.",
-		"modifiers": [{"type": "ability", "id": "cha", "amount": 1}, {"type": "skill_proficiency", "id": "arts"}]
+		"modifiers": [{"type": "ability", "id": "cha", "amount": 1}, {"type": "skill_rank", "id": "arts", "amount": 1}]
 	},
 	{
 		"id": "athlete",
 		"name": "Athlète",
 		"category": "origin",
 		"description": "Un entraînement physique rigoureux a forgé votre corps.",
-		"modifiers": [{"type": "skill_proficiency", "id": "athletics"}],
+		"modifiers": [{"type": "skill_rank", "id": "physique", "amount": 1}],
 		"choices": [
 			{"id": "ability", "name": "Attribut", "type": "ability", "count": 1, "options": ["str", "dex"],
 				"modifiers": [{"type": "ability", "id": "$", "amount": 1}], "default": ["str"]}
@@ -93,14 +94,14 @@
 		"name": "Érudit des arcanes",
 		"category": "origin",
 		"description": "Des nuits entières passées sur les grimoires ont aiguisé votre esprit.",
-		"modifiers": [{"type": "ability", "id": "int", "amount": 1}, {"type": "skill_proficiency", "id": "nature"}]
+		"modifiers": [{"type": "ability", "id": "int", "amount": 1}, {"type": "skill_rank", "id": "lore", "amount": 1}]
 	},
 	{
 		"id": "nimble",
 		"name": "Agile",
 		"category": "origin",
 		"description": "Les ruelles vous ont appris à esquiver, sauter et filer.",
-		"modifiers": [{"type": "ability", "id": "dex", "amount": 1}, {"type": "skill_proficiency", "id": "acrobatics"}]
+		"modifiers": [{"type": "ability", "id": "dex", "amount": 1}, {"type": "skill_rank", "id": "physique", "amount": 1}]
 	},
 	{
 		"id": "ability_score_improvement",
@@ -139,7 +140,7 @@
 		"id": "resilient",
 		"name": "Résistant",
 		"category": "general",
-		"description": "+1 à un attribut, et vous maîtrisez ses jets de sauvegarde.",
+		"description": "+1 à un attribut, et +1 rang à ses jets de sauvegarde.",
 		"choices": [
 			{"id": "ability", "name": "Attribut", "type": "ability", "count": 1,
 				"modifiers": [{"type": "ability", "id": "$", "amount": 1}, {"type": "save_proficiency", "id": "$"}], "default": ["con"]}

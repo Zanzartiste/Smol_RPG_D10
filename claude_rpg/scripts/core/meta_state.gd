@@ -7,7 +7,10 @@ var world_flags: Dictionary = {}
 var unlocks: Dictionary = {}  # "species:elf", "class:rogue"... -> true
 var seen_events: Dictionary = {}  # id d'événement -> nombre de fois vu, toutes vies confondues
 var chronicle: Array[Dictionary] = []
-var creator_points := 0  # Creator Points disponibles (gagnés à chaque mort, dépensés à la création)
+var creator_points := 0
+## Réglages du joueur (conservés même quand on efface le monde) :
+##   manual_skill_ability : choisir soi-même l'attribut d'un test de compétence (sinon le meilleur).
+var settings := {"manual_skill_ability": false}  # Creator Points disponibles (gagnés à chaque mort, dépensés à la création)
 
 
 func has_world_flag(id: String) -> bool:
@@ -95,7 +98,7 @@ func record_life(life: LifeState) -> void:
 
 func to_dict() -> Dictionary:
 	return {"world_flags": world_flags, "unlocks": unlocks, "seen_events": seen_events, "chronicle": chronicle,
-		"creator_points": creator_points}
+		"creator_points": creator_points, "settings": settings}
 
 
 func load_dict(data: Dictionary) -> void:
@@ -103,6 +106,7 @@ func load_dict(data: Dictionary) -> void:
 	unlocks = data.get("unlocks", {})
 	seen_events = Character._int_dict(data.get("seen_events", {}))
 	creator_points = int(data.get("creator_points", 0))
+	settings.merge(data.get("settings", {}), true)
 	chronicle.clear()
 	for entry: Dictionary in data.get("chronicle", []):
 		var life := entry.duplicate()
@@ -113,4 +117,6 @@ func load_dict(data: Dictionary) -> void:
 
 ## Efface toute la méta-progression (nouveau monde).
 func reset() -> void:
+	var kept := settings.duplicate()
 	load_dict({})
+	settings = kept

@@ -17,6 +17,15 @@
 	"time_slots": [{"id": "morning", "name": "Matin"}, {"id": "afternoon", "name": "Après-midi"}, {"id": "evening", "name": "Soir"}],
 	"days_per_year": 365,
 	"majority_age": 18,
+	"common_actions": ["hide", "intimidate", "first_aid"],
+	"languages": [
+		{"id": "common", "name": "Commun", "known_by_all": true},
+		{"id": "elvish", "name": "Elfique"},
+		{"id": "dwarvish", "name": "Nain"},
+		{"id": "goblin", "name": "Gobelin"},
+		{"id": "orc", "name": "Orque"},
+		{"id": "infernal", "name": "Infernal"}
+	],
 	"spell_slots": {
 		"_doc": "Emplacements de sort par niveau de classe (SRD 5.1) : ligne n = niveau n, colonne i = emplacements de niveau i+1.",
 		"full": [

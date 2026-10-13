@@ -127,10 +127,11 @@
 		"id": "invisible",
 		"name": "Invisible",
 		"negative": false,
-		"description": "Avantage à ses attaques ; désavantage pour ceux qui l'attaquent. Perd 1 charge par tour.",
+		"description": "Avantage à ses attaques ; désavantage pour ceux qui l'attaquent. Perd 1 charge à la fin de son tour.",
 		"attack_advantage": true,
 		"attacked_disadvantage": true,
 		"decay": 1,
+		"decay_at": "end",
 		"color": "#c8e8f0"
 	}
 ]

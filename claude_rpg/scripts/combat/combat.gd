@@ -433,7 +433,7 @@ func _resolve(actor: Combatant, effects: Array, target_mode: String, chosen: Com
 		for e: Dictionary in effects:
 			if e.get("type") in CombatEffects.UNTARGETED:
 				continue
-			if e.get("type") == "attack" or e.has("save"):
+			if e.get("type") in ["attack", "check"] or e.has("save"):
 				if not target.is_alive():
 					break
 				var result := _apply(actor, e, target, fast)
@@ -515,6 +515,8 @@ func _apply(actor: Combatant, e: Dictionary, target: Combatant, fast: bool) -> D
 					removed.append(StatusEffects.name_of(status_id))
 			if not removed.is_empty():
 				_beat(beats, Loc.ui("%s n'est plus affecté par : %s.") % [target.name, ", ".join(removed)])
+		"check":
+			hit = _skill_check(actor, target, e, beats, fast)
 		"extra_action":
 			actions_left += 1
 			_beat(beats, Loc.ui("%s peut agir une fois de plus.") % actor.name)
@@ -581,6 +583,27 @@ func _status_from_damage(target: Combatant, type: String, dealt: int) -> String:
 		return ""
 	target.add_status(status["id"], int(status.get("stacks", 1)))
 	return " " + Loc.ui("%s : +%d %s.") % [target.name, int(status.get("stacks", 1)), StatusEffects.name_of(status["id"])]
+
+
+## Test de compétence de l'acteur, contre un DD ("dc") ou contre un jet de sauvegarde de la cible
+## ("vs_save"). Retourne true si l'acteur réussit.
+func _skill_check(actor: Combatant, target: Combatant, e: Dictionary, beats: Array[Dictionary], fast: bool) -> bool:
+	var skill: String = e["skill"]
+	var mod := actor.skill_mod(skill, e.get("ability", ""))
+	var d20 := Dice.roll_d20(rng, -1 if actor.has_status_flag("check_disadvantage") else 0)
+	var die := int(d20["die"])
+	var dc := int(e.get("dc", 10))
+	var against := ""
+	if e.has("vs_save"):
+		var save_die := rng.randi_range(1, 20)
+		dc = save_die + target.save_mod(e["vs_save"])
+		against = Loc.ui(" (%s : %d + %d)") % [target.name, save_die, target.save_mod(e["vs_save"])]
+	var success := die == 20 or (die != 1 and die + mod >= dc)
+	var label := Skills.name_of(skill)
+	_beat(beats, Loc.ui("%s : %s %d + %d = %d contre %d%s — %s") % [actor.name, label, die, mod, die + mod, dc, against,
+		Loc.ui("réussi") if success else Loc.ui("raté")],
+		{"dice": d20["dice"], "mod": mod, "dc": dc, "success": success, "stat": "%s (%s)" % [label, actor.name]}, fast)
+	return success
 
 
 ## Jet de sauvegarde de la cible contre le DD de l'acteur (ou "dc"). Inflexible relance un échec.
