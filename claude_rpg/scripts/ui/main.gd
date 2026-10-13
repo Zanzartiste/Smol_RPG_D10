@@ -1,7 +1,8 @@
 extends Control
 ## Écran principal : fiche du personnage à gauche, scène courante à droite.
-## La zone de droite affiche tour à tour le hub (choix du lieu), un événement, le lancer de dés,
-## son résultat, un combat ou la mort.
+## La zone de droite affiche tour à tour le hub (choix du lieu), le menu d'un lieu qui a des boutiques,
+## un événement, le lancer de dés, son résultat, un combat ou la mort. L'inventaire et les boutiques
+## s'ouvrent dans une fenêtre par-dessus (`_overlay`).
 ## Raccourcis : touches 1 à 9 pour choisir une option ; n'importe quelle touche accélère les dés ;
 ## F12 active ou désactive le mode debug (choix verrouillés visibles) ; Échap sauvegarde et revient au menu ;
 ## I ouvre l'inventaire (bouton « Inventaire » sous la fiche, hors combat).
@@ -26,7 +27,7 @@ const MAX_CHOICES_HEIGHT := 330  # au-delà, la liste de choix défile
 
 var _debug_badge := Label.new()
 var _inventory_button := Button.new()
-var _inventory: InventoryView  # fenêtre d'inventaire ouverte (null sinon)
+var _overlay: Control  # fenêtre ouverte par-dessus l'écran : inventaire ou boutique (null sinon)
 var _event_on_screen: Dictionary = {}  # événement dont les choix sont affichés (pour les réafficher en debug)
 
 
@@ -53,7 +54,7 @@ func _ready() -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
-	if key == null or not key.pressed or key.echo or combat_view.visible or _inventory != null:
+	if key == null or not key.pressed or key.echo or combat_view.visible or _overlay != null:
 		return
 	if key.keycode == KEY_I and not dice_tray.is_playing():
 		open_inventory()
@@ -205,7 +206,30 @@ func _on_feat_chosen(member: Character, feat_id: String) -> void:
 
 
 
+## Un lieu avec des boutiques ouvre son menu ; les autres tirent directement un événement.
 func _on_location_chosen(location_id: String) -> void:
+	if Shops.of_location(location_id).is_empty():
+		_show_event(Game.draw_event(location_id))
+	else:
+		_show_location_menu(location_id)
+
+
+## Menu d'un lieu : se promener (événement au hasard), entrer dans une boutique, ou revenir.
+## Les boutiques ne font pas passer le temps.
+func _show_location_menu(location_id: String) -> void:
+	var loc: Dictionary = DB.locations[location_id]
+	illustration.texture = ArtProvider.location_image(loc.get("art", location_id), Game.life)
+	title_label.text = loc["name"]
+	body_text.text = loc.get("description", "")
+	_clear_choices()
+	_add_choice(tr("Se promener (événement au hasard)"), _show_event_from.bind(location_id))
+	for shop_id in Shops.of_location(location_id):
+		_add_choice("%s — %s" % [Shops.name_of(shop_id), Shops.def(shop_id).get("description", "")],
+			open_shop.bind(shop_id))
+	_add_choice(tr("Retour"), _show_hub)
+
+
+func _show_event_from(location_id: String) -> void:
 	_show_event(Game.draw_event(location_id))
 
 
@@ -257,16 +281,29 @@ func _on_new_life() -> void:
 
 ## Ouvre la fenêtre d'inventaire par-dessus l'écran (pas pendant un combat).
 func open_inventory() -> void:
-	if _inventory != null or combat_view.visible or Game.life == null or Game.life.dead:
-		return
-	_inventory = InventoryView.new(Game.life)
-	_inventory.changed.connect(_refresh_sheet)
-	_inventory.closed.connect(_on_inventory_closed)
-	add_child(_inventory)
+	if _can_open_overlay():
+		_open_overlay(InventoryView.new(Game.life))
 
 
-func _on_inventory_closed() -> void:
-	_inventory = null
+## Ouvre la fenêtre d'une boutique (depuis le menu de son lieu).
+func open_shop(shop_id: String) -> void:
+	if _can_open_overlay():
+		_open_overlay(ShopView.new(Game.life, shop_id))
+
+
+func _can_open_overlay() -> bool:
+	return _overlay == null and not combat_view.visible and Game.life != null and not Game.life.dead
+
+
+func _open_overlay(view: Control) -> void:
+	_overlay = view
+	view.changed.connect(_refresh_sheet)
+	view.closed.connect(_on_overlay_closed)
+	add_child(view)
+
+
+func _on_overlay_closed() -> void:
+	_overlay = null
 	Saves.save_all()
 
 
@@ -274,8 +311,8 @@ func _on_inventory_closed() -> void:
 
 ## Le combat se joue dans l'écran dédié (CombatView), qui remplace le contenu le temps de la bataille.
 func _run_combat(spec: Dictionary) -> void:
-	if _inventory != null:
-		_inventory.close_view()
+	if _overlay != null:
+		_overlay.close_view()
 	_inventory_button.disabled = true
 	content_box.visible = false
 	combat_view.visible = true

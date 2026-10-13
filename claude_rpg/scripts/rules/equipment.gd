@@ -42,11 +42,14 @@ static func ids() -> Array[String]:
 
 
 static func has(id: String) -> bool:
-	return DB.equipment.has(id)
+	return DB.equipment.has(id) or not Crafting.upgraded_def(id).is_empty()
 
 
+## Définition d'un équipement ; un id « base@rang » (amélioré à la forge) est calculé par Crafting.
 static func def(id: String) -> Dictionary:
-	return DB.equipment.get(id, {})
+	if DB.equipment.has(id):
+		return DB.equipment[id]
+	return Crafting.upgraded_def(id) if Crafting.UPGRADE_SEPARATOR in id else {}
 
 
 static func name_of(id: String) -> String:

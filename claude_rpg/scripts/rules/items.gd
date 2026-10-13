@@ -7,8 +7,9 @@ extends RefCounted
 ## ({id: quantité}) peut donc mélanger les deux.
 ##
 ## Champs communs : "name", "description"?, "value"? (prix en po), "rarity"? (common, uncommon, rare,
-## very_rare, legendary). Un consommable a "use": {"heal"?: "2d4+2", "cleanse"?: "poisoned",
-## "target": "ally"}.
+## very_rare, legendary). Un objet de items.json a une "category" : consumable, material, treasure ;
+## l'équipement garde la sienne (weapon, armor, shield, accessory).
+## Un consommable a "use": {"heal"?: "2d4+2", "cleanse"?: "poisoned", "target": "ally"}.
 
 const RARITIES := ["common", "uncommon", "rare", "very_rare", "legendary"]
 const RARITY_NAMES := {
@@ -17,14 +18,23 @@ const RARITY_NAMES := {
 const RARITY_COLORS := {
 	"common": "#d8cfc0", "uncommon": "#6fbf5a", "rare": "#5a8fd8", "very_rare": "#a36ad8", "legendary": "#e0a030",
 }
+const CATEGORIES := ["weapon", "armor", "shield", "accessory", "consumable", "material", "treasure"]
+const CATEGORY_NAMES := {
+	"weapon": "Armes", "armor": "Armures", "shield": "Boucliers", "accessory": "Accessoires",
+	"consumable": "Consommables", "material": "Matériaux", "treasure": "Trésors",
+}
 
 
 static func has(id: String) -> bool:
-	return DB.items.has(id) or DB.equipment.has(id)
+	return DB.items.has(id) or Equipment.has(id)
 
 
 static func def(id: String) -> Dictionary:
-	return DB.items.get(id, DB.equipment.get(id, {}))
+	return DB.items[id] if DB.items.has(id) else Equipment.def(id)
+
+
+static func category_of(id: String) -> String:
+	return def(id).get("category", "material")
 
 
 static func name_of(id: String) -> String:
@@ -49,7 +59,7 @@ static func rarity_color(id: String) -> Color:
 
 ## L'objet se porte (arme, armure, bouclier, accessoire) ?
 static func is_equipment(id: String) -> bool:
-	return DB.equipment.has(id) and id != Equipment.UNARMED
+	return Equipment.has(id) and id != Equipment.UNARMED
 
 
 static func is_usable(id: String) -> bool:

@@ -1,6 +1,7 @@
 [
 	{
 		"id": "potion_heal",
+		"category": "consumable",
 		"name": "Potion de soins",
 		"description": "Une fiole rouge qui referme les plaies.",
 		"value": 10,
@@ -8,6 +9,7 @@
 	},
 	{
 		"id": "antidote",
+		"category": "consumable",
 		"name": "Antidote",
 		"description": "Un remède amer qui neutralise les poisons.",
 		"value": 8,
@@ -15,20 +17,30 @@
 	},
 	{
 		"id": "healing_herbs",
+		"category": "material",
 		"name": "Herbes médicinales",
 		"description": "Sauge et achillée, prisées des guérisseurs.",
 		"value": 2
 	},
 	{
 		"id": "wolf_pelt",
+		"category": "material",
 		"name": "Peau de loup",
 		"description": "Rêche et odorante, mais les tanneurs l'achètent.",
-		"value": 8
+		"value": 3
 	},
 	{
 		"id": "old_amulet",
+		"category": "treasure",
 		"name": "Amulette ancienne",
 		"description": "Un bijou terni gravé de runes inconnues.",
 		"value": 40
+	},
+	{
+		"id": "iron_ore",
+		"category": "material",
+		"name": "Minerai de fer",
+		"description": "Un bloc de roche veinée de rouille, prêt pour la forge.",
+		"value": 1
 	}
 ]

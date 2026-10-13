@@ -14,6 +14,7 @@ static func validate(db: Node) -> void:
 	_validate_combat_data(db, errors)
 	_validate_items(db, errors)
 	_validate_damage_types(db, errors)
+	_validate_economy(db, errors)
 	for id: String in db.events:
 		_validate_event(db, db.events[id], errors)
 
@@ -572,6 +573,37 @@ static func _validate_damage_types(db: Node, errors: Array[String]) -> void:
 			var chance := float(status.get("chance", -1))
 			if chance < 0.0 or chance > 1.0:
 				errors.append(ctx + " : status.chance doit être entre 0 et 1")
+
+
+static func _validate_economy(db: Node, errors: Array[String]) -> void:
+	for item: Dictionary in db.items.values():
+		if item.get("category", "") not in ["consumable", "material", "treasure"]:
+			errors.append("items.json › %s : category doit valoir consumable, material ou treasure" % item["id"])
+	var stations := {}
+	for shop: Dictionary in db.shops.values():
+		var ctx := "shops.json › %s" % shop["id"]
+		_expect_ref(db.locations, shop.get("location"), "lieu", ctx, errors)
+		for category in shop.get("buys", []):
+			if category not in Items.CATEGORIES:
+				errors.append(ctx + " : catégorie achetée inconnue « %s » (%s)" % [category, Items.CATEGORIES])
+		for item_id: String in shop.get("stock", {}):
+			_expect_item(db, item_id, ctx, errors)
+		if shop.has("crafting"):
+			stations[shop["crafting"]] = true
+	for recipe: Dictionary in db.recipes.values():
+		var ctx := "recipes.json › %s" % recipe["id"]
+		_expect_item(db, recipe.get("result"), ctx, errors)
+		if recipe.get("materials", {}).is_empty():
+			errors.append(ctx + " : aucun matériau")
+		for item_id: String in recipe.get("materials", {}):
+			_expect_item(db, item_id, ctx, errors)
+		if not stations.has(recipe.get("station")):
+			errors.append(ctx + " : aucune boutique n'a la station « %s » (shops.json › crafting)" % recipe.get("station"))
+	for key in ["sell_rate", "price_skill", "percent_per_point", "max_percent"]:
+		if not db.rules.get("trade", {}).has(key):
+			errors.append("rules.json › trade : champ « %s » manquant" % key)
+	if not db.skills.has(db.rules.get("trade", {}).get("price_skill", "")):
+		errors.append("rules.json › trade : price_skill doit être une compétence")
 
 
 ## Un objet du sac : id de items.json ou de equipment.json.

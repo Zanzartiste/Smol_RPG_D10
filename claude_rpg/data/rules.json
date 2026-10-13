@@ -77,6 +77,18 @@
 		{"id": "venerable", "name": "Vénérable"}
 	],
 	"start_gold": 15,
+	"trade": {
+		"_doc": "Prix d'achat = valeur × price_rate de la boutique × (1 − remise) ; prix de revente = valeur × sell_rate × (1 + remise). La remise vaut percent_per_point % par point de la compétence price_skill du meilleur négociateur du groupe, entre −max_percent et +max_percent.",
+		"sell_rate": 0.5,
+		"price_skill": "persuasion",
+		"percent_per_point": 3,
+		"max_percent": 15
+	},
+	"forge": {
+		"_doc": "Amélioration d'une arme, d'une armure ou d'un bouclier : coût en po de chaque rang (+1, +2, +3) et rareté obtenue.",
+		"upgrade_costs": [50, 150, 400],
+		"upgrade_rarities": ["uncommon", "rare", "very_rare"]
+	},
 	"encumbered_modifiers": [],
 	"armor_strength": {
 		"_doc": "Force conseillée pour une armure, selon son type (un objet peut la redéfinir avec \"strength\"). En dessous, l'armure reste portable mais le personnage est encombré (encumbered_modifiers).",

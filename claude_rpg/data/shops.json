@@ -1,0 +1,40 @@
+[
+	{
+		"id": "armorer",
+		"name": "Armurerie de Gorvald",
+		"location": "town",
+		"description": "Des lames alignées au mur et un vieux soldat qui jauge votre bourse d'un coup d'œil.",
+		"price_rate": 1.0,
+		"restock_days": 7,
+		"buys": ["weapon", "armor", "shield", "accessory"],
+		"stock": {
+			"dagger": 3, "club": 2, "mace": 2, "handaxe": 2, "shortsword": 2, "scimitar": 1, "rapier": 1,
+			"longsword": 2, "greataxe": 1, "shortbow": 1, "longbow": 1,
+			"clothes": 3, "padded": 2, "leather": 2, "studded_leather": 1, "hide": 2, "chain_shirt": 1,
+			"breastplate": 1, "chain_mail": 1, "plate": 1, "shield": 2
+		}
+	},
+	{
+		"id": "apothecary",
+		"name": "Herboristerie de Maëlle",
+		"location": "town",
+		"description": "Une échoppe embaumée de sauge, où fioles et bocaux s'entassent jusqu'au plafond.",
+		"price_rate": 1.0,
+		"restock_days": 3,
+		"buys": ["consumable", "material"],
+		"stock": {"potion_heal": 4, "antidote": 3, "healing_herbs": 5},
+		"crafting": "alchemy"
+	},
+	{
+		"id": "forge",
+		"name": "Forge de Brumeval",
+		"location": "town",
+		"description": "La chaleur vous saisit dès le seuil. L'enclume chante sous le marteau de Hilde.",
+		"price_rate": 1.0,
+		"restock_days": 7,
+		"buys": ["material", "weapon", "armor", "shield"],
+		"stock": {"iron_ore": 10},
+		"crafting": "forge",
+		"upgrade": true
+	}
+]

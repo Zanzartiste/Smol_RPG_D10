@@ -20,6 +20,8 @@ var creatures: Dictionary = {}  # bestiaire : ennemis et invocations (API Creatu
 var actions: Dictionary = {}  # actions de combat des classes (API Actions)
 var companions: Dictionary = {}
 var items: Dictionary = {}
+var shops: Dictionary = {}  # boutiques et services (API Shops)
+var recipes: Dictionary = {}  # recettes de fabrication (API Crafting)
 var locations: Dictionary = {}
 var location_order: Array[String] = []
 var events: Dictionary = {}
@@ -47,6 +49,8 @@ func load_all() -> void:
 	actions = _index_by_id(_load_json("actions.json", []), "actions.json")
 	companions = _index_by_id(_load_json("companions.json", []), "companions.json")
 	items = _index_by_id(_load_json("items.json", []), "items.json")
+	shops = _index_by_id(_load_json("shops.json", []), "shops.json")
+	recipes = _index_by_id(_load_json("recipes.json", []), "recipes.json")
 	locations = _index_by_id(_load_json("locations.json", []), "locations.json")
 	location_order.assign(locations.keys())
 

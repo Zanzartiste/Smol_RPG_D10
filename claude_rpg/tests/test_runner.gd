@@ -27,6 +27,7 @@ const TESTS := [
 	"_test_armor_strength",
 	"_test_new_species",
 	"_test_damage_types",
+	"_test_economy",
 	"_test_combat",
 	"_test_combat_turns",
 	"_test_companions",
@@ -892,6 +893,74 @@ func _test_damage_types() -> bool:
 	_expect(hp - target.hp == 2, "état Poison : dégâts de poison, divisés par la résistance")
 	Game.combat = null
 	DB.creatures.erase("_target")
+	return true
+
+
+func _test_economy() -> bool:
+	_expect(Shops.of_location("town") == ["armorer", "apothecary", "forge"] and Shops.of_location("forest").is_empty(),
+		"boutiques de Brumeval")
+	_expect(Items.category_of("potion_heal") == "consumable" and Items.category_of("longsword") == "weapon", "catégories")
+
+	var hero := Character.create("goblin", "fighter", "Client", {"abilities": {"str": 15, "dex": 14, "con": 13, "int": 10,
+		"wis": 12, "cha": 10}})
+	Game.start_life(hero, 101)
+	var life := Game.life
+	_expect(Shops.discount(life) == 0.0, "CHA 10 sans Persuasion : pas de remise")
+	_expect(Shops.buy_price("apothecary", "potion_heal", life) == 10 and Shops.sell_price("potion_heal", life) == 5,
+		"prix : valeur à l'achat, moitié à la revente")
+	hero.abilities["cha"] = 20  # +5 sans maîtrise : 15 %
+	_expect(is_equal_approx(Shops.discount(life), 0.15) and Shops.buy_price("apothecary", "potion_heal", life) == 9
+		and Shops.sell_price("potion_heal", life) == 5, "Persuasion : remise plafonnée à 15 %")
+	hero.abilities["cha"] = 6
+	_expect(is_equal_approx(Shops.discount(life), -0.06) and Shops.buy_price("apothecary", "potion_heal", life) == 11,
+		"mauvais négociateur : prix plus élevés")
+	var mira := Character.create_companion("mira")
+	mira.abilities["cha"] = 18
+	life.companions.append(mira)
+	_expect(Shops.negotiator(life) == mira, "le meilleur négociateur du groupe parle")
+	life.companions.clear()
+	hero.abilities["cha"] = 10
+
+	# Achat, revente, réassort.
+	hero.gold = 30
+	_expect(life.buy("apothecary", "potion_heal") and hero.gold == 20 and hero.item_count("potion_heal") == 2
+		and life.shop_stock("apothecary")["potion_heal"] == 3, "achat : or, sac et stock")
+	_expect(not life.sell("armorer", "potion_heal"), "l'armurier ne rachète pas les potions")
+	_expect(life.sell("apothecary", "potion_heal") and hero.gold == 25 and life.shop_stock("apothecary")["potion_heal"] == 4,
+		"revente : l'objet rejoint le stock")
+	hero.gold = 0
+	_expect(not life.buy("armorer", "longsword"), "pas assez d'or")
+	life.shop_stock("apothecary").erase("antidote")
+	life.day += 3
+	_expect(life.shop_stock("apothecary").get("antidote", 0) == 3, "réassort après restock_days jours")
+	var saved := LifeState.from_dict(JSON.parse_string(JSON.stringify(life.to_dict())))
+	_expect(saved.shop_stock("apothecary") == life.shop_stock("apothecary"), "stock des boutiques sauvegardé")
+
+	# Fabrication.
+	var recipe := Crafting.recipe("craft_longsword")
+	_expect(Crafting.missing_for(recipe, life) == "il manque : Minerai de fer ×2, 1 po", "fabrication : ce qui manque")
+	hero.gold = 5
+	hero.add_item("iron_ore", 2)
+	_expect(life.craft("craft_longsword") and hero.item_count("iron_ore") == 0 and hero.gold == 4
+		and hero.item_count("longsword") == 1, "fabrication : matériaux et or dépensés")
+
+	# Amélioration à la forge.
+	_expect(Crafting.can_upgrade("longsword") and not Crafting.can_upgrade("robe") and not Crafting.can_upgrade("flame_tongue")
+		and not Crafting.can_upgrade("longsword@3"), "objets améliorables")
+	hero.gold = 1000
+	_expect(life.upgrade("longsword") and hero.item_count("longsword@1") == 1 and hero.gold == 950, "+1 depuis le sac")
+	_expect(Items.name_of("longsword@1") == "Épée longue +1" and Items.rarity_of("longsword@1") == "uncommon"
+		and Items.value_of("longsword@1") == 53, "objet amélioré : nom, rareté, valeur")
+	var armor_before := hero.armor_class()
+	_expect(life.upgrade("chain_mail", hero, "armor") and hero.equipment["armor"] == "chain_mail@1"
+		and hero.armor_class() == armor_before + 1, "+1 sur l'armure portée")
+	_expect(life.upgrade("chain_mail@1", hero, "armor") and hero.equipment["armor"] == "chain_mail@2" and hero.gold == 750,
+		"+2 : 150 po")
+	var c := Combatant.from_character(hero, true)
+	life.equip(hero, "longsword@1")
+	_expect(c.damage_expr({"type": "attack", "weapon": true}).ends_with("+3") and hero.weapon_id() == "longsword@1",
+		"arme +1 équipée : dégâts")
+	_expect(Shops.buys("forge", "longsword") and Shops.buys("armorer", "chain_mail@2"), "les objets améliorés se revendent")
 	return true
 
 

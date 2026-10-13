@@ -18,6 +18,7 @@ var notices: Array[String] = []  # messages à afficher au prochain retour au hu
 ## Combat déclenché mais pas encore terminé : il reprend au chargement d'une sauvegarde
 ## (quitter le jeu ne permet pas d'esquiver un combat).
 var pending_combat: Dictionary = {}
+var shops: Dictionary = {}  # id de boutique -> {"stock": {id: quantité}, "restocked": jour du dernier réassort}
 
 
 func slot_id() -> String:
@@ -106,8 +107,6 @@ func _check_old_age() -> void:
 	change_ability(id, -1, Loc.ui("Mort de vieillesse"))
 
 
-# --- Sauvegarde ----------------------------------------------------------------
-
 # --- Sac du groupe -------------------------------------------------------------
 # Le sac est celui du héros (character.inventory) : les compagnons s'équipent et se soignent en y
 # puisant, et ce qu'ils retirent y retourne.
@@ -154,6 +153,76 @@ func drop_item(item_id: String, count := 1) -> int:
 	return character.remove_item(item_id, count)
 
 
+# --- Boutiques, fabrication, forge ------------------------------------------------
+
+## Stock actuel d'une boutique, reconstitué si son délai de réassort est passé.
+func shop_stock(shop_id: String) -> Dictionary:
+	var shop := Shops.def(shop_id)
+	var state: Dictionary = shops.get(shop_id, {})
+	if state.is_empty() or day - int(state.get("restocked", 0)) >= int(shop.get("restock_days", 7)):
+		state = {"stock": Character._int_dict(shop.get("stock", {})), "restocked": day}
+		shops[shop_id] = state
+	return state["stock"]
+
+
+## Achète un objet ; retourne false si la boutique n'en a plus ou si l'or manque.
+func buy(shop_id: String, item_id: String) -> bool:
+	var stock := shop_stock(shop_id)
+	var price := Shops.buy_price(shop_id, item_id, self)
+	if int(stock.get(item_id, 0)) <= 0 or character.gold < price:
+		return false
+	character.gold -= price
+	stock[item_id] = int(stock[item_id]) - 1
+	if stock[item_id] <= 0:
+		stock.erase(item_id)
+	character.add_item(item_id)
+	return true
+
+
+## Vend un objet du sac à une boutique qui le rachète ; il rejoint son stock.
+func sell(shop_id: String, item_id: String) -> bool:
+	if character.item_count(item_id) <= 0 or not Shops.buys(shop_id, item_id):
+		return false
+	var stock := shop_stock(shop_id)
+	character.gold += Shops.sell_price(item_id, self)
+	character.remove_item(item_id)
+	stock[item_id] = int(stock.get(item_id, 0)) + 1
+	return true
+
+
+## Fabrique une recette avec les matériaux et l'or du sac.
+func craft(recipe_id: String) -> bool:
+	var recipe := Crafting.recipe(recipe_id)
+	if recipe.is_empty() or Crafting.missing_for(recipe, self) != "":
+		return false
+	var materials: Dictionary = recipe.get("materials", {})
+	for item_id: String in materials:
+		character.remove_item(item_id, int(materials[item_id]))
+	character.gold -= int(recipe.get("gold", 0))
+	character.add_item(recipe["result"], int(recipe.get("count", 1)))
+	return true
+
+
+## Améliore à la forge un objet du sac, ou porté par un membre du groupe (`member`, `slot`).
+func upgrade(item_id: String, member: Character = null, slot := "") -> bool:
+	if not Crafting.can_upgrade(item_id) or character.gold < Crafting.upgrade_cost(item_id):
+		return false
+	if member != null:
+		if member.equipment.get(slot, "") != item_id:
+			return false
+		member.equipment[slot] = Crafting.upgraded_id(item_id)
+		member.refresh_max_hp()
+	else:
+		if character.item_count(item_id) <= 0:
+			return false
+		character.remove_item(item_id)
+		character.add_item(Crafting.upgraded_id(item_id))
+	character.gold -= Crafting.upgrade_cost(item_id)
+	return true
+
+
+# --- Sauvegarde ----------------------------------------------------------------
+
 func to_dict() -> Dictionary:
 	return {
 		"character": character.to_dict(),
@@ -162,7 +231,7 @@ func to_dict() -> Dictionary:
 		"rng_state": str(rng.state),
 		"day": day, "slot": slot, "flags": flags, "seen": seen, "last_seen_day": last_seen_day,
 		"dead": dead, "death_cause": death_cause, "recorded": recorded, "notices": notices,
-		"pending_combat": pending_combat,
+		"pending_combat": pending_combat, "shops": shops,
 	}
 
 
@@ -183,4 +252,8 @@ static func from_dict(data: Dictionary) -> LifeState:
 	life.recorded = data.get("recorded", false)
 	life.notices.assign(data.get("notices", []))
 	life.pending_combat = data.get("pending_combat", {})
+	var saved_shops: Dictionary = data.get("shops", {})
+	for shop_id: String in saved_shops:
+		life.shops[shop_id] = {"stock": Character._int_dict(saved_shops[shop_id].get("stock", {})),
+			"restocked": int(saved_shops[shop_id].get("restocked", 0))}
 	return life

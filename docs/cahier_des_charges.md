@@ -289,7 +289,9 @@ Claude ne génère pas d'images lui-même. Il peut en revanche écrire le **guid
 12. ~~**Inventaire et équipement**~~ : écran Inventaire depuis la fiche (touche I), sac du groupe partagé,
     équipement des compagnons, emplacements cape / amulette / anneau, butin d'équipement, premiers objets magiques.
     Fiches de conception [types_de_degats.md](types_de_degats.md) et [etats.md](etats.md), avec leurs questions.
-13. **Économie** : boutiques (achat, revente, stock), forge (fabrication et amélioration).
+13. ~~**Économie**~~ : à Brumeval, armurerie, herboristerie et forge (achat, revente, stock qui se reconstitue),
+    prix négociés par la Persuasion, fabrication par recettes (forge, alchimie), amélioration +1 à +3. Fiches
+    [equipements.md](equipements.md) et [objets.md](objets.md).
 14. **Temps long** : événement voyage (durée, transport, événements en route, se perdre), activités de 1, 2, 5 ou
     10 ans, journal de la vie.
 15. **PNJ générés progressivement** et relations : faits enregistrés, jauges, interactions sociales.

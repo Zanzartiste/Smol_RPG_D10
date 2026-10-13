@@ -16,7 +16,8 @@ dans la console Godot. Les tests automatisés le signalent aussi.
 | `species.json` | Espèces : taille, âges, vieillissement, noms, apparence des portraits |
 | `classes.json` | Classes : dé de vie, modèle d'attributs, compétences maîtrisées, objets de départ |
 | `backgrounds.json` | Passés : compétences maîtrisées, or et objets de départ éventuels |
-| `items.json` | Objets hors équipement : consommables (`use`, ex. `{"heal": "2d4+2"}`), matériaux, trésors. Les ids sont uniques entre `items.json` et `equipment.json` |
+| `items.json` | Objets hors équipement, avec une `category` : `consumable` (`use`, ex. `{"heal": "2d4+2"}`), `material`, `treasure`. Les ids sont uniques entre `items.json` et `equipment.json` |
+| `shops.json`, `recipes.json` | Boutiques et recettes (voir Économie) |
 | `creatures.json` | Bestiaire : ennemis et invocations (API `Creatures`) |
 | `actions.json` | Actions de combat des classes : attaques, sorts, capacités (API `Actions`) |
 | `companions.json` | Compagnons recrutables |
@@ -444,6 +445,45 @@ Calcul des dégâts subis :
 - résistance : moitié, arrondie à l'inférieur ;
 - vulnérabilité : double ;
 - résistance et vulnérabilité au même type s'annulent.
+
+## Économie : boutiques, fabrication, forge
+
+### Boutiques (`shops.json`)
+
+| Champ | Description |
+|---|---|
+| `location` | Lieu où elle se trouve. Un lieu qui a des boutiques ouvre un **menu** (se promener = événement au hasard, entrer dans une boutique, retour) au lieu de tirer directement un événement. Entrer dans une boutique ne fait pas passer le temps |
+| `stock` | `{id: quantité}`, reconstitué tous les `restock_days` jours. Ce que le joueur vend rejoint le stock |
+| `buys` | Catégories rachetées : `weapon`, `armor`, `shield`, `accessory`, `consumable`, `material`, `treasure` |
+| `price_rate` | Multiplicateur des prix d'achat (1.0) |
+| `crafting`? | Station de fabrication (`forge`, `alchemy`) : recettes de `recipes.json` |
+| `upgrade`? | `true` : la boutique améliore armes, armures et boucliers |
+
+L'état des boutiques (stock, jour du dernier réassort) est sauvegardé avec la vie (`LifeState.shops`).
+
+### Prix (`rules.json › trade`)
+
+- Achat : valeur × `price_rate` × (1 − remise), au moins 1 po.
+- Revente : valeur × `sell_rate` (0,5) × (1 + remise), au moins 1 po si l'objet a de la valeur.
+- Remise : `percent_per_point` (3) % par point de `price_skill` (Persuasion) du **meilleur négociateur du groupe**,
+  entre −`max_percent` et +`max_percent` (15 %).
+
+### Recettes (`recipes.json`)
+
+`{"id", "result", "count"? (1), "station": "forge" | "alchemy", "materials": {id: quantité}, "gold"? (0)}`. Les
+matériaux et l'or sont pris dans le sac du groupe.
+
+### Amélioration (`rules.json › forge`)
+
+- Une arme, une armure (pas un vêtement) ou un bouclier **ordinaire** (sans rareté) devient +1, +2, +3 pour
+  `upgrade_costs` po (50, 150, 400), avec la rareté `upgrade_rarities`.
+- L'objet amélioré a l'id `<base>@<rang>` (ex. `longsword@2`). `Equipment.def` le calcule à partir de la base : nom
+  « Épée longue +2 », bonus au toucher et aux dégâts (arme) ou à la CA, valeur augmentée. Il se sauvegarde,
+  s'équipe et se revend comme n'importe quel objet.
+- On peut améliorer un objet du sac ou un objet porté par un membre du groupe.
+
+Les API correspondantes sont `Shops` (boutiques et prix), `Crafting` (recettes et amélioration) et `Items`
+(objets du sac, avec leur `category`).
 
 ## Flags : conventions
 
