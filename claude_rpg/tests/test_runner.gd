@@ -28,6 +28,7 @@ const TESTS := [
 	"_test_new_species",
 	"_test_damage_types",
 	"_test_economy",
+	"_test_advantage",
 	"_test_combat",
 	"_test_combat_turns",
 	"_test_companions",
@@ -810,7 +811,7 @@ func _test_inventory() -> bool:
 	_expect(saved.equipment["ring_2"] == "ring_fire_resistance" and saved.equipment["neck"] == "amulet_vigor",
 		"sauvegarde : accessoires équipés")
 	var old := Character.from_dict({"species_id": "human", "class_id": "fighter", "equipment": {"amulet": "amulet_vigor",
-		"ring": "ring_fire_resistance", "cloak": "x"}})
+		"ring": "ring_fire_resistance"}})
 	_expect(old.equipment == {"neck": "amulet_vigor", "ring_1": "ring_fire_resistance"}, "anciennes sauvegardes : emplacements convertis")
 
 	# Filtres et recherche de l'inventaire.
@@ -996,6 +997,83 @@ func _test_economy() -> bool:
 	_expect(c.damage_expr({"type": "attack", "weapon": true}).ends_with("+3") and hero.weapon_id() == "longsword@1",
 		"arme +1 équipée : dégâts")
 	_expect(Shops.buys("forge", "longsword") and Shops.buys("armorer", "chain_mail@2"), "les objets améliorés se revendent")
+	return true
+
+
+func _test_advantage() -> bool:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 3
+	var all_good := true
+	for i in 50:
+		var adv := Dice.roll_d20(rng, 1)
+		var dis := Dice.roll_d20(rng, -1)
+		var a: Array = adv["dice"]
+		var d: Array = dis["dice"]
+		all_good = all_good and adv["die"] == maxi(a[0]["value"], a[1]["value"]) and dis["die"] == mini(d[0]["value"], d[1]["value"]) \
+			and a.filter(func(x): return x["dropped"]).size() == 1
+	_expect(all_good, "avantage : meilleur des deux ; désavantage : pire des deux ; un dé écarté")
+	_expect(Dice.combine_advantage(2, 0) == 1 and Dice.combine_advantage(1, 1) == 0 and Dice.combine_advantage(0, 3) == -1,
+		"avantage et désavantage s'annulent")
+	var ch := Character.create("human", "fighter", "Testeur")
+	var check := {"skill": "athletics", "dc": 15}
+	var base := Dice.success_chance(ch, check)
+	check["advantage"] = true
+	_expect(Dice.success_chance(ch, check) > base, "test d'événement avec avantage : plus de chances")
+	check["disadvantage"] = true
+	_expect(is_equal_approx(Dice.success_chance(ch, check), base), "test avec les deux : normal")
+
+	DB.creatures["_target"] = {"id": "_target", "name": "Cible", "ac": 10, "hp": "200",
+		"actions": [{"name": "Rien", "weight": 1, "target": "self", "effects": [{"type": "status", "status": "shielded", "stacks": 0}]}]}
+	Game.start_life(Character.create("human", "fighter", "Testeur"), 111)
+	var combat := Game.start_combat({"enemies": ["_target", "_target"]})
+	var hero := combat.hero
+	var target := combat.enemies()[0]
+	target.add_status("prone", 1)
+	_expect(combat.attack_advantage(hero, target) == 1, "À terre : avantage pour l'attaquant")
+	hero.add_status("blinded", 1)
+	_expect(combat.attack_advantage(hero, target) == 0, "Aveuglé + À terre : ils s'annulent")
+	hero.statuses.clear()
+	target.statuses.clear()
+	target.add_status("invisible", 1)
+	_expect(combat.attack_advantage(hero, target) == -1, "Invisible : désavantage pour l'attaquant")
+	target.statuses.clear()
+
+	# Paralysé : sauvegardes de DEX ratées d'office, coups critiques.
+	target.add_status("paralyzed", 1)
+	var beats: Array[Dictionary] = []
+	_expect(not combat._saving_throw(hero, target, {"ability": "dex", "dc": -100}, beats, true), "Paralysé : rate la sauvegarde de DEX")
+	var before := combat.log.size()
+	combat._apply(hero, {"type": "attack", "weapon": true, "to_hit": 100}, target, true)
+	_expect(combat.log.slice(before).any(func(l): return "coup critique" in l), "Paralysé : un coup qui touche est critique")
+	target.statuses.clear()
+
+	# Endormi : passe son tour, se réveille s'il est blessé.
+	target.add_status("asleep", 2)
+	combat.turn = combat.order.find(target)
+	combat.start_turn()
+	_expect(combat.skipped and target.stacks("asleep") == 1, "Endormi : passe son tour")
+	combat._deal_damage(hero, target, 3, "slashing", false, "")
+	_expect(target.stacks("asleep") == 0, "Endormi : réveillé par les dégâts")
+
+	# Charmé : aucune action contre l'ennemi ; Entravé : pas de fuite.
+	hero.add_status("charmed", 1)
+	_expect(combat.action_unavailable_reason(hero, Actions.def("weapon_attack")) == "charmé"
+		and combat.action_unavailable_reason(hero, Actions.def("second_wind")) == "", "Charmé : seulement les actions non hostiles")
+	hero.statuses.clear()
+	hero.add_status("restrained", 1)
+	_expect(not combat.can_flee_now(hero), "Entravé : pas de fuite")
+	hero.statuses.clear()
+
+	# Sommeil : sauvegarde de SAG ou endormi.
+	var mage := Character.create("human", "wizard", "Mage")
+	Game.start_life(mage, 112)
+	combat = Game.start_combat({"enemies": ["_target"]})
+	target = combat.enemies()[0]
+	combat._resolve(combat.hero, [{"type": "status", "status": "asleep", "stacks": 2, "save": {"ability": "wis", "dc": 100}}],
+		"all_enemies", null, true)
+	_expect(target.stacks("asleep") == 2, "Sommeil : sauvegarde ratée, la cible s'endort")
+	Game.combat = null
+	DB.creatures.erase("_target")
 	return true
 
 

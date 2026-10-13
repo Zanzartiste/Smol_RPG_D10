@@ -64,6 +64,15 @@
 		"effects": [{"type": "damage", "damage": "3d6", "damage_type": "fire", "save": {"ability": "dex", "half": true}, "upcast": "1d6"}, {"type": "status", "status": "burning", "stacks": 1}]
 	},
 	{
+		"id": "sleep",
+		"name": "Sommeil",
+		"description": "Une torpeur magique s'abat sur vos ennemis.",
+		"target": "all_enemies",
+		"cost": "spell_slot",
+		"spell_level": 1,
+		"effects": [{"type": "status", "status": "asleep", "stacks": 2, "save": {"ability": "wis"}}]
+	},
+	{
 		"id": "mage_shield",
 		"name": "Bouclier",
 		"description": "Une barrière de force invisible vous protège.",

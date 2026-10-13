@@ -537,13 +537,11 @@ static func from_dict(data: Dictionary) -> Character:
 	c.pending_feats = int(data.get("pending_feats", 0))
 	c.pending_ability_points = int(data.get("pending_ability_points", 0))
 	c.equipment = data.get("equipment", {})
-	# Anciennes sauvegardes : amulet -> neck, ring -> ring_1, cloak (supprimé) -> sac.
+	# Anciennes sauvegardes : amulet -> neck, ring -> ring_1.
 	for old_slot: String in {"amulet": "neck", "ring": "ring_1"}:
 		if c.equipment.has(old_slot):
 			c.equipment[{"amulet": "neck", "ring": "ring_1"}[old_slot]] = c.equipment[old_slot]
 			c.equipment.erase(old_slot)
-	if c.equipment.has("cloak"):
-		c.equipment.erase("cloak")
 	c.defenses = Defenses.from_dict(data.get("defenses", {}))
 	c.level = int(data.get("level", 1))
 	c.xp = int(data.get("xp", 0))

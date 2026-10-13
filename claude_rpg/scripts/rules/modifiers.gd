@@ -25,7 +25,9 @@ const SCHEMA := {
 	"uncanny_dodge": [],  # une fois par round, dégâts d'une attaque divisés par deux
 	"evasion": [],  # sauvegarde de DEX pour moitié : 0 si réussie, moitié si ratée
 	"reliable_talent": [],  # test d'une compétence maîtrisée : un d20 sous 10 compte comme 10
-	"relentless_endurance": [],  # tombe à 1 PV au lieu de 0 (ressource relentless_endurance, repos long)
+	"relentless_endurance": [],
+	"critical_range": ["amount"],  # critique à partir de 20 − amount (Critique amélioré : 1)
+	"save_advantage": ["id"],  # avantage aux jets de sauvegarde d'un attribut  # tombe à 1 PV au lieu de 0 (ressource relentless_endurance, repos long)
 }
 
 ## Types de modificateurs qui deviennent des défenses (type -> sorte de Defenses).
@@ -102,6 +104,10 @@ static func describe(m: Dictionary) -> String:
 			return Loc.ui("Talent fiable")
 		"relentless_endurance":
 			return Loc.ui("Endurance implacable")
+		"critical_range":
+			return Loc.ui("Critique sur %d-20") % (20 - amount)
+		"save_advantage":
+			return Loc.ui("Avantage aux sauvegardes de %s") % Abilities.name_of(m["id"])
 	return str(m)
 
 

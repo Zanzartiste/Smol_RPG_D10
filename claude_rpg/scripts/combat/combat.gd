@@ -87,6 +87,18 @@ func can_flee() -> bool:
 	return spec.get("flee", true)
 
 
+## Le combattant actif peut-il fuir (Entravé l'en empêche) ?
+func can_flee_now(actor: Combatant) -> bool:
+	return can_flee() and not actor.has_status_flag("no_flee")
+
+
+## Avantage d'une attaque : états de l'attaquant et de la cible (+1, -1 ou 0).
+func attack_advantage(actor: Combatant, target: Combatant) -> int:
+	var advantages := (1 if actor.has_status_flag("attack_advantage") else 0) + (1 if target.has_status_flag("attacked_advantage") else 0)
+	var disadvantages := (1 if actor.has_status_flag("attack_disadvantage") else 0) + (1 if target.has_status_flag("attacked_disadvantage") else 0)
+	return Dice.combine_advantage(advantages, disadvantages)
+
+
 func flee_dc() -> int:
 	return int(spec.get("flee_dc", DEFAULT_FLEE_DC))
 
@@ -251,14 +263,16 @@ func use_item(actor: Combatant, item_id: String, target: Combatant) -> Array[Dic
 
 ## Tentative de fuite du groupe : d20 + DEX contre le DD de fuite.
 func flee(actor: Combatant) -> Array[Dictionary]:
-	var die := rng.randi_range(1, 20)
+	var advantage := -1 if actor.has_status_flag("check_disadvantage") else 0
+	var d20 := Dice.roll_d20(rng, advantage)
+	var die := int(d20["die"])
 	var mod := actor.check_mod("dex")
 	var success := die == 20 or (die != 1 and die + mod >= flee_dc())
 	actions_left = 0
 	var beats: Array[Dictionary] = []
 	_beat(beats, Loc.ui("%s tente de fuir : %s.") % [actor.name, Loc.ui("réussite") if success else Loc.ui("échec")],
-		{"dice": [{"sides": 20, "value": die}], "mod": mod, "dc": flee_dc(), "success": success,
-		"stat": Loc.ui("Fuite (Dextérité)")})
+		{"dice": d20["dice"], "mod": mod, "dc": flee_dc(), "success": success, "advantage": advantage,
+		"stat": Loc.ui("Fuite (Dextérité)") + Dice.advantage_text(advantage)})
 	if success:
 		outcome = "fled"
 	return beats
@@ -299,8 +313,8 @@ func ai_turn(actor: Combatant) -> Array[Dictionary]:
 
 
 func _pick_action(actor: Combatant) -> Dictionary:
-	var actions := actor.combat_actions().filter(func(a): return a.get("target") == "none" \
-		or not targets(actor, a.get("target", "enemy")).is_empty())
+	var actions := actor.combat_actions().filter(func(a): return (a.get("target") == "none" \
+		or not targets(actor, a.get("target", "enemy")).is_empty()) and actor.unavailable_reason(a) == "")
 	var total := 0.0
 	for a: Dictionary in actions:
 		total += float(a.get("weight", 1))
@@ -444,15 +458,17 @@ func _apply(actor: Combatant, e: Dictionary, target: Combatant, fast: bool) -> D
 	match e.get("type"):
 		"attack":
 			var bonus := actor.attack_bonus(e)
-			var die := rng.randi_range(1, 20)
+			var advantage := attack_advantage(actor, target)
+			var d20 := Dice.roll_d20(rng, advantage)
+			var die := int(d20["die"])
 			var ac := target.armor_class()
-			var critical := die == 20
-			hit = critical or (die != 1 and die + bonus >= ac)
-			var text := Loc.ui("%s attaque %s : %d + %d = %d contre CA %d — %s") % [
-				actor.name, target.name, die, bonus, die + bonus, ac,
+			hit = die == 20 or (die != 1 and die + bonus >= ac)
+			var critical := hit and (die >= actor.critical_threshold() or target.has_status_flag("attacked_critical"))
+			var text := Loc.ui("%s attaque %s%s : %d + %d = %d contre CA %d — %s") % [
+				actor.name, target.name, Dice.advantage_text(advantage), die, bonus, die + bonus, ac,
 				Loc.ui("coup critique !") if critical else (Loc.ui("touché") if hit else Loc.ui("raté"))]
-			_beat(beats, text, {"dice": [{"sides": 20, "value": die}], "mod": bonus, "dc": ac, "dc_label": "CA",
-				"success": hit, "stat": "%s → %s" % [actor.name, target.name]}, fast)
+			_beat(beats, text, {"dice": d20["dice"], "mod": bonus, "dc": ac, "dc_label": "CA", "advantage": advantage,
+				"success": hit, "stat": "%s → %s%s" % [actor.name, target.name, Dice.advantage_text(advantage)]}, fast)
 			if hit:
 				_roll_damage(actor, target, actor.damage_expr(e), actor.damage_type(e), critical, beats, 1.0, true)
 				_roll_bonus_damage(actor, target, e, critical, beats, 1.0)
@@ -549,13 +565,19 @@ func _saving_throw(actor: Combatant, target: Combatant, save: Dictionary, beats:
 	var ability: String = save["ability"]
 	var dc := int(save.get("dc", actor.save_dc()))
 	var bonus := target.save_mod(ability)
-	var die := rng.randi_range(1, 20)
-	var saved := die == 20 or (die != 1 and die + bonus >= dc)
 	var label := Loc.ui("Sauvegarde de %s") % Abilities.name_of(ability)
-	_beat(beats, Loc.ui("%s : %s %d + %d = %d contre DD %d — %s") % [target.name, label.to_lower(), die, bonus, die + bonus,
-		dc, Loc.ui("réussie") if saved else Loc.ui("ratée")],
-		{"dice": [{"sides": 20, "value": die}], "mod": bonus, "dc": dc, "success": saved, "stat": "%s (%s)" % [label, target.name]},
-		fast)
+	if target.has_status_flag("auto_fail_saves", ability):
+		_beat(beats, Loc.ui("%s rate automatiquement sa %s.") % [target.name, label.to_lower()])
+		return false
+	var advantage := Dice.combine_advantage(1 if target.has_save_advantage(ability) else 0,
+		1 if target.has_status_flag("save_disadvantage", ability) else 0)
+	var d20 := Dice.roll_d20(rng, advantage)
+	var die := int(d20["die"])
+	var saved := die == 20 or (die != 1 and die + bonus >= dc)
+	_beat(beats, Loc.ui("%s : %s%s %d + %d = %d contre DD %d — %s") % [target.name, label.to_lower(),
+		Dice.advantage_text(advantage), die, bonus, die + bonus, dc, Loc.ui("réussie") if saved else Loc.ui("ratée")],
+		{"dice": d20["dice"], "mod": bonus, "dc": dc, "success": saved, "advantage": advantage,
+		"stat": "%s (%s)" % [label, target.name]}, fast)
 	if not saved and target.character != null and int(target.character.resources.get("indomitable", 0)) > 0:
 		target.character.resources["indomitable"] = int(target.character.resources["indomitable"]) - 1
 		die = rng.randi_range(1, 20)
@@ -585,6 +607,11 @@ func _deal_damage(source: Combatant, target: Combatant, amount: int, type: Strin
 				amount -= absorbed
 				notes.append(Loc.ui("%d absorbé(s)") % absorbed)
 	target.hp = maxi(0, target.hp - amount)
+	if amount > 0:
+		for status_id: String in target.statuses.keys():
+			if StatusEffects.has_flag(status_id, "wake_on_damage"):
+				target.remove_status(status_id)
+				notes.append(Loc.ui("se réveille"))
 	if target.hp == 0 and target.has_modifier("relentless_endurance") \
 			and int(target.character.resources.get("relentless_endurance", 0)) > 0:
 		target.character.resources["relentless_endurance"] = int(target.character.resources["relentless_endurance"]) - 1

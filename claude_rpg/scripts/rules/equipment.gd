@@ -12,7 +12,7 @@ extends RefCounted
 ##           (rules.json › armor_strength : vêtements 0, légère 10, intermédiaire 12, lourde 14).
 ##           En dessous, elle reste portable mais encombre (rules.json › encumbered_modifiers).
 ## Bouclier : {"category": "shield", "ac_bonus": 2}
-## Accessoire : {"category": "accessory", "slot": "head" | "hands" | "legs" | "feet" | "neck" | "ring"}
+## Accessoire : {"category": "accessory", "slot": "head" | "cloak" | "hands" | "legs" | "feet" | "neck" | "ring"}
 ##           (un anneau va dans ring_1, ou ring_2 si le premier est pris)
 ## Tous : "weight" (kg) ; le poids porté par le groupe peut l'encombrer (voir Character).
 ## Facultatif pour tous : "modifiers" (voir Modifiers), "rarity", "value", "description" (voir Items).
@@ -21,10 +21,10 @@ extends RefCounted
 ## Un objet magique est un équipement avec des modificateurs, ex. une épée +1 :
 ##   "modifiers": [{"type": "weapon_attack", "amount": 1}, {"type": "weapon_damage", "amount": 1}]
 
-const SLOTS := ["main_hand", "off_hand", "head", "armor", "hands", "legs", "feet", "neck", "ring_1", "ring_2"]
-const ACCESSORY_SLOTS := ["head", "hands", "legs", "feet", "neck", "ring"]
+const SLOTS := ["main_hand", "off_hand", "head", "armor", "cloak", "hands", "legs", "feet", "neck", "ring_1", "ring_2"]
+const ACCESSORY_SLOTS := ["head", "cloak", "hands", "legs", "feet", "neck", "ring"]
 const SLOT_NAMES := {
-	"main_hand": "Main principale", "off_hand": "Main secondaire", "head": "Couvre-chef", "armor": "Torse",
+	"main_hand": "Main principale", "off_hand": "Main secondaire", "head": "Couvre-chef", "armor": "Torse", "cloak": "Cape",
 	"hands": "Gants", "legs": "Jambes", "feet": "Chaussures", "neck": "Collier", "ring": "Anneau",
 	"ring_1": "Anneau", "ring_2": "Anneau",
 }

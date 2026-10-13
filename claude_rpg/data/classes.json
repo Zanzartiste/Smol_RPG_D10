@@ -32,7 +32,7 @@
 		"equipment": {"main_hand": "quarterstaff", "armor": "robe"},
 		"spellcasting": "int",
 		"spell_slots": "full",
-		"actions": ["weapon_attack", "fire_bolt", "ray_of_frost", "magic_missile", "burning_hands", "mage_shield", "find_familiar"],
+		"actions": ["weapon_attack", "fire_bolt", "ray_of_frost", "magic_missile", "burning_hands", "sleep", "mage_shield", "find_familiar"],
 		"features": [
 			{"level": 3, "id": "spells_level_2", "name": "Sorts du 2e niveau", "description": "Vous apprenez Rayons ardents.", "actions": ["scorching_ray"]},
 			{"level": 5, "id": "spells_level_3", "name": "Sorts du 3e niveau", "description": "Vous apprenez Boule de feu.", "actions": ["fireball"]},

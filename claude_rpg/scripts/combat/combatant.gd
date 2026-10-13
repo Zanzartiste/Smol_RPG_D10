@@ -97,6 +97,16 @@ func has_modifier(type: String) -> bool:
 	return character != null and character.has_modifier(type)
 
 
+## Valeur minimale du d20 pour un coup critique (20, ou moins avec Critique amélioré).
+func critical_threshold() -> int:
+	return 20 - (Modifiers.sum(character.modifiers(), "critical_range") if character != null else 0)
+
+
+## Avantage aux jets de sauvegarde de cet attribut (modificateur "save_advantage").
+func has_save_advantage(ability_id: String) -> bool:
+	return character != null and Modifiers.grants(character.modifiers(), "save_advantage", ability_id)
+
+
 ## Attaques en plus pour l'action Attaque (Attaque supplémentaire).
 func extra_attacks() -> int:
 	return Modifiers.sum(character.modifiers(), "extra_attack") if character != null else 0
@@ -171,6 +181,8 @@ func resource_key(action: Dictionary) -> String:
 
 ## Une action peut-elle être utilisée ? Retourne "" si oui, sinon la raison.
 func unavailable_reason(action: Dictionary) -> String:
+	if action.get("target", "enemy") in ["enemy", "all_enemies"] and has_status_flag("no_hostile_actions"):
+		return Loc.ui("charmé")
 	if action.has("per_combat") and int(uses.get(action.get("id", ""), 0)) <= 0:
 		return Loc.ui("déjà utilisée")
 	var key := resource_key(action)
@@ -189,6 +201,14 @@ func consume(action: Dictionary) -> void:
 
 
 # --- États -------------------------------------------------------------------
+
+## Un des états actifs a-t-il ce marqueur (voir StatusEffects.has_flag) ?
+func has_status_flag(key: String, value := "") -> bool:
+	for status_id: String in statuses:
+		if StatusEffects.has_flag(status_id, key, value):
+			return true
+	return false
+
 
 func stacks(status_id: String) -> int:
 	return int(statuses.get(status_id, 0))

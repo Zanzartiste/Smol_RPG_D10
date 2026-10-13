@@ -53,11 +53,84 @@
 		"id": "asleep",
 		"name": "Endormi",
 		"negative": true,
-		"description": "Inconscient jusqu'à ce qu'on le réveille ou qu'il subisse des dégâts."
+		"description": "Passe ses tours (1 charge par tour) et se réveille s'il subit des dégâts. Les attaques contre lui ont l'avantage et sont des critiques si elles touchent.",
+		"skip_turn": true,
+		"wake_on_damage": true,
+		"attacked_advantage": true,
+		"attacked_critical": true,
+		"decay": 1,
+		"color": "#6a7ac8"
 	},
-	{"id": "blinded", "name": "Aveuglé", "negative": true, "description": "Ne voit plus rien."},
-	{"id": "charmed", "name": "Charmé", "negative": true, "description": "Ne peut pas attaquer celui qui l'a charmé."},
-	{"id": "frightened", "name": "Effrayé", "negative": true, "description": "Terrorisé par la source de sa peur."},
-	{"id": "paralyzed", "name": "Paralysé", "negative": true, "description": "Incapable de bouger ou d'agir."},
-	{"id": "prone", "name": "À terre", "negative": true, "description": "Renversé au sol."}
+	{
+		"id": "blinded",
+		"name": "Aveuglé",
+		"negative": true,
+		"description": "Désavantage à ses attaques ; avantage pour ceux qui l'attaquent. Perd 1 charge par tour.",
+		"attack_disadvantage": true,
+		"attacked_advantage": true,
+		"decay": 1,
+		"color": "#4a4a4a"
+	},
+	{
+		"id": "charmed",
+		"name": "Charmé",
+		"negative": true,
+		"description": "Ne peut rien entreprendre contre ses ennemis (attaques, sorts offensifs). Perd 1 charge par tour.",
+		"no_hostile_actions": true,
+		"decay": 1,
+		"color": "#e070c0"
+	},
+	{
+		"id": "frightened",
+		"name": "Effrayé",
+		"negative": true,
+		"description": "Désavantage à ses attaques et à ses tests (fuite comprise). Perd 1 charge par tour.",
+		"attack_disadvantage": true,
+		"check_disadvantage": true,
+		"decay": 1,
+		"color": "#a0a0d0"
+	},
+	{
+		"id": "paralyzed",
+		"name": "Paralysé",
+		"negative": true,
+		"description": "Passe son tour et rate ses sauvegardes de FOR et de DEX ; les attaques contre lui ont l'avantage et sont des critiques si elles touchent. Perd 1 charge par tour.",
+		"skip_turn": true,
+		"auto_fail_saves": ["str", "dex"],
+		"attacked_advantage": true,
+		"attacked_critical": true,
+		"decay": 1,
+		"color": "#c8c060"
+	},
+	{
+		"id": "prone",
+		"name": "À terre",
+		"negative": true,
+		"description": "Les attaques contre lui ont l'avantage. Il se relève au début de son tour.",
+		"attacked_advantage": true,
+		"decay": "all",
+		"color": "#8a6a4a"
+	},
+	{
+		"id": "restrained",
+		"name": "Entravé",
+		"negative": true,
+		"description": "Désavantage à ses attaques et à ses sauvegardes de DEX ; avantage pour ceux qui l'attaquent ; ne peut pas fuir. Perd 1 charge par tour.",
+		"attack_disadvantage": true,
+		"attacked_advantage": true,
+		"save_disadvantage": ["dex"],
+		"no_flee": true,
+		"decay": 1,
+		"color": "#7a5a3a"
+	},
+	{
+		"id": "invisible",
+		"name": "Invisible",
+		"negative": false,
+		"description": "Avantage à ses attaques ; désavantage pour ceux qui l'attaquent. Perd 1 charge par tour.",
+		"attack_advantage": true,
+		"attacked_disadvantage": true,
+		"decay": 1,
+		"color": "#c8e8f0"
+	}
 ]

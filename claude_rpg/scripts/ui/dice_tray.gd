@@ -5,7 +5,7 @@ extends Control
 ## Usage : `await dice_tray.play(roll)`, ou `play(roll, true)` pour un lancer rapide (ennemis, dégâts).
 ## Un clic ou une touche accélère l'animation (voir skip()).
 ##
-## `roll` : {"dice": [{"sides": 20, "value": 14}, ...], "mod": 2, "stat": "Athlétisme",
+## `roll` : {"dice": [{"sides": 20, "value": 14, "dropped"?: true}, ...], "mod": 2, "stat": "Athlétisme",
 ##           "dc": 13, "dc_label": "CA", "success": true}  (dc, dc_label, success et stat sont facultatifs)
 
 signal finished
@@ -52,6 +52,7 @@ func play(roll: Dictionary, fast := false) -> void:
 		_dice.append({
 			"sides": sides,
 			"value": int(specs[i]["value"]),
+			"dropped": specs[i].get("dropped", false),  # dé écarté (avantage ou désavantage)
 			"shown": _rng.randi_range(1, sides),
 			"pos": Vector2(_play_area().position.x, clampf(_play_area().get_center().y + lane,
 				_play_area().position.y, _play_area().end.y)),
@@ -198,7 +199,10 @@ func _draw_die(d: Dictionary, font: Font) -> void:
 	var radius: float = DIE_RADIUS * (1.0 + 0.25 * d["pop"])
 	var body := BODY
 	var ink := INK
-	if d["settled"] and sides == 20 and d["value"] == 20:
+	if d["settled"] and d["dropped"]:
+		body = BODY.darkened(0.55)
+		ink = INK.lightened(0.35)
+	elif d["settled"] and sides == 20 and d["value"] == 20:
 		body = UITheme.GOLD.lightened(0.25)
 	elif d["settled"] and sides == 20 and d["value"] == 1:
 		body = Color("#b8452f")
@@ -229,14 +233,18 @@ func _draw_die(d: Dictionary, font: Font) -> void:
 func _draw_verdict(font: Font) -> void:
 	var total := 0
 	var parts := PackedStringArray()
+	var kept: Array[Dictionary] = []
 	for d in _dice:
+		if d["dropped"]:
+			continue
+		kept.append(d)
 		total += int(d["value"])
 		parts.append(str(d["value"]))
 	var mod := int(_roll.get("mod", 0))
 	var line := " + ".join(parts)
 	if mod != 0:
 		line += (" + %d" if mod > 0 else " − %d") % absi(mod)
-	if mod != 0 or _dice.size() > 1:
+	if mod != 0 or kept.size() > 1:
 		line += " = %d" % (total + mod)
 	var y := size.y - 18.0
 	draw_string(font, Vector2(16, y), line, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, UITheme.TEXT)
@@ -246,7 +254,7 @@ func _draw_verdict(font: Font) -> void:
 		var verdict := Loc.ui("RÉUSSITE") if ok else Loc.ui("ÉCHEC")
 		if is_attack:
 			verdict = Loc.ui("TOUCHÉ") if ok else Loc.ui("RATÉ")
-		var natural: int = _dice[0]["value"] if _dice.size() == 1 and _dice[0]["sides"] == 20 else 0
+		var natural: int = kept[0]["value"] if kept.size() == 1 and kept[0]["sides"] == 20 else 0
 		if natural == 20:
 			verdict = Loc.ui("CRITIQUE !") if is_attack else Loc.ui("20 NATUREL !")
 		elif natural == 1:
@@ -258,12 +266,16 @@ func _draw_verdict(font: Font) -> void:
 ## Notation des dés lancés, ex. « Athlétisme : 1d20 + 2 ».
 func _notation() -> String:
 	var counts := {}
+	var dropped := 0
 	for d in _dice:
 		counts[d["sides"]] = int(counts.get(d["sides"], 0)) + 1
+		dropped += 1 if d["dropped"] else 0
 	var parts := PackedStringArray()
 	for sides in counts:
 		parts.append("%dd%d" % [counts[sides], sides])
 	var text := " + ".join(parts)
+	if dropped > 0:
+		text = Loc.ui("2d20, on garde le %s") % (Loc.ui("meilleur") if _roll.get("advantage", 0) > 0 else Loc.ui("pire"))
 	var mod := int(_roll.get("mod", 0))
 	if mod != 0:
 		text += (" + %d" if mod > 0 else " − %d") % absi(mod)

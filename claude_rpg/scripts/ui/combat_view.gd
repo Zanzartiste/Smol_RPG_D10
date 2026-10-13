@@ -109,7 +109,7 @@ func _fill_action_bar() -> void:
 		item_menu.get_popup().add_item("%s ×%d" % [items[i]["item"]["name"], items[i]["count"]], i)
 	item_menu.get_popup().id_pressed.connect(_on_item_chosen, CONNECT_DEFERRED)
 	action_bar.add_child(item_menu)
-	if combat.can_flee():
+	if combat.can_flee_now(_actor):
 		var chance := clampf((21 - (combat.flee_dc() - _actor.check_mod("dex"))) / 20.0, 0.05, 0.95)
 		_button(tr("Fuir (%d %%)") % roundi(chance * 100), _on_flee_pressed, enabled)
 	_button(tr("Passer"), _on_pass_pressed, enabled)
