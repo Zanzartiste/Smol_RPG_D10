@@ -7,8 +7,8 @@
 
 ## Règles générales
 
-- **Emplacements** : main principale, main secondaire, couvre-chef, torse (armure, avec bras et épaules), gants,
-  jambes, chaussures, collier (1), anneaux (2).
+- **Emplacements** : main principale, main secondaire, couvre-chef, torse (armure, avec bras et épaules), cape,
+  gants, jambes, chaussures, collier (1), anneaux (2).
 - **Armes** : la FOR sert à l'attaque et aux dégâts ; une arme de finesse prend le meilleur de FOR et DEX, une arme
   à distance la DEX. Une arme polyvalente fait plus de dégâts à deux mains (sans bouclier). Une arme à deux mains et
   un bouclier s'excluent.
@@ -39,7 +39,7 @@
 ```markdown
 ### <Nom> (`<id>`)
 
-- **Catégorie** : arme / armure (torse) / bouclier / accessoire (couvre-chef, gants, jambes, chaussures, collier, anneau).
+- **Catégorie** : arme / armure (torse) / bouclier / accessoire (couvre-chef, cape, gants, jambes, chaussures, collier, anneau).
 - **Dégâts** (arme) : ex. 1d8 tranchant (+ 1d6 feu).
 - **Propriétés** (arme) : finesse, légère, lancer, polyvalente (1d10), lourde, à deux mains, à distance.
 - **Type et CA** (armure) : vêtement / légère / intermédiaire / lourde, CA de base.
@@ -310,6 +310,26 @@
 - **Où le trouver** : aucune pour l'instant (événements à écrire).
 - **Description** : Un cuir enchanté, souple comme une seconde peau.
 
+### Cape de protection (`cloak_of_protection`)
+
+- **Emplacement** : cape.
+- **Effets** : +1 CA, +1 aux jets de sauvegarde.
+- **Poids** : 0.5 kg.
+- **Rareté** : peu commun.
+- **Valeur** : 150 po.
+- **Où le trouver** : aucune pour l'instant (événements à écrire).
+- **Description** : Une cape grise qui détourne les coups et les sortilèges.
+
+### Cape elfique (`elven_cloak`)
+
+- **Emplacement** : cape.
+- **Effets** : maîtrise de Discrétion, expertise en Discrétion.
+- **Poids** : 0.5 kg.
+- **Rareté** : peu commun.
+- **Valeur** : 100 po.
+- **Où le trouver** : aucune pour l'instant (événements à écrire).
+- **Description** : Son capuchon se fond dans l'ombre et le feuillage.
+
 ### Anneau de protection (`ring_of_protection`)
 
 - **Emplacement** : anneau.
@@ -390,15 +410,15 @@
 
 ### Objets magiques du SRD à envisager
 
-- Cape elfique (quel emplacement ?), sac sans fond (capacité de charge), baguette de projectiles magiques, bâton de
+- Sac sans fond (capacité de charge), baguette de projectiles magiques, bâton de
   feu, amulette de santé, heaume de télépathie…
 
 ---
 
 ## Décisions (2026-10-13)
 
-- Emplacements : couvre-chef, torse, gants, jambes, chaussures, collier (1), anneaux (2). La cape a disparu ; la Cape
-  de protection est devenue l'Anneau de protection.
+- Emplacements : couvre-chef, torse, cape, gants, jambes, chaussures, collier (1), anneaux (2). La cape a été
+  rétablie (Cape de voyage, Cape de protection, Cape elfique) ; l'Anneau de protection reste.
 - Pas de règle spéciale pour les armes à distance pour l'instant.
 - Ni munitions ni usure.
 - Pas de limite au nombre d'objets magiques portés.
@@ -406,5 +426,4 @@
 
 ## Questions ouvertes
 
-1. **Capes** : elles reviennent comme couche par-dessus le torse, ou elles restent absentes ?
-2. **Colliers et anneaux** : on garde 1 collier et 2 anneaux, ou on autorise davantage ?
+1. **Colliers et anneaux** : on garde 1 collier et 2 anneaux, ou on autorise davantage ?

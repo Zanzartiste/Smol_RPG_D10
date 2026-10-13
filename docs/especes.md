@@ -58,7 +58,8 @@
 - **Âgé à** : 60.
 - **Vénérable à** : 80.
 - **Vieillit à partir de** : 60.
-- **Traits** : Vous obtenez un don supplémentaire au choix (implémenté : le choix s'ouvre au début de la partie).
+- **Traits** : Vous obtenez un don d'origine supplémentaire au choix (implémenté : le choix s'ouvre au hub au début
+  de la partie).
 - **Noms** : Aldric, Brenna, Cédric, Daria, Edwin, Fiora, Gareth, Helna, Ivo, Jessa.
 - **Descendance** : *à définir.*
 
@@ -138,9 +139,9 @@
 - **Âgé à** : 70.
 - **Vénérable à** : 90.
 - **Vieillit à partir de** : 70.
-- **Traits** : résistance au feu (implémentée).
-- **Ascendance** (décision du 2026-10-13, à faire) : choisie à la création parmi **Feu**, **Froid** et
-  **Nécrotique** pour l'instant, chacune avec sa résistance (et plus tard un petit sort). D'autres viendront.
+- **Ascendance** (implémentée) : choisie à la création parmi **Feu infernal** (résistance au feu), **Givre abyssal**
+  (résistance au froid) et **Ombre funeste** (résistance aux dégâts nécrotiques). Plus tard : un petit sort par
+  ascendance, et d'autres ascendances.
 - **Noms** : Méphara, Ilzac, Vhorn, Saelith, Akzar, Nyx, et des noms de vertu : Espérance, Tourment, Audace, Chant.
 - **Apparence** : peau rouge, prune, rosée ou violette ; cornes ; yeux dorés, blancs ou rouges.
 - **Descendance** : *à définir* (le sang infernal peut-il ressurgir chez un enfant de parents non tieffelins ?).

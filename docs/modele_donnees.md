@@ -295,6 +295,18 @@ Les états se cumulent en charges. Leur mécanique est entièrement décrite dan
 | `absorb` | Chaque charge absorbe 1 point de dégâts (Protection) |
 | `decay` / `decay_at` | Charges perdues par tour (un nombre, ou `all`), au début (`start`) ou à la fin (`end`) du tour |
 | `negative`, `death_cause`, `color` | État négatif (pour `cleanse`), texte de mort, couleur de la pastille |
+| `attack_advantage` / `attack_disadvantage` | Avantage / désavantage à ses jets d'attaque |
+| `attacked_advantage` / `attacked_disadvantage` | Avantage / désavantage pour qui l'attaque |
+| `attacked_critical` | Un coup qui le touche est un critique (Endormi, Paralysé) |
+| `save_disadvantage` / `auto_fail_saves` | Liste d'attributs : désavantage à ces sauvegardes / échec automatique |
+| `check_disadvantage`, `no_flee` | Désavantage à ses tests (fuite) ; fuite impossible |
+| `no_hostile_actions` | Aucune action visant un ennemi (Charmé) |
+| `wake_on_damage` | L'état disparaît quand la créature subit des dégâts (Endormi) |
+
+**Avantage et désavantage** : on lance deux d20 et on garde le meilleur (avantage) ou le pire (désavantage) ; si les
+deux s'appliquent, ils s'annulent. Ils jouent sur les attaques (états de l'attaquant et de la cible), les jets de
+sauvegarde, la fuite, l'initiative (`initiative_advantage`) et les tests d'événement (`"advantage": true`,
+`"disadvantage": true` dans `check`, ou `skill_advantage` du personnage). Le plateau de dés grise le dé écarté.
 
 ### Créatures (`creatures.json`)
 
@@ -388,6 +400,18 @@ Les dons, les espèces et les équipements peuvent porter des `modifiers`. Ils s
 | `evasion` | — | Sauvegarde de DEX pour moitié : rien si elle réussit, moitié si elle échoue |
 | `reliable_talent` | — | Test d'une compétence maîtrisée : un d20 de 9 ou moins compte comme 10 |
 | `relentless_endurance` | — | Tombe à 1 PV au lieu de 0, tant qu'il reste la ressource `relentless_endurance` |
+| `critical_range` | `amount` | Critique à partir de 20 − amount (Champion) |
+| `save_advantage` | `id` | Avantage aux sauvegardes d'un attribut |
+| `initiative_proficiency`, `initiative_advantage` | — | Bonus de maîtrise / avantage à l'initiative |
+| `skill_advantage` | `id` | Avantage aux tests d'une compétence |
+| `spellcasting_ability` | `id` | Attribut d'incantation hors classe (Initié à la magie) |
+| `savage_attacker` | — | Une fois par tour, dés de dégâts d'arme lancés deux fois, le meilleur gardé |
+| `ignore_resistance` | `damage_type` | Les cibles ne résistent plus à ce type |
+| `ranged_attack`, `armored_ac`, `dueling` | `amount` | Styles Archerie (toucher à distance), Défense (CA en armure), Duel (dégâts à une main) |
+| `great_weapon_fighting` | — | À deux mains, 1 et 2 aux dés de dégâts comptent 3 |
+| `armor_strength_reduction` | `amount` | Force conseillée des armures réduite |
+| `potent_cantrip`, `empowered_evocation` | — | Évocateur : tour de magie raté = moitié des dégâts ; + attribut aux dégâts d'évocation (effets `"school": "evocation"`) |
+| `fast_hands`, `survivor` | — | Voleur : un objet par tour sans coût d'action ; Champion : regain de PV à moitié de vie |
 
 ### Équipement (`equipment.json`)
 
@@ -500,6 +524,35 @@ Les API correspondantes sont `Shops` (boutiques et prix), `Crafting` (recettes e
 - Pour une quête, on pose un flag `<quête>_accepted` au départ, puis `<quête>_done` à la fin. Les événements suivants
   utilisent `flag` et `not` → `flag`.
 
+## Choix du personnage (`choices`)
+
+Une espèce, une classe, une aptitude (y compris de sous-classe) ou un don peut déclarer des **choix** à faire
+(API `Choices`) :
+
+```json
+{"id": "skills", "name": "Compétences de classe", "type": "skill", "count": 2, "at_creation": true,
+ "options": ["athletics", "perception", "survival"], "modifiers": [{"type": "skill_proficiency", "id": "$"}],
+ "default": ["athletics", "perception"]}
+```
+
+| Champ | Description |
+|---|---|
+| `type` | `skill`, `ability`, `damage_type`, `feat` (avec `category`), `action` (avec `cost`? : ressource à la place d'un emplacement), `option` |
+| `count` | Nombre de valeurs à choisir (1) ; `allow_repeat` : la même valeur peut être prise plusieurs fois |
+| `options` | Valeurs proposées (toutes par défaut) ; pour `option`, des objets `{"id", "name", "description", "modifiers"?, "actions"?, "features"?}` |
+| `modifiers` | Modèles de modificateurs, `"$"` étant remplacé par la valeur choisie |
+| `from` | `proficient` : seulement des compétences déjà maîtrisées (Expertise) |
+| `default` | Valeurs prises d'office : pour les choix de création non faits, et pour les compagnons |
+| `at_creation` | Proposé à l'écran de création ; sinon, au hub, dès que le choix existe |
+
+- Les valeurs choisies sont sauvegardées dans `Character.choices` (clé « source/id », ex. `class/skills`,
+  `species/ancestry`, `feature:subclass/subclass`, `feat:skilled/skills`).
+- Une **sous-classe** est une option dont les `features` (aptitudes par niveau) s'ajoutent à celles de la classe.
+- Un **don** choisi (type `feat`) est acquis ; ses propres choix deviennent à leur tour des choix en attente.
+- Les compétences de classe ne sont plus fixes : la classe propose sa liste (champ `skills` supprimé).
+- Un don peut aussi accorder des `actions` et des `resources` (rechargées par un repos long). Une action
+  « `sleep|magic_initiate` » est le sort Sommeil payé avec la ressource `magic_initiate`.
+
 ## Espèces, classes et passés
 
 - `locked: true` : l'espèce ou la classe n'est pas jouable tant qu'un effet `unlock` ne l'a pas débloquée.
@@ -512,7 +565,8 @@ Les API correspondantes sont `Shops` (boutiques et prix), `Crafting` (recettes e
   - `modifiers`? : ses traits (résistances, immunités, `relentless_endurance`…) ;
   - `resources`? : ressources rechargées par un repos long (ex. `{"relentless_endurance": 1}` pour l'orc) ;
   - `bonus_feats`? : dons en plus à choisir au début de la partie (1 pour l'humain).
-- **Classe** : `hit_die` (dé de vie) et `skills` (compétences maîtrisées). `ability_priority` donne le **modèle
+- **Classe** : `hit_die` (dé de vie), `saving_throws`, `choices` (dont les compétences de classe) et `features`
+  (aptitudes par niveau, dont la sous-classe). `ability_priority` donne le **modèle
   d'attributs** proposé : la répartition standard (15, 14, 13, 12, 10, 8) dans cet ordre, puis +2 sur le premier
   attribut et +1 sur le second.
 - **Passé** : `skills`, soit 2 compétences maîtrisées qui s'ajoutent à celles de la classe, et `feat`, le don accordé.

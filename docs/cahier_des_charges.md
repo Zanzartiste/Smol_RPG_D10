@@ -310,9 +310,10 @@ Le détail est dans les catalogues ([equipements.md](equipements.md), [objets.md
 13. ~~**Économie**~~ : à Brumeval, armurerie, herboristerie et forge (achat, revente, stock qui se reconstitue),
     prix négociés par la Persuasion, fabrication par recettes (forge, alchimie), amélioration +1 à +3. Fiches
     [equipements.md](equipements.md) et [objets.md](objets.md).
-14. **Règles D&D à compléter** : avantage et désavantage (et les états qui en dépendent), choix des compétences
-    de classe et ascendance du tieffelin à la création, dons à choix et dons du SRD 5.2 en version complète,
-    sous-classes.
+14. ~~**Règles D&D à compléter**~~ : avantage et désavantage (attaques, sauvegardes, fuite, tests) et 8 états
+    qui en dépendent, sort Sommeil ; système de choix (création et hub) : compétences de classe, ascendance du
+    tieffelin, don de l'humain, dons à options, Style de combat ; dons du SRD 5.2 en version complète ;
+    sous-classes au niveau 3 (Champion, Évocateur, Voleur) ; emplacement de cape rétabli.
 15. **Temps long** : événement voyage (durée, transport, événements en route, se perdre), activités de 1, 2, 5 ou
     10 ans, journal de la vie.
 16. **PNJ générés progressivement** et relations : faits enregistrés, jauges, interactions sociales.

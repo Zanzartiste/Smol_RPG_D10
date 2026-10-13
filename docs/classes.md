@@ -18,11 +18,13 @@
   sous-systèmes d'artisanat, de cuisine…).
 - ⚠️ Licence : les classes du SRD 5.1 sont réutilisables (CC-BY 4.0). Les autres (Artificier, Alchimiste…) doivent
   être **conçues par nous**, sans recopier un livre hors SRD.
-- **Sous-classes** : choisies entre les niveaux 1 et 3 selon la classe (décision du 2026-10-13).
-- **Compétences de classe** : le joueur les choisira à la création dans une liste propre à la classe, comme dans D&D
-  (décision du 2026-10-13, à faire).
-- **Pas encore géré** : sous-classes (et leur choix), choix des compétences, actions bonus, réactions autres que
-  l'Esquive instinctive, repos courts, choix des sorts appris (ils sont donnés par les aptitudes).
+- **Sous-classes** : choisies entre les niveaux 1 et 3 selon la classe ; pour l'instant au niveau 3, une par classe
+  (celles du SRD 5.2). Le choix s'ouvre au hub.
+- **Compétences de classe** : le joueur les choisit à la création dans la liste de sa classe, comme dans D&D.
+- **Choix d'aptitude** (Style de combat, Expertise…) : proposés au hub dès qu'on les obtient. Les compagnons
+  arrivent avec leurs choix déjà faits.
+- **Pas encore géré** : actions bonus, réactions autres que l'Esquive instinctive, repos courts, choix des sorts
+  appris (ils sont donnés par les aptitudes), maîtrises d'armes.
 
 ---
 
@@ -65,14 +67,17 @@
 - **Dé de vie** : d10.
 - **Priorité des attributs** : FOR > CON > DEX > SAG > CHA > INT.
 - **Jets de sauvegarde maîtrisés** : Force, Constitution.
-- **Compétences maîtrisées** : Athlétisme, Perception, Survie.
+- **Compétences** : 2 au choix parmi Acrobaties, Dressage, Athlétisme, Histoire, Perspicacité, Intimidation,
+  Perception, Survie.
 - **Équipement de départ** : épée longue, cotte de mailles, une potion de soins.
 - **Lanceur de sorts** : non.
 - **Actions de départ** : Attaque, Second souffle, Posture défensive, Coup de pommeau.
 
 **Progression** (implémentée)
 
+- Niveau 1 : Style de combat (un don de style au choix : Archerie, Défense, Armes à deux mains, Duel).
 - Niveau 2 : Fougue (une action de plus, une fois par combat).
+- Niveau 3 : Archétype martial (sous-classe).
 - Niveau 5 : Attaque supplémentaire (deux coups par action Attaque).
 - Niveau 9 : Inflexible (relance automatique d'un jet de sauvegarde raté, une fois par repos long).
 - Niveau 11 : Attaque supplémentaire (trois coups).
@@ -80,8 +85,13 @@
 - Niveau 17 : Inflexible (trois utilisations).
 - Niveau 20 : Attaque supplémentaire (quatre coups).
 
-**À venir (SRD)** : Style de combat au niveau 1, archétype martial au niveau 3 (Champion dans le SRD : critique sur
-19-20…).
+**Sous-classe : Champion** (SRD 5.2, implémentée)
+
+- Niveau 3 : Critique amélioré (critique sur 19-20) ; Athlète remarquable (avantage à l'initiative et en Athlétisme).
+- Niveau 7 : Style de combat supplémentaire.
+- Niveau 10 : Guerrier héroïque (pas encore de mécanique).
+- Niveau 15 : Critique supérieur (critique sur 18-20).
+- Niveau 18 : Survivant (début de tour à moitié de PV ou moins : récupère 5 + CON PV).
 
 ### Magicien (`wizard`)
 
@@ -90,23 +100,31 @@
 - **Dé de vie** : d6.
 - **Priorité des attributs** : INT > CON > DEX > SAG > CHA > FOR.
 - **Jets de sauvegarde maîtrisés** : Intelligence, Sagesse.
-- **Compétences maîtrisées** : Arcanes, Investigation, Médecine.
+- **Compétences** : 2 au choix parmi Arcanes, Histoire, Perspicacité, Investigation, Médecine, Nature, Religion.
 - **Équipement de départ** : bâton, robe d'érudit (vêtement).
 - **Lanceur de sorts** : complet, Intelligence.
 - **Actions de départ** :
   - tours de magie : Trait de feu, Rayon de givre ;
-  - sorts du 1er niveau : Projectile magique, Mains brûlantes, Bouclier, Appel du familier.
+  - sorts du 1er niveau : Projectile magique, Mains brûlantes, Sommeil, Bouclier, Appel du familier.
 
 **Progression** (implémentée)
 
 - Emplacements de sort : table du lanceur complet (voir plus bas).
-- Niveau 3 : Rayons ardents (sort du 2e niveau).
+- Niveau 3 : Rayons ardents (sort du 2e niveau) ; Tradition arcanique (sous-classe).
 - Niveau 5 : Boule de feu (sort du 3e niveau), et tours de magie à deux dés.
 - Niveau 11 : tours de magie à trois dés.
 - Niveau 17 : tours de magie à quatre dés.
 
-**À venir (SRD)** : Restauration arcanique (demande les repos courts), tradition arcanique au niveau 2 (Évocation dans
-le SRD), sorts des niveaux 4 à 9, choix des sorts appris.
+**Sous-classe : Évocateur** (SRD 5.2, implémentée)
+
+- Niveau 3 : Tour de magie puissant (un tour de magie raté inflige quand même la moitié des dégâts) ; Savant de
+  l'évocation (pas encore de mécanique).
+- Niveau 6 : Sculpture des sorts (déjà le cas : les sorts de zone épargnent les alliés).
+- Niveau 10 : Évocation renforcée (+ INT aux dégâts des sorts d'évocation).
+- Niveau 14 : Surcharge (pas encore de mécanique).
+
+**À venir (SRD)** : Restauration arcanique (demande les repos courts), sorts des niveaux 4 à 9, choix des sorts
+appris.
 
 ### Roublard (`rogue`)
 
@@ -115,7 +133,8 @@ le SRD), sorts des niveaux 4 à 9, choix des sorts appris.
 - **Dé de vie** : d8.
 - **Priorité des attributs** : DEX > CON > CHA > SAG > INT > FOR.
 - **Jets de sauvegarde maîtrisés** : Dextérité, Intelligence.
-- **Compétences maîtrisées** : Discrétion, Escamotage, Acrobaties, Perception.
+- **Compétences** : 4 au choix parmi Acrobaties, Athlétisme, Tromperie, Perspicacité, Intimidation,
+  Investigation, Perception, Persuasion, Escamotage, Discrétion.
 - **Équipement de départ** : rapière, armure de cuir (Force 10 conseillée : avec le modèle de la classe, FOR 8, il est
   encombré).
 - **Lanceur de sorts** : non.
@@ -123,15 +142,23 @@ le SRD), sorts des niveaux 4 à 9, choix des sorts appris.
 
 **Progression** (implémentée)
 
-- Niveau 1 : Expertise en Discrétion et en Escamotage (maîtrise doublée) ; Attaque sournoise à 1d6.
+- Niveau 1 : Expertise dans deux compétences maîtrisées au choix ; Attaque sournoise à 1d6.
+- Niveau 3 : Archétype de roublard (sous-classe).
 - Niveaux 3, 5, 7… 19 : l'Attaque sournoise gagne 1d6 (10d6 au niveau 19).
 - Niveau 5 : Esquive instinctive (une attaque par round divisée par deux).
-- Niveau 6 : Expertise en Acrobaties et en Perception.
+- Niveau 6 : Expertise dans deux autres compétences maîtrisées.
 - Niveau 7 : Dérobade (sauvegarde de DEX : rien si réussie, moitié si ratée).
 - Niveau 11 : Talent fiable (pas moins de 10 au d20 pour une compétence maîtrisée).
 
-**À venir (SRD)** : Ruse au niveau 2 (demande les actions bonus), archétype au niveau 3 (Voleur dans le SRD),
-Coup de chance au niveau 20, choix des compétences d'Expertise.
+**Sous-classe : Voleur** (SRD 5.2, implémentée)
+
+- Niveau 3 : Mains lestes (une fois par tour, utiliser un objet ne coûte pas l'action) ; Monte-en-l'air (maîtrise
+  d'Athlétisme).
+- Niveau 9 : Furtivité suprême (avantage en Discrétion).
+- Niveau 13 : Utilisation d'objets magiques (pas encore de mécanique).
+- Niveau 17 : Réflexes de voleur (pas encore de mécanique).
+
+**À venir (SRD)** : Ruse au niveau 2 (demande les actions bonus), Coup de chance au niveau 20.
 
 ---
 

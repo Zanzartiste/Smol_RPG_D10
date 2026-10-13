@@ -17,7 +17,12 @@
   - passer son tour ;
   - dégâts infligés modifiés ;
   - absorption des dégâts reçus ;
+  - **avantage ou désavantage** : à ses attaques, pour qui l'attaque, à ses sauvegardes ou à ses tests ;
+  - coups critiques automatiques, sauvegardes ratées d'office, fuite impossible, aucune action hostile ;
+  - disparaître si l'on subit des dégâts ;
   - perte de charges au début ou à la fin du tour.
+- **Avantage / désavantage** : on lance deux d20 et on garde le meilleur (ou le pire) ; les deux s'annulent. Le dé
+  écarté apparaît grisé sur le plateau.
 
 ---
 
@@ -39,86 +44,113 @@
 
 ---
 
-## États implémentés (avec une mécanique)
+## États implémentés
+
+Tous les états ci-dessous ont une mécanique en combat.
 
 ### Poison (`poisoned`)
 
 - **Négatif** : oui.
-- **Effet** : au début de son tour, subit 1 dégât de **poison** par charge (réduit par la résistance au poison et par
-  la Protection, comme les autres dégâts).
-- **Charges** : −1 au début de chaque tour.
-- **Fin** : charges à 0, ou Antidote.
-- **Sources** : Lame empoisonnée (Roublard, 3 charges), brigand, rat géant.
-- **Remèdes / immunités** : Antidote ; don Résistant.
-- **Couleur** : vert.
+- **Effet** : Au début de son tour, subit 1 dégât de poison par charge, puis perd 1 charge.
+- **Mécanique** : 1 dégât(s) par charge au début du tour ; perd 1 charge(s) au début de son tour.
+- **Sources** : Lame empoisonnée (Roublard), brigand, rat géant. Remède : Antidote.
+- **Couleur** : `#7ac943`.
 
 ### Brûlure (`burning`)
 
 - **Négatif** : oui.
-- **Effet** : au début de son tour, subit 5 % de ses PV max par charge (au moins 1 par charge), en dégâts de feu.
-- **Charges** : −1 au début de chaque tour.
-- **Sources** : Mains brûlantes (1 charge, si la cible rate sa sauvegarde) ; tout dégât de feu (25 % de chances,
-  1 charge).
-- **Remèdes / immunités** : résistance ou immunité au feu (elles réduisent les dégâts).
-- **Couleur** : orange.
+- **Effet** : Au début de son tour, subit 5 % de ses PV max par charge (au moins 1 par charge, dégâts de feu), puis perd 1 charge.
+- **Mécanique** : 5 % des PV max par charge au début du tour ; perd 1 charge(s) au début de son tour.
+- **Sources** : Mains brûlantes (si la sauvegarde est ratée) ; tout dégât de feu (25 %).
+- **Couleur** : `#f08a2e`.
 
 ### Étourdi (`stunned`)
 
 - **Négatif** : oui.
-- **Effet** : passe son tour.
-- **Charges** : −1 au début de chaque tour (une charge = un tour perdu).
-- **Sources** : Coup de pommeau (Guerrier), morsure du loup, Colosse tatoué.
-- **Couleur** : jaune.
+- **Effet** : Passe son tour, puis perd 1 charge.
+- **Mécanique** : passe son tour ; perd 1 charge(s) au début de son tour.
+- **Sources** : Coup de pommeau (Guerrier), loup, Colosse tatoué.
+- **Couleur** : `#e8d44a`.
 
 ### Affaibli (`weakened`)
 
 - **Négatif** : oui.
-- **Effet** : inflige 1 dégât de moins par charge.
-- **Charges** : −1 à la **fin** de chaque tour.
-- **Sources** : Rayon de givre (2 charges), Alpha des loups, familier.
-- **Couleur** : violet.
+- **Effet** : Inflige 1 dégât de moins par charge. Perd 1 charge à la fin de son tour.
+- **Mécanique** : -1 dégât(s) infligé(s) par charge ; perd 1 charge(s) à la fin de son tour.
+- **Sources** : Rayon de givre, Alpha des loups, familier.
+- **Couleur** : `#9a8cc8`.
 
 ### Protection (`shielded`)
 
 - **Négatif** : non.
-- **Effet** : chaque charge absorbe 1 point de dégâts (et disparaît en l'absorbant).
-- **Fin** : toutes les charges disparaissent au début de son prochain tour.
-- **Sources** : Posture défensive (Guerrier, 5 charges), sort Bouclier (6 charges).
-- **Couleur** : bleu clair.
-
----
-
-## États déclarés, sans mécanique pour l'instant
-
-Ils existent dans les données (pour les immunités notamment) mais ne font encore rien. La plupart demandent
-l'**avantage et le désavantage** (lancer deux d20 et garder le meilleur ou le pire), qui n'existent pas encore en combat.
+- **Effet** : Chaque charge absorbe 1 point de dégâts. Disparaît au début de son prochain tour.
+- **Mécanique** : chaque charge absorbe 1 point de dégâts ; perd toutes ses charges au début de son tour.
+- **Sources** : Posture défensive (Guerrier), sort Bouclier.
+- **Couleur** : `#8fc3e8`.
 
 ### Endormi (`asleep`)
 
-- **Effet prévu** : inconscient (passe ses tours) jusqu'à ce qu'il subisse des dégâts ou qu'un allié le réveille.
-- **Immunités** : les elfes.
+- **Négatif** : oui.
+- **Effet** : Passe ses tours (1 charge par tour) et se réveille s'il subit des dégâts. Les attaques contre lui ont l'avantage et sont des critiques si elles touchent.
+- **Mécanique** : passe son tour ; avantage pour qui l'attaque ; un coup qui le touche est critique ; disparaît s'il subit des dégâts ; perd 1 charge(s) au début de son tour.
+- **Sources** : sort Sommeil (Magicien, sauvegarde de SAG). Immunité : elfes.
+- **Couleur** : `#6a7ac8`.
 
 ### Aveuglé (`blinded`)
 
-- **Effet prévu (SRD)** : désavantage à ses attaques, avantage pour ceux qui l'attaquent.
+- **Négatif** : oui.
+- **Effet** : Désavantage à ses attaques ; avantage pour ceux qui l'attaquent. Perd 1 charge par tour.
+- **Mécanique** : désavantage à ses attaques ; avantage pour qui l'attaque ; perd 1 charge(s) au début de son tour.
+- **Sources** : aucune pour l'instant.
+- **Couleur** : `#4a4a4a`.
 
 ### Charmé (`charmed`)
 
-- **Effet prévu (SRD)** : ne peut pas attaquer celui qui l'a charmé.
+- **Négatif** : oui.
+- **Effet** : Ne peut rien entreprendre contre ses ennemis (attaques, sorts offensifs). Perd 1 charge par tour.
+- **Mécanique** : aucune action contre ses ennemis ; perd 1 charge(s) au début de son tour.
+- **Sources** : aucune pour l'instant.
+- **Couleur** : `#e070c0`.
 
 ### Effrayé (`frightened`)
 
-- **Effet prévu (SRD)** : désavantage à ses attaques et à ses tests tant que la source de sa peur est là.
+- **Négatif** : oui.
+- **Effet** : Désavantage à ses attaques et à ses tests (fuite comprise). Perd 1 charge par tour.
+- **Mécanique** : désavantage à ses attaques ; désavantage à ses tests (fuite) ; perd 1 charge(s) au début de son tour.
+- **Sources** : aucune pour l'instant.
+- **Couleur** : `#a0a0d0`.
 
 ### Paralysé (`paralyzed`)
 
-- **Effet prévu (SRD)** : ne peut pas agir, rate ses sauvegardes de FOR et DEX, et les attaques qui le touchent sont
-  des critiques.
+- **Négatif** : oui.
+- **Effet** : Passe son tour et rate ses sauvegardes de FOR et de DEX ; les attaques contre lui ont l'avantage et sont des critiques si elles touchent. Perd 1 charge par tour.
+- **Mécanique** : passe son tour ; avantage pour qui l'attaque ; un coup qui le touche est critique ; rate ses sauvegardes de Force, Dextérité ; perd 1 charge(s) au début de son tour.
+- **Sources** : aucune pour l'instant.
+- **Couleur** : `#c8c060`.
 
 ### À terre (`prone`)
 
-- **Effet prévu (SRD)** : désavantage à ses attaques. Sans positionnement, il faudra trancher : avantage pour tous
-  ceux qui l'attaquent ?
+- **Négatif** : oui.
+- **Effet** : Les attaques contre lui ont l'avantage. Il se relève au début de son tour.
+- **Mécanique** : avantage pour qui l'attaque ; perd toutes ses charges au début de son tour.
+- **Sources** : aucune pour l'instant.
+- **Couleur** : `#8a6a4a`.
+
+### Entravé (`restrained`)
+
+- **Négatif** : oui.
+- **Effet** : Désavantage à ses attaques et à ses sauvegardes de DEX ; avantage pour ceux qui l'attaquent ; ne peut pas fuir. Perd 1 charge par tour.
+- **Mécanique** : désavantage à ses attaques ; avantage pour qui l'attaque ; ne peut pas fuir ; désavantage aux sauvegardes de Dextérité ; perd 1 charge(s) au début de son tour.
+- **Sources** : Empoignade (don Lutteur).
+- **Couleur** : `#7a5a3a`.
+
+### Invisible (`invisible`)
+
+- **Négatif** : non.
+- **Effet** : Avantage à ses attaques ; désavantage pour ceux qui l'attaquent. Perd 1 charge par tour.
+- **Mécanique** : avantage à ses attaques ; désavantage pour qui l'attaque ; perd 1 charge(s) au début de son tour.
+- **Sources** : aucune pour l'instant.
+- **Couleur** : `#c8e8f0`.
 
 ---
 
@@ -129,9 +161,7 @@ l'**avantage et le désavantage** (lancer deux d20 et garder le meilleur ou le p
 - **Assourdi** (`deafened`) : rate ce qui demande d'entendre.
 - **Agrippé** (`grappled`) : ne peut pas fuir.
 - **Neutralisé** (`incapacitated`) : ne peut pas agir (base de Paralysé, Étourdi…).
-- **Invisible** (`invisible`) : avantage à ses attaques, désavantage pour l'attaquer.
 - **Pétrifié** (`petrified`) : changé en pierre, résistance à tous les dégâts.
-- **Entravé** (`restrained`) : désavantage aux attaques et sauvegardes de DEX.
 - **Inconscient** (`unconscious`) : à 0 PV sans être mort, si on ajoute les jets contre la mort.
 - **Épuisement** (`exhaustion`) : six niveaux cumulables (un bon candidat pour la fatigue des voyages).
 
@@ -148,7 +178,7 @@ l'**avantage et le désavantage** (lancer deux d20 et garder le meilleur ou le p
 ## Décisions (2026-10-13)
 
 - **Charges partout** : chaque état utilise ses charges à sa façon (dégâts, tours passés, absorption…).
-- **Avantage et désavantage** : oui, à ajouter au combat (prochaine étape des états).
+- **Avantage et désavantage** : oui (fait : attaques, sauvegardes, fuite, tests d'événement).
 - **États hors combat** (maladies, malédictions, fatigue…) : oui, à terme.
 - **Jet de sauvegarde** : généralement, un état infligé en permet un.
 
