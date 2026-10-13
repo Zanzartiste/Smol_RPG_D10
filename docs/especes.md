@@ -6,6 +6,9 @@
 
 ## Règles générales
 
+- **Taille** (décision du 2026-10-13) : une échelle de −4 à 5 : −4 araignée, insecte ; −3 souris ; −2 chat ; −1 enfant,
+  nain ; 0 humain ; 1 grand humain, cheval, autruche ; 2 grizzly, rhinocéros, ogre ; 3 éléphant, géant ; 4 baleine ;
+  5 et plus au-delà. Elle fixe les **PV** (Constitution × 1,414^taille), la place au combat et la taille du sprite.
 - Une espèce **ne modifie jamais les attributs**. Elle donne une taille, des âges, des noms, une apparence et
   éventuellement des traits (résistances, immunités, sens, actions).
 - **Majorité à 18 ans pour toutes les espèces** (`rules.json › majority_age`) : un personnage jouable commence à 18 ans
@@ -26,7 +29,7 @@
 
 - **Concept** : une ou deux phrases (apparence, culture, place dans le monde).
 - **Statut** : disponible / à débloquer (indice, coût en Creator Points).
-- **Taille** : Très petite / Petite / Moyenne / Grande (place au combat et taille du sprite : ½, 1 ou 2).
+- **Taille** : de −4 à 5 (voir plus haut).
 - **Âge de départ** : 18 ou plus.
 - **Adolescent à** : …
 - **Adulte à** : 18 ou plus.
@@ -51,7 +54,7 @@
 
 - **Concept** : polyvalents et ambitieux, les humains sont partout.
 - **Statut** : disponible par défaut.
-- **Taille** : Moyenne.
+- **Taille** : 0 (Moyenne).
 - **Âge de départ** : 18.
 - **Adolescent à** : 12.
 - **Adulte à** : 18.
@@ -67,7 +70,7 @@
 
 - **Concept** : petits, vifs et rusés. On les dit voleurs ; ils préfèrent « opportunistes ».
 - **Statut** : disponible.
-- **Taille** : Petite.
+- **Taille** : −1 (Petite).
 - **Âge de départ** : 18 (relevé de 12 le 2026-10-12, pour la règle de majorité).
 - **Adolescent à** : 10.
 - **Adulte à** : 18.
@@ -82,7 +85,7 @@
 
 - **Concept** : gracieux et d'une longévité prodigieuse, ils se tiennent à l'écart des affaires des mortels.
 - **Statut** : à débloquer (« Percer le secret d'un sanctuaire oublié », ou 15 Creator Points).
-- **Taille** : Moyenne.
+- **Taille** : 0 (Moyenne).
 - **Âge de départ** : 100.
 - **Adolescent à** : 20.
 - **Adulte à** : 100.
@@ -96,7 +99,7 @@
 
 - **Concept** : petits, robustes et barbus. Mineurs, forgerons et bâtisseurs, ils ont la rancune aussi tenace que la peau.
 - **Statut** : disponible.
-- **Taille** : Moyenne (trapus plutôt que petits, comme dans le SRD).
+- **Taille** : −1 (Petite).
 - **Âge de départ** : 50.
 - **Adolescent à** : 20.
 - **Adulte à** : 50.
@@ -114,7 +117,7 @@
 
 - **Concept** : grands, puissants et fiers, les orcs vivent intensément et tiennent debout là où d'autres tombent.
 - **Statut** : disponible.
-- **Taille** : Moyenne.
+- **Taille** : 0 (Moyenne).
 - **Âge de départ** : 18.
 - **Adolescent à** : 12.
 - **Adulte à** : 18.
@@ -132,7 +135,7 @@
 
 - **Concept** : une ascendance infernale marque leur corps de cornes et de flammes ; beaucoup s'en méfient.
 - **Statut** : disponible.
-- **Taille** : Moyenne.
+- **Taille** : 0 (Moyenne).
 - **Âge de départ** : 18.
 - **Adolescent à** : 12.
 - **Adulte à** : 18.

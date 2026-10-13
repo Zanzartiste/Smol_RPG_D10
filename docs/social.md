@@ -39,6 +39,13 @@
   des **rumeurs**), naissances.
 - **Jalousie** : une réussite romantique peut être apprise par un partenaire sans relation libre (chance de 50 %,
   plus forte chez un jaloux) : Amour et Confiance baissent.
+- **Activités** : dîner (5 po), promenade, entraînement : plus de gains, mais un créneau de plus.
+- **Initiatives** : au hub, un PNJ connu vient parfois vous voir (une fois par jour au plus) : un ami demande un
+  service, un rival provoque, un partenaire délaissé depuis 7 jours se plaint.
+- **Réputation** : un lieu où vous êtes respecté vous accueille mieux (Amitié de départ + réputation ÷ 4) et fait
+  de meilleurs prix (+5 %) ; honni, les prix montent (−10 %).
+- **Échanges entre PNJ** : des amis s'offrent parfois des objets. Les **enfants des héros** restent des PNJ du monde,
+  qu'on peut retrouver dans une vie suivante.
 - **Compagnons à la BG3** : un choix d'événement peut porter `"approval": {"mira": 2}` ; l'Amitié du compagnon
   change, et sous -50 il quitte le groupe. On peut **recruter** un PNJ ami (Amitié 60) dont le rôle a une classe.
 
@@ -248,6 +255,26 @@
 - **Réussite** : Amitié +2, Confiance +1.
 - **Effet spécial** : révèle un nouveau fait sur le PNJ (définitif).
 
+#### Inviter à dîner (5 po) (`dinner`)
+
+- **Catégorie** : amical.
+- **Conditions** : Amitié 10.
+- **Réussite** : Amitié +8, Confiance +3, Amour +3.
+
+#### Se promener ensemble (`walk`)
+
+- **Catégorie** : amical.
+- **Conditions** : Amitié 15.
+- **Réussite** : Amitié +6, Confiance +2, Amour +2.
+
+#### S'entraîner ensemble (`train`)
+
+- **Catégorie** : amical.
+- **Conditions** : Amitié 10.
+- **Test** : Physique DD 11.
+- **Réussite** : Amitié +6, Confiance +3.
+- **Échec** : Amitié +2.
+
 ### Romantique
 
 #### Flirter (`flirt`)
@@ -375,13 +402,9 @@
 
 ## Questions ouvertes
 
-1. **Rendez-vous et activités** : faut-il des actions longues avec un PNJ (dîner à la taverne, promenade, entraînement)
-   qui rapportent plus mais coûtent plus de temps ou d'or ?
-2. **Les PNJ prennent-ils l'initiative ?** Un ami qui vient demander un service, un rival qui provoque, un partenaire
-   qui se plaint d'être négligé : sous forme d'événements au hub ?
-3. **Mort des PNJ** : de vieillesse, en combat, par des événements ? Et le deuil (souvenirs, réputation) ?
-4. **Usure des relations** : à réactiver plus tard (avec le temps long) ?
-5. **Les enfants du héros** : ils grandissent dans le monde ; faut-il pouvoir les retrouver dans une vie suivante
+1. **Mort des PNJ** : de vieillesse, en combat, par des événements ? Et le deuil (souvenirs, réputation) ?
+2. **Usure des relations** : à réactiver plus tard (avec le temps long) ?
+3. **Les enfants du héros** : ils grandissent dans le monde ; faut-il pouvoir les retrouver dans une vie suivante
    (« le fils d'un ancien héros ») ?
-6. **Échanges entre PNJ** : les PNJ achètent-ils, se volent-ils, s'offrent-ils des objets entre eux ?
-7. **Réputation** : quels effets (prix, gardes plus méfiants, événements) ?
+4. **Échanges entre PNJ** : les PNJ achètent-ils, se volent-ils, s'offrent-ils des objets entre eux ?
+5. **Réputation** : quels autres effets (prix, gardes plus méfiants, événements) ?

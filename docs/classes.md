@@ -11,7 +11,16 @@
 - Améliorations aux niveaux 4, 8, 12, 16 et 20 : +1 à un attribut **et** un don (`rules.json › advancement`).
 - Chaque classe maîtrise **deux jets de sauvegarde** (provisoirement : rang 2 au lieu de 1).
 - **Compétences** : les rangs remplacent le bonus de maîtrise (voir [competences.md](competences.md)).
-- **Multiclassage** prévu : les niveaux d'amélioration et d'aptitudes se compteront par classe.
+- **Multiclassage** (implémenté, libre) : à chaque niveau gagné, on choisit au hub la classe qui progresse. Les
+  aptitudes et les améliorations se comptent par niveau de classe ; les emplacements de sort se cumulent (lanceurs
+  complets + demi-lanceurs ÷ 2) ; les sauvegardes et les compétences de classe restent celles de la classe de
+  départ.
+- **Points de vie** : ils ne dépendent plus de la classe (le dé de vie n'est plus utilisé) : Constitution ×
+  1,414^taille.
+- **Économie d'actions** : une action et une action bonus par tour (Second souffle, Se cacher avec la Ruse) ; les
+  actions gardées deviennent des réactions (esquive, parade).
+- **Classes à venir, dans l'ordre** : Barde, Rôdeur, Clerc, Druide, Artificier. Le système de magie (sorts appris)
+  reste à définir.
 - **Armures** : aucune restriction par classe ; toute armure peut être portée. Chaque type a une Force conseillée
   (vêtements 0, légère 10, intermédiaire 12, lourde 14) : en dessous, le personnage est encombré et subit des malus
   (à définir).
@@ -145,6 +154,7 @@ appris.
 **Progression** (implémentée)
 
 - Niveau 1 : Expertise : +1 rang dans deux compétences déjà entraînées ; Attaque sournoise à 1d6.
+- Niveau 2 : Ruse (Se cacher devient une action bonus).
 - Niveau 3 : Archétype de roublard (sous-classe).
 - Niveaux 3, 5, 7… 19 : l'Attaque sournoise gagne 1d6 (10d6 au niveau 19).
 - Niveau 5 : Esquive instinctive (une attaque par round divisée par deux).
@@ -160,7 +170,7 @@ appris.
 - Niveau 13 : Utilisation d'objets magiques (pas encore de mécanique).
 - Niveau 17 : Réflexes de voleur (pas encore de mécanique).
 
-**À venir (SRD)** : Ruse au niveau 2 (demande les actions bonus), Coup de chance au niveau 20.
+**À venir (SRD)** : Coup de chance au niveau 20.
 
 ---
 

@@ -1,6 +1,6 @@
 # Cahier des charges — Lifantasy (titre provisoire)
 
-> Version 0.5 — 2026-10-13 — document vivant, à mettre à jour au fil des décisions.
+> Version 0.6 — 2026-10-13 — document vivant, à mettre à jour au fil des décisions.
 
 ---
 
@@ -279,6 +279,30 @@ Le détail est dans les catalogues ([equipements.md](equipements.md), [objets.md
 | **Compétences** | Trois compétences de métier génériques : Artisanat, Arts, Potions et cuisine. Leur progression sera liée au niveau (système à trouver). |
 | **Améliorations** | Tous les 4 niveaux : un attribut **et** un don. |
 
+### 9.6 Décisions de la v0.6 (réponses du 2026-10-13)
+
+| Sujet | Décision |
+|---|---|
+| **Création de personnage** | À retravailler plus tard ([creation_personnage.md](creation_personnage.md)). |
+| **Jets de sauvegarde** | À réexaminer : usages et options dans [jets_de_sauvegarde.md](jets_de_sauvegarde.md). |
+| **Points de vie** | Selon la **taille** et l'**endurance** (Constitution), pas la classe ; peut-être pas de progression par niveau (fragilité voulue). |
+| **Tailles** | Échelle de −4 (insecte) à 5+ (colosse) ; humain 0, nain et enfant −1, ogre 2, géant 3, baleine 4. |
+| **Mort** | Pas de jets contre la mort : un membre du groupe qui tombe est inconscient tant qu'un autre tient debout, et il est ramené à lui après le combat ; si tout le groupe tombe, c'est la mort. Un moyen de revenir à la vie est à prévoir. |
+| **Classes suivantes** | Barde, Rôdeur, Clerc, Druide, Artificier. Le système de magie (sorts appris) reste à définir. |
+| **Économie d'actions** | Celle de D&D : une action et une action bonus par tour. |
+| **Réactions** | Les actions gardées à la fin du tour servent à esquiver (Physique DEX) ou parer (Physique ou Armes de mêlée, DEX ; distance : avec un bouclier) ; contresort plus tard. L'attaque ne touche que si elle dépasse le jet de défense. |
+| **Repos** | Un bouton toujours accessible : camper en zone sauvage, nuit à l'auberge (payante) en ville. |
+| **Multiclassage** | Libre : à chaque niveau, on choisit la classe. |
+| **IA** | Combat automatique par personnage ; archétypes d'IA plus tard. |
+| **Terrain** | Pistes à étudier ([environnement.md](environnement.md)). |
+| **Voyages, temps long** | Se perdre (Survie) et ses événements ; résumé pour les années passées ; mort des PNJ ; journal chronologique et filtrable. |
+| **Métiers** | Pas de « métier jouable » : un métier se dessine naturellement (forger et vendre fait de vous un forgeron) ; la fabrication suit la description d'Artisanat ; on vit de la vente de ses créations. |
+| **Social** | Activités (dîner, promenade, entraînement), PNJ qui prennent l'initiative, enfants retrouvables d'une vie à l'autre, effets de la réputation (prix, accueil, événements), échanges entre PNJ. Pas d'usure des relations pour l'instant. |
+| **Équipement** | 1 collier, 2 anneaux ; des reliques peuvent traverser les vies. |
+| **Lore** | Fiches [monde.md](monde.md), [lieux.md](lieux.md), [factions.md](factions.md) à remplir par morceaux. |
+| **Contenu** | Des événements de test peuvent être générés au besoin. |
+| **Images** | Le pixel art actuel convient (le rapprocher de BG3 serait un plus). |
+
 ## 10. Prochaines étapes proposées
 
 1. ~~Répondre aux questions ouvertes du §9.~~
@@ -324,6 +348,10 @@ Le détail est dans les catalogues ([equipements.md](equipements.md), [objets.md
     romance (couple, relation libre, polyamour, fiançailles, mariage, enfants, rupture, jalousie) ; monde autonome
     (liens, couples, rumeurs, naissances) ; langues cryptées ; approbation et recrutement des compagnons ; carnet.
     Détail dans [social.md](social.md). Aussi : initiative lancée en une fois.
+14 quater. ~~**Règles de la v0.6**~~ : tailles de −4 à 5 et PV selon la Constitution et la taille ;
+    inconscience au lieu de la mort ; action et action bonus ; réactions (esquive, parade) ; IA par
+    personnage ; repos (camp, auberge) ; multiclassage libre ; Artisanat avec test et métiers qui se dessinent ;
+    activités, initiatives des PNJ, réputation ; Vigilant converti ; fiches de conception et de lore.
 15. **Temps long** : événement voyage (durée, transport, événements en route, se perdre), activités de 1, 2, 5 ou
     10 ans, journal de la vie.
 16. **PNJ générés progressivement** et relations : faits enregistrés, jauges, interactions sociales.
@@ -340,8 +368,8 @@ désormais dans la feuille de route du §10. Restent ici :
 
 - **Conjoint ou enfant comme personnage suivant**, et enfance jouable.
 - **Creator Points** : barème à ajuster avec les testeurs ; autres bonus possibles.
-- **Combat** : réactions, mécaniques des autres états (endormi, charmé…), IA ennemie plus fine (cibler les blessés,
-  se soigner), bouton « combat automatique ».
+- **Combat** : contresort, archétypes d'IA (cibler les blessés, se soigner, fuir), revenir à la vie.
+- **Classes** : Barde, Rôdeur, Clerc, Druide, Artificier ; système de magie (sorts appris) à définir.
 - **Lore et univers** : fournis par l'auteur, à intégrer (noms de lieux, factions, campagnes).
 - **Son et musique**, **pipeline d'images IA**, **traduction anglaise**.
 

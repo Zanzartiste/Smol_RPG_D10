@@ -476,6 +476,38 @@ Calcul des dégâts subis :
 - vulnérabilité : double ;
 - résistance et vulnérabilité au même type s'annulent.
 
+## Tailles, points de vie, inconscience
+
+- **Tailles** (`rules.json › sizes`) : échelle de −4 à 5 (`species.json › size`, `creatures.json › size`). Places au
+  combat (`combat › size_slots`) et taille des sprites (`combat › sprite_scale`) par valeur ; condition d'événement
+  `{"type": "size", "in": [-1]}` ou `{"type": "size", "max": -1}`.
+- **PV max** (`rules.json › hit_points`) : Constitution × `size_base` (1,4142)^taille, au moins 1, + modificateurs
+  (`hp_per_level` × niveau, don Robuste). Ni la classe ni le niveau ne les augmentent. Les créatures gardent leurs PV
+  en dés.
+- **Inconscience** : en combat, un membre du groupe à 0 PV est inconscient tant qu'un autre tient debout ; après une
+  victoire ou une fuite, il revient à 1 PV. Si tout le groupe tombe dans un combat mortel, le héros et les
+  compagnons meurent.
+
+## Économie d'actions et réactions
+
+- Par tour : une **action** et une **action bonus** (`"bonus": true` dans actions.json ; Se cacher devient bonus avec
+  la Ruse, modificateur `cunning_action`) ; `"free": true` ne coûte rien (Fougue). « Fin du tour » à tout moment.
+- **Réactions** : les actions gardées à la fin du tour (action, action bonus) donnent autant de réactions jusqu'au
+  tour suivant. Une attaque qui touche (sauf 20 naturel) peut être **esquivée** (Physique, DEX) puis **parée**
+  (Physique ou Armes de mêlée, DEX ; une attaque à distance ou un sort ne se pare qu'avec un bouclier) : elle ne
+  touche que si son total dépasse le jet de défense. Automatique pour l'instant.
+- **IA par personnage** : `Character.auto_combat` (bouton « IA : oui/non » dans la barre d'actions).
+
+## Repos et multiclassage
+
+- **Repos** (`locations.json › rest`) : `{"type": camp | inn | home, "name", "cost"?, "event_chance"?}`. Le bouton
+  de la fiche (R) se repose au dernier lieu visité (`LifeState.location`) : repos long de tout le groupe jusqu'au
+  matin ; l'auberge coûte de l'or ; un camp peut tirer un événement nocturne.
+- **Multiclassage** : `Character.class_levels` (classe -> niveau) ; `pending_class_levels` (niveaux gagnés dont la
+  classe est à choisir au hub, `assign_class_level`). Les aptitudes, améliorations et dés d'Attaque sournoise
+  (`scaling.class`) suivent le niveau de classe ; les tours de magie suivent le niveau total ; les emplacements de
+  sort se cumulent. Clés de choix des classes secondaires : `feature:<classe>:<aptitude>/<choix>`.
+
 ## Économie : boutiques, fabrication, forge
 
 ### Boutiques (`shops.json`)
@@ -500,8 +532,11 @@ L'état des boutiques (stock, jour du dernier réassort) est sauvegardé avec la
 
 ### Recettes (`recipes.json`)
 
-`{"id", "result", "count"? (1), "station": "forge" | "alchemy", "materials": {id: quantité}, "gold"? (0)}`. Les
-matériaux et l'or sont pris dans le sac du groupe.
+`{"id", "result", "count"? (1), "station": "forge" | "alchemy", "materials": {id: quantité}, "gold"? (0), "dc"? (10)}`.
+Les matériaux et l'or sont pris dans le sac du groupe. **Test** (`rules.json › crafting`) : la compétence de la
+station (Artisanat avec la DEX à la forge, Potions et cuisine à l'alchimie) contre le DD ; un échec gâche
+`failure_loss` (la moitié) des matériaux et l'or. Après `profession_threshold` objets à une station, la fiche
+affiche le **métier** qui se dessine (« Forgeronne (7 objets) »).
 
 ### Amélioration (`rules.json › forge`)
 
@@ -533,7 +568,13 @@ Le détail de conception est dans [social.md](social.md). Données : `npc_roles.
 - **Relation avec le héros** : `Npc.player` (`met`, `friendship`, `love`, `trust`, `status`, `open`, `fear`), remise à
   zéro à chaque nouvelle vie ; les souvenirs (`memories`) restent.
 - **Vie** (`LifeState`) : `reputation` par lieu.
-- **Événements** : un choix (ou son issue) peut porter `"approval": {"mira": 2}` (approbation des compagnons).
+- **Événements** : un choix (ou son issue) peut porter `"approval": {"mira": 2}` (approbation des compagnons) ;
+  effets `{"type": "npc_relation", "npc", "friendship"?, "love"?, "trust"?}` et `{"type": "reputation", "amount",
+  "location"?}` ; condition `{"type": "reputation", "location", "min"?, "max"?}`.
+- **Activités** : une action sociale peut coûter de l'or (`gold`) et du temps en plus (`extra_time`).
+- **Initiatives** (`rules.json › social › initiative_chance`, `neglect_days`) : au hub, un PNJ connu vient parfois
+  (une fois par jour au plus) : un ami demande un service, un rival provoque, un partenaire délaissé se plaint.
+- **Réputation** : à la première rencontre, Amitié + réputation ÷ 4 ; prix +5 % (respecté) ou −10 % (honni).
 - **Interface** : « Parler à quelqu'un » dans le menu d'un lieu, fenêtres `SocialView` (dialogue), `NpcTradeView`
   (échange), `CarnetView` (carnet, touche C). Quitter une conversation après une action fait passer un créneau
   (`Game.end_interaction`).
