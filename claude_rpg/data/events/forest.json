@@ -352,5 +352,262 @@
 				"outcome": {"text": "La lueur s'éteint dès que vous tournez le dos.", "effects": []}
 			}
 		]
+	},
+	{
+		"id": "forest_lost",
+		"location": "forest",
+		"weight": 3,
+		"title": "Égaré",
+		"text": "Les arbres se ressemblent tous. Le sentier a disparu sous les fougères, et le soleil se cache derrière les frondaisons. Vous êtes {g:perdu|perdue|perdu·e}.",
+		"choices": [
+			{
+				"id": "orient",
+				"text": "Chercher la mousse, le soleil, le bruit du ruisseau",
+				"check": {
+					"skill": "survival",
+					"difficulty": 2
+				},
+				"critical_success": {
+					"text": "Non seulement vous retrouvez votre chemin, mais vous découvrez un raccourci bordé d'herbes médicinales.",
+					"effects": [
+						{
+							"type": "add_item",
+							"id": "healing_herbs",
+							"count": 2
+						},
+						{
+							"type": "xp",
+							"amount": 40
+						}
+					]
+				},
+				"success": {
+					"text": "Le ruisseau vous ramène au sentier. Vous connaissez un peu mieux ces bois.",
+					"effects": [
+						{
+							"type": "xp",
+							"amount": 25
+						}
+					]
+				},
+				"failure": {
+					"text": "Vous tournez en rond des heures durant avant de reconnaître un arbre foudroyé.",
+					"effects": [
+						{
+							"type": "pass_time",
+							"slots": 1
+						}
+					]
+				},
+				"critical_failure": {
+					"text": "Le sol cède sous vos pieds : vous dévalez un ravin couvert de ronces, et il vous faut la journée pour en sortir.",
+					"effects": [
+						{
+							"type": "hp",
+							"amount": -2,
+							"cause": "Égaré dans la Forêt des Murmures"
+						},
+						{
+							"type": "pass_time",
+							"slots": 2
+						}
+					]
+				}
+			},
+			{
+				"id": "climb",
+				"text": "Grimper à un arbre pour voir au loin",
+				"check": {
+					"skill": "physique",
+					"ability": "dex",
+					"difficulty": 2
+				},
+				"success": {
+					"text": "Du haut du chêne, vous apercevez les toits de Brumeval. Facile.",
+					"effects": [
+						{
+							"type": "xp",
+							"amount": 15
+						}
+					]
+				},
+				"failure": {
+					"text": "Une branche casse. Vous tombez lourdement, et vous rentrez à l'aveuglette.",
+					"effects": [
+						{
+							"type": "hp",
+							"amount": -1,
+							"cause": "Tombé d'un arbre"
+						},
+						{
+							"type": "pass_time",
+							"slots": 1
+						}
+					]
+				}
+			}
+		]
+	},
+	{
+		"id": "forest_tracks",
+		"location": "forest",
+		"weight": 3,
+		"title": "Des traces fraîches",
+		"text": "Dans la boue, des empreintes encore humides : de grosses pattes, et quelque chose qu'on a traîné.",
+		"choices": [
+			{
+				"id": "follow",
+				"text": "Suivre la piste",
+				"check": {
+					"skill": "survival",
+					"difficulty": 2
+				},
+				"critical_success": {
+					"text": "La piste mène à la cachette d'un braconnier, abandonnée en hâte : quelques pièces et une peau tannée.",
+					"effects": [
+						{
+							"type": "gold",
+							"amount": 12
+						},
+						{
+							"type": "add_item",
+							"id": "wolf_pelt"
+						},
+						{
+							"type": "xp",
+							"amount": 40
+						}
+					]
+				},
+				"success": {
+					"text": "Vous trouvez la carcasse d'un cerf à demi dévorée, et une peau de loup arrachée dans la lutte.",
+					"effects": [
+						{
+							"type": "add_item",
+							"id": "wolf_pelt"
+						},
+						{
+							"type": "xp",
+							"amount": 25
+						}
+					]
+				},
+				"failure": {
+					"text": "La piste se perd dans un ruisseau. Rien à tirer de cette marche.",
+					"effects": []
+				},
+				"critical_failure": {
+					"text": "Vous marchez droit dans la tanière. Un loup se dresse, babines retroussées !",
+					"effects": [
+						{
+							"type": "combat",
+							"enemies": [
+								"wolf"
+							],
+							"victory": {
+								"text": "Le loup s'effondre. Vous l'avez échappé belle.",
+								"effects": []
+							},
+							"fled": {
+								"text": "Vous détalez sans demander votre reste.",
+								"effects": []
+							}
+						}
+					]
+				}
+			},
+			{
+				"id": "avoid",
+				"text": "Faire un large détour",
+				"outcome": {
+					"text": "Mieux vaut ne pas croiser ce qui a laissé ces traces.",
+					"effects": []
+				}
+			}
+		]
+	},
+	{
+		"id": "forest_storm",
+		"location": "forest",
+		"weight": 2,
+		"conditions": [
+			{
+				"type": "time",
+				"in": [
+					"afternoon",
+					"evening"
+				]
+			}
+		],
+		"title": "L'orage",
+		"text": "Le ciel se fend d'un éclair. En quelques instants, une pluie glacée transperce le feuillage.",
+		"choices": [
+			{
+				"id": "shelter",
+				"text": "Bâtir un abri de fortune",
+				"check": {
+					"skill": "survival",
+					"difficulty": 1
+				},
+				"critical_success": {
+					"text": "Votre abri est si bien fait que vous dormez au sec, bercé{g:|e|·e} par la pluie. Vous vous réveillez reposé{g:|e|·e}.",
+					"effects": [
+						{
+							"type": "heal_full"
+						},
+						{
+							"type": "pass_time",
+							"slots": 1
+						}
+					]
+				},
+				"success": {
+					"text": "Branches et fougères vous gardent à peu près au sec jusqu'à la fin de l'averse.",
+					"effects": [
+						{
+							"type": "pass_time",
+							"slots": 1
+						}
+					]
+				},
+				"failure": {
+					"text": "L'abri s'effondre au premier coup de vent. Trempé{g:|e|·e} jusqu'aux os, vous grelottez.",
+					"effects": [
+						{
+							"type": "hp",
+							"amount": -1,
+							"cause": "Mort de froid sous l'orage"
+						},
+						{
+							"type": "pass_time",
+							"slots": 1
+						}
+					]
+				}
+			},
+			{
+				"id": "push_on",
+				"text": "Continuer sous la pluie",
+				"check": {
+					"skill": "physique",
+					"ability": "con",
+					"difficulty": 2
+				},
+				"success": {
+					"text": "Vous serrez les dents et rentrez, trempé{g:|e|·e} mais entier{g:|e|·e}.",
+					"effects": []
+				},
+				"failure": {
+					"text": "Le froid vous transperce. Vous rentrez fiévreu{g:x|se|x·se}.",
+					"effects": [
+						{
+							"type": "hp",
+							"amount": -2,
+							"cause": "Mort de froid sous l'orage"
+						}
+					]
+				}
+			}
+		]
 	}
 ]
