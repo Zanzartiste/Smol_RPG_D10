@@ -76,11 +76,13 @@ func refresh() -> void:
 		var t: Dictionary = _tokens[c.id]
 		t["bar"].ratio = float(c.hp) / maxf(1.0, c.max_hp())
 		t["hp_label"].text = "%d / %d" % [c.hp, c.max_hp()]
+		if c.reactions > 0 and c.is_alive():
+			t["hp_label"].text += Loc.ui(" · %d réac.") % c.reactions  # actions gardées pour se défendre
 		var targetable := c in _targetable
 		t["panel"].add_theme_stylebox_override("panel", _token_style(c == active, targetable))
 		t["panel"].modulate.a = 1.0 if c.is_alive() else 0.3
 		t["panel"].mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if targetable else Control.CURSOR_ARROW
-		t["intent"].text = (Loc.ui("Prépare : %s") % c.intent["name"]) if not c.intent.is_empty() else ""
+		t["intent"].text = (Loc.ui("S'apprête : %s") % c.intent["name"]) if not c.intent.is_empty() else ""
 		_refresh_statuses(c, t["statuses"])
 		if _last_hp.has(c.id) and c.hp < int(_last_hp[c.id]):
 			_flash(t["panel"])
