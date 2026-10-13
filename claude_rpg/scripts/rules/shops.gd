@@ -2,8 +2,6 @@ class_name Shops
 extends RefCounted
 ## API des boutiques et services (data/shops.json) et des prix (rules.json › trade).
 ## Une boutique : {"id", "name", "location", "description", "price_rate" (1.0), "restock_days",
-##                 "buys": [catégories achetées au joueur : weapon, armor, shield, accessory,
-##                          consumable, material, treasure],
 ##                 "stock": {id d'objet: quantité, reconstituée tous les restock_days jours},
 ##                 "crafting"?: "forge" | "alchemy" (recettes de recipes.json de cette station),
 ##                 "upgrade"?: true (améliore armes, armures et boucliers, voir Crafting)}
@@ -33,9 +31,11 @@ static func of_location(location_id: String) -> Array[String]:
 	return result
 
 
-## La boutique rachète-t-elle cet objet ? (catégorie acceptée et valeur non nulle)
+## La boutique rachète-t-elle cet objet ? Tout marchand rachète tout ce qui a de la valeur, sauf les
+## objets de quête (pas d'allers-retours entre boutiques).
+@warning_ignore("unused_parameter")
 static func buys(shop_id: String, item_id: String) -> bool:
-	return Items.category_of(item_id) in def(shop_id).get("buys", []) and Items.value_of(item_id) > 0
+	return Items.value_of(item_id) > 0 and not Items.is_quest(item_id)
 
 
 # --- Prix ----------------------------------------------------------------------

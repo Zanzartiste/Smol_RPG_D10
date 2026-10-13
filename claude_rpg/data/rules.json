@@ -89,9 +89,15 @@
 		"upgrade_costs": [50, 150, 400],
 		"upgrade_rarities": ["uncommon", "rare", "very_rare"]
 	},
-	"encumbered_modifiers": [],
+	"encumbrance": {
+		"_doc": "Malus aux jets de FOR et de DEX (attaques, sauvegardes, tests, initiative, fuite) : 1 par tranche de armor_points_per_penalty points de Force manquants pour l'armure portée, + 1 par tranche de overload_percent_per_penalty % de charge au-delà de la capacité du groupe (somme de carry_per_strength kg par point de Force de chaque membre), au plus max_penalty.",
+		"armor_points_per_penalty": 2,
+		"carry_per_strength": 7.5,
+		"overload_percent_per_penalty": 10,
+		"max_penalty": 5
+	},
 	"armor_strength": {
-		"_doc": "Force conseillée pour une armure, selon son type (un objet peut la redéfinir avec \"strength\"). En dessous, l'armure reste portable mais le personnage est encombré (encumbered_modifiers).",
+		"_doc": "Force conseillée pour une armure, selon son type (un objet peut la redéfinir avec \"strength\"). En dessous, l'armure reste portable mais encombre (voir encumbrance).",
 		"clothing": 0,
 		"light": 10,
 		"medium": 12,

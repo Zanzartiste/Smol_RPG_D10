@@ -34,8 +34,7 @@ func tabs() -> Array[String]:
 	var shop := Shops.def(shop_id)
 	if not shop.get("stock", {}).is_empty():
 		result.append("buy")
-	if not shop.get("buys", []).is_empty():
-		result.append("sell")
+	result.append("sell")  # tout marchand rachète tout
 	if shop.has("crafting"):
 		result.append("craft")
 	if shop.get("upgrade", false):
@@ -158,8 +157,7 @@ func _fill_buy() -> void:
 
 
 func _fill_sell() -> void:
-	var names := PackedStringArray(Shops.def(shop_id).get("buys", []).map(func(c): return tr(Items.CATEGORY_NAMES[c])))
-	_list.add_child(_dim_label(tr("Rachète : %s. Les objets portés ne sont pas proposés.") % ", ".join(names)))
+	_list.add_child(_dim_label(tr("Le marchand rachète tout, sauf les objets de quête. Les objets portés ne sont pas proposés.")))
 	for item_id: String in _sorted(life.inventory().keys()):
 		if Shops.buys(shop_id, item_id):
 			_row("%s ×%d" % [Items.bbcode_name(item_id), life.character.item_count(item_id)], Items.summary(item_id),

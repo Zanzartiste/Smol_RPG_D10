@@ -1,15 +1,14 @@
 [
-	{"id": "acid", "name": "Acide"},
-	{"id": "bludgeoning", "name": "Contondant", "physical": true},
-	{"id": "cold", "name": "Froid"},
-	{"id": "fire", "name": "Feu", "status": {"id": "burning", "chance": 0.25, "stacks": 1}},
-	{"id": "force", "name": "Force"},
-	{"id": "lightning", "name": "Foudre"},
-	{"id": "necrotic", "name": "Nécrotique"},
-	{"id": "piercing", "name": "Perforant", "physical": true},
-	{"id": "poison", "name": "Poison"},
-	{"id": "psychic", "name": "Psychique"},
-	{"id": "radiant", "name": "Radiant"},
-	{"id": "slashing", "name": "Tranchant", "physical": true},
-	{"id": "thunder", "name": "Tonnerre"}
+	{"id": "bludgeoning", "name": "Contondant", "color": "#b8a88a", "physical": true},
+	{"id": "cold", "name": "Froid", "color": "#7ec8e8"},
+	{"id": "fire", "name": "Feu", "color": "#f08a2e", "status": {"id": "burning", "chance": 0.25, "stacks": 1}},
+	{"id": "force", "name": "Force", "color": "#c890f0"},
+	{"id": "lightning", "name": "Foudre", "color": "#f0e050"},
+	{"id": "necrotic", "name": "Nécrotique", "color": "#8a9a6a"},
+	{"id": "piercing", "name": "Perforant", "color": "#c8c0b0", "physical": true},
+	{"id": "poison", "name": "Poison", "color": "#7ac943"},
+	{"id": "psychic", "name": "Psychique", "color": "#e070c0"},
+	{"id": "radiant", "name": "Radiant", "color": "#f8e8a0"},
+	{"id": "slashing", "name": "Tranchant", "color": "#d8d0c8", "physical": true},
+	{"id": "thunder", "name": "Tonnerre", "color": "#7a9af0"}
 ]

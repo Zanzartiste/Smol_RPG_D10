@@ -12,19 +12,24 @@ extends RefCounted
 ##           (rules.json › armor_strength : vêtements 0, légère 10, intermédiaire 12, lourde 14).
 ##           En dessous, elle reste portable mais encombre (rules.json › encumbered_modifiers).
 ## Bouclier : {"category": "shield", "ac_bonus": 2}
-## Accessoire : {"category": "accessory", "slot": "cloak" | "amulet" | "ring"}
+## Accessoire : {"category": "accessory", "slot": "head" | "hands" | "legs" | "feet" | "neck" | "ring"}
+##           (un anneau va dans ring_1, ou ring_2 si le premier est pris)
+## Tous : "weight" (kg) ; le poids porté par le groupe peut l'encombrer (voir Character).
 ## Facultatif pour tous : "modifiers" (voir Modifiers), "rarity", "value", "description" (voir Items).
 ## Facultatif pour une arme : "bonus_damage": [{"damage": "2d6", "damage_type": "fire"}], dégâts d'autres
 ## types ajoutés à chaque coup (une épée enflammée : tranchant + feu).
 ## Un objet magique est un équipement avec des modificateurs, ex. une épée +1 :
 ##   "modifiers": [{"type": "weapon_attack", "amount": 1}, {"type": "weapon_damage", "amount": 1}]
 
-const SLOTS := ["main_hand", "off_hand", "armor", "cloak", "amulet", "ring"]
-const ACCESSORY_SLOTS := ["cloak", "amulet", "ring"]
+const SLOTS := ["main_hand", "off_hand", "head", "armor", "hands", "legs", "feet", "neck", "ring_1", "ring_2"]
+const ACCESSORY_SLOTS := ["head", "hands", "legs", "feet", "neck", "ring"]
 const SLOT_NAMES := {
-	"main_hand": "Main principale", "off_hand": "Main secondaire", "armor": "Armure",
-	"cloak": "Cape", "amulet": "Amulette", "ring": "Anneau",
+	"main_hand": "Main principale", "off_hand": "Main secondaire", "head": "Couvre-chef", "armor": "Torse",
+	"hands": "Gants", "legs": "Jambes", "feet": "Chaussures", "neck": "Collier", "ring": "Anneau",
+	"ring_1": "Anneau", "ring_2": "Anneau",
 }
+## Emplacements multiples : un type d'emplacement -> ses emplacements réels.
+const SLOT_GROUPS := {"ring": ["ring_1", "ring_2"]}
 const UNARMED := "unarmed"
 const MEDIUM_ARMOR_DEX_CAP := 2
 
@@ -93,6 +98,17 @@ static func slot_for(id: String) -> String:
 
 static func slot_name(slot: String) -> String:
 	return Loc.ui(SLOT_NAMES.get(slot, slot))
+
+
+## Emplacements réels où peut aller un objet (deux pour un anneau).
+static func slots_for(id: String) -> Array:
+	var slot := slot_for(id)
+	return SLOT_GROUPS.get(slot, [slot])
+
+
+## Poids en kg.
+static func weight_of(id: String) -> float:
+	return float(def(id).get("weight", 0.0))
 
 
 ## Dégâts d'une arme ; une arme polyvalente tenue à deux mains utilise ses dégâts « versatile ».

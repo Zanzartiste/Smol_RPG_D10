@@ -67,7 +67,7 @@ static func modifier(ch: Character, check: Dictionary) -> int:
 		return ch.skill_mod(check["skill"])
 	if check.has("save"):
 		return ch.save_mod(check["save"])
-	return ch.ability_mod(check.get("ability", "str"))
+	return ch.check_mod(check.get("ability", "str"))
 
 
 ## Talent fiable : un test de compétence maîtrisée ne descend jamais sous 10 au d20.

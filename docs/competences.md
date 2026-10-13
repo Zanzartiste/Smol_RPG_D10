@@ -175,30 +175,41 @@
 
 ---
 
+## Compétences de métier (ajoutées le 2026-10-13)
+
+Elles existent dans le jeu ; aucune classe ni aucun passé ne les maîtrise encore, et la fabrication ne les teste pas
+encore (ce sera fait avec les métiers).
+
+### Artisanat (`crafting`)
+
+- **Attribut** : INT (à confirmer).
+- **Sert à** : créer des objets « utiles » : armes, armures, outils, meubles…
+- **Maîtrisée par** : personne pour l'instant.
+- **Usages prévus** : fabrication à la forge, métiers d'artisan.
+
+### Arts (`arts`)
+
+- **Attribut** : CHA (à confirmer).
+- **Sert à** : réaliser des objets ou des prestations « agréables » : peindre, chanter, sculpter, jouer…
+- **Maîtrisée par** : personne pour l'instant.
+- **Usages prévus** : métiers d'artiste, revenus en taverne, relations sociales.
+- **Notes** : recoupe Représentation ; faut-il fusionner les deux ?
+
+### Potions et cuisine (`potions_cooking`)
+
+- **Attribut** : SAG (à confirmer).
+- **Sert à** : cuisiner, préparer des recettes alchimiques (potions, remèdes, poisons).
+- **Maîtrisée par** : personne pour l'instant.
+- **Usages prévus** : alchimie chez l'herboriste, cuisine, métiers.
+
+---
+
 ## Compétences candidates (à compléter)
-
-Idées liées aux métiers et à la vie sédentaire. Dans D&D, ce sont des « maîtrises d'outils », mais on peut en faire
-de vraies compétences.
-
-### Artisanat / Forge
-
-- **Attribut** : FOR ou INT ?
-- **Sert à** : fabriquer et réparer armes, armures, objets.
-
-### Alchimie
-
-- **Attribut** : INT.
-- **Sert à** : préparer potions, poisons, remèdes.
-
-### Cuisine
-
-- **Attribut** : SAG ?
-- **Sert à** : préparer des repas (bonus temporaires, métier).
 
 ### Commerce
 
 - **Attribut** : CHA ou INT ?
-- **Sert à** : acheter et vendre au meilleur prix, tenir une boutique.
+- **Sert à** : acheter et vendre au meilleur prix, tenir une boutique (aujourd'hui, c'est la Persuasion).
 
 ### Équitation / Conduite
 
@@ -207,16 +218,18 @@ de vraies compétences.
 
 ---
 
+## Décisions (2026-10-13)
+
+- **Métiers** : trois compétences génériques plutôt qu'une par métier : **Artisanat**, **Arts**, **Potions et
+  cuisine** (ajoutées).
+- **Progression** : pas par la pratique ; plutôt liée à l'XP et à la montée de niveau. Solution à trouver, puisque
+  dans D&D une compétence est seulement maîtrisée ou non.
+- **Choix à la création** : oui, le joueur choisit ses compétences de classe (à faire).
+
 ## Questions ouvertes
 
-1. **Métiers** : on ajoute de vraies compétences (Forge, Alchimie, Cuisine, Commerce…), ou des « maîtrises d'outils »
-   à la D&D (maîtrisée ou non, sans attribut fixe) ?
-2. **Compétences en combat** : Athlétisme pour agripper, Discrétion pour se cacher, Intimidation pour faire fuir,
-   Médecine pour stabiliser un allié… Lesquelles ?
-3. **Progression par l'usage** : les compétences restent-elles uniquement liées à la maîtrise (comme D&D), ou
-   s'améliorent-elles aussi en les pratiquant (comme dans The Elder Scrolls), ce qui irait bien avec les métiers et le
-   passage des années ?
-4. **Choix des compétences** : aujourd'hui, la classe et le passé imposent les leurs. Dans D&D, on choisit 2 à 4
-   compétences dans une liste de classe. On ajoute ce choix à l'écran de création ?
-5. **Équilibre** : 9 compétences ne sont jamais testées par les événements actuels. Faut-il y veiller en écrivant
-   le contenu ?
+1. **Compétences en combat** : lesquelles ? (à retravailler avec les compétences en général)
+2. **Attributs des nouvelles compétences** : Artisanat (INT), Arts (CHA), Potions et cuisine (SAG), ça te va ?
+3. **Arts et Représentation** : on fusionne ?
+4. **Progression des compétences** : quel système, au-delà de « maîtrisée ou non » (rangs de maîtrise, points à
+   répartir en montant de niveau…) ?

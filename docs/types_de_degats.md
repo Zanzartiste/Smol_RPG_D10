@@ -20,7 +20,8 @@
 - Ces défenses viennent de l'espèce, des dons, de l'équipement (ex. l'Anneau de résistance au feu), des événements
   (effet `add_defense`) ou du bestiaire (`defenses` d'une créature).
 - Trois types sont **physiques** (contondant, perforant, tranchant). Le jeu ne s'en sert pas encore.
-- Les 13 types viennent du SRD 5.1.
+- 12 types, issus du SRD 5.1 ; l'Acide a été fondu dans le Poison (2026-10-13).
+- Chaque type a une **couleur**, utilisée dans le journal de combat (`damage_types.json › color`).
 
 ---
 
@@ -99,12 +100,6 @@
 - **État associé** : Poison.
 - **Qui y résiste…** : nains ; le don Résistant (qui immunise aussi contre l'état Poison).
 
-### Acide (`acid`)
-éventuellement à omettre si peu intéressant (il peut être mis dans Poison)
-- **Physique** : non.
-- **Description** : corrosion.
-- **Sources** : aucune pour l'instant.
-
 ### Foudre (`lightning`)
 
 - **Physique** : non.
@@ -137,27 +132,16 @@
 
 ---
 
+## Décisions (2026-10-13)
+
+- **Liste** : on pourra en supprimer ou en ajouter ; l'Acide est fondu dans le Poison pour l'instant (fait).
+- **Réactions élémentaires** : probablement, sans aller aussi loin que Genshin.
+- **Magique ou non** : possible ; à faire plus tard (marquer les armes magiques, défense « physique non magique »).
+- **Environnement** : oui (pièges, météo, surfaces), par des événements, avec une incidence possible en combat.
+- **Poison** : un vrai type, bloqué par la résistance (fait).
+- **Un état par type** : probablement, mais on ne s'occupe pas des détails pour l'instant. Seul le feu enflamme.
+- **Couleurs** : une couleur par type (fait, dans le journal de combat).
+
 ## Questions ouvertes
 
-1. **Liste des types** : on garde les 13 types du SRD, ou ton univers en demande d'autres (ex. ombre, arcane,
-   sang…), ou moins (fusionner foudre et tonnerre…) ? => potentiellement en supprimer / ajouter certains oui.
-2. **Réactions élémentaires à la Genshin** : faut-il que les types interagissent ? Par exemple feu + froid = « fonte »
-   (dégâts bonus), foudre sur une cible mouillée, feu qui retire Gelé… Ce serait une vraie signature du jeu, mais
-   cela demande des états « élément appliqué ».
-=> Je ne pense pas qu'on le fasse au point de Genshin, mais c'est probable sinon.
-3. **Magique ou non** : dans D&D, beaucoup de monstres résistent aux dégâts physiques **non magiques**. On le gère ?
-   Les armes +1 deviendraient alors importantes contre certains ennemis.
-   => Possible oui.
-   → Noté pour plus tard : il faudra marquer les armes magiques et ajouter une défense « physique non magique ».
-4. **Environnement** : pièges, chutes, météo, surfaces à la BG3 (huile qui s'enflamme, eau qui conduit la foudre) ?
-   Sans positionnement, cela passerait plutôt par les événements et des états de terrain.
-5. **Dégâts du poison** : on garde le Poison en dégâts bruts (qui ignorent les défenses), ou il devient un vrai type
-   poison, bloqué par la résistance ? Un vrai type poison, bloqué par la résistance.
-   → **Fait.**
-6. **Lien type → état** : chaque type doit-il avoir une chance d'infliger un état par défaut (feu → Brûlure,
-   froid → Ralenti, foudre → Étourdi…), ou seulement certaines actions comme aujourd'hui ? => Probable que je me dirige vers une altération par type à peu de choses près.
-   → Le mécanisme existe (feu → Brûlure). Pour les autres, il suffira d'ajouter une ligne `status` dans
-   `damage_types.json` une fois les états choisis. Propositions : froid → Ralenti, foudre → Étourdi, tonnerre → À
-   terre, acide → Corrodé (CA réduite), nécrotique → soins réduits, radiant → Aveuglé, psychique → Effrayé,
-   poison → Poison, tranchant → Saignement. Il faudra créer les états manquants (voir [etats.md](etats.md)).
-7. **Interface** : une couleur ou une icône par type, dans le journal de combat et sur les fiches ?
+1. Quels types ajouter ou retirer quand le lore sera posé ?

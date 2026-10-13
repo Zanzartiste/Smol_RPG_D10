@@ -22,6 +22,16 @@ static func name_of(id: String) -> String:
 	return DB.damage_types.get(id, {}).get("name", id)
 
 
+## Couleur du type (journal de combat, fiches).
+static func color_of(id: String) -> Color:
+	return Color(String(DB.damage_types.get(id, {}).get("color", "#d8cfc0")))
+
+
+## Nom en minuscules, coloré en BBCode.
+static func bbcode_name(id: String) -> String:
+	return "[color=#%s]%s[/color]" % [color_of(id).to_html(false), name_of(id).to_lower()]
+
+
 ## État que ce type peut infliger : {"id", "chance", "stacks"}, ou {} si aucun.
 static func status_of(id: String) -> Dictionary:
 	return DB.damage_types.get(id, {}).get("status", {})

@@ -35,12 +35,12 @@ func _ready() -> void:
 	var main: Control = load("res://scenes/main.tscn").instantiate()
 	add_child(main)
 	await _capture("2_hub.png")
-	for item_id in ["longsword_plus_1", "cloak_of_protection", "ring_fire_resistance", "potion_heal"]:
+	for item_id in ["longsword_plus_1", "ring_of_protection", "ring_fire_resistance", "potion_heal"]:
 		Game.life.character.add_item(item_id)
 	Game.life.companions.append(Character.create_companion("mira"))
 	main._refresh_sheet()
 	main.open_inventory()
-	main._overlay._on_equip("cloak_of_protection")
+	main._overlay._on_equip("ring_of_protection")
 	await _capture("2b_inventory.png")
 	main._overlay.close_view()
 	Game.life.character.gold = 120

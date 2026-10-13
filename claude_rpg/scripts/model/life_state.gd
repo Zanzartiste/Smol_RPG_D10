@@ -115,6 +115,41 @@ func inventory() -> Dictionary:
 	return character.inventory
 
 
+## Poids du sac (kg).
+func bag_weight() -> float:
+	var total := 0.0
+	for item_id: String in character.inventory:
+		total += Items.weight_of(item_id) * int(character.inventory[item_id])
+	return total
+
+
+## Charge du groupe : le sac et tout ce que portent les membres debout (kg).
+func carried_weight() -> float:
+	var total := bag_weight()
+	for member in party():
+		total += member.equipped_weight()
+	return total
+
+
+## Capacité du groupe : somme des capacités de ses membres (kg).
+func carry_capacity() -> float:
+	var total := 0.0
+	for member in party():
+		total += member.carry_capacity()
+	return total
+
+
+## Recalcule le malus de charge de chaque membre : 1 par tranche de overload_percent_per_penalty %
+## au-delà de la capacité du groupe. À appeler après tout changement du sac ou de l'équipement.
+func refresh_load() -> void:
+	var capacity := maxf(carry_capacity(), 1.0)
+	var over := (carried_weight() - capacity) / capacity * 100.0
+	var step := float(DB.rules.get("encumbrance", {}).get("overload_percent_per_penalty", 10))
+	var penalty := ceili(over / step) if over > 0.0 else 0
+	for member in party():
+		member.load_penalty = penalty
+
+
 ## Équipe un membre du groupe avec un objet du sac ; les objets retirés retournent dans le sac.
 func equip(member: Character, item_id: String) -> bool:
 	if not Items.is_equipment(item_id) or character.item_count(item_id) <= 0:
@@ -123,6 +158,7 @@ func equip(member: Character, item_id: String) -> bool:
 	for removed in member.equip(item_id):
 		if removed != Equipment.UNARMED:
 			character.add_item(removed)
+	refresh_load()
 	return true
 
 
@@ -133,6 +169,7 @@ func unequip(member: Character, slot: String) -> bool:
 		return false
 	if removed != Equipment.UNARMED:
 		character.add_item(removed)
+	refresh_load()
 	return true
 
 
@@ -148,9 +185,13 @@ func use_item(item_id: String, member: Character) -> String:
 	return Loc.ui("%s : %s récupère %d PV.") % [Items.name_of(item_id), member.name, member.hp - before]
 
 
-## Jette des objets du sac ; retourne le nombre jeté.
+## Jette des objets du sac (pas les objets de quête) ; retourne le nombre jeté.
 func drop_item(item_id: String, count := 1) -> int:
-	return character.remove_item(item_id, count)
+	if Items.is_quest(item_id):
+		return 0
+	var dropped := character.remove_item(item_id, count)
+	refresh_load()
+	return dropped
 
 
 # --- Boutiques, fabrication, forge ------------------------------------------------
@@ -176,6 +217,7 @@ func buy(shop_id: String, item_id: String) -> bool:
 	if stock[item_id] <= 0:
 		stock.erase(item_id)
 	character.add_item(item_id)
+	refresh_load()
 	return true
 
 
@@ -187,6 +229,7 @@ func sell(shop_id: String, item_id: String) -> bool:
 	character.gold += Shops.sell_price(item_id, self)
 	character.remove_item(item_id)
 	stock[item_id] = int(stock.get(item_id, 0)) + 1
+	refresh_load()
 	return true
 
 
@@ -200,6 +243,7 @@ func craft(recipe_id: String) -> bool:
 		character.remove_item(item_id, int(materials[item_id]))
 	character.gold -= int(recipe.get("gold", 0))
 	character.add_item(recipe["result"], int(recipe.get("count", 1)))
+	refresh_load()
 	return true
 
 
@@ -256,4 +300,5 @@ static func from_dict(data: Dictionary) -> LifeState:
 	for shop_id: String in saved_shops:
 		life.shops[shop_id] = {"stock": Character._int_dict(saved_shops[shop_id].get("stock", {})),
 			"restocked": int(saved_shops[shop_id].get("restocked", 0))}
+	life.refresh_load()
 	return life

@@ -204,14 +204,15 @@
 
 ---
 
+## Décisions (2026-10-13)
+
+- **Versions des dons** : se rapprocher des règles libres de droit (SRD 5.2) dans leur version complète, pas
+  simplifiée. À faire : revoir Frappe brutale, Résistant, Adepte élémentaire, Musicien…
+- **Dons à choix** (Doué, Résistant, Adepte élémentaire…) : oui, avec un écran de choix.
+- **Dons qui donnent des actions ou des sorts** : possible.
+- **Tous les 4 niveaux** : un attribut **et** un don. On n'a jamais à choisir entre améliorer ses statistiques et
+  développer son personnage avec un don intéressant.
+
 ## Questions ouvertes
 
-1. **Rapprocher de D&D 2024 ?** Plusieurs dons actuels sont simplifiés (Frappe brutale, Résistant, Adepte
-   élémentaire…). On garde ces versions simples ou on suit les règles officielles ?
-2. **Dons à choix** : Doué (trois compétences), Résistant (une sauvegarde), Adepte élémentaire (un élément)…
-   On ajoute un écran de choix ?
-3. **Dons qui donnent des actions ou des sorts** : nécessaires pour Initié à la magie, Lutteur, Sentinelle. À
-   prévoir ?
-4. **Don ou amélioration d'attribut** : aux niveaux 4, 8, 12… le personnage a les deux. On garde, ou il choisit
-   l'un ou l'autre comme dans D&D ?
-5. **Dons de métier** : existent-ils, et s'obtiennent-ils en pratiquant le métier plutôt qu'en montant de niveau ?
+1. **Dons de métier** : pas certain, à voir avec les métiers.

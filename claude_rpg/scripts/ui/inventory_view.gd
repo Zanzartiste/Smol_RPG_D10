@@ -3,7 +3,8 @@ extends Control
 ## Fenêtre d'inventaire, ouverte depuis la fiche (bouton « Inventaire » ou touche I).
 ## À gauche : l'équipement du membre du groupe sélectionné (héros ou compagnon), avec « Retirer ».
 ## À droite : le sac du groupe (celui du héros), avec « Équiper » (sur le membre sélectionné),
-## « Utiliser » (soins, sur le membre sélectionné) et « Jeter ».
+## « Utiliser » (soins, sur le membre sélectionné) et « Jeter » ; filtres par catégorie et recherche.
+## En haut : la charge du groupe (sac + objets portés) et sa capacité.
 ## Toute la logique passe par LifeState (equip, unequip, use_item, drop_item).
 
 signal changed  # l'inventaire ou l'équipement a changé (pour rafraîchir la fiche)
@@ -12,12 +13,17 @@ signal closed
 var life: LifeState
 var _member: Character
 var _message := ""
+var _filter := "all"
+var _search := ""
 
 var _member_tabs := HBoxContainer.new()
 var _gold_label := Label.new()
 var _equipment_box := VBoxContainer.new()
 var _stats_text := RichTextLabel.new()
 var _bag_box := VBoxContainer.new()
+var _filter_box := HBoxContainer.new()
+var _search_edit := LineEdit.new()
+var _load_label := Label.new()
 var _message_label := RichTextLabel.new()
 
 
@@ -50,6 +56,10 @@ func _ready() -> void:
 	title.theme_type_variation = &"TitleLabel"
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title)
+	header.add_child(_load_label)
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(16, 0)
+	header.add_child(spacer)
 	_gold_label.add_theme_color_override("font_color", UITheme.GOLD)
 	header.add_child(_gold_label)
 	var close := Button.new()
@@ -76,6 +86,11 @@ func _ready() -> void:
 	var right := VBoxContainer.new()
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	right.add_child(_section(tr("Sac du groupe")))
+	right.add_child(_filter_box)
+	_search_edit.placeholder_text = tr("Rechercher un objet…")
+	_search_edit.clear_button_enabled = true
+	_search_edit.text_changed.connect(_on_search_changed)
+	right.add_child(_search_edit)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -98,7 +113,8 @@ func close_view() -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
-	if key != null and key.pressed and not key.echo and key.keycode in [KEY_ESCAPE, KEY_I]:
+	if key != null and key.pressed and not key.echo and (key.keycode == KEY_ESCAPE \
+			or (key.keycode == KEY_I and not _search_edit.has_focus())):
 		accept_event()
 		close_view()
 
@@ -109,9 +125,25 @@ func select_member(member: Character) -> void:
 	refresh()
 
 
+## Filtre du sac : une clé de Items.FILTERS.
+func set_filter(filter: String) -> void:
+	_filter = filter
+	refresh()
+
+
+func _on_search_changed(text: String) -> void:
+	_search = text.strip_edges()
+	_fill_bag()
+
+
 func refresh() -> void:
+	life.refresh_load()
 	_gold_label.text = tr("Or : %d po") % life.character.gold
+	_load_label.text = tr("Charge : %.1f / %.0f kg") % [life.carried_weight(), life.carry_capacity()]
+	_load_label.add_theme_color_override("font_color",
+		UITheme.BAD if life.carried_weight() > life.carry_capacity() else UITheme.TEXT_DIM)
 	_fill_member_tabs()
+	_fill_filters()
 	_fill_equipment()
 	_fill_bag()
 	_message_label.text = _message
@@ -128,6 +160,20 @@ func _fill_member_tabs() -> void:
 		button.button_pressed = member == _member
 		button.pressed.connect(select_member.bind(member), CONNECT_DEFERRED)
 		_member_tabs.add_child(button)
+
+
+func _fill_filters() -> void:
+	_clear(_filter_box)
+	for filter: String in Items.FILTERS:
+		var count := life.inventory().keys().filter(func(id): return Items.matches(id, filter)).size()
+		if filter != "all" and count == 0:
+			continue
+		var button := Button.new()
+		button.text = "%s (%d)" % [tr(Items.FILTERS[filter]["name"]), count]
+		button.toggle_mode = true
+		button.button_pressed = filter == _filter
+		button.pressed.connect(set_filter.bind(filter), CONNECT_DEFERRED)
+		_filter_box.add_child(button)
 
 
 func _fill_equipment() -> void:
@@ -163,21 +209,25 @@ func _fill_equipment() -> void:
 func _fill_bag() -> void:
 	_clear(_bag_box)
 	var inventory := life.inventory()
-	if inventory.is_empty():
+	var shown: Array = inventory.keys().filter(func(id): return Items.matches(id, _filter, _search))
+	if shown.is_empty():
 		var empty := Label.new()
-		empty.text = tr("Le sac est vide.")
+		empty.text = tr("Le sac est vide.") if inventory.is_empty() else tr("Aucun objet ne correspond.")
 		empty.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 		_bag_box.add_child(empty)
 		return
-	for item_id: String in inventory:
+	shown.sort_custom(func(a, b): return Items.name_of(a) < Items.name_of(b))
+	for item_id: String in shown:
 		var row := HBoxContainer.new()
 		var label := RichTextLabel.new()
 		label.bbcode_enabled = true
 		label.fit_content = true
 		label.scroll_active = false
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		label.text = "%s ×%d\n[font_size=14][color=%s]%s[/color][/font_size]" % [Items.bbcode_name(item_id),
-			int(inventory[item_id]), UITheme.TEXT_DIM.to_html(false), Items.summary(item_id)]
+		var weight := Items.weight_of(item_id) * int(inventory[item_id])
+		label.text = "%s ×%d\n[font_size=14][color=%s]%s%s[/color][/font_size]" % [Items.bbcode_name(item_id),
+			int(inventory[item_id]), UITheme.TEXT_DIM.to_html(false), Items.summary(item_id),
+			(" · %s kg" % String.num(weight, 2)) if weight > 0.0 else ""]
 		label.tooltip_text = Items.description_of(item_id)
 		row.add_child(label)
 		if Items.is_equipment(item_id):
@@ -190,7 +240,8 @@ func _fill_bag() -> void:
 			var use := _small_button(tr("Utiliser"), _on_use.bind(item_id))
 			use.disabled = _member.hp >= _member.max_hp
 			row.add_child(use)
-		row.add_child(_small_button(tr("Jeter"), _on_drop.bind(item_id)))
+		if not Items.is_quest(item_id):
+			row.add_child(_small_button(tr("Jeter"), _on_drop.bind(item_id)))
 		_bag_box.add_child(row)
 
 

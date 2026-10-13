@@ -12,7 +12,9 @@
   au moins, et l'étape « adulte » ne commence jamais avant 18 ans. Les événements « adultes » (romance, couple)
   exigent cet âge, quelle que soit l'espèce. Le validateur de données le vérifie.
 - **Mariage** : aucune restriction entre espèces. En revanche, chaque espèce indique ce que donne sa **descendance**
-  avec les autres (rubrique « Descendance » de chaque fiche).
+  avec les autres (rubrique « Descendance » de chaque fiche). Pour l'instant, un enfant prend **au hasard** l'espèce
+  d'un de ses parents.
+- **Disponibilité** : nains, orcs et tieffelins sont jouables d'office pour l'instant.
 - ⚠️ Licence : les espèces du SRD 5.1 sont réutilisables (CC-BY 4.0). Les autres sont à concevoir nous-mêmes.
 
 ---
@@ -137,9 +139,8 @@
 - **Vénérable à** : 90.
 - **Vieillit à partir de** : 70.
 - **Traits** : résistance au feu (implémentée).
-- **Idée de trait** : (ou dépendant d'un choix basé sur un démon majeur). Piste : une **ascendance** choisie à la
-  création, chacune avec sa résistance et un petit sort (feu, froid, nécrotique…). Il faudrait alors un choix
-  supplémentaire dans l'écran de création, à l'image des sous-classes.
+- **Ascendance** (décision du 2026-10-13, à faire) : choisie à la création parmi **Feu**, **Froid** et
+  **Nécrotique** pour l'instant, chacune avec sa résistance (et plus tard un petit sort). D'autres viendront.
 - **Noms** : Méphara, Ilzac, Vhorn, Saelith, Akzar, Nyx, et des noms de vertu : Espérance, Tourment, Audace, Chant.
 - **Apparence** : peau rouge, prune, rosée ou violette ; cornes ; yeux dorés, blancs ou rouges.
 - **Descendance** : *à définir* (le sang infernal peut-il ressurgir chez un enfant de parents non tieffelins ?).

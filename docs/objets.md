@@ -10,11 +10,14 @@
   - **consommable** : s'utilise et disparaît (potions, antidotes…) ;
   - **matériau** : sert à fabriquer (forge, alchimie) et se revend ;
   - **trésor** : n'a pas d'usage, sinon d'être vendu (ou de déclencher des événements).
-- Le **sac est partagé** par le groupe ; les objets s'y cumulent sans limite de poids ni de place.
+- Le **sac est partagé** par le groupe. Chaque objet a un **poids** (kg) ; au-delà de la capacité du groupe (7,5 kg
+  par point de Force de chaque membre, objets portés compris), tout le groupe est encombré (voir
+  [equipements.md](equipements.md)).
+- L'inventaire a des **filtres** (Tout, Équipement, Consommables, Matériaux, Trésors, Quête) et une **recherche**.
+- **Objets de quête** (`"quest": true`) : ni vendus ni jetés.
 - **Hors combat**, seuls les objets de soins s'utilisent ; en combat, utiliser un objet prend l'action du tour.
-- **Revente** : 50 % de la valeur, ajustée par la Persuasion (jusqu'à ±15 %). Chaque boutique ne rachète que
-  certaines catégories (l'herboriste : consommables et matériaux ; la forge : matériaux, armes, armures, boucliers ;
-  l'armurier : équipement).
+- **Revente** : 50 % de la valeur, ajustée par la Persuasion (jusqu'à ±15 %). Tout marchand rachète tout, sauf les
+  objets de quête.
 
 ---
 
@@ -27,6 +30,8 @@
 - **Effet** : (consommable) soins, retrait d'un état, bonus temporaire…
 - **Sert à fabriquer** : (matériau) …
 - **Valeur** : en po.
+- **Poids** : en kg.
+- **Quête** : oui / non (un objet de quête ne se vend ni ne se jette).
 - **Où le trouver** : boutique, récolte, butin, événement…
 - **Description** : une phrase d'ambiance.
 ```
@@ -39,6 +44,7 @@
 
 - **Effet** : soigne 2d4+2 PV (en combat ou hors combat).
 - **Valeur** : 10 po.
+- **Poids** : 0.25 kg.
 - **Où le trouver** : vendu par Herboristerie de Maëlle, fabriqué (alchimie), départ : Guerrier, événement « Jour de marché », événement « Un visage familier ».
 - **Description** : Une fiole rouge qui referme les plaies.
 
@@ -46,6 +52,7 @@
 
 - **Effet** : retire l'état Poison (en combat seulement).
 - **Valeur** : 8 po.
+- **Poids** : 0.25 kg.
 - **Où le trouver** : vendu par Herboristerie de Maëlle.
 - **Description** : Un remède amer qui neutralise les poisons.
 
@@ -57,6 +64,7 @@
 
 - **Sert à fabriquer** : Potion de soins.
 - **Valeur** : 2 po.
+- **Poids** : 0.1 kg.
 - **Où le trouver** : vendu par Herboristerie de Maëlle, événement « Sous les frondaisons », événement « Une clairière fleurie ».
 - **Description** : Sauge et achillée, prisées des guérisseurs.
 
@@ -64,6 +72,7 @@
 
 - **Sert à fabriquer** : Cuir clouté.
 - **Valeur** : 3 po.
+- **Poids** : 2 kg.
 - **Où le trouver** : butin : Loup (100 %), butin : Alpha des loups (100 %), événement « Un loup gris », événement « Jour de marché ».
 - **Description** : Rêche et odorante, mais les tanneurs l'achètent.
 
@@ -71,6 +80,7 @@
 
 - **Sert à fabriquer** : Dague, Hachette, Épée courte, Épée longue, Chemise de mailles, Cuir clouté.
 - **Valeur** : 1 po.
+- **Poids** : 2 kg.
 - **Où le trouver** : vendu par Forge de Brumeval.
 - **Description** : Un bloc de roche veinée de rouille, prêt pour la forge.
 
@@ -81,6 +91,7 @@
 ### Amulette ancienne (`old_amulet`)
 
 - **Valeur** : 40 po.
+- **Poids** : 0.25 kg.
 - **Où le trouver** : événement « Le feu follet », événement « Jour de marché ».
 - **Description** : Un bijou terni gravé de runes inconnues.
 
@@ -110,11 +121,17 @@
 
 ---
 
+## Décisions (2026-10-13)
+
+- Poids maximal porté selon la Force (fait).
+- Objets de quête : oui (faits : ni vendus ni jetés) ; filtres et recherche dans l'inventaire (faits).
+- Pas d'objets périssables.
+- Récolte de matériaux : oui (à faire, par des événements et des activités).
+- Identification des objets mystérieux : à prévoir (par Arcanes ou chez un érudit).
+- Héritage : en général, aucun objet ne passe d'une vie à la suivante.
+- Fabrication : un jet de compétence (Artisanat, Potions et cuisine…), détails avec les métiers.
+
 ## Questions ouvertes
 
-1. **Encombrement du sac** : on garde un sac illimité, ou on ajoute un poids ou un nombre de places ?
-2. **Objets de quête** : des objets impossibles à vendre ou à jeter ?
-3. **Durée de vie** : des objets qui se périment (nourriture, herbes fraîches) ?
-4. **Récolte** : peut-on récolter des matériaux (cueillette, minage) par des événements ou des activités ?
-5. **Identification** : des objets mystérieux à identifier (l'Amulette ancienne), par Arcanes ou chez un érudit ?
-6. **Héritage** : quels objets passent d'une vie à la suivante (trésor familial, maison) ?
+1. **Exceptions à l'héritage** : des objets légendaires ou des reliques liées au monde (et non au personnage)
+   peuvent-ils rester d'une vie à l'autre, par exemple cachés quelque part ?

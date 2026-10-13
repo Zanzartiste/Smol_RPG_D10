@@ -118,9 +118,9 @@ func _test_rule_apis() -> bool:
 	_expect(Abilities.ids() == ["str", "dex", "con", "int", "wis", "cha"], "attributs dans l'ordre du JSON")
 	_expect(Abilities.name_of("wis") == "Sagesse" and Abilities.short_of("wis") == "SAG", "noms d'attributs")
 	_expect(Abilities.modifier(8) == -1 and Abilities.modifier(15) == 2 and Abilities.modifier(1) == -5, "modificateurs")
-	_expect(Skills.ids().size() == 18 and Skills.ability_of("stealth") == "dex", "compétences")
+	_expect(Skills.ids().size() == 21 and Skills.ability_of("stealth") == "dex", "compétences")
 	_expect(Skills.names_of(["arcana", "history"]) == "Arcanes, Histoire", "noms de compétences")
-	_expect(DamageTypes.ids().size() == 13 and DamageTypes.name_of("fire") == "Feu", "types de dégâts")
+	_expect(DamageTypes.ids().size() == 12 and not DamageTypes.has("acid") and DamageTypes.name_of("fire") == "Feu", "types de dégâts")
 	_expect(DamageTypes.is_physical("slashing") and not DamageTypes.is_physical("fire"), "dégâts physiques")
 	_expect(StatusEffects.name_of("poisoned") == "Poison" and StatusEffects.name_of("burning") == "Brûlure", "états")
 
@@ -690,7 +690,8 @@ func _test_class_features() -> bool:
 
 	# Roublard : Expertise, Attaque sournoise, Esquive instinctive, Dérobade, Talent fiable.
 	var rogue := _at_level("goblin", "rogue", 11)
-	_expect(rogue.skill_mod("stealth") == rogue.ability_mod("dex") + 2 * rogue.proficiency_bonus(), "Expertise : maîtrise doublée")
+	_expect(rogue.skill_mod("stealth") == rogue.ability_mod("dex") + 2 * rogue.proficiency_bonus() - rogue.roll_penalty("dex"),
+		"Expertise : maîtrise doublée")
 	var sneak := Combatant.from_character(rogue, true)
 	_expect(sneak.damage_expr(Actions.def("sneak_attack")["effects"][0]).ends_with("+6d6"), "Attaque sournoise : 6d6 au niveau 11")
 	var rng := RandomNumberGenerator.new()
@@ -731,10 +732,10 @@ func _test_class_features() -> bool:
 func _test_inventory() -> bool:
 	_expect(Items.name_of("potion_heal") == "Potion de soins" and Items.name_of("longsword_plus_1") == "Épée longue +1",
 		"Items : objets et équipement au même endroit")
-	_expect(Items.is_equipment("cloak_of_protection") and not Items.is_equipment("potion_heal")
+	_expect(Items.is_equipment("ring_of_protection") and not Items.is_equipment("potion_heal")
 		and Items.is_usable_outside_combat("potion_heal") and not Items.is_usable_outside_combat("antidote"), "Items : catégories")
-	_expect(Equipment.slot_for("cloak_of_protection") == "cloak" and Equipment.slot_for("ring_fire_resistance") == "ring",
-		"accessoires : leur emplacement")
+	_expect(Equipment.slot_for("amulet_vigor") == "neck" and Equipment.slots_for("ring_fire_resistance") == ["ring_1", "ring_2"]
+		and Equipment.slot_for("elven_boots") == "feet", "accessoires : leur emplacement")
 
 	Game.start_life(Character.create("human", "fighter", "Porteur"), 61)
 	var life := Game.life
@@ -759,14 +760,20 @@ func _test_inventory() -> bool:
 
 	var ac := hero.armor_class()
 	var save := hero.save_mod("dex")
-	hero.add_item("cloak_of_protection")
-	life.equip(hero, "cloak_of_protection")
-	_expect(hero.armor_class() == ac + 1 and hero.save_mod("dex") == save + 1, "Cape de protection : +1 CA et sauvegardes")
-	_expect(life.unequip(hero, "cloak") and hero.armor_class() == ac and hero.item_count("cloak_of_protection") == 1,
-		"retirer : l'objet retourne dans le sac")
+	hero.add_item("ring_of_protection")
+	life.equip(hero, "ring_of_protection")
+	_expect(hero.armor_class() == ac + 1 and hero.save_mod("dex") == save + 1 and hero.equipment["ring_1"] == "ring_of_protection",
+		"Anneau de protection : +1 CA et sauvegardes")
 	hero.add_item("ring_fire_resistance")
 	life.equip(hero, "ring_fire_resistance")
-	_expect(hero.all_defenses().has(Defenses.RESISTANCE, "fire"), "anneau : résistance au feu")
+	_expect(hero.equipment["ring_2"] == "ring_fire_resistance" and hero.all_defenses().has(Defenses.RESISTANCE, "fire"),
+		"deuxième anneau : second emplacement, résistance au feu")
+	hero.add_item("ring_of_protection")
+	life.equip(hero, "ring_of_protection")
+	_expect(hero.item_count("ring_of_protection") == 1 and hero.equipment["ring_1"] == "ring_of_protection",
+		"troisième anneau : il remplace le premier")
+	_expect(life.unequip(hero, "ring_1") and hero.armor_class() == ac and hero.item_count("ring_of_protection") == 2,
+		"retirer : l'objet retourne dans le sac")
 	var hp := hero.max_hp
 	hero.add_item("amulet_vigor")
 	life.equip(hero, "amulet_vigor")
@@ -800,8 +807,15 @@ func _test_inventory() -> bool:
 	view.close_view()
 
 	var saved := Character.from_dict(JSON.parse_string(JSON.stringify(hero.to_dict())))
-	_expect(saved.equipment.get("cloak", "") == "" and saved.equipment["ring"] == "ring_fire_resistance",
+	_expect(saved.equipment["ring_2"] == "ring_fire_resistance" and saved.equipment["neck"] == "amulet_vigor",
 		"sauvegarde : accessoires équipés")
+	var old := Character.from_dict({"species_id": "human", "class_id": "fighter", "equipment": {"amulet": "amulet_vigor",
+		"ring": "ring_fire_resistance", "cloak": "x"}})
+	_expect(old.equipment == {"neck": "amulet_vigor", "ring_1": "ring_fire_resistance"}, "anciennes sauvegardes : emplacements convertis")
+
+	# Filtres et recherche de l'inventaire.
+	_expect(Items.matches("potion_heal", "consumable") and not Items.matches("potion_heal", "equipment")
+		and Items.matches("longsword", "equipment", "épée") and not Items.matches("longsword", "all", "potion"), "filtres et recherche")
 	Game.combat = null
 	return true
 
@@ -816,20 +830,37 @@ func _test_armor_strength() -> bool:
 	var fighter := Character.create("goblin", "fighter", "Fluet", {"abilities": weak})
 	_expect(fighter.equipment["armor"] == "chain_mail" and fighter.is_encumbered(),
 		"armure trop lourde : portée quand même, mais encombré")
-	_expect(fighter.encumbrance_reason("chain_mail") == "Force 14 conseillée (vous avez 8) : encombré"
+	_expect(fighter.encumbrance_reason("chain_mail") == "Force 14 conseillée (vous avez 8) : −3 aux jets de FOR et DEX"
 		and fighter.encumbrance_reason("robe") == "", "raison de l'encombrement")
 	_expect(not Character.create("goblin", "fighter", "Costaud").is_encumbered(), "guerrier au modèle (FOR 17) : pas encombré")
 
-	# Les malus viennent de rules.json › encumbered_modifiers (vides pour l'instant).
-	var backup: Array = DB.rules["encumbered_modifiers"]
-	DB.rules["encumbered_modifiers"] = [{"type": "ac", "amount": -2}, {"type": "initiative", "amount": -1}]
-	var ac := fighter.armor_class()
+	# Malus : 1 par tranche de 2 points de Force manquants (6 -> 3), sur tous les jets de FOR et DEX.
+	_expect(fighter.encumbrance_penalty() == 3 and fighter.roll_penalty("dex") == 3 and fighter.roll_penalty("int") == 0,
+		"malus proportionnel au manque de Force")
+	_expect(fighter.initiative_bonus() == fighter.ability_mod("dex") - 3 and fighter.save_mod("dex") == fighter.ability_mod("dex") - 3
+		and fighter.skill_mod("acrobatics") == fighter.ability_mod("dex") - 3
+		and fighter.attack_bonus("weapon") == fighter.ability_mod("str") + 2 - 3, "initiative, sauvegarde, compétence, attaque")
+	_expect(Dice.modifier(fighter, {"ability": "str", "dc": 10}) == fighter.ability_mod("str") - 3
+		and Dice.modifier(fighter, {"ability": "int", "dc": 10}) == fighter.ability_mod("int"), "tests d'attribut")
 	Game.start_life(fighter, 71)
 	Game.life.unequip(fighter, "armor")
-	_expect(not fighter.is_encumbered() and fighter.armor_class() == 10 + fighter.ability_mod("dex"), "sans armure : plus de malus")
-	_expect(Game.life.equip(fighter, "chain_mail") and fighter.armor_class() == ac and fighter.initiative_bonus() == fighter.ability_mod("dex") - 1,
-		"malus d'encombrement appliqués")
-	DB.rules["encumbered_modifiers"] = backup
+	_expect(not fighter.is_encumbered() and fighter.initiative_bonus() == fighter.ability_mod("dex"), "sans armure : plus de malus")
+
+	# Charge : capacité = 7,5 kg par point de Force ; 1 malus par tranche de 10 % au-delà.
+	var life := Game.life
+	_expect(is_equal_approx(life.carry_capacity(), 60.0), "capacité : FOR 8 × 7,5 kg")
+	life.refresh_load()
+	_expect(fighter.load_penalty == 0, "chargé sous sa capacité : pas de malus")
+	fighter.add_item("iron_ore", 30)  # 60 kg de plus
+	life.refresh_load()
+	var over := (life.carried_weight() - 60.0) / 60.0 * 100.0
+	_expect(fighter.load_penalty == ceili(over / 10.0) and fighter.encumbrance_penalty() == 5, "surcharge : malus plafonné à 5")
+	var mira := Character.create_companion("mira")
+	life.companions.append(mira)
+	life.refresh_load()
+	_expect(life.carry_capacity() > 60.0 and mira.load_penalty == fighter.load_penalty, "la capacité du groupe s'additionne")
+	life.drop_item("iron_ore", 30)
+	_expect(fighter.load_penalty == 0, "jeter : la charge baisse")
 	return true
 
 
@@ -872,7 +903,7 @@ func _test_damage_types() -> bool:
 	var beats: Array[Dictionary] = []
 	combat._apply(combat.hero, {"type": "attack", "weapon": true, "to_hit": 100}, target, true)
 	var lines := combat.log.slice(before)
-	_expect(lines.any(func(l): return "tranchant" in l) and lines.any(func(l): return "feu (immunité)" in l),
+	_expect(lines.any(func(l): return "tranchant" in l) and lines.any(func(l): return "feu[/color] (immunité)" in l),
 		"tranchant puis feu, chacun avec ses défenses")
 
 	# Le feu peut enflammer (chance réglée dans damage_types.json).
@@ -925,9 +956,13 @@ func _test_economy() -> bool:
 	hero.gold = 30
 	_expect(life.buy("apothecary", "potion_heal") and hero.gold == 20 and hero.item_count("potion_heal") == 2
 		and life.shop_stock("apothecary")["potion_heal"] == 3, "achat : or, sac et stock")
-	_expect(not life.sell("armorer", "potion_heal"), "l'armurier ne rachète pas les potions")
-	_expect(life.sell("apothecary", "potion_heal") and hero.gold == 25 and life.shop_stock("apothecary")["potion_heal"] == 4,
-		"revente : l'objet rejoint le stock")
+	_expect(life.sell("armorer", "potion_heal") and hero.gold == 25 and life.shop_stock("armorer")["potion_heal"] == 1,
+		"tout marchand rachète tout, et l'objet rejoint son stock")
+	DB.items["_relic"] = {"id": "_relic", "name": "Relique", "category": "treasure", "value": 50, "quest": true}
+	hero.add_item("_relic")
+	_expect(not life.sell("armorer", "_relic") and life.drop_item("_relic") == 0, "objet de quête : ni vendu ni jeté")
+	hero.remove_item("_relic")
+	DB.items.erase("_relic")
 	hero.gold = 0
 	_expect(not life.buy("armorer", "longsword"), "pas assez d'or")
 	life.shop_stock("apothecary").erase("antidote")

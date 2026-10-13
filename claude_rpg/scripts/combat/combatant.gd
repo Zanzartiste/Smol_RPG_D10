@@ -102,6 +102,11 @@ func extra_attacks() -> int:
 	return Modifiers.sum(character.modifiers(), "extra_attack") if character != null else 0
 
 
+## Test d'attribut (fuite…) : modificateur moins l'encombrement.
+func check_mod(ability_id: String) -> int:
+	return character.check_mod(ability_id) if character != null else ability_mod(ability_id)
+
+
 func initiative_bonus() -> int:
 	return character.initiative_bonus() if character != null else ability_mod("dex")
 

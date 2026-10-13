@@ -1,6 +1,6 @@
 # Cahier des charges — Lifantasy (titre provisoire)
 
-> Version 0.4 — 2026-10-12 — document vivant, à mettre à jour au fil des décisions.
+> Version 0.5 — 2026-10-13 — document vivant, à mettre à jour au fil des décisions.
 
 ---
 
@@ -262,6 +262,23 @@ Claude ne génère pas d'images lui-même. Il peut en revanche écrire le **guid
 | **Interface** | Un bouton **Inventaire** dans la fiche, qui ouvre un menu (équiper, utiliser, jeter). Un **journal** de la vie en cours. Des **options** (vitesse et désactivation des dés, taille du texte, langue). |
 | **Tests** | Versions **Windows et Web**. Le recueil des retours et le calendrier des tests sont gérés par l'auteur. |
 
+### 9.5 Décisions de la v0.5 (réponses du 2026-10-13)
+
+Le détail est dans les catalogues ([equipements.md](equipements.md), [objets.md](objets.md),
+[types_de_degats.md](types_de_degats.md), [etats.md](etats.md), [dons.md](dons.md), [competences.md](competences.md),
+[classes.md](classes.md), [especes.md](especes.md)), rubriques « Décisions ».
+
+| Sujet | Décision |
+|---|---|
+| **Commerce** | Tout marchand rachète tout (sauf les objets de quête). La Persuasion joue sur l'achat et la revente. |
+| **Encombrement** | Malus à tous les jets de FOR et DEX, proportionnel : armure trop lourde pour sa Force, et poids porté au-delà de la capacité (selon la Force). |
+| **Emplacements** | Couvre-chef, torse, gants, jambes, chaussures, collier (1), anneaux (2), plus les deux mains. |
+| **Simplicité** | Ni munitions, ni usure, ni objets périssables, ni limite d'objets magiques ; pas d'héritage d'objets en général. |
+| **Inventaire** | Objets de quête, filtres et recherche. |
+| **À venir** | Récolte de matériaux, identification, jet de compétence pour fabriquer, environnement (aussi en combat), avantage et désavantage, états hors combat, dons du SRD 5.2 en version complète, dons à choix, choix des compétences de classe, sous-classes (niveaux 1 à 3), ascendances du tieffelin (feu, froid, nécrotique). |
+| **Compétences** | Trois compétences de métier génériques : Artisanat, Arts, Potions et cuisine. Leur progression sera liée au niveau (système à trouver). |
+| **Améliorations** | Tous les 4 niveaux : un attribut **et** un don. |
+
 ## 10. Prochaines étapes proposées
 
 1. ~~Répondre aux questions ouvertes du §9.~~
@@ -287,19 +304,23 @@ Claude ne génère pas d'images lui-même. Il peut en revanche écrire le **guid
     sauvegarde maîtrisés (événements et combat). Détail dans [classes.md](classes.md). Restent pour plus tard :
     sous-classes, actions bonus, repos courts, choix des sorts.
 12. ~~**Inventaire et équipement**~~ : écran Inventaire depuis la fiche (touche I), sac du groupe partagé,
-    équipement des compagnons, emplacements cape / amulette / anneau, butin d'équipement, premiers objets magiques.
+    équipement des compagnons, 10 emplacements, poids et encombrement, filtres et recherche, objets de quête, butin
+    d'équipement, premiers objets magiques.
     Fiches de conception [types_de_degats.md](types_de_degats.md) et [etats.md](etats.md), avec leurs questions.
 13. ~~**Économie**~~ : à Brumeval, armurerie, herboristerie et forge (achat, revente, stock qui se reconstitue),
     prix négociés par la Persuasion, fabrication par recettes (forge, alchimie), amélioration +1 à +3. Fiches
     [equipements.md](equipements.md) et [objets.md](objets.md).
-14. **Temps long** : événement voyage (durée, transport, événements en route, se perdre), activités de 1, 2, 5 ou
+14. **Règles D&D à compléter** : avantage et désavantage (et les états qui en dépendent), choix des compétences
+    de classe et ascendance du tieffelin à la création, dons à choix et dons du SRD 5.2 en version complète,
+    sous-classes.
+15. **Temps long** : événement voyage (durée, transport, événements en route, se perdre), activités de 1, 2, 5 ou
     10 ans, journal de la vie.
-15. **PNJ générés progressivement** et relations : faits enregistrés, jauges, interactions sociales.
-16. **Mariage et enfants**, puis **monde autonome** (PNJ qui vieillissent, lieux qui changent).
-17. **Compagnons à la BG3** : approbation, dialogues, départ.
-18. **Métiers en sous-systèmes**, en commençant par la forge.
-19. **Multiclassage**.
-20. **Options** (dés, texte, langue) et **exports** Windows et Web dès qu'une version de test est voulue.
+16. **PNJ générés progressivement** et relations : faits enregistrés, jauges, interactions sociales.
+17. **Mariage et enfants**, puis **monde autonome** (PNJ qui vieillissent, lieux qui changent).
+18. **Compagnons à la BG3** : approbation, dialogues, départ.
+19. **Métiers en sous-systèmes**, en commençant par la forge.
+20. **Multiclassage**.
+21. **Options** (dés, texte, langue) et **exports** Windows et Web dès qu'une version de test est voulue.
 
 ## 11. Backlog (idées validées, non prioritaires)
 

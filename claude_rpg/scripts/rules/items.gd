@@ -10,6 +10,7 @@ extends RefCounted
 ## very_rare, legendary). Un objet de items.json a une "category" : consumable, material, treasure ;
 ## l'équipement garde la sienne (weapon, armor, shield, accessory).
 ## Un consommable a "use": {"heal"?: "2d4+2", "cleanse"?: "poisoned", "target": "ally"}.
+## "weight" : poids en kg (voir l'encombrement). "quest": true : objet de quête, ni vendu ni jeté.
 
 const RARITIES := ["common", "uncommon", "rare", "very_rare", "legendary"]
 const RARITY_NAMES := {
@@ -43,6 +44,37 @@ static func name_of(id: String) -> String:
 
 static func description_of(id: String) -> String:
 	return def(id).get("description", "")
+
+
+static func weight_of(id: String) -> float:
+	return float(def(id).get("weight", 0.0))
+
+
+static func is_quest(id: String) -> bool:
+	return def(id).get("quest", false)
+
+
+## Filtres de l'inventaire : id -> {name, categories}.
+const FILTERS := {
+	"all": {"name": "Tout", "categories": []},
+	"equipment": {"name": "Équipement", "categories": ["weapon", "armor", "shield", "accessory"]},
+	"consumable": {"name": "Consommables", "categories": ["consumable"]},
+	"material": {"name": "Matériaux", "categories": ["material"]},
+	"treasure": {"name": "Trésors", "categories": ["treasure"]},
+	"quest": {"name": "Quête", "categories": []},
+}
+
+
+## L'objet passe-t-il le filtre et la recherche (texte contenu dans le nom, sans casse) ?
+static func matches(id: String, filter: String, search := "") -> bool:
+	if search != "" and not name_of(id).to_lower().contains(search.to_lower()):
+		return false
+	match filter:
+		"all":
+			return true
+		"quest":
+			return is_quest(id)
+	return category_of(id) in FILTERS.get(filter, {}).get("categories", [])
 
 
 static func value_of(id: String) -> int:

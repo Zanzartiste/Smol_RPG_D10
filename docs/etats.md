@@ -145,17 +145,15 @@ l'**avantage et le désavantage** (lancer deux d20 et garder le meilleur ou le p
 
 ---
 
+## Décisions (2026-10-13)
+
+- **Charges partout** : chaque état utilise ses charges à sa façon (dégâts, tours passés, absorption…).
+- **Avantage et désavantage** : oui, à ajouter au combat (prochaine étape des états).
+- **États hors combat** (maladies, malédictions, fatigue…) : oui, à terme.
+- **Jet de sauvegarde** : généralement, un état infligé en permet un.
+
 ## Questions ouvertes
 
-1. **Charges ou durée** : on garde le système de charges (à la PokeRogue / Slay the Spire) pour tous les états, ou
-   certains états D&D gardent une durée en rounds avec un jet de sauvegarde à chaque tour pour s'en débarrasser ?
-2. **Avantage / désavantage** : faut-il l'ajouter au combat ? C'est nécessaire pour la plupart des états du SRD
-   (Aveuglé, À terre, Entravé, Invisible…).
-3. **États hors combat** : maladies, malédictions, fatigue, ivresse, blessures graves… qui durent des jours et se
-   soignent par des événements, du repos ou un guérisseur ? Ils rejoindraient le temps long (voyages, années).
-4. **Combien d'états** : une petite liste lisible (une dizaine), ou toute la liste du SRD plus les idées propres au jeu ?
-5. **Résistances aux états** : uniquement des immunités (tout ou rien), ou aussi une résistance (moitié des charges) ?
-6. **Jets de sauvegarde** : un état infligé doit-il toujours permettre une sauvegarde (comme dans D&D), ou seulement
-   certains ? Aujourd'hui, seul le Brûlure de Mains brûlantes en dépend.
-7. **Lien avec les types de dégâts** : voir la question 6 de [types_de_degats.md](types_de_degats.md).
-8. **Icônes** : une icône par état en plus de la couleur ?
+1. **Combien d'états** : pas encore décidé.
+2. **Résistance aux états** (moitié des charges) en plus de l'immunité : pas encore décidé.
+3. **Icônes** : une icône par état en plus de la couleur ?

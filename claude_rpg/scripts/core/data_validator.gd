@@ -184,7 +184,7 @@ static func _validate_classes(db: Node, errors: Array[String]) -> void:
 				errors.append(ctx + " : emplacement inconnu « %s » (attendu %s)" % [slot, Equipment.SLOTS])
 			elif not db.equipment.has(equipment[slot]):
 				errors.append(ctx + " : équipement inconnu « %s »" % equipment[slot])
-			elif Equipment.slot_for(equipment[slot]) != slot:
+			elif slot not in Equipment.slots_for(equipment[slot]):
 				errors.append(ctx + " : « %s » ne va pas dans l'emplacement « %s »" % [equipment[slot], slot])
 		for ability_id in cls.get("saving_throws", []):
 			_expect_ref(db.abilities, ability_id, "attribut (saving_throws)", ctx, errors)
@@ -583,9 +583,6 @@ static func _validate_economy(db: Node, errors: Array[String]) -> void:
 	for shop: Dictionary in db.shops.values():
 		var ctx := "shops.json › %s" % shop["id"]
 		_expect_ref(db.locations, shop.get("location"), "lieu", ctx, errors)
-		for category in shop.get("buys", []):
-			if category not in Items.CATEGORIES:
-				errors.append(ctx + " : catégorie achetée inconnue « %s » (%s)" % [category, Items.CATEGORIES])
 		for item_id: String in shop.get("stock", {}):
 			_expect_item(db, item_id, ctx, errors)
 		if shop.has("crafting"):

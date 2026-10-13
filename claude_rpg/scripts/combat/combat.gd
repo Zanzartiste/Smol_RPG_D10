@@ -252,7 +252,7 @@ func use_item(actor: Combatant, item_id: String, target: Combatant) -> Array[Dic
 ## Tentative de fuite du groupe : d20 + DEX contre le DD de fuite.
 func flee(actor: Combatant) -> Array[Dictionary]:
 	var die := rng.randi_range(1, 20)
-	var mod := actor.ability_mod("dex")
+	var mod := actor.check_mod("dex")
 	var success := die == 20 or (die != 1 and die + mod >= flee_dc())
 	actions_left = 0
 	var beats: Array[Dictionary] = []
@@ -519,7 +519,7 @@ func _roll_damage(actor: Combatant, target: Combatant, expr: String, type: Strin
 	if not notes.is_empty():
 		text += " (%s)" % ", ".join(notes)
 	if type != "":
-		text += " " + DamageTypes.name_of(type).to_lower()
+		text += " " + DamageTypes.bbcode_name(type)
 	text += dealt["suffix"] + inflicted
 	var label := Loc.ui("Dégâts (%s %s)") % [expr, DamageTypes.name_of(type).to_lower()] if type != "" else Loc.ui("Dégâts (%s)") % expr
 	_beat(beats, text, {"dice": roll["dice"], "mod": roll["bonus"], "stat": label}, true)

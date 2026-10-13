@@ -7,16 +7,24 @@
 
 ## Règles générales
 
-- **Emplacements** : main principale, main secondaire, armure, cape, amulette, anneau.
+- **Emplacements** : main principale, main secondaire, couvre-chef, torse (armure, avec bras et épaules), gants,
+  jambes, chaussures, collier (1), anneaux (2).
 - **Armes** : la FOR sert à l'attaque et aux dégâts ; une arme de finesse prend le meilleur de FOR et DEX, une arme
   à distance la DEX. Une arme polyvalente fait plus de dégâts à deux mains (sans bouclier). Une arme à deux mains et
   un bouclier s'excluent.
 - **Armures** : CA de base + DEX (vêtement et légère), + DEX plafonnée à 2 (intermédiaire), sans DEX (lourde).
   Toute armure peut être portée, mais sous la **Force conseillée** (vêtement 0, légère 10, intermédiaire 12,
-  lourde 14) le personnage est **encombré** (malus à définir).
+  lourde 14) le personnage est **encombré**.
+- **Encombrement** : un malus à **tous les jets de FOR et de DEX** (attaques, sauvegardes, tests, initiative, fuite),
+  qui dépend de l'importance de l'encombrement :
+  - armure trop lourde : −1 par tranche de 2 points de Force manquants ;
+  - charge : chaque objet a un **poids** (kg). Le groupe peut porter 7,5 kg par point de Force de chaque membre
+    (sac partagé + objets portés) ; au-delà, −1 par tranche de 10 % de surcharge ;
+  - les deux se cumulent, avec un maximum de −5 (réglages : `rules.json › encumbrance`).
 - **Plusieurs types de dégâts** : une arme peut ajouter des dégâts d'un autre type (Langue de feu : tranchant + feu).
-- **Prix** : environ un cinquième des prix du SRD, pour que la potion de soins coûte 10 po. Revente à 50 %,
-  ajustée par la Persuasion du meilleur négociateur du groupe (jusqu'à ±15 %).
+- **Prix** : environ un cinquième des prix du SRD, pour que la potion de soins coûte 10 po. **Tout marchand rachète
+  tout** (sauf les objets de quête), à 50 % de la valeur. La Persuasion du meilleur négociateur du groupe ajuste les
+  prix d'achat **et** de revente (jusqu'à ±15 %).
 - **Forge** :
   - **Amélioration** d'une arme, d'une armure (pas d'un vêtement) ou d'un bouclier ordinaire : +1 (50 po), +2 (150 po),
     +3 (400 po). +N au toucher et aux dégâts pour une arme, +N à la CA sinon. Les objets déjà magiques ne
@@ -31,12 +39,13 @@
 ```markdown
 ### <Nom> (`<id>`)
 
-- **Catégorie** : arme / armure / bouclier / accessoire (cape, amulette, anneau).
+- **Catégorie** : arme / armure (torse) / bouclier / accessoire (couvre-chef, gants, jambes, chaussures, collier, anneau).
 - **Dégâts** (arme) : ex. 1d8 tranchant (+ 1d6 feu).
 - **Propriétés** (arme) : finesse, légère, lancer, polyvalente (1d10), lourde, à deux mains, à distance.
 - **Type et CA** (armure) : vêtement / légère / intermédiaire / lourde, CA de base.
 - **Force conseillée** (armure) : si différente de celle du type.
 - **Effets** : bonus, résistances… (objets magiques).
+- **Poids** : en kg.
 - **Rareté** : commun / peu commun / rare / très rare / légendaire.
 - **Valeur** : en po.
 - **Où le trouver** : boutique, forge, butin, événement, quête…
@@ -56,6 +65,7 @@
 
 - **Dégâts** : 1d4 contondant.
 - **Propriétés** : légère.
+- **Poids** : 1 kg.
 - **Valeur** : 1 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald.
 
@@ -63,6 +73,7 @@
 
 - **Dégâts** : 1d4 perforant.
 - **Propriétés** : finesse, légère, lancer.
+- **Poids** : 0.5 kg.
 - **Valeur** : 1 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald, fabriqué (forge), butin : Brigand (30 %).
 
@@ -70,6 +81,7 @@
 
 - **Dégâts** : 1d6 contondant.
 - **Propriétés** : polyvalente (1d8).
+- **Poids** : 2 kg.
 - **Valeur** : 1 po.
 - **Où le trouver** : départ : Magicien.
 
@@ -77,6 +89,7 @@
 
 - **Dégâts** : 1d6 contondant.
 - **Propriétés** : aucune.
+- **Poids** : 2 kg.
 - **Valeur** : 1 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald.
 
@@ -84,6 +97,7 @@
 
 - **Dégâts** : 1d6 tranchant.
 - **Propriétés** : légère, lancer.
+- **Poids** : 1 kg.
 - **Valeur** : 1 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald, fabriqué (forge).
 
@@ -91,6 +105,7 @@
 
 - **Dégâts** : 1d6 perforant.
 - **Propriétés** : finesse, légère.
+- **Poids** : 1 kg.
 - **Valeur** : 2 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald, fabriqué (forge), butin : Brigand (15 %).
 
@@ -98,6 +113,7 @@
 
 - **Dégâts** : 1d6 tranchant.
 - **Propriétés** : finesse, légère.
+- **Poids** : 1.5 kg.
 - **Valeur** : 5 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald.
 
@@ -105,6 +121,7 @@
 
 - **Dégâts** : 1d8 perforant.
 - **Propriétés** : finesse.
+- **Poids** : 1 kg.
 - **Valeur** : 5 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald, départ : Roublard.
 
@@ -112,6 +129,7 @@
 
 - **Dégâts** : 1d8 tranchant.
 - **Propriétés** : polyvalente (1d10).
+- **Poids** : 1.5 kg.
 - **Valeur** : 3 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald, fabriqué (forge), départ : Guerrier.
 
@@ -119,6 +137,7 @@
 
 - **Dégâts** : 1d12 tranchant.
 - **Propriétés** : lourde, à deux mains.
+- **Poids** : 3.5 kg.
 - **Valeur** : 6 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald, butin : Colosse tatoué (25 %).
 
@@ -126,6 +145,7 @@
 
 - **Dégâts** : 1d6 perforant.
 - **Propriétés** : à distance, à deux mains.
+- **Poids** : 1 kg.
 - **Valeur** : 5 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald.
 
@@ -133,6 +153,7 @@
 
 - **Dégâts** : 1d8 perforant.
 - **Propriétés** : à distance, lourde, à deux mains.
+- **Poids** : 1 kg.
 - **Valeur** : 10 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald.
 
@@ -145,6 +166,7 @@
 - **Type** : vêtement.
 - **CA** : 10 + DEX.
 - **Force conseillée** : aucune.
+- **Poids** : 1.5 kg.
 - **Valeur** : 1 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald.
 
@@ -153,6 +175,7 @@
 - **Type** : vêtement.
 - **CA** : 10 + DEX.
 - **Force conseillée** : aucune.
+- **Poids** : 2 kg.
 - **Valeur** : 2 po.
 - **Où le trouver** : départ : Magicien.
 
@@ -161,6 +184,7 @@
 - **Type** : légère.
 - **CA** : 11 + DEX.
 - **Force conseillée** : 10.
+- **Poids** : 4 kg.
 - **Valeur** : 1 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald.
 
@@ -169,6 +193,7 @@
 - **Type** : légère.
 - **CA** : 11 + DEX.
 - **Force conseillée** : 10.
+- **Poids** : 5 kg.
 - **Valeur** : 2 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald, départ : Roublard.
 
@@ -177,6 +202,7 @@
 - **Type** : légère.
 - **CA** : 12 + DEX.
 - **Force conseillée** : 10.
+- **Poids** : 6.5 kg.
 - **Valeur** : 9 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald, fabriqué (forge), butin : Brigand (10 %).
 
@@ -185,6 +211,7 @@
 - **Type** : intermédiaire.
 - **CA** : 12 + DEX (max 2).
 - **Force conseillée** : 12.
+- **Poids** : 6 kg.
 - **Valeur** : 2 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald.
 
@@ -193,6 +220,7 @@
 - **Type** : intermédiaire.
 - **CA** : 13 + DEX (max 2).
 - **Force conseillée** : 12.
+- **Poids** : 10 kg.
 - **Valeur** : 10 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald, fabriqué (forge).
 
@@ -201,6 +229,7 @@
 - **Type** : intermédiaire.
 - **CA** : 14 + DEX (max 2).
 - **Force conseillée** : 12.
+- **Poids** : 10 kg.
 - **Valeur** : 80 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald.
 
@@ -209,6 +238,7 @@
 - **Type** : lourde.
 - **CA** : 16.
 - **Force conseillée** : 14.
+- **Poids** : 27 kg.
 - **Valeur** : 15 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald, départ : Guerrier.
 
@@ -217,6 +247,7 @@
 - **Type** : lourde.
 - **CA** : 18.
 - **Force conseillée** : 14.
+- **Poids** : 32 kg.
 - **Valeur** : 300 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald.
 
@@ -227,6 +258,7 @@
 ### Bouclier (`shield`)
 
 - **CA** : +2.
+- **Poids** : 3 kg.
 - **Valeur** : 2 po.
 - **Où le trouver** : vendu par Armurerie de Gorvald.
 
@@ -239,6 +271,7 @@
 - **Dégâts** : 1d8 tranchant.
 - **Propriétés** : polyvalente (1d10).
 - **Effets** : +1 au toucher, +1 aux dégâts.
+- **Poids** : 1.5 kg.
 - **Rareté** : peu commun.
 - **Valeur** : 120 po.
 - **Où le trouver** : aucune pour l'instant (événements à écrire).
@@ -248,6 +281,7 @@
 
 - **Dégâts** : 1d8 tranchant + 2d6 feu.
 - **Propriétés** : polyvalente (1d10).
+- **Poids** : 1.5 kg.
 - **Rareté** : rare.
 - **Valeur** : 400 po.
 - **Où le trouver** : aucune pour l'instant (événements à écrire).
@@ -258,6 +292,7 @@
 - **Dégâts** : 1d4 perforant.
 - **Propriétés** : finesse, légère, lancer.
 - **Effets** : +1 au toucher, +1 aux dégâts.
+- **Poids** : 0.5 kg.
 - **Rareté** : peu commun.
 - **Valeur** : 80 po.
 - **Où le trouver** : aucune pour l'instant (événements à écrire).
@@ -269,24 +304,27 @@
 - **CA** : 12 + DEX.
 - **Force conseillée** : 10.
 - **Effets** : +1 CA.
+- **Poids** : 6.5 kg.
 - **Rareté** : peu commun.
 - **Valeur** : 120 po.
 - **Où le trouver** : aucune pour l'instant (événements à écrire).
 - **Description** : Un cuir enchanté, souple comme une seconde peau.
 
-### Cape de protection (`cloak_of_protection`)
+### Anneau de protection (`ring_of_protection`)
 
-- **Emplacement** : cape.
+- **Emplacement** : anneau.
 - **Effets** : +1 CA, +1 aux jets de sauvegarde.
+- **Poids** : 0 kg.
 - **Rareté** : peu commun.
 - **Valeur** : 150 po.
 - **Où le trouver** : butin : Alpha des loups (100 %).
-- **Description** : Une cape grise qui détourne les coups et les sortilèges.
+- **Description** : Un anneau d'argent qui détourne les coups et les sortilèges.
 
 ### Anneau de résistance au feu (`ring_fire_resistance`)
 
 - **Emplacement** : anneau.
 - **Effets** : résistance au feu.
+- **Poids** : 0 kg.
 - **Rareté** : rare.
 - **Valeur** : 200 po.
 - **Où le trouver** : aucune pour l'instant (événements à écrire).
@@ -294,12 +332,33 @@
 
 ### Amulette de vigueur (`amulet_vigor`)
 
-- **Emplacement** : amulette.
+- **Emplacement** : collier.
 - **Effets** : +1 PV par niveau.
+- **Poids** : 0.2 kg.
 - **Rareté** : peu commun.
 - **Valeur** : 100 po.
 - **Où le trouver** : aucune pour l'instant (événements à écrire).
 - **Description** : Un pendentif de chêne qui bat comme un cœur.
+
+### Gantelets de puissance d'ogre (`gauntlets_ogre_power`)
+
+- **Emplacement** : gants.
+- **Effets** : +2 FOR.
+- **Poids** : 1 kg.
+- **Rareté** : rare.
+- **Valeur** : 300 po.
+- **Où le trouver** : aucune pour l'instant (événements à écrire).
+- **Description** : De lourds gantelets cloutés qui décuplent la poigne.
+
+### Bottes elfiques (`elven_boots`)
+
+- **Emplacement** : chaussures.
+- **Effets** : maîtrise de Discrétion.
+- **Poids** : 0.5 kg.
+- **Rareté** : peu commun.
+- **Valeur** : 100 po.
+- **Où le trouver** : aucune pour l'instant (événements à écrire).
+- **Description** : Des bottes souples dont les pas ne font aucun bruit.
 
 ---
 
@@ -327,21 +386,25 @@
 
 ### Accessoires
 
-- Bottes, gants, ceinture, casque : de nouveaux emplacements ?
+- Casques, chapeaux, capuches ; gants et gantelets ; jambières ; bottes ; colliers et amulettes ; anneaux.
 
 ### Objets magiques du SRD à envisager
 
-- Bottes elfiques, cape elfique, anneau de protection, sac sans fond, baguette de projectiles magiques, bâton de feu,
-  amulette de santé, gantelets de puissance d'ogre…
+- Cape elfique (quel emplacement ?), sac sans fond (capacité de charge), baguette de projectiles magiques, bâton de
+  feu, amulette de santé, heaume de télépathie…
 
 ---
 
+## Décisions (2026-10-13)
+
+- Emplacements : couvre-chef, torse, gants, jambes, chaussures, collier (1), anneaux (2). La cape a disparu ; la Cape
+  de protection est devenue l'Anneau de protection.
+- Pas de règle spéciale pour les armes à distance pour l'instant.
+- Ni munitions ni usure.
+- Pas de limite au nombre d'objets magiques portés.
+- Améliorations élémentaires à la forge : plus tard.
+
 ## Questions ouvertes
 
-1. **Nouveaux emplacements** : casque, gants, bottes, ceinture ? Deux anneaux comme dans D&D ?
-2. **Armes à distance** : sans positionnement, une arme à distance n'a pas d'avantage particulier. Lui en donner un
-   (attaquer en premier, ne pas subir de riposte…) ?
-3. **Munitions** : flèches et carreaux à gérer, ou ignorés ?
-4. **Usure et réparation** : l'équipement s'abîme-t-il (et la forge le répare) ?
-5. **Harmonisation** : faut-il limiter le nombre d'objets magiques portés (3 dans D&D) ?
-6. **Amélioration** : +3 au maximum ; faut-il aussi des améliorations élémentaires (ajouter du feu à une arme) ?
+1. **Capes** : elles reviennent comme couche par-dessus le torse, ou elles restent absentes ?
+2. **Colliers et anneaux** : on garde 1 collier et 2 anneaux, ou on autorise davantage ?

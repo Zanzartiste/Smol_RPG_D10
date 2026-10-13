@@ -18,8 +18,11 @@
   sous-systèmes d'artisanat, de cuisine…).
 - ⚠️ Licence : les classes du SRD 5.1 sont réutilisables (CC-BY 4.0). Les autres (Artificier, Alchimiste…) doivent
   être **conçues par nous**, sans recopier un livre hors SRD.
-- **Pas encore géré** : sous-classes (et leur choix), actions bonus, réactions autres que l'Esquive instinctive, repos
-  courts, choix des sorts appris (ils sont donnés par les aptitudes).
+- **Sous-classes** : choisies entre les niveaux 1 et 3 selon la classe (décision du 2026-10-13).
+- **Compétences de classe** : le joueur les choisira à la création dans une liste propre à la classe, comme dans D&D
+  (décision du 2026-10-13, à faire).
+- **Pas encore géré** : sous-classes (et leur choix), choix des compétences, actions bonus, réactions autres que
+  l'Esquive instinctive, repos courts, choix des sorts appris (ils sont donnés par les aptitudes).
 
 ---
 

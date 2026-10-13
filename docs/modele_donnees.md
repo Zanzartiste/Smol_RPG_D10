@@ -396,16 +396,17 @@ Les dons, les espèces et les équipements peuvent porter des `modifiers`. Ils s
 | `weapon` | `damage`, `damage_type`, `properties` (`finesse`, `light`, `thrown`, `versatile`, `heavy`, `two_handed`, `ranged`), `versatile_damage` pour une arme polyvalente |
 | `armor` | `armor_type` (`clothing` et `light` : base + DEX, `medium` : base + DEX max 2, `heavy` : base seule), `base_ac`, `strength`? (Force requise, voir ci-dessous) |
 | `shield` | `ac_bonus` |
-| `accessory` | `slot` : `cloak` (cape), `amulet` (amulette) ou `ring` (anneau) |
+| `accessory` | `slot` : `head` (couvre-chef), `hands` (gants), `legs` (jambes), `feet` (chaussures), `neck` (collier) ou `ring` (anneau : `ring_1`, ou `ring_2` si le premier est pris) |
 
-Champs communs facultatifs : `modifiers`, `rarity` (`common`, `uncommon`, `rare`, `very_rare`, `legendary`, qui donne
-la couleur du nom), `value` (prix en po), `description`.
+Champs communs : `weight` (kg) ; facultatifs : `modifiers`, `rarity` (`common`, `uncommon`, `rare`, `very_rare`,
+`legendary`, qui donne la couleur du nom), `value` (prix en po), `description`.
 
 **Objets magiques** : ce sont des équipements avec des `modifiers`. Par exemple, une épée +1 porte
-`[{"type": "weapon_attack", "amount": 1}, {"type": "weapon_damage", "amount": 1}]`, et la Cape de protection
+`[{"type": "weapon_attack", "amount": 1}, {"type": "weapon_damage", "amount": 1}]`, et l'Anneau de protection
 `[{"type": "ac", "amount": 1}, {"type": "saving_throws", "amount": 1}]`.
 
-**Emplacements** : main principale, main secondaire, armure, cape, amulette, anneau (`Equipment.SLOTS`).
+**Emplacements** (`Equipment.SLOTS`) : `main_hand`, `off_hand`, `head`, `armor` (torse), `hands`, `legs`, `feet`,
+`neck`, `ring_1`, `ring_2`. Les anciennes sauvegardes sont converties (`amulet` → `neck`, `ring` → `ring_1`).
 
 ### Sac et inventaire
 
@@ -415,20 +416,26 @@ la couleur du nom), `value` (prix en po), `description`.
   `use_item`, `drop_item`). Il n'y a pas de restriction de maîtrise d'armure pour l'instant.
 - Hors combat, seuls les objets de soins sont utilisables. L'Antidote ne sert qu'en combat.
 - **Écran** : bouton « Inventaire (I) » sous la fiche (hors combat), avec l'équipement du membre choisi à gauche et le
-  sac à droite (Équiper, Retirer, Utiliser, Jeter).
+  sac à droite (Équiper, Retirer, Utiliser, Jeter), des filtres par catégorie, une recherche et la charge du groupe.
+- **Objets de quête** (`"quest": true` dans `items.json`) : ni vendus ni jetés.
 - **Butin** : les créatures peuvent lâcher de l'équipement (`loot`), comme le brigand (dague, épée courte, cuir
-  clouté) ou l'Alpha (Cape de protection). L'effet `equip` range l'objet remplacé dans le sac.
+  clouté) ou l'Alpha (Anneau de protection). L'effet `equip` range l'objet remplacé dans le sac.
 
 **Règles appliquées :**
 - Une arme de finesse utilise le meilleur de FOR et DEX, une arme à distance utilise la DEX.
 - Une arme polyvalente tenue sans bouclier fait ses dégâts à deux mains.
 - Une arme à deux mains et un bouclier s'excluent.
 - L'entrée `unarmed` (mains nues) est obligatoire.
-- **Force et encombrement** : toute armure peut être portée. Chaque type a une Force conseillée
-  (`rules.json › armor_strength`) : vêtements 0, légère 10, intermédiaire 12, lourde 14 ; un objet peut la redéfinir
-  avec `strength`. En dessous, le personnage est **encombré** et reçoit les modificateurs de
-  `rules.json › encumbered_modifiers` (liste vide pour l'instant : les malus restent à décider), par exemple
-  `[{"type": "ac", "amount": -1}, {"type": "initiative", "amount": -2}]`. La fiche et l'inventaire le signalent.
+- **Force et encombrement** (`rules.json › encumbrance`) : toute armure peut être portée. Le malus d'encombrement
+  s'applique à **tous les jets de FOR et de DEX** (attaques, sauvegardes, tests de compétence et d'attribut,
+  initiative, fuite). Il cumule, avec un maximum de `max_penalty` (5) :
+  - l'**armure** : chaque type a une Force conseillée (`armor_strength` : vêtements 0, légère 10, intermédiaire 12,
+    lourde 14 ; un objet peut la redéfinir avec `strength`) ; −1 par tranche de `armor_points_per_penalty` (2)
+    points de Force manquants ;
+  - la **charge** : le groupe porte le sac et tout son équipement ; sa capacité est la somme de
+    `carry_per_strength` (7,5 kg) × Force de chaque membre ; au-delà, −1 par tranche de
+    `overload_percent_per_penalty` (10) % de surcharge, pour tout le groupe (`LifeState.refresh_load`).
+  La fiche, l'inventaire (charge / capacité) et le combat en tiennent compte.
 
 ### Défenses
 
@@ -454,7 +461,6 @@ Calcul des dégâts subis :
 |---|---|
 | `location` | Lieu où elle se trouve. Un lieu qui a des boutiques ouvre un **menu** (se promener = événement au hasard, entrer dans une boutique, retour) au lieu de tirer directement un événement. Entrer dans une boutique ne fait pas passer le temps |
 | `stock` | `{id: quantité}`, reconstitué tous les `restock_days` jours. Ce que le joueur vend rejoint le stock |
-| `buys` | Catégories rachetées : `weapon`, `armor`, `shield`, `accessory`, `consumable`, `material`, `treasure` |
 | `price_rate` | Multiplicateur des prix d'achat (1.0) |
 | `crafting`? | Station de fabrication (`forge`, `alchemy`) : recettes de `recipes.json` |
 | `upgrade`? | `true` : la boutique améliore armes, armures et boucliers |
@@ -466,7 +472,8 @@ L'état des boutiques (stock, jour du dernier réassort) est sauvegardé avec la
 - Achat : valeur × `price_rate` × (1 − remise), au moins 1 po.
 - Revente : valeur × `sell_rate` (0,5) × (1 + remise), au moins 1 po si l'objet a de la valeur.
 - Remise : `percent_per_point` (3) % par point de `price_skill` (Persuasion) du **meilleur négociateur du groupe**,
-  entre −`max_percent` et +`max_percent` (15 %).
+  entre −`max_percent` et +`max_percent` (15 %). Elle joue sur l'achat comme sur la revente.
+- **Tout marchand rachète tout** ce qui a de la valeur, sauf les objets de quête.
 
 ### Recettes (`recipes.json`)
 

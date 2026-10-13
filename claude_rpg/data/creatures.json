@@ -51,7 +51,7 @@
 			}
 		],
 		"xp": 200,
-		"loot": [{"item": "wolf_pelt", "chance": 1.0, "count": 2}, {"item": "cloak_of_protection", "chance": 1.0}],
+		"loot": [{"item": "wolf_pelt", "chance": 1.0, "count": 2}, {"item": "ring_of_protection", "chance": 1.0}],
 		"death_cause": "Dévoré par l'alpha des loups",
 		"art": {"type": "wolf", "fur": "#3c3a40", "belly": "#6a6670", "eyes": "#e0402a"}
 	},
