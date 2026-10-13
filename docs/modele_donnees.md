@@ -515,6 +515,29 @@ matériaux et l'or sont pris dans le sac du groupe.
 Les API correspondantes sont `Shops` (boutiques et prix), `Crafting` (recettes et amélioration) et `Items`
 (objets du sac, avec leur `category`).
 
+## Social : PNJ, relations, monde autonome
+
+Le détail de conception est dans [social.md](social.md). Données : `npc_roles.json`, `traits.json`,
+`npc_facts.json`, `social_actions.json`, `rules.json › social`. API : `Social` ; modèle : `Npc`.
+
+| Fichier | Contenu |
+|---|---|
+| `npc_roles.json` | `{"id", "name", "location", "regular"? (habitué créé à la première visite), "searchable"? (on peut le chercher), "fixed"? ({name, species, gender, age}), "shop"? (sa boutique), "class"? (recrutable), "inventory"?, "gold"? (dés), "foreign_chance"?, "art"}` |
+| `traits.json` | `{"id", "name", "description", "hidden"?, "reactions": {action: {"dc"?, "gain"?}}, "refuses"?: [actions], "likes"?: [catégories], "jealousy"?}` |
+| `npc_facts.json` | `{"id", "name", "values": [textes avec {npc}, {g:…}], "creates_relative"?}` |
+| `social_actions.json` | `{"id", "name", "category": friendly \| romantic \| hostile \| special, "requires"? ({friendship, love, trust, status, not_status}), "check"? ({skill, ability?, dc \| vs}), "romantic"?, "special"? (reveal_fact, trade, recruit, gestures, child, break_up), "success"/"failure" ({friendship, love, trust, reputation, set, fear}), "lines"}` |
+
+- **Monde** (`Meta`, sauvegardé avec la méta) : `npcs` (id -> `Npc`), `world_day` (horloge du monde, toutes vies
+  confondues), `pregnancies`, `next_npc_id`. Chaque nouveau jour : `Social.daily_tick` (liens et couples entre PNJ,
+  rumeurs, naissances).
+- **Relation avec le héros** : `Npc.player` (`met`, `friendship`, `love`, `trust`, `status`, `open`, `fear`), remise à
+  zéro à chaque nouvelle vie ; les souvenirs (`memories`) restent.
+- **Vie** (`LifeState`) : `reputation` par lieu.
+- **Événements** : un choix (ou son issue) peut porter `"approval": {"mira": 2}` (approbation des compagnons).
+- **Interface** : « Parler à quelqu'un » dans le menu d'un lieu, fenêtres `SocialView` (dialogue), `NpcTradeView`
+  (échange), `CarnetView` (carnet, touche C). Quitter une conversation après une action fait passer un créneau
+  (`Game.end_interaction`).
+
 ## Flags : conventions
 
 - **Flags de vie** (`set_flag`) : l'état de l'histoire du personnage actuel. Par exemple `quest_herbs_accepted` ou

@@ -318,7 +318,12 @@ Le détail est dans les catalogues ([equipements.md](equipements.md), [objets.md
     plusieurs attributs possibles (le meilleur par défaut, option pour choisir), compétences d'armes et de Magie
     pour les attaques et le DD des sorts, langues, Perception passive, actions communes (Se cacher, Intimider,
     Premiers soins), rangs des créatures. Détail dans [competences.md](competences.md).
-14 ter. **Interactions sociales** : à concevoir (questions posées le 2026-10-13).
+14 ter. ~~**Interactions sociales**~~ : PNJ du monde générés progressivement (habitués, gardes et villageois à
+    chercher), traits, goûts, humeur, faits révélés, souvenirs entre les vies ; jauges Amitié / Amour / Confiance,
+    statuts, réputation par lieu ; dialogue à la Sims, échange à la BG3 (acheter, vendre, offrir, demander) ;
+    romance (couple, relation libre, polyamour, fiançailles, mariage, enfants, rupture, jalousie) ; monde autonome
+    (liens, couples, rumeurs, naissances) ; langues cryptées ; approbation et recrutement des compagnons ; carnet.
+    Détail dans [social.md](social.md). Aussi : initiative lancée en une fois.
 15. **Temps long** : événement voyage (durée, transport, événements en route, se perdre), activités de 1, 2, 5 ou
     10 ans, journal de la vie.
 16. **PNJ générés progressivement** et relations : faits enregistrés, jauges, interactions sociales.
