@@ -11,6 +11,7 @@ var background_id := ""  # passé ("" = aucun)
 var gender := ""  # sans effet sur l'apparence ; sert aux accords dans les textes
 var abilities: Dictionary = {}  # valeurs de base (achat de points, vieillesse…) ; voir ability_score()
 var feats: Array[String] = []  # dons
+var choices: Dictionary = {}  # « source/id du choix » -> valeurs choisies (voir Choices)
 var pending_feats := 0  # dons à choisir (gagnés en montant de niveau)
 var pending_ability_points := 0  # points d'attribut à répartir (gagnés en montant de niveau)
 var equipment: Dictionary = {}  # emplacement (Equipment.SLOTS) -> id d'équipement
@@ -29,7 +30,8 @@ var load_penalty := 0  # malus de charge du groupe (calculé par LifeState.refre
 var resources: Dictionary = {}  # ressources restantes (spell_slot_1…, indomitable…), rechargées par un repos long
 
 
-## Options : "abilities" (scores, sinon modèle de la classe), "background", "gender".
+## Options : "abilities" (scores, sinon modèle de la classe), "background", "gender",
+## "choices" ({clé: valeurs} pour les choix faits à la création ; sinon leurs valeurs par défaut).
 static func create(species: String, cls: String, char_name: String, options: Dictionary = {}) -> Character:
 	var c := Character.new()
 	c.species_id = species
@@ -49,7 +51,11 @@ static func create(species: String, cls: String, char_name: String, options: Dic
 	if background_feat != "":
 		c.feats.append(background_feat)
 	c.equipment = class_data.get("equipment", {}).duplicate()
-	c.pending_feats += int(DB.species[species].get("bonus_feats", 0))  # ex. don en plus des humains
+	var given: Dictionary = options.get("choices", {})
+	for key: String in given:
+		for value: String in given[key]:
+			c.choose(key, value)
+	c.apply_default_choices(true)
 
 
 	c.max_hp = c.compute_max_hp()
@@ -91,6 +97,7 @@ static func create_companion(companion_id: String) -> Character:
 		c.feats.append(feat_id)
 	c.level = int(t.get("level", 1))
 	c.xp = Progression.xp_for(c.level)
+	c.complete_all_choices()  # un compagnon arrive avec ses choix déjà faits
 	c.max_hp = c.compute_max_hp()
 	c.hp = c.max_hp
 	c.resources = c.max_resources()
@@ -109,6 +116,8 @@ func modifiers() -> Array:
 	result.append_array(DB.species[species_id].get("modifiers", []))
 	for feature: Dictionary in features():
 		result.append_array(feature.get("modifiers", []))
+	for entry: Dictionary in choice_specs():
+		result.append_array(Choices.modifiers_from(entry["spec"], choices.get(entry["key"], [])))
 	for feat_id in feats:
 		result.append_array(Feats.modifiers_of(feat_id))
 	for slot: String in equipment:
@@ -143,10 +152,9 @@ func proficiency_bonus() -> int:
 	return Progression.proficiency_bonus(level)
 
 
-## Compétences maîtrisées : classe, passé et modificateurs (dons…).
+## Compétences maîtrisées : passé, et modificateurs (choix de classe, dons…).
 func is_proficient(skill_id: String) -> bool:
-	return skill_id in DB.classes[class_id].get("skills", []) \
-		or skill_id in DB.backgrounds.get(background_id, {}).get("skills", []) \
+	return skill_id in DB.backgrounds.get(background_id, {}).get("skills", []) \
 		or Modifiers.grants(modifiers(), "skill_proficiency", skill_id)
 
 
@@ -193,11 +201,12 @@ func add_feat(feat_id: String) -> bool:
 	return true
 
 
-## Dons que le personnage peut choisir : prérequis remplis et pas encore possédés.
+## Dons que le personnage peut choisir en montant de niveau : prérequis remplis, pas encore possédés,
+## et pas un style de combat (ceux-là s'obtiennent par l'aptitude Style de combat).
 func available_feats() -> Array[String]:
 	var result: Array[String] = []
 	for feat_id in Feats.ids():
-		if not has_feat(feat_id) and Feats.meets_prerequisites(feat_id, self):
+		if Feats.category_of(feat_id) != "fighting_style" and not has_feat(feat_id) and Feats.meets_prerequisites(feat_id, self):
 			result.append(feat_id)
 	return result
 
@@ -215,6 +224,95 @@ func can_increase_ability() -> bool:
 ## Une amélioration (attribut ou don) attend-elle un choix du joueur ?
 func has_pending_advancement() -> bool:
 	return can_increase_ability() or can_choose_feat()
+
+
+# --- Choix (compétences de classe, ascendance, styles, sous-classe, options de dons) ---
+
+## Tous les choix du personnage : [{"key", "spec", "source"}] (voir Choices).
+func choice_specs() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for spec: Dictionary in DB.species[species_id].get("choices", []):
+		result.append({"key": "species/" + spec["id"], "spec": spec, "source": DB.species[species_id]["name"]})
+	for spec: Dictionary in DB.classes[class_id].get("choices", []):
+		result.append({"key": "class/" + spec["id"], "spec": spec, "source": DB.classes[class_id]["name"]})
+	for feature: Dictionary in features():
+		for spec: Dictionary in feature.get("choices", []):
+			result.append({"key": "feature:%s/%s" % [feature["id"], spec["id"]], "spec": spec, "source": feature["name"]})
+	for feat_id in feats:
+		for spec: Dictionary in DB.feats.get(feat_id, {}).get("choices", []):
+			result.append({"key": "feat:%s/%s" % [feat_id, spec["id"]], "spec": spec, "source": Feats.name_of(feat_id)})
+	return result
+
+
+func _choice_entry(key: String) -> Dictionary:
+	for entry in choice_specs():
+		if entry["key"] == key:
+			return entry
+	return {}
+
+
+## Valeurs encore proposées pour un choix.
+func choice_options(key: String) -> Array[String]:
+	var entry := _choice_entry(key)
+	if entry.is_empty():
+		var none: Array[String] = []
+		return none
+	return Choices.options_for(entry["spec"], self, choices.get(key, []))
+
+
+## Premier choix en attente (incomplet et avec des options), ou {}.
+func pending_choice() -> Dictionary:
+	for entry in choice_specs():
+		var taken: Array = choices.get(entry["key"], [])
+		if taken.size() < int(entry["spec"].get("count", 1)) and not choice_options(entry["key"]).is_empty():
+			return entry
+	return {}
+
+
+## Fait un choix ; retourne false si la valeur n'est pas proposée. Un don choisi est acquis.
+func choose(key: String, value: String) -> bool:
+	var entry := _choice_entry(key)
+	if entry.is_empty() or value not in choice_options(key):
+		return false
+	var taken: Array = choices.get(key, [])
+	if taken.size() >= int(entry["spec"].get("count", 1)):
+		return false
+	taken.append(value)
+	choices[key] = taken
+	if entry["spec"].get("type") == "feat":
+		feats.append(value)
+	refresh_max_hp()
+	return true
+
+
+## Complète les choix en attente avec leurs valeurs par défaut (seulement ceux de la création si
+## `creation_only`).
+func apply_default_choices(creation_only := false) -> void:
+	for entry in choice_specs():
+		if creation_only and not entry["spec"].get("at_creation", false):
+			continue
+		for value: String in entry["spec"].get("default", []):
+			if choices.get(entry["key"], []).size() < int(entry["spec"].get("count", 1)):
+				choose(entry["key"], value)
+
+
+## Complète tous les choix (valeurs par défaut, puis premières options) : compagnons, personnages générés.
+func complete_all_choices() -> void:
+	apply_default_choices()
+	for i in 50:
+		var entry := pending_choice()
+		if entry.is_empty():
+			return
+		choose(entry["key"], choice_options(entry["key"])[0])
+
+
+## Ex. « Tieffelin (Feu infernal) » ; « Guerrier (Champion) ».
+func choice_label(key: String) -> String:
+	var entry := _choice_entry(key)
+	var values: Array = choices.get(key, [])
+	if entry.is_empty() or values.is_empty():
+		return ""
+	return ", ".join(PackedStringArray(values.map(func(v): return Choices.value_name(entry["spec"], v))))
 
 
 func can_raise(ability_id: String) -> bool:
@@ -250,9 +348,13 @@ static func _encumbrance(key: String, default: Variant) -> Variant:
 	return DB.rules.get("encumbrance", {}).get(key, default)
 
 
-## Points de Force qui manquent pour porter un équipement sans malus (0 si aucun).
+## Points de Force qui manquent pour porter un équipement sans malus (0 si aucun). Entraînement aux
+## armures lourdes réduit la Force conseillée.
 func strength_missing(item_id: String) -> int:
-	return maxi(0, Equipment.strength_required(item_id) - ability_score("str"))
+	var required := Equipment.strength_required(item_id)
+	if required > 0:
+		required -= Modifiers.sum(modifiers(), "armor_strength_reduction")
+	return maxi(0, required - ability_score("str"))
 
 
 ## Malus dû aux armures trop lourdes.
@@ -297,7 +399,7 @@ func encumbrance_reason(item_id: String) -> String:
 		return ""
 	var penalty := ceili(missing / float(_encumbrance("armor_points_per_penalty", 2)))
 	return Loc.ui("Force %d conseillée (vous avez %d) : −%d aux jets de FOR et DEX") % [
-		Equipment.strength_required(item_id), ability_score("str"), penalty]
+		ability_score("str") + missing, ability_score("str"), penalty]
 
 
 func weapon_id() -> String:
@@ -347,12 +449,21 @@ func weapon_damage_type() -> String:
 
 ## Classe d'armure : armure, DEX, bouclier (voir Equipment.armor_class) + modificateurs.
 func armor_class() -> int:
-	return Equipment.armor_class(equipment.get("armor", ""), equipment.get("off_hand", ""), ability_mod("dex")) \
-		+ Modifiers.sum(modifiers(), "ac")
+	var mods := modifiers()
+	var ac := Equipment.armor_class(equipment.get("armor", ""), equipment.get("off_hand", ""), ability_mod("dex")) \
+		+ Modifiers.sum(mods, "ac")
+	var armor := Equipment.def(equipment.get("armor", ""))
+	if not armor.is_empty() and armor.get("armor_type") != "clothing":
+		ac += Modifiers.sum(mods, "armored_ac")  # style Défense
+	return ac
 
 
 func initiative_bonus() -> int:
-	return ability_mod("dex") + Modifiers.sum(modifiers(), "initiative") - roll_penalty("dex")
+	var mods := modifiers()
+	var bonus := ability_mod("dex") + Modifiers.sum(mods, "initiative") - roll_penalty("dex")
+	if has_modifier("initiative_proficiency"):
+		bonus += proficiency_bonus()  # Vigilant
+	return bonus
 
 
 ## Attribut utilisé par une action : "weapon" (celui de l'arme), "spell" (celui de la classe) ou un id d'attribut.
@@ -361,7 +472,12 @@ func action_ability(ability: String) -> String:
 		"weapon":
 			return Equipment.attack_ability(weapon_id(), ability_mod("str"), ability_mod("dex"))
 		"spell":
-			return DB.classes[class_id].get("spellcasting", "int")
+			if DB.classes[class_id].has("spellcasting"):
+				return DB.classes[class_id]["spellcasting"]
+			for m: Dictionary in modifiers():
+				if m.get("type") == "spellcasting_ability":
+					return m["id"]  # Initié à la magie
+			return "int"
 	return ability
 
 
@@ -377,14 +493,28 @@ func class_level() -> int:
 	return level
 
 
-## Aptitudes de classe acquises (classes.json › features).
+## Aptitudes de classe acquises (classes.json › features), y compris celles de la sous-classe choisie.
 func features() -> Array:
-	return ClassFeatures.up_to(class_id, class_level())
+	var result: Array = ClassFeatures.up_to(class_id, class_level())
+	var extra: Array = []
+	for feature: Dictionary in result:
+		for spec: Dictionary in feature.get("choices", []):
+			var key := "feature:%s/%s" % [feature["id"], spec["id"]]
+			for sub: Dictionary in Choices.features_from(spec, choices.get(key, [])):
+				if int(sub["level"]) <= class_level():
+					extra.append(sub)
+	result.append_array(extra)
+	return result
 
 
-## Ressources maximales : celles de l'espèce, de la classe et des aptitudes, plus les emplacements de sort.
+## Ressources maximales : celles de l'espèce, de la classe, des aptitudes et des dons, plus les
+## emplacements de sort.
 func max_resources() -> Dictionary:
 	var result: Dictionary = DB.classes[class_id].get("resources", {}).duplicate()
+	for feat_id in feats:
+		var feat_resources: Dictionary = DB.feats.get(feat_id, {}).get("resources", {})
+		for id: String in feat_resources:
+			result[id] = int(result.get(id, 0)) + int(feat_resources[id])
 	var species_resources: Dictionary = DB.species[species_id].get("resources", {})
 	for id: String in species_resources:
 		result[id] = int(result.get(id, 0)) + int(species_resources[id])
@@ -402,13 +532,20 @@ func max_resource(resource_id: String) -> int:
 	return int(max_resources().get(resource_id, 0))
 
 
-## Actions de combat : celles de la classe puis celles des aptitudes acquises (ids de actions.json).
+## Actions de combat : celles de la classe, des aptitudes acquises, des dons et des choix
+## (ids de actions.json, ou « action|ressource » pour un sort lancé grâce à un don).
 func combat_actions() -> Array:
 	var result: Array = DB.classes[class_id].get("actions", []).duplicate()
+	var granted: Array = []
 	for feature: Dictionary in features():
-		for action_id: String in feature.get("actions", []):
-			if action_id not in result:
-				result.append(action_id)
+		granted.append_array(feature.get("actions", []))
+	for feat_id in feats:
+		granted.append_array(DB.feats.get(feat_id, {}).get("actions", []))
+	for entry: Dictionary in choice_specs():
+		granted.append_array(Choices.actions_from(entry["spec"], choices.get(entry["key"], [])))
+	for action_id: String in granted:
+		if action_id not in result and action_id.split("|")[0] not in result:
+			result.append(action_id)
 	return result
 
 
@@ -516,7 +653,7 @@ func remove_item(item_id: String, count := 1) -> int:
 func to_dict() -> Dictionary:
 	return {
 		"name": name, "species_id": species_id, "class_id": class_id, "background_id": background_id,
-		"gender": gender, "abilities": abilities, "feats": feats, "pending_feats": pending_feats,
+		"gender": gender, "abilities": abilities, "feats": feats, "choices": choices, "pending_feats": pending_feats,
 		"pending_ability_points": pending_ability_points, "equipment": equipment, "defenses": defenses.to_dict(),
 		"level": level, "xp": xp, "hp": hp, "max_hp": max_hp, "gold": gold, "inventory": inventory,
 		"start_age": start_age, "age_days": age_days, "art_seed": art_seed, "template_id": template_id,
@@ -534,6 +671,7 @@ static func from_dict(data: Dictionary) -> Character:
 	c.gender = data.get("gender", "nonbinary")
 	c.abilities = _int_dict(data.get("abilities", {}))
 	c.feats.assign(data.get("feats", []))
+	c.choices = data.get("choices", {})
 	c.pending_feats = int(data.get("pending_feats", 0))
 	c.pending_ability_points = int(data.get("pending_ability_points", 0))
 	c.equipment = data.get("equipment", {})
@@ -554,6 +692,7 @@ static func from_dict(data: Dictionary) -> Character:
 	c.art_seed = int(data.get("art_seed", 0))
 	c.template_id = data.get("template_id", "")
 	c.resources = _int_dict(data.get("resources", {}))
+	c.apply_default_choices(true)  # anciennes sauvegardes : compétences de classe par défaut
 	# Anciennes sauvegardes (ex. "spell_slot" unique) : on ne garde que les ressources connues.
 	var max_now := c.max_resources()
 	for id: String in max_now:

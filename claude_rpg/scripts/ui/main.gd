@@ -86,6 +86,10 @@ func _show_hub() -> void:
 	# Un membre du groupe a gagné une amélioration en montant de niveau : on la lui fait choisir d'abord.
 	Saves.save_all()
 	for member in Game.life.party():
+		var pending := member.pending_choice()
+		if not pending.is_empty():
+			_show_pending_choice(member, pending)
+			return
 		if member.can_increase_ability():
 			_show_ability_choice(member)
 			return
@@ -165,6 +169,32 @@ func _show_death() -> void:
 	_clear_choices()
 	_add_choice(tr("Commencer une nouvelle vie"), _on_new_life)
 	_add_choice(tr("Menu principal"), _on_menu)
+
+
+## Un choix à faire (compétences, style de combat, sous-classe, options d'un don…), une valeur à la fois.
+func _show_pending_choice(member: Character, entry: Dictionary) -> void:
+	var spec: Dictionary = entry["spec"]
+	var taken: Array = member.choices.get(entry["key"], [])
+	var count := int(spec.get("count", 1))
+	illustration.texture = ArtProvider.location_image("town", Game.life)
+	title_label.text = tr("%s — %s") % [spec.get("name", entry["source"]), member.name]
+	body_text.text = tr("%s (%s) : choisissez %d option(s).") % [member.name, entry["source"], count]
+	if count > 1:
+		body_text.text += " " + tr("Choix %d sur %d.") % [taken.size() + 1, count]
+	if not taken.is_empty():
+		body_text.text += "\n" + tr("Déjà choisi : %s") % member.choice_label(entry["key"])
+	_clear_choices()
+	for value in member.choice_options(entry["key"]):
+		var description := Choices.value_description(spec, value).strip_edges()
+		var label := Choices.value_name(spec, value) + (" — " + description if description != "" else "")
+		var button := _add_choice(label, _on_pending_chosen.bind(member, entry["key"], value))
+		button.tooltip_text = description
+
+
+func _on_pending_chosen(member: Character, key: String, value: String) -> void:
+	member.choose(key, value)
+	_refresh_sheet()
+	_show_hub()
 
 
 func _show_ability_choice(member: Character) -> void:

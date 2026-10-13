@@ -19,6 +19,8 @@ var statuses: Dictionary = {}  # id d'état -> charges
 var intent: Dictionary = {}  # action préparée, exécutée au prochain tour (ennemis)
 var uses: Dictionary = {}  # id d'action -> utilisations restantes dans ce combat (per_combat)
 var reaction_used := false  # réaction déjà utilisée ce round (Esquive instinctive…), rendue à son tour
+var savage_used := false  # Frappe brutale déjà utilisée ce tour
+var fast_hands_used := false  # Mains lestes déjà utilisées ce tour
 var _hp := 0
 var _max_hp := 0
 
@@ -241,7 +243,11 @@ func attack_bonus(effect: Dictionary) -> int:
 	if character == null:
 		return 0
 	if _uses_own_weapon(effect):
-		return character.attack_bonus("weapon") + Modifiers.sum(character.modifiers(), "weapon_attack")
+		var mods := character.modifiers()
+		var bonus := character.attack_bonus("weapon") + Modifiers.sum(mods, "weapon_attack")
+		if Equipment.has_property(character.weapon_id(), "ranged"):
+			bonus += Modifiers.sum(mods, "ranged_attack")  # style Archerie
+		return bonus
 	return character.attack_bonus(String(effect.get("ability", "weapon")))
 
 
@@ -258,11 +264,16 @@ func damage_expr(effect: Dictionary) -> String:
 	var bonus := 0
 	if _uses_own_weapon(effect):
 		expr = character.weapon_damage()
-		bonus += Modifiers.sum(character.modifiers(), "weapon_damage") + character.ability_mod(character.action_ability("weapon"))
+		var mods := character.modifiers()
+		bonus += Modifiers.sum(mods, "weapon_damage") + character.ability_mod(character.action_ability("weapon"))
+		if not two_handed_grip() and not Equipment.has_property(character.weapon_id(), "ranged"):
+			bonus += Modifiers.sum(mods, "dueling")  # style Duel
 	elif effect.get("weapon") is String:
 		expr = Equipment.weapon_damage(effect["weapon"])
 	elif effect.get("add_mod", false) and character != null:
 		bonus += character.ability_mod(character.action_ability(effect.get("ability", "str")))
+	if effect.get("school") == "evocation" and has_modifier("empowered_evocation"):
+		bonus += character.ability_mod(character.action_ability("spell"))
 	expr = Dice.add_mod(expr, bonus)
 	if extra != "":
 		expr += "+" + extra
@@ -285,6 +296,20 @@ func damage_type(effect: Dictionary) -> String:
 	if effect.get("weapon") is String:
 		return Equipment.damage_type_of(effect["weapon"])
 	return effect.get("damage_type", "")
+
+
+## L'arme est tenue à deux mains (arme à deux mains, ou polyvalente sans rien en main secondaire).
+func two_handed_grip() -> bool:
+	if character == null:
+		return false
+	var weapon := character.weapon_id()
+	return Equipment.has_property(weapon, "two_handed") \
+		or (Equipment.has_property(weapon, "versatile") and not character.equipment.has("off_hand"))
+
+
+## L'attaque d'arme profite-t-elle du style Armes à deux mains ?
+func great_weapon_fighting(effect: Dictionary) -> bool:
+	return _uses_own_weapon(effect) and two_handed_grip() and has_modifier("great_weapon_fighting")
 
 
 ## Expression de soins, « level » étant remplacé par le niveau du personnage.

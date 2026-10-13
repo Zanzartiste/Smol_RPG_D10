@@ -44,12 +44,12 @@ static func is_physical(id: String) -> bool:
 
 ## Dégâts réellement subis. Retourne {"amount": int, "note": String} ; la note explique
 ## l'effet des défenses (« résistance », « immunité », « vulnérabilité »), vide sinon.
-static func apply(amount: int, damage_type: String, defenses: Defenses) -> Dictionary:
+static func apply(amount: int, damage_type: String, defenses: Defenses, ignore_resistance := false) -> Dictionary:
 	if defenses == null or damage_type == "":
 		return {"amount": amount, "note": ""}
 	if defenses.has(Defenses.IMMUNITY, damage_type):
 		return {"amount": 0, "note": Loc.ui("immunité")}
-	var resistant := defenses.has(Defenses.RESISTANCE, damage_type)
+	var resistant := defenses.has(Defenses.RESISTANCE, damage_type) and not ignore_resistance
 	var vulnerable := defenses.has(Defenses.VULNERABILITY, damage_type)
 	if resistant and not vulnerable:
 		return {"amount": floori(amount / 2.0), "note": Loc.ui("résistance")}

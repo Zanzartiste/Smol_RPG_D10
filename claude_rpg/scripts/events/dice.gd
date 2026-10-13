@@ -24,7 +24,8 @@ static func is_valid_expr(expr: String) -> bool:
 
 ## Lance une expression de dés. `critical` double le nombre de dés (coup critique).
 ## Retourne {"dice": [{"sides", "value"}...], "bonus": int, "total": int}.
-static func roll_expr(expr: String, rng: RandomNumberGenerator, critical := false) -> Dictionary:
+## `min_face` : un dé qui fait moins compte comme cette valeur (style Armes à deux mains : 3).
+static func roll_expr(expr: String, rng: RandomNumberGenerator, critical := false, min_face := 0) -> Dictionary:
 	var dice: Array[Dictionary] = []
 	var bonus := 0
 	var total := 0
@@ -35,7 +36,7 @@ static func roll_expr(expr: String, rng: RandomNumberGenerator, critical := fals
 			if critical:
 				count *= 2
 			for i in count:
-				var value := rng.randi_range(1, int(m.get_string(3)))
+				var value := maxi(rng.randi_range(1, int(m.get_string(3))), mini(min_face, int(m.get_string(3))))
 				dice.append({"sides": int(m.get_string(3)), "value": value})
 				total += sign * value
 		else:
@@ -95,9 +96,13 @@ static func advantage_text(advantage: int) -> String:
 	return ""
 
 
-## Avantage d'un test d'événement (champs "advantage" / "disadvantage").
-static func check_advantage(check: Dictionary) -> int:
-	return combine_advantage(1 if check.get("advantage", false) else 0, 1 if check.get("disadvantage", false) else 0)
+## Avantage d'un test d'événement (champs "advantage" / "disadvantage", et avantage de compétence
+## du personnage, ex. Athlète remarquable).
+static func check_advantage(check: Dictionary, ch: Character = null) -> int:
+	var advantages := 1 if check.get("advantage", false) else 0
+	if ch != null and check.has("skill") and Modifiers.grants(ch.modifiers(), "skill_advantage", check["skill"]):
+		advantages += 1
+	return combine_advantage(advantages, 1 if check.get("disadvantage", false) else 0)
 
 
 static func modifier(ch: Character, check: Dictionary) -> int:
@@ -133,7 +138,7 @@ static func success_chance(ch: Character, check: Dictionary) -> float:
 	if minimum_die(ch, check) + modifier(ch, check) >= int(check["dc"]):
 		return 1.0
 	var p := clampf((21 - needed) / 20.0, 0.05, 0.95)
-	match check_advantage(check):
+	match check_advantage(check, ch):
 		1:
 			return 1.0 - (1.0 - p) * (1.0 - p)
 		-1:
@@ -142,7 +147,7 @@ static func success_chance(ch: Character, check: Dictionary) -> float:
 
 
 static func roll_check(ch: Character, check: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
-	var d20 := roll_d20(rng, check_advantage(check))
+	var d20 := roll_d20(rng, check_advantage(check, ch))
 	var die := maxi(int(d20["die"]), minimum_die(ch, check))
 	var mod := modifier(ch, check)
 	var dc := int(check["dc"])
@@ -154,6 +159,6 @@ static func roll_check(ch: Character, check: Dictionary, rng: RandomNumberGenera
 		"total": die + mod,
 		"dc": dc,
 		"success": success,
-		"label": label(check) + advantage_text(check_advantage(check)),
+		"label": label(check) + advantage_text(check_advantage(check, ch)),
 		"stat": stat_name(check),
 	}

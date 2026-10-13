@@ -17,11 +17,20 @@ static func ids() -> Array[String]:
 
 
 static func has(id: String) -> bool:
-	return DB.actions.has(id)
+	return DB.actions.has(id.split("|")[0])
 
 
+## Définition d'une action. « sleep|magic_initiate » : le sort Sommeil, payé avec la ressource
+## magic_initiate au lieu d'un emplacement (sort accordé par un don).
 static func def(id: String) -> Dictionary:
-	return DB.actions.get(id, {})
+	if "|" not in id:
+		return DB.actions.get(id, {})
+	var parts := id.split("|")
+	var action: Dictionary = DB.actions.get(parts[0], {}).duplicate(true)
+	if not action.is_empty():
+		action["id"] = id
+		action["cost"] = parts[1]
+	return action
 
 
 static func name_of(id: String) -> String:
@@ -42,4 +51,5 @@ static func resource_name(resource_id: String) -> String:
 	if Spellcasting.is_slot(resource_id):
 		return Loc.ui("emplacement de sort de niveau %d") % Spellcasting.slot_level(resource_id)
 	return {"spell_slot": Loc.ui("emplacement de sort"), "indomitable": Loc.ui("Inflexible"),
-		"relentless_endurance": Loc.ui("Endurance implacable")}.get(resource_id, resource_id)
+		"relentless_endurance": Loc.ui("Endurance implacable"),
+		"magic_initiate": Loc.ui("Initié à la magie")}.get(resource_id, resource_id)

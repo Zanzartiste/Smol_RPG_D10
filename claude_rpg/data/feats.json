@@ -3,8 +3,44 @@
 		"id": "alert",
 		"name": "Vigilant",
 		"category": "origin",
-		"description": "Toujours sur le qui-vive, vous êtes difficile à prendre au dépourvu.",
-		"modifiers": [{"type": "initiative", "amount": 5}]
+		"source": "SRD 5.2",
+		"description": "Toujours sur le qui-vive : vous ajoutez votre bonus de maîtrise à l'initiative.",
+		"modifiers": [{"type": "initiative_proficiency"}]
+	},
+	{
+		"id": "magic_initiate",
+		"name": "Initié à la magie",
+		"category": "origin",
+		"source": "SRD 5.2",
+		"description": "Vous avez appris deux tours de magie et un sort du 1er niveau, que vous pouvez lancer une fois par repos long sans emplacement.",
+		"resources": {"magic_initiate": 1},
+		"choices": [
+			{"id": "ability", "name": "Attribut d'incantation", "type": "ability", "count": 1, "options": ["int", "wis", "cha"],
+				"modifiers": [{"type": "spellcasting_ability", "id": "$"}], "default": ["int"]},
+			{"id": "cantrips", "name": "Tours de magie", "type": "action", "count": 2, "options": ["fire_bolt", "ray_of_frost"],
+				"default": ["fire_bolt", "ray_of_frost"]},
+			{"id": "spell", "name": "Sort du 1er niveau", "type": "action", "count": 1, "cost": "magic_initiate",
+				"options": ["magic_missile", "burning_hands", "sleep", "mage_shield", "find_familiar"], "default": ["magic_missile"]}
+		]
+	},
+	{
+		"id": "savage_attacker",
+		"name": "Frappe brutale",
+		"category": "origin",
+		"source": "SRD 5.2",
+		"description": "Une fois par tour, quand vous touchez avec une arme, vous lancez ses dés de dégâts deux fois et gardez le meilleur résultat.",
+		"modifiers": [{"type": "savage_attacker"}]
+	},
+	{
+		"id": "skilled",
+		"name": "Doué",
+		"category": "origin",
+		"source": "SRD 5.2",
+		"description": "Vous maîtrisez trois compétences de votre choix.",
+		"choices": [
+			{"id": "skills", "name": "Compétences", "type": "skill", "count": 3, "modifiers": [{"type": "skill_proficiency", "id": "$"}],
+				"default": ["insight", "persuasion", "history"]}
+		]
 	},
 	{
 		"id": "tough",
@@ -25,7 +61,7 @@
 		"name": "Artisan accompli",
 		"category": "origin",
 		"description": "Un œil exercé repère la moindre malfaçon… et le moindre détail suspect.",
-		"modifiers": [{"type": "skill_proficiency", "id": "investigation"}, {"type": "skill_proficiency", "id": "perception"}]
+		"modifiers": [{"type": "skill_proficiency", "id": "crafting"}, {"type": "skill_proficiency", "id": "investigation"}]
 	},
 	{
 		"id": "silver_tongue",
@@ -39,25 +75,18 @@
 		"name": "Musicien",
 		"category": "origin",
 		"description": "Votre talent apaise les foules et vous ouvre bien des portes.",
-		"modifiers": [{"type": "ability", "id": "cha", "amount": 1}, {"type": "skill_proficiency", "id": "insight"}]
-	},
-	{
-		"id": "skilled",
-		"name": "Doué",
-		"category": "origin",
-		"description": "Une éducation soignée vous a ouvert à de nombreux domaines.",
-		"modifiers": [
-			{"type": "skill_proficiency", "id": "insight"},
-			{"type": "skill_proficiency", "id": "intimidation"},
-			{"type": "skill_proficiency", "id": "religion"}
-		]
+		"modifiers": [{"type": "ability", "id": "cha", "amount": 1}, {"type": "skill_proficiency", "id": "arts"}]
 	},
 	{
 		"id": "athlete",
 		"name": "Athlète",
 		"category": "origin",
 		"description": "Un entraînement physique rigoureux a forgé votre corps.",
-		"modifiers": [{"type": "ability", "id": "str", "amount": 1}, {"type": "skill_proficiency", "id": "athletics"}]
+		"modifiers": [{"type": "skill_proficiency", "id": "athletics"}],
+		"choices": [
+			{"id": "ability", "name": "Attribut", "type": "ability", "count": 1, "options": ["str", "dex"],
+				"modifiers": [{"type": "ability", "id": "$", "amount": 1}], "default": ["str"]}
+		]
 	},
 	{
 		"id": "scholar",
@@ -67,18 +96,36 @@
 		"modifiers": [{"type": "ability", "id": "int", "amount": 1}, {"type": "skill_proficiency", "id": "nature"}]
 	},
 	{
-		"id": "savage_attacker",
-		"name": "Frappe brutale",
-		"category": "origin",
-		"description": "Vos coups d'arme portent avec une violence redoutable.",
-		"modifiers": [{"type": "weapon_damage", "amount": 1}]
-	},
-	{
 		"id": "nimble",
 		"name": "Agile",
 		"category": "origin",
 		"description": "Les ruelles vous ont appris à esquiver, sauter et filer.",
 		"modifiers": [{"type": "ability", "id": "dex", "amount": 1}, {"type": "skill_proficiency", "id": "acrobatics"}]
+	},
+	{
+		"id": "ability_score_improvement",
+		"name": "Amélioration d'attribut",
+		"category": "general",
+		"source": "SRD 5.2",
+		"description": "+2 à un attribut, ou +1 à deux attributs (20 au maximum).",
+		"prerequisites": [{"type": "level", "min": 4}],
+		"choices": [
+			{"id": "abilities", "name": "Attributs (+1, deux fois)", "type": "ability", "count": 2, "allow_repeat": true,
+				"modifiers": [{"type": "ability", "id": "$", "amount": 1}]}
+		]
+	},
+	{
+		"id": "grappler",
+		"name": "Lutteur",
+		"category": "general",
+		"source": "SRD 5.2",
+		"description": "+1 FOR ou DEX. Vous savez frapper et empoigner d'un même geste : l'Empoignade entrave la cible.",
+		"prerequisites": [{"type": "level", "min": 4}, {"type": "any", "conditions": [{"type": "ability", "id": "str", "min": 13}, {"type": "ability", "id": "dex", "min": 13}]}],
+		"actions": ["grapple"],
+		"choices": [
+			{"id": "ability", "name": "Attribut", "type": "ability", "count": 1, "options": ["str", "dex"],
+				"modifiers": [{"type": "ability", "id": "$", "amount": 1}], "default": ["str"]}
+		]
 	},
 	{
 		"id": "defensive_duelist",
@@ -92,28 +139,66 @@
 		"id": "resilient",
 		"name": "Résistant",
 		"category": "general",
-		"description": "Votre corps s'est endurci face aux poisons.",
-		"prerequisites": [{"type": "ability", "id": "con", "min": 13}],
-		"modifiers": [
-			{"type": "ability", "id": "con", "amount": 1},
-			{"type": "resistance", "damage_type": "poison"},
-			{"type": "status_immunity", "status": "poisoned"}
+		"description": "+1 à un attribut, et vous maîtrisez ses jets de sauvegarde.",
+		"choices": [
+			{"id": "ability", "name": "Attribut", "type": "ability", "count": 1,
+				"modifiers": [{"type": "ability", "id": "$", "amount": 1}, {"type": "save_proficiency", "id": "$"}], "default": ["con"]}
 		]
 	},
 	{
 		"id": "elemental_adept",
 		"name": "Adepte élémentaire",
 		"category": "general",
-		"description": "À force de manier le feu, vous avez appris à le dompter.",
+		"description": "+1 INT, SAG ou CHA. Vos sorts ignorent la résistance de vos cibles à l'élément choisi.",
 		"prerequisites": [{"type": "class", "in": ["wizard"]}],
-		"modifiers": [{"type": "ability", "id": "int", "amount": 1}, {"type": "resistance", "damage_type": "fire"}]
+		"choices": [
+			{"id": "element", "name": "Élément", "type": "damage_type", "count": 1, "options": ["fire", "cold", "lightning", "thunder"],
+				"modifiers": [{"type": "ignore_resistance", "damage_type": "$"}], "default": ["fire"]},
+			{"id": "ability", "name": "Attribut", "type": "ability", "count": 1, "options": ["int", "wis", "cha"],
+				"modifiers": [{"type": "ability", "id": "$", "amount": 1}], "default": ["int"]}
+		]
 	},
 	{
 		"id": "heavy_armor_training",
 		"name": "Entraînement aux armures lourdes",
 		"category": "general",
-		"description": "Vous encaissez mieux les coups sous le métal.",
+		"description": "+1 FOR ou CON. Les armures vous pèsent moins : leur Force conseillée baisse de 2.",
 		"prerequisites": [{"type": "level", "min": 4}],
-		"modifiers": [{"type": "ability", "id": "str", "amount": 1}, {"type": "ac", "amount": 1}]
+		"modifiers": [{"type": "armor_strength_reduction", "amount": 2}],
+		"choices": [
+			{"id": "ability", "name": "Attribut", "type": "ability", "count": 1, "options": ["str", "con"],
+				"modifiers": [{"type": "ability", "id": "$", "amount": 1}], "default": ["str"]}
+		]
+	},
+	{
+		"id": "archery",
+		"name": "Style : Archerie",
+		"category": "fighting_style",
+		"source": "SRD 5.2",
+		"description": "+2 aux jets d'attaque avec une arme à distance.",
+		"modifiers": [{"type": "ranged_attack", "amount": 2}]
+	},
+	{
+		"id": "defense",
+		"name": "Style : Défense",
+		"category": "fighting_style",
+		"source": "SRD 5.2",
+		"description": "+1 CA tant que vous portez une armure (pas de simples vêtements).",
+		"modifiers": [{"type": "armored_ac", "amount": 1}]
+	},
+	{
+		"id": "great_weapon_fighting",
+		"name": "Style : Armes à deux mains",
+		"category": "fighting_style",
+		"source": "SRD 5.2",
+		"description": "Avec une arme tenue à deux mains, chaque 1 ou 2 sur un dé de dégâts compte comme un 3.",
+		"modifiers": [{"type": "great_weapon_fighting"}]
+	},
+	{
+		"id": "dueling",
+		"name": "Style : Duel",
+		"category": "fighting_style",
+		"description": "+2 aux dégâts avec une arme de corps à corps tenue à une main.",
+		"modifiers": [{"type": "dueling", "amount": 2}]
 	}
 ]

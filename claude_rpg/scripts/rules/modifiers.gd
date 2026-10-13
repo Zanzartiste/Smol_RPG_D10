@@ -27,7 +27,22 @@ const SCHEMA := {
 	"reliable_talent": [],  # test d'une compétence maîtrisée : un d20 sous 10 compte comme 10
 	"relentless_endurance": [],
 	"critical_range": ["amount"],  # critique à partir de 20 − amount (Critique amélioré : 1)
-	"save_advantage": ["id"],  # avantage aux jets de sauvegarde d'un attribut  # tombe à 1 PV au lieu de 0 (ressource relentless_endurance, repos long)
+	"save_advantage": ["id"],  # avantage aux jets de sauvegarde d'un attribut
+	"initiative_proficiency": [],  # bonus de maîtrise à l'initiative (Vigilant)
+	"initiative_advantage": [],  # avantage à l'initiative (Champion)
+	"skill_advantage": ["id"],  # avantage aux tests d'une compétence
+	"spellcasting_ability": ["id"],  # attribut d'incantation hors classe (Initié à la magie)
+	"savage_attacker": [],  # une fois par tour, dés de dégâts d'arme lancés deux fois (Frappe brutale)
+	"ignore_resistance": ["damage_type"],  # ignore la résistance des cibles à ce type (Adepte élémentaire)
+	"ranged_attack": ["amount"],  # bonus au toucher avec une arme à distance (Archerie)
+	"armored_ac": ["amount"],  # bonus de CA en armure (Défense)
+	"great_weapon_fighting": [],  # arme à deux mains : 1 et 2 aux dés de dégâts comptent 3
+	"dueling": ["amount"],  # bonus aux dégâts avec une arme de corps à corps à une main (Duel)
+	"armor_strength_reduction": ["amount"],  # Force conseillée des armures réduite
+	"potent_cantrip": [],  # tour de magie raté : moitié des dégâts (Évocateur)
+	"empowered_evocation": [],  # + modificateur d'incantation aux dégâts d'évocation
+	"fast_hands": [],  # utiliser un objet ne coûte pas l'action, une fois par tour (Voleur)
+	"survivor": [],  # début de tour à moitié de PV ou moins : récupère 5 + CON (Champion)  # tombe à 1 PV au lieu de 0 (ressource relentless_endurance, repos long)
 }
 
 ## Types de modificateurs qui deviennent des défenses (type -> sorte de Defenses).
@@ -108,6 +123,36 @@ static func describe(m: Dictionary) -> String:
 			return Loc.ui("Critique sur %d-20") % (20 - amount)
 		"save_advantage":
 			return Loc.ui("Avantage aux sauvegardes de %s") % Abilities.name_of(m["id"])
+		"initiative_proficiency":
+			return Loc.ui("Maîtrise à l'initiative")
+		"initiative_advantage":
+			return Loc.ui("Avantage à l'initiative")
+		"skill_advantage":
+			return Loc.ui("Avantage en %s") % Skills.name_of(m["id"])
+		"spellcasting_ability":
+			return Loc.ui("Incantation : %s") % Abilities.name_of(m["id"])
+		"savage_attacker":
+			return Loc.ui("Frappe brutale")
+		"ignore_resistance":
+			return Loc.ui("Ignore la résistance : %s") % DamageTypes.name_of(m["damage_type"])
+		"ranged_attack":
+			return Loc.ui("%s au toucher à distance") % signed
+		"armored_ac":
+			return Loc.ui("%s CA en armure") % signed
+		"great_weapon_fighting":
+			return Loc.ui("Armes à deux mains : 1 et 2 comptent 3")
+		"dueling":
+			return Loc.ui("%s dégâts à une main") % signed
+		"armor_strength_reduction":
+			return Loc.ui("Force des armures −%d") % amount
+		"potent_cantrip":
+			return Loc.ui("Tour de magie puissant")
+		"empowered_evocation":
+			return Loc.ui("Évocation renforcée")
+		"fast_hands":
+			return Loc.ui("Mains lestes")
+		"survivor":
+			return Loc.ui("Survivant")
 	return str(m)
 
 

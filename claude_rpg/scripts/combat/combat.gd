@@ -177,6 +177,12 @@ func start_turn() -> Array[Dictionary]:
 	skipped = false
 	actions_left = 1
 	actor.reaction_used = false
+	actor.savage_used = false
+	actor.fast_hands_used = false
+	if actor.has_modifier("survivor") and actor.is_alive() and actor.hp <= actor.max_hp() / 2.0:
+		var healed := mini(actor.max_hp() - actor.hp, 5 + actor.ability_mod("con"))
+		actor.hp += healed
+		_beat(beats, Loc.ui("%s, survivant, récupère %d PV.") % [actor.name, healed])
 	for status_id: String in actor.statuses.keys():
 		var stacks := actor.stacks(status_id)
 		var damage := StatusEffects.tick_damage(status_id, stacks, actor.max_hp())
@@ -247,7 +253,10 @@ func perform(actor: Combatant, action: Dictionary, target: Combatant = null) -> 
 func use_item(actor: Combatant, item_id: String, target: Combatant) -> Array[Dictionary]:
 	var item: Dictionary = Items.def(item_id)
 	life.character.remove_item(item_id)
-	actions_left -= 1
+	if actor.has_modifier("fast_hands") and not actor.fast_hands_used:
+		actor.fast_hands_used = true  # Mains lestes : l'objet ne coûte pas l'action
+	else:
+		actions_left -= 1
 	var effects: Array = []
 	var use: Dictionary = item["use"]
 	if use.has("heal"):
@@ -470,8 +479,16 @@ func _apply(actor: Combatant, e: Dictionary, target: Combatant, fast: bool) -> D
 			_beat(beats, text, {"dice": d20["dice"], "mod": bonus, "dc": ac, "dc_label": "CA", "advantage": advantage,
 				"success": hit, "stat": "%s → %s%s" % [actor.name, target.name, Dice.advantage_text(advantage)]}, fast)
 			if hit:
-				_roll_damage(actor, target, actor.damage_expr(e), actor.damage_type(e), critical, beats, 1.0, true)
+				var savage: bool = e.get("weapon") is bool and e.get("weapon") and actor.has_modifier("savage_attacker") \
+					and not actor.savage_used
+				if savage:
+					actor.savage_used = true
+				_roll_damage(actor, target, actor.damage_expr(e), actor.damage_type(e), critical, beats, 1.0, true, true,
+					savage, 3 if actor.great_weapon_fighting(e) else 0)
 				_roll_bonus_damage(actor, target, e, critical, beats, 1.0)
+			elif e.get("cantrip", false) and actor.has_modifier("potent_cantrip"):
+				_beat(beats, Loc.ui("Tour de magie puissant : la moitié des dégâts passe."))
+				_roll_damage(actor, target, actor.damage_expr(e), actor.damage_type(e), false, beats, 0.5)
 		"damage":
 			_roll_damage(actor, target, actor.damage_expr(e), actor.damage_type(e), false, beats, multiplier)
 			_roll_bonus_damage(actor, target, e, false, beats, multiplier)
@@ -515,11 +532,18 @@ func _apply(actor: Combatant, e: Dictionary, target: Combatant, fast: bool) -> D
 
 ## Lance et inflige des dégâts. `multiplier` : 0.5 pour une sauvegarde réussie (moitié, arrondie à
 ## l'inférieur). `from_attack` : dégâts d'une attaque, que l'Esquive instinctive peut diviser par deux.
+## `savage` : les dés sont lancés deux fois et le meilleur total est gardé (Frappe brutale).
+## `min_face` : un dé sous cette valeur compte comme elle (style Armes à deux mains).
 func _roll_damage(actor: Combatant, target: Combatant, expr: String, type: String, critical: bool,
-		beats: Array[Dictionary], multiplier := 1.0, from_attack := false, main := true) -> void:
+		beats: Array[Dictionary], multiplier := 1.0, from_attack := false, main := true, savage := false,
+		min_face := 0) -> void:
 	if not target.is_alive():
 		return
-	var roll := Dice.roll_expr(expr, rng, critical)
+	var roll := Dice.roll_expr(expr, rng, critical, min_face)
+	if savage:
+		var second := Dice.roll_expr(expr, rng, critical, min_face)
+		if int(second["total"]) > int(roll["total"]):
+			roll = second
 	var notes := PackedStringArray()
 	if multiplier < 1.0:
 		notes.append(Loc.ui("moitié"))
@@ -595,7 +619,9 @@ func _deal_damage(source: Combatant, target: Combatant, amount: int, type: Strin
 		death_cause: String) -> Dictionary:
 	var notes := PackedStringArray()
 	if not raw and type != "":
-		var applied := DamageTypes.apply(amount, type, target.defenses())
+		var ignore := source != null and source.character != null \
+			and source.character.modifiers().any(func(m): return m.get("type") == "ignore_resistance" and m.get("damage_type") == type)
+		var applied := DamageTypes.apply(amount, type, target.defenses(), ignore)
 		amount = applied["amount"]
 		if applied["note"] != "":
 			notes.append(applied["note"])
@@ -681,7 +707,7 @@ func _select(predicate: Callable) -> Array[Combatant]:
 func _roll_initiative() -> void:
 	var parts := PackedStringArray()
 	for c in combatants:
-		c.initiative = rng.randi_range(1, 20) + c.initiative_bonus()
+		c.initiative = int(Dice.roll_d20(rng, 1 if c.has_modifier("initiative_advantage") else 0)["die"]) + c.initiative_bonus()
 	order = combatants.duplicate()
 	order.sort_custom(func(a, b): return a.initiative > b.initiative \
 		or (a.initiative == b.initiative and a.ability_mod("dex") > b.ability_mod("dex")))

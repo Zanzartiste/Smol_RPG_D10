@@ -42,7 +42,8 @@ func _ready() -> void:
 						life.companions.append(Character.create_companion("mira"))
 					for member in life.party():
 						member.add_xp(int(DB.rules["xp_by_level"][encounter["level"] - 1]) - member.xp)
-						member.hp = member.max_hp
+						member.complete_all_choices()  # style de combat, don de l'humain… comme en jeu
+						member.long_rest()
 					if _fight(encounter["enemies"], life) == "victory":
 						wins += 1
 				line += "%11d%%" % roundi(100.0 * wins / RUNS)

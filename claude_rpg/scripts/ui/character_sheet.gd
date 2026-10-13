@@ -7,8 +7,15 @@ static func bbcode(ch: Character) -> String:
 	var gold := UITheme.GOLD.to_html(false)
 	var dim := UITheme.TEXT_DIM.to_html(false)
 
-	var t := "%s %s · %s\n" % [
-		DB.species[ch.species_id]["name"], DB.classes[ch.class_id]["name"], DB.gender_name(ch.gender)]
+	var species_name: String = DB.species[ch.species_id]["name"]
+	for key: String in ch.choices:
+		if key.begins_with("species/") and DB.species[ch.species_id].get("choices", []).any(func(s): return s.get("type") == "option"):
+			species_name += " (%s)" % ch.choice_label(key)
+	var class_name_text: String = DB.classes[ch.class_id]["name"]
+	for key: String in ch.choices:
+		if key.ends_with("/subclass"):
+			class_name_text += " (%s)" % ch.choice_label(key)
+	var t := "%s %s · %s\n" % [species_name, class_name_text, DB.gender_name(ch.gender)]
 	if DB.backgrounds.has(ch.background_id):
 		t += "[color=%s]%s[/color] %s   " % [gold, Loc.ui("Passé"), DB.backgrounds[ch.background_id]["name"]]
 	t += "[color=%s]%s[/color] %s\n" % [gold, Loc.ui("Taille"), DB.size_name(ch.size())]

@@ -25,6 +25,10 @@ func _ready() -> void:
 
 	var creation: Control = load("res://scenes/creation.tscn").instantiate()
 	add_child(creation)
+	creation._species_buttons["tiefling"].button_pressed = true
+	creation._on_species_selected("tiefling")  # pour montrer le choix d'ascendance
+	creation._class_buttons["fighter"].button_pressed = true
+	creation._on_class_selected("fighter")
 	for tab in creation.pages.get_tab_count():
 		creation.tab_buttons.get_child(tab).button_pressed = true
 		creation.pages.current_tab = tab

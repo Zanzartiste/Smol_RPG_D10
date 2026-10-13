@@ -36,14 +36,14 @@
 		"name": "Trait de feu",
 		"description": "Tour de magie : un trait de flammes jaillit de vos doigts.",
 		"target": "enemy",
-		"effects": [{"type": "attack", "ability": "spell", "damage": "1d10", "damage_type": "fire", "scaling": {"table": "cantrip"}}]
+		"effects": [{"type": "attack", "ability": "spell", "damage": "1d10", "damage_type": "fire", "scaling": {"table": "cantrip"}, "cantrip": true, "school": "evocation"}]
 	},
 	{
 		"id": "ray_of_frost",
 		"name": "Rayon de givre",
 		"description": "Tour de magie : un rayon glacé qui engourdit la cible.",
 		"target": "enemy",
-		"effects": [{"type": "attack", "ability": "spell", "damage": "1d8", "damage_type": "cold", "scaling": {"table": "cantrip"}}, {"type": "status", "status": "weakened", "stacks": 2}]
+		"effects": [{"type": "attack", "ability": "spell", "damage": "1d8", "damage_type": "cold", "scaling": {"table": "cantrip"}, "cantrip": true, "school": "evocation"}, {"type": "status", "status": "weakened", "stacks": 2}]
 	},
 	{
 		"id": "magic_missile",
@@ -52,7 +52,7 @@
 		"target": "enemy",
 		"cost": "spell_slot",
 		"spell_level": 1,
-		"effects": [{"type": "damage", "damage": "3d4+3", "damage_type": "force", "upcast": "1d4+1"}]
+		"effects": [{"type": "damage", "damage": "3d4+3", "damage_type": "force", "upcast": "1d4+1", "school": "evocation"}]
 	},
 	{
 		"id": "burning_hands",
@@ -61,7 +61,7 @@
 		"target": "all_enemies",
 		"cost": "spell_slot",
 		"spell_level": 1,
-		"effects": [{"type": "damage", "damage": "3d6", "damage_type": "fire", "save": {"ability": "dex", "half": true}, "upcast": "1d6"}, {"type": "status", "status": "burning", "stacks": 1}]
+		"effects": [{"type": "damage", "damage": "3d6", "damage_type": "fire", "save": {"ability": "dex", "half": true}, "upcast": "1d6", "school": "evocation"}, {"type": "status", "status": "burning", "stacks": 1}]
 	},
 	{
 		"id": "sleep",
@@ -107,6 +107,13 @@
 		"effects": [{"type": "attack", "weapon": true}, {"type": "status", "status": "poisoned", "stacks": 3}]
 	},
 	{
+		"id": "grapple",
+		"name": "Empoignade",
+		"description": "Un coup de poing suivi d'une prise : la cible est entravée.",
+		"target": "enemy",
+		"effects": [{"type": "attack", "weapon": "unarmed", "ability": "str"}, {"type": "status", "status": "restrained", "stacks": 2}]
+	},
+	{
 		"id": "action_surge",
 		"name": "Fougue",
 		"description": "Vous puisez dans vos réserves pour agir une deuxième fois.",
@@ -123,9 +130,9 @@
 		"cost": "spell_slot",
 		"spell_level": 2,
 		"effects": [
-			{"type": "attack", "ability": "spell", "damage": "2d6", "damage_type": "fire"},
-			{"type": "attack", "ability": "spell", "damage": "2d6", "damage_type": "fire"},
-			{"type": "attack", "ability": "spell", "damage": "2d6", "damage_type": "fire"}
+			{"type": "attack", "ability": "spell", "damage": "2d6", "damage_type": "fire", "school": "evocation"},
+			{"type": "attack", "ability": "spell", "damage": "2d6", "damage_type": "fire", "school": "evocation"},
+			{"type": "attack", "ability": "spell", "damage": "2d6", "damage_type": "fire", "school": "evocation"}
 		]
 	},
 	{
@@ -135,6 +142,6 @@
 		"target": "all_enemies",
 		"cost": "spell_slot",
 		"spell_level": 3,
-		"effects": [{"type": "damage", "damage": "8d6", "damage_type": "fire", "save": {"ability": "dex", "half": true}, "upcast": "1d6"}]
+		"effects": [{"type": "damage", "damage": "8d6", "damage_type": "fire", "save": {"ability": "dex", "half": true}, "upcast": "1d6", "school": "evocation"}]
 	}
 ]

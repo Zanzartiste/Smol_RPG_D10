@@ -62,10 +62,13 @@ static func _validate_rule_tables(db: Node, errors: Array[String]) -> void:
 
 	for feat: Dictionary in db.feats.values():
 		var ctx := "feats.json › %s" % feat["id"]
-		if feat.get("category", "general") not in ["origin", "general"]:
-			errors.append(ctx + " : catégorie inconnue « %s » (origin ou general)" % feat.get("category"))
+		if feat.get("category", "general") not in ["origin", "general", "fighting_style"]:
+			errors.append(ctx + " : catégorie inconnue « %s » (origin, general ou fighting_style)" % feat.get("category"))
 		_validate_modifiers(db, feat.get("modifiers", []), ctx, errors, true)
 		_validate_conditions(db, feat.get("prerequisites", []), ctx + " › prerequisites", errors)
+		_validate_choices(db, feat.get("choices", []), ctx, errors)
+		for action_id in feat.get("actions", []):
+			_expect_ref(db.actions, action_id, "action", ctx, errors)
 
 	for item: Dictionary in db.equipment.values():
 		var ctx := "equipment.json › %s" % item["id"]
@@ -160,6 +163,7 @@ static func _validate_species(db: Node, errors: Array[String]) -> void:
 		if species.has("ability_bonus"):
 			errors.append(ctx + " : une espèce ne doit pas modifier les attributs (ability_bonus)")
 		_validate_modifiers(db, species.get("modifiers", []), ctx, errors, false)
+		_validate_choices(db, species.get("choices", []), ctx, errors)
 		var majority := int(db.rules.get("majority_age", 18))
 		if int(species.get("start_age", 18)) < majority or int(species.get("age_stages", {}).get("adult", majority)) < majority:
 			errors.append(ctx + " : start_age et l'étape adult doivent valoir au moins %d (rules.json › majority_age)" % majority)
@@ -186,6 +190,7 @@ static func _validate_classes(db: Node, errors: Array[String]) -> void:
 				errors.append(ctx + " : équipement inconnu « %s »" % equipment[slot])
 			elif slot not in Equipment.slots_for(equipment[slot]):
 				errors.append(ctx + " : « %s » ne va pas dans l'emplacement « %s »" % [equipment[slot], slot])
+		_validate_choices(db, cls.get("choices", []), ctx, errors)
 		for ability_id in cls.get("saving_throws", []):
 			_expect_ref(db.abilities, ability_id, "attribut (saving_throws)", ctx, errors)
 		if cls.has("spell_slots") and cls["spell_slots"] not in Spellcasting.progressions():
@@ -205,6 +210,7 @@ static func _validate_classes(db: Node, errors: Array[String]) -> void:
 			for action_id in feature.get("actions", []):
 				_expect_ref(db.actions, action_id, "action", fctx, errors)
 			_validate_modifiers(db, feature.get("modifiers", []), fctx, errors, true)
+			_validate_choices(db, feature.get("choices", []), fctx, errors)
 
 
 static func _validate_backgrounds(db: Node, errors: Array[String]) -> void:
@@ -601,6 +607,57 @@ static func _validate_economy(db: Node, errors: Array[String]) -> void:
 			errors.append("rules.json › trade : champ « %s » manquant" % key)
 	if not db.skills.has(db.rules.get("trade", {}).get("price_skill", "")):
 		errors.append("rules.json › trade : price_skill doit être une compétence")
+
+
+## Choix (voir Choices) d'une espèce, d'une classe, d'une aptitude ou d'un don ; les options d'une
+## sous-classe sont vérifiées avec leurs aptitudes.
+static func _validate_choices(db: Node, specs: Variant, ctx: String, errors: Array[String]) -> void:
+	if typeof(specs) != TYPE_ARRAY:
+		errors.append(ctx + " : « choices » doit être une liste")
+		return
+	for spec: Dictionary in specs:
+		var cctx := "%s › choix %s" % [ctx, spec.get("id", "?")]
+		var type: String = spec.get("type", "")
+		var table: Dictionary = {"skill": db.skills, "ability": db.abilities, "damage_type": db.damage_types,
+			"feat": db.feats, "action": db.actions}.get(type, {})
+		if type not in ["skill", "ability", "damage_type", "feat", "action", "option"]:
+			errors.append(cctx + " : type inconnu « %s »" % type)
+			continue
+		var option_ids: Array = []
+		for o: Variant in spec.get("options", []):
+			if type == "option":
+				if typeof(o) != TYPE_DICTIONARY or not o.has("id") or not o.has("name"):
+					errors.append(cctx + " : une option doit être {\"id\", \"name\", ...}")
+					continue
+				option_ids.append(o["id"])
+				_validate_modifiers(db, o.get("modifiers", []), cctx, errors, true)
+				for action_id in o.get("actions", []):
+					_expect_ref(db.actions, action_id, "action", cctx, errors)
+				_validate_features(db, o.get("features", []), "%s › %s" % [cctx, o["id"]], errors)
+			else:
+				option_ids.append(o)
+				_expect_ref(table, o, type, cctx, errors)
+		for value in spec.get("default", []):
+			if type != "feat" and not option_ids.is_empty() and value not in option_ids:
+				errors.append(cctx + " : valeur par défaut « %s » absente des options" % value)
+			elif type == "feat":
+				_expect_ref(db.feats, value, "don", cctx, errors)
+		var sample: String = str(option_ids[0]) if not option_ids.is_empty() else ("str" if type == "ability" else "")
+		if sample != "" and type != "option":
+			_validate_modifiers(db, spec.get("modifiers", []).map(func(m): return Choices.fill(m, sample)), cctx, errors, true)
+
+
+## Aptitudes de classe ou de sous-classe : champs, actions, modificateurs, choix.
+static func _validate_features(db: Node, features: Array, ctx: String, errors: Array[String]) -> void:
+	for feature: Dictionary in features:
+		var fctx := "%s › aptitude %s" % [ctx, feature.get("id", "?")]
+		for key in ["level", "id", "name", "description"]:
+			if not feature.has(key):
+				errors.append(fctx + " : champ « %s » manquant" % key)
+		for action_id in feature.get("actions", []):
+			_expect_ref(db.actions, action_id, "action", fctx, errors)
+		_validate_modifiers(db, feature.get("modifiers", []), fctx, errors, true)
+		_validate_choices(db, feature.get("choices", []), fctx, errors)
 
 
 ## Un objet du sac : id de items.json ou de equipment.json.

@@ -29,6 +29,7 @@ const TESTS := [
 	"_test_damage_types",
 	"_test_economy",
 	"_test_advantage",
+	"_test_choices",
 	"_test_combat",
 	"_test_combat_turns",
 	"_test_companions",
@@ -168,11 +169,13 @@ func _test_feats() -> bool:
 	var init := c.initiative_bonus()
 	Effects.apply_all([{"type": "add_feat", "id": "tough"}, {"type": "add_feat", "id": "alert"}], life, Meta)
 	_expect(c.max_hp == hp + 2 and c.hp == c.max_hp, "Robuste : +2 PV par niveau")
-	_expect(c.initiative_bonus() == init + 5, "Vigilant : +5 à l'initiative")
+	_expect(c.initiative_bonus() == init + c.proficiency_bonus(), "Vigilant : bonus de maîtrise à l'initiative")
 	c.add_xp(300)
 	_expect(c.max_hp == hp + 2 + 4 + 2 + 2, "Robuste suit les niveaux")
 	var str_before := c.ability_score("str")
 	c.add_feat("athlete")
+	_expect(c.choice_options("feat:athlete/ability") == ["str", "dex"] and c.choose("feat:athlete/ability", "str")
+		and not c.choose("feat:athlete/ability", "dex"), "Athlète : choix de l'attribut, une seule fois")
 	_expect(c.ability_score("str") == str_before + 1 and c.abilities["str"] == str_before, "Athlète : +1 FOR (bonus, base inchangée)")
 	_expect(c.is_proficient("athletics"), "Athlète : maîtrise d'Athlétisme")
 	_expect(Conditions.check({"type": "has_feat", "id": "alert"}, life, Meta), "condition has_feat")
@@ -183,7 +186,8 @@ func _test_feats() -> bool:
 		_expect(Feats.has(Feats.for_background(bg_id)), "le passé %s accorde un don" % bg_id)
 	var soldier := Character.create("human", "fighter", "Soldat", {"background": "soldier"})
 	var sword := Combatant.from_character(soldier, true)
-	_expect(sword.damage_expr({"type": "attack", "weapon": true}) == "1d10+4", "Frappe brutale : +1 aux dégâts d'arme")
+	_expect(sword.damage_expr({"type": "attack", "weapon": true}) == "1d10+3" and soldier.has_modifier("savage_attacker"),
+		"Frappe brutale : les dés sont relancés (pas de bonus fixe)")
 	var hero := Character.create("goblin", "fighter", "Héros")  # pas d'humain : il a un don en plus dès le départ
 	hero.add_xp(300)
 	_expect(hero.level == 2 and not hero.has_pending_advancement(), "niveau 2 : pas d'amélioration")
@@ -613,6 +617,7 @@ func _test_actions() -> bool:
 func _at_level(species: String, cls: String, level: int) -> Character:
 	var ch := Character.create(species, cls, "Niv%d" % level)
 	ch.add_xp(Progression.xp_for(level) - ch.xp)
+	ch.complete_all_choices()
 	return ch
 
 
@@ -630,7 +635,7 @@ func _test_spell_progression() -> bool:
 		"montée de niveau : les emplacements gagnés sont disponibles, les dépensés le restent")
 	mage.long_rest()
 	_expect(mage.resources == {"spell_slot_1": 4, "spell_slot_2": 2}, "repos long : tous les emplacements")
-	_expect(ClassFeatures.announce(mage, 3).size() == 2, "annonce : nouvelle aptitude et nouveaux emplacements")
+	_expect(ClassFeatures.announce(mage, 3).size() == 3, "annonce : nouvelles aptitudes (sorts, tradition) et emplacements")
 
 	var old := Character.from_dict({"species_id": "goblin", "class_id": "wizard", "level": 1, "resources": {"spell_slot": 1}})
 	_expect(old.resources == {"spell_slot_1": 2}, "ancienne sauvegarde : ressources converties")
@@ -867,7 +872,9 @@ func _test_armor_strength() -> bool:
 
 func _test_new_species() -> bool:
 	var human := Character.create("human", "wizard", "H")
-	_expect(human.pending_feats == 1 and human.can_choose_feat(), "humain : un don en plus à choisir")
+	_expect(human.pending_choice().get("key") == "species/versatile"
+		and human.choice_options("species/versatile").all(func(id): return Feats.category_of(id) == "origin"),
+		"humain : un don d'origine en plus à choisir")
 	var dwarf := Character.create("dwarf", "fighter", "N")
 	_expect(dwarf.age_years() == 50 and dwarf.all_defenses().has(Defenses.RESISTANCE, "poison"), "nain : 50 ans, résistance au poison")
 	_expect(Character.create("tiefling", "wizard", "T").all_defenses().has(Defenses.RESISTANCE, "fire"), "tieffelin : résistance au feu")
@@ -1074,6 +1081,103 @@ func _test_advantage() -> bool:
 	_expect(target.stacks("asleep") == 2, "Sommeil : sauvegarde ratée, la cible s'endort")
 	Game.combat = null
 	DB.creatures.erase("_target")
+	return true
+
+
+func _test_choices() -> bool:
+	# Compétences de classe : au choix à la création, sinon par défaut ; pas une compétence du passé.
+	var fighter := Character.create("human", "fighter", "G", {"background": "sage",
+		"choices": {"class/skills": ["history", "survival"]}})
+	_expect("history" not in fighter.choices["class/skills"] and fighter.choices["class/skills"] == ["survival", "athletics"],
+		"compétence déjà donnée par le passé : refusée, complétée par une valeur par défaut")
+	fighter = Character.create("goblin", "fighter", "G", {"background": "acolyte", "choices": {"class/skills": ["intimidation", "survival"]}})
+	_expect(fighter.is_proficient("intimidation") and fighter.is_proficient("survival") and not fighter.is_proficient("athletics"),
+		"compétences de classe choisies")
+	_expect(Character.create("goblin", "fighter", "D").choices["class/skills"] == ["athletics", "perception"], "valeurs par défaut")
+
+	# Ascendance du tieffelin.
+	var tiefling := Character.create("tiefling", "wizard", "T", {"choices": {"species/ancestry": ["cold"]}})
+	_expect(tiefling.all_defenses().has(Defenses.RESISTANCE, "cold") and not tiefling.all_defenses().has(Defenses.RESISTANCE, "fire"),
+		"ascendance : Givre abyssal")
+	_expect(CharacterSheet.bbcode(tiefling).begins_with("Tieffelin (Givre abyssal)"), "fiche : ascendance affichée")
+
+	# Style de combat (Guerrier niveau 1) : choix en attente, puis effet.
+	_expect(fighter.pending_choice().get("key") == "feature:fighting_style/style", "Style de combat à choisir au hub")
+	_expect("defense" in fighter.choice_options("feature:fighting_style/style") and "alert" not in fighter.choice_options("feature:fighting_style/style"),
+		"seulement les dons de style")
+	var ac := fighter.armor_class()
+	_expect(fighter.choose("feature:fighting_style/style", "defense") and fighter.has_feat("defense") and fighter.armor_class() == ac + 1,
+		"Défense : +1 CA en armure")
+	_expect("defense" not in fighter.available_feats(), "les styles ne s'obtiennent pas en montant de niveau")
+
+	# Sous-classe au niveau 3 : Champion.
+	fighter.add_xp(Progression.xp_for(3) - fighter.xp)
+	_expect(fighter.pending_choice().get("key") == "feature:subclass/subclass", "sous-classe à choisir au niveau 3")
+	fighter.choose("feature:subclass/subclass", "champion")
+	var champion := Combatant.from_character(fighter, true)
+	_expect(champion.critical_threshold() == 19 and fighter.features().any(func(f): return f["id"] == "remarkable_athlete"),
+		"Champion : critique sur 19-20, Athlète remarquable")
+	_expect(Dice.check_advantage({"skill": "athletics", "dc": 10}, fighter) == 1, "Athlète remarquable : avantage en Athlétisme")
+	_expect(CharacterSheet.bbcode(fighter).contains("Guerrier (Champion)"), "fiche : sous-classe affichée")
+
+	# Doué (Noble) : trois compétences au choix.
+	var noble := Character.create("goblin", "wizard", "N", {"background": "noble"})
+	_expect(noble.pending_choice().get("key") == "feat:skilled/skills", "Doué : choix en attente")
+	for skill in ["stealth", "athletics", "survival"]:
+		noble.choose("feat:skilled/skills", skill)
+	_expect(noble.is_proficient("stealth") and noble.is_proficient("survival") and noble.pending_choice().is_empty(), "Doué : 3 maîtrises")
+
+	# Amélioration d'attribut : deux fois le même attribut = +2.
+	var str_score := noble.ability_score("str")
+	noble.feats.append("ability_score_improvement")
+	_expect(noble.choose("feat:ability_score_improvement/abilities", "str") and noble.choose("feat:ability_score_improvement/abilities", "str")
+		and noble.ability_score("str") == str_score + 2, "Amélioration d'attribut : +2 FOR")
+
+	# Initié à la magie : un guerrier lance Sommeil une fois par repos long, avec l'attribut choisi.
+	var knight := Character.create("goblin", "fighter", "K")
+	knight.feats.append("magic_initiate")
+	knight.complete_all_choices()
+	knight.long_rest()
+	_expect("magic_missile|magic_initiate" in knight.combat_actions() and knight.resources.get("magic_initiate", 0) == 1
+		and knight.action_ability("spell") == "int", "Initié à la magie : sort, ressource, attribut")
+	Game.start_life(knight, 121)
+	var combat := Game.start_combat({"enemies": ["wolf"]})
+	var missile := Actions.def("magic_missile|magic_initiate")
+	combat.perform(combat.hero, missile, combat.enemies()[0])
+	_expect(knight.resources["magic_initiate"] == 0 and combat.action_unavailable_reason(combat.hero, missile) != "",
+		"Initié à la magie : une fois par repos long")
+	Game.combat = null
+
+	# Évocateur : tour de magie puissant ; Voleur : Mains lestes.
+	var evoker := _at_level("goblin", "wizard", 10)
+	_expect(evoker.choices.get("feature:subclass/subclass") == ["evoker"] and evoker.has_modifier("empowered_evocation"), "Évocateur niveau 10")
+	var caster := Combatant.from_character(evoker, true)
+	_expect(caster.damage_expr(Actions.def("fire_bolt")["effects"][0]) == "2d10+%d" % evoker.ability_mod("int"),
+		"Évocation renforcée : + INT aux dégâts d'évocation")
+	var thief := _at_level("goblin", "rogue", 3)
+	thief.add_item("potion_heal")
+	Game.start_life(thief, 122)
+	combat = Game.start_combat({"enemies": ["wolf"]})
+	combat.turn = combat.order.find(combat.hero)
+	combat.start_turn()
+	combat.use_item(combat.hero, "potion_heal", combat.hero)
+	_expect(combat.actions_left == 1, "Mains lestes : l'objet ne coûte pas l'action")
+	Game.combat = null
+
+	# Style Armes à deux mains : aucun dé de dégâts sous 3.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 9
+	var lowest := 99
+	for i in 40:
+		for d: Dictionary in Dice.roll_expr("2d6", rng, false, 3)["dice"]:
+			lowest = mini(lowest, d["value"])
+	_expect(lowest == 3, "Armes à deux mains : 1 et 2 comptent 3")
+
+	# Compagnon : ses choix sont faits d'office ; sauvegarde des choix.
+	var mira := Character.create_companion("mira")
+	_expect(mira.pending_choice().is_empty() and mira.choices.has("species/versatile"), "compagnon : choix complétés")
+	var saved := Character.from_dict(JSON.parse_string(JSON.stringify(fighter.to_dict())))
+	_expect(saved.choices == fighter.choices and saved.armor_class() == fighter.armor_class(), "choix sauvegardés")
 	return true
 
 

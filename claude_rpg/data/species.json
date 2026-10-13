@@ -7,7 +7,9 @@
 		"start_age": 18,
 		"age_stages": {"child": 0, "teen": 12, "adult": 18, "elder": 60, "venerable": 80},
 		"aging_age": 60,
-		"bonus_feats": 1,
+		"choices": [
+			{"id": "versatile", "name": "Don de l'humain", "type": "feat", "category": "origin", "count": 1, "default": ["skilled"]}
+		],
 		"names": ["Aldric", "Brenna", "Cédric", "Daria", "Edwin", "Fiora", "Gareth", "Helna", "Ivo", "Jessa"],
 		"art": {
 			"ears": "round",
@@ -98,7 +100,13 @@
 		"start_age": 18,
 		"age_stages": {"child": 0, "teen": 12, "adult": 18, "elder": 70, "venerable": 90},
 		"aging_age": 70,
-		"modifiers": [{"type": "resistance", "damage_type": "fire"}],
+		"choices": [
+			{"id": "ancestry", "name": "Ascendance infernale", "type": "option", "count": 1, "at_creation": true, "default": ["fire"], "options": [
+				{"id": "fire", "name": "Feu infernal", "description": "Le sang des fournaises : résistance au feu.", "modifiers": [{"type": "resistance", "damage_type": "fire"}]},
+				{"id": "cold", "name": "Givre abyssal", "description": "Le froid des abysses : résistance au froid.", "modifiers": [{"type": "resistance", "damage_type": "cold"}]},
+				{"id": "necrotic", "name": "Ombre funeste", "description": "Le souffle des enfers morts : résistance aux dégâts nécrotiques.", "modifiers": [{"type": "resistance", "damage_type": "necrotic"}]}
+			]}
+		],
 		"names": ["Méphara", "Ilzac", "Vhorn", "Saelith", "Akzar", "Nyx", "Espérance", "Tourment", "Audace", "Chant"],
 		"art": {
 			"ears": "elf",

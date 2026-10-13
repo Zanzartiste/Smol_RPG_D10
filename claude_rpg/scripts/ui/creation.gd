@@ -43,6 +43,9 @@ var _cp_ranks := {}  # id d'amélioration (Creator Points) -> rang acheté pour 
 var _upgrade_rows := {}  # id d'amélioration -> {rank, cost, minus, plus}
 var _species_buttons := {}
 var _class_buttons := {}
+var _creation_choices := {}  # clé de choix (« class/skills », « species/ancestry ») -> valeurs choisies
+var _class_choice_box := VBoxContainer.new()
+var _species_choice_box := VBoxContainer.new()
 
 
 func _ready() -> void:
@@ -59,6 +62,9 @@ func _ready() -> void:
 	var genders := _fill_buttons(gender_buttons, _index(DB.rules["genders"]), func(_id): return true, _on_gender_selected)
 	_build_ability_grid()
 	_build_upgrade_grid()
+	class_text.get_parent().add_child(_class_choice_box)
+	species_text.get_parent().add_child(_species_choice_box)
+	species_text.get_parent().move_child(_species_choice_box, species_text.get_index() + 1)
 
 	random_name_button.pressed.connect(_randomize_name)
 	appearance_button.pressed.connect(_on_appearance_pressed)
@@ -89,6 +95,7 @@ func build_character() -> Character:
 		"abilities": _point_buy.final_scores(),
 		"background": _background,
 		"gender": _gender,
+		"choices": _creation_choices,
 	})
 	ch.art_seed = _art_seed
 	CreatorPoints.apply(ch, _cp_ranks)  # niveau de départ et or en plus
@@ -184,6 +191,7 @@ func _centered_label() -> Label:
 
 func _on_species_selected(species_id: String) -> void:
 	_species = species_id
+	_reset_creation_choices("species/", DB.species[species_id])
 	if _name_is_random:
 		_randomize_name()
 	_refresh()
@@ -192,6 +200,7 @@ func _on_species_selected(species_id: String) -> void:
 ## Changer de classe réapplique son modèle d'attributs (comme dans BG3).
 func _on_class_selected(class_id: String) -> void:
 	_class = class_id
+	_reset_creation_choices("class/", DB.classes[class_id])
 	_point_buy = PointBuy.from_class(class_id)
 	_point_buy.extra_budget = CreatorPoints.bonus(_cp_ranks, "point_buy")
 	_refresh()
@@ -199,7 +208,100 @@ func _on_class_selected(class_id: String) -> void:
 
 func _on_background_selected(background_id: String) -> void:
 	_background = background_id
+	# Une compétence déjà donnée par le passé ne peut pas être choisie en plus.
+	var granted: Array = DB.backgrounds[background_id].get("skills", [])
+	for key: String in _creation_choices:
+		_creation_choices[key] = _creation_choices[key].filter(func(v): return v not in granted)
+	_fill_missing_choices()
 	_refresh()
+
+
+# --- Choix de création (compétences de classe, ascendance) -----------------------
+
+## Choix proposés à la création par une espèce ou une classe ("at_creation").
+func _creation_specs(source: Dictionary) -> Array:
+	return source.get("choices", []).filter(func(s): return s.get("at_creation", false))
+
+
+## Revient aux valeurs par défaut des choix de création d'une source (en évitant les compétences du passé).
+func _reset_creation_choices(prefix: String, source: Dictionary) -> void:
+	for key: String in _creation_choices.keys():
+		if key.begins_with(prefix):
+			_creation_choices.erase(key)
+	var granted: Array = DB.backgrounds.get(_background, {}).get("skills", [])
+	for spec: Dictionary in _creation_specs(source):
+		_creation_choices[prefix + spec["id"]] = spec.get("default", []).filter(func(v): return v not in granted)
+	_fill_missing_choices()
+
+
+## Complète les choix de création incomplets avec les premières options libres (une compétence
+## par défaut déjà donnée par le passé est remplacée par une autre).
+func _fill_missing_choices() -> void:
+	var granted: Array = DB.backgrounds.get(_background, {}).get("skills", [])
+	for pair in [["species/", DB.species.get(_species, {})], ["class/", DB.classes.get(_class, {})]]:
+		for spec: Dictionary in _creation_specs(pair[1]):
+			var key: String = pair[0] + spec["id"]
+			var values: Array = _creation_choices.get(key, [])
+			for o in spec.get("options", []):
+				var value: String = o if o is String else o["id"]
+				if values.size() >= int(spec.get("count", 1)):
+					break
+				if value not in values and not (spec.get("type") == "skill" and value in granted):
+					values.append(value)
+			_creation_choices[key] = values
+
+
+func _on_creation_choice(key: String, spec: Dictionary, value: String) -> void:
+	var values: Array = _creation_choices.get(key, [])
+	if value in values:
+		values.erase(value)
+	elif int(spec.get("count", 1)) == 1:
+		values = [value]
+	elif values.size() < int(spec.get("count", 1)):
+		values.append(value)
+	_creation_choices[key] = values
+	_refresh()
+
+
+## Boutons à bascule des choix de création d'une source, dans `box`.
+func _fill_creation_choices(box: VBoxContainer, prefix: String, source: Dictionary) -> void:
+	for child in box.get_children():
+		box.remove_child(child)
+		child.queue_free()
+	var granted: Array = DB.backgrounds.get(_background, {}).get("skills", [])
+	for spec: Dictionary in _creation_specs(source):
+		var key: String = prefix + spec["id"]
+		var values: Array = _creation_choices.get(key, [])
+		var count := int(spec.get("count", 1))
+		var title := Label.new()
+		title.text = tr("%s : %d / %d") % [spec.get("name", ""), values.size(), count]
+		title.theme_type_variation = &"SectionLabel"
+		box.add_child(title)
+		var flow := HFlowContainer.new()
+		box.add_child(flow)
+		var options: Array = spec.get("options", []).map(func(o): return o if o is String else o["id"])
+		for value: String in options:
+			var button := Button.new()
+			button.text = Choices.value_name(spec, value)
+			button.tooltip_text = Choices.value_description(spec, value)
+			button.toggle_mode = true
+			button.button_pressed = value in values
+			if spec.get("type") == "skill" and value in granted:
+				button.disabled = true
+				button.tooltip_text = tr("Déjà maîtrisée grâce au passé")
+			elif value not in values and values.size() >= count and count > 1:
+				button.disabled = true
+			button.pressed.connect(_on_creation_choice.bind(key, spec, value), CONNECT_DEFERRED)
+			flow.add_child(button)
+
+
+## Tous les choix de création sont-ils complets ?
+func _creation_choices_complete() -> bool:
+	for pair in [["species/", DB.species[_species]], ["class/", DB.classes[_class]]]:
+		for spec: Dictionary in _creation_specs(pair[1]):
+			if _creation_choices.get(pair[0] + spec["id"], []).size() < int(spec.get("count", 1)):
+				return false
+	return true
 
 
 func _on_gender_selected(gender_id: String) -> void:
@@ -353,10 +455,12 @@ func _refresh() -> void:
 	sheet_text.text = CharacterSheet.bbcode(ch)
 	species_text.text = _species_info(DB.species[_species])
 	class_text.text = _class_info(DB.classes[_class])
+	_fill_creation_choices(_class_choice_box, "class/", DB.classes[_class])
+	_fill_creation_choices(_species_choice_box, "species/", DB.species[_species])
 	background_text.text = _background_info(DB.backgrounds[_background])
 	_refresh_abilities()
 	_refresh_creator_points()
-	start_button.disabled = ch.name == "" or not _point_buy.is_valid()
+	start_button.disabled = ch.name == "" or not _point_buy.is_valid() or not _creation_choices_complete()
 
 
 func _refresh_abilities() -> void:
@@ -398,7 +502,7 @@ func _class_info(cls: Dictionary) -> String:
 		cls.get("description", ""),
 		_field(tr("Dé de vie :"), "d%d" % int(cls["hit_die"])),
 		_field(tr("Sauvegardes :"), ", ".join(saves)),
-		_field(tr("Maîtrises :"), _skill_names(cls.get("skills", []))),
+		_field(tr("Maîtrises :"), tr("au choix, ci-dessous")),
 		_field(tr("Équipement :"), " · ".join(gear))] + "\n" + _field(tr("Actions :"),
 		", ".join(PackedStringArray(cls.get("actions", []).map(func(id): return Actions.name_of(id)))))
 	if cls.has("spell_slots"):
