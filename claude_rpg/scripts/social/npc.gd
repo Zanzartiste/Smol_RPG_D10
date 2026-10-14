@@ -47,6 +47,15 @@ func role_def() -> Dictionary:
 	return DB.npc_roles.get(role, {})
 
 
+## Lieu où on le trouve à un moment de la journée (npc_roles.json › schedule : {"morning": "forest"…}) ;
+## sans emploi du temps, ou hors de son lieu habituel (groupe, déménagement), son lieu tout court.
+func location_at(slot_id: String) -> String:
+	var schedule: Dictionary = role_def().get("schedule", {})
+	if slot_id == "" or location != role_def().get("location", location):
+		return location
+	return schedule.get(slot_id, location)
+
+
 func role_name() -> String:
 	return Loc.gendered(String(role_def().get("name", role)), gender)
 

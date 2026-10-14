@@ -40,20 +40,26 @@ static func all_npcs() -> Array[Npc]:
 	return result
 
 
-## PNJ présents dans un lieu (les habitués sont créés à la première visite).
-static func at_location(location_id: String, rng: RandomNumberGenerator) -> Array[Npc]:
+## PNJ présents dans un lieu, à un moment de la journée (`slot_id` : "morning"… ; "" : leur lieu habituel).
+## Les habitués sont créés à la première visite.
+static func at_location(location_id: String, rng: RandomNumberGenerator, slot_id := "") -> Array[Npc]:
 	ensure_regulars(location_id, rng)
 	var result: Array[Npc] = []
 	for n in all_npcs():
-		if n.alive and n.location == location_id and n.age(Meta.world_day) >= 1:
+		if n.alive and n.location_at(slot_id) == location_id and n.age(Meta.world_day) >= 1:
 			result.append(n)
 	return result
 
 
+## Rôles qu'on peut croiser dans un lieu : ceux qui y vivent, et ceux dont l'emploi du temps y passe.
+static func roles_in(location_id: String) -> Array:
+	return DB.npc_roles.values().filter(func(r): return r.get("location") == location_id \
+		or location_id in r.get("schedule", {}).values())
+
+
 static func ensure_regulars(location_id: String, rng: RandomNumberGenerator) -> void:
-	for role: Dictionary in DB.npc_roles.values():
-		if role.get("regular", false) and role.get("location") == location_id \
-				and not all_npcs().any(func(n): return n.role == role["id"]):
+	for role: Dictionary in roles_in(location_id):
+		if role.get("regular", false) and not all_npcs().any(func(n): return n.role == role["id"]):
 			generate(role["id"], rng)
 
 

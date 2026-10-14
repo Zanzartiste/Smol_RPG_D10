@@ -10,7 +10,7 @@
 		"art": {"headgear": "", "outfit": "#4a4a52", "accent": "#9a2f2f"}
 	},
 	{
-		"id": "herbalist", "name": "Herboriste", "location": "town", "regular": true, "shop": "apothecary", "class": "wizard",
+		"id": "herbalist", "name": "Herboriste", "location": "town", "schedule": {"morning": "forest"}, "regular": true, "shop": "apothecary", "class": "wizard",
 		"fixed": {"name": "Maëlle", "species": "elf", "gender": "female", "age": 160},
 		"art": {"headgear": "hood", "outfit": "#3a5a3a", "accent": "#a0c060"}
 	},
@@ -30,7 +30,7 @@
 		"art": {"headgear": "", "outfit": "#7a6a4a", "accent": "#a08060"}
 	},
 	{
-		"id": "woodcutter", "name": "Bûcheron", "location": "forest", "searchable": true, "class": "fighter",
+		"id": "woodcutter", "name": "Bûcheron", "location": "forest", "schedule": {"evening": "town"}, "searchable": true, "class": "fighter",
 		"inventory": {"handaxe": 1, "wolf_pelt": 1}, "gold": "1d6",
 		"art": {"headgear": "hood", "outfit": "#4a3a2a", "accent": "#6a8a3a"}
 	}

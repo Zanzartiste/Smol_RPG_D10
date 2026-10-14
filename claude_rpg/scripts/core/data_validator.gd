@@ -17,6 +17,7 @@ static func validate(db: Node) -> void:
 	_validate_economy(db, errors)
 	_validate_social(db, errors)
 	_validate_quests(db, errors)
+	_validate_schedules(db, errors)
 	for id: String in db.events:
 		_validate_event(db, db.events[id], errors)
 
@@ -641,6 +642,16 @@ static func _validate_damage_types(db: Node, errors: Array[String]) -> void:
 			var chance := float(status.get("chance", -1))
 			if chance < 0.0 or chance > 1.0:
 				errors.append(ctx + " : status.chance doit être entre 0 et 1")
+
+
+static func _validate_schedules(db: Node, errors: Array[String]) -> void:
+	var slots: Array = db.rules.get("time_slots", []).map(func(s): return s["id"])
+	for role: Dictionary in db.npc_roles.values():
+		for slot_id: String in role.get("schedule", {}):
+			var ctx := "npc_roles.json › %s › schedule" % role["id"]
+			if slot_id not in slots:
+				errors.append(ctx + " : moment inconnu « %s »" % slot_id)
+			_expect_ref(db.locations, role["schedule"][slot_id], "lieu", ctx, errors)
 
 
 static func _validate_quests(db: Node, errors: Array[String]) -> void:

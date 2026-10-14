@@ -359,7 +359,7 @@ func _on_location_chosen(location_id: String) -> void:
 
 
 func _has_people(location_id: String) -> bool:
-	return DB.npc_roles.values().any(func(r): return r.get("location") == location_id)
+	return not Social.roles_in(location_id).is_empty()
 
 
 ## Menu d'un lieu : se promener (événement au hasard), entrer dans une boutique, ou revenir.
@@ -385,9 +385,9 @@ func _show_location_menu(location_id: String) -> void:
 ## Les gens présents dans un lieu, et la possibilité de chercher un garde, un villageois…
 func _show_people(location_id: String) -> void:
 	title_label.text = tr("%s — Parler à quelqu'un") % DB.locations[location_id]["name"]
-	body_text.text = tr("Qui allez-vous voir ?")
+	body_text.text = tr("Qui allez-vous voir ? (Les gens vont et viennent selon le moment de la journée.)")
 	_clear_choices()
-	for n in Social.at_location(location_id, Game.life.rng):
+	for n in Social.at_location(location_id, Game.life.rng, Game.life.slot_id()):
 		var label := "%s — %s" % [n.name, n.role_name()]
 		if n.player.get("met", false):
 			label += " (%s)" % Social.status_name(n)

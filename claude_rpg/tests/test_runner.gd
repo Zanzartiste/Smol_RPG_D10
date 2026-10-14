@@ -1690,6 +1690,11 @@ func _test_social() -> bool:
 	_expect(people.size() >= 4 and people.any(func(n): return n.name == "Hilde" and n.species == "dwarf"),
 		"habitués de Brumeval (Hilde la forgeronne…)")
 	_expect(Social.at_location("town", rng).size() == people.size(), "les habitués ne sont créés qu'une fois")
+	var herbalist_seen := func(loc: String, slot: String) -> bool:
+		return Social.at_location(loc, rng, slot).any(func(n): return n.role == "herbalist")
+	_expect(herbalist_seen.call("forest", "morning") and not herbalist_seen.call("town", "morning")
+		and herbalist_seen.call("town", "afternoon") and not herbalist_seen.call("forest", "evening"),
+		"emploi du temps : l'herboriste cueille en forêt le matin, tient boutique ensuite")
 	var guard := Social.generate("guard", rng)
 	_expect(guard.location == "town" and guard.traits.size() == 2 and guard.facts.is_empty() and guard.age(Meta.world_day) >= 18,
 		"garde généré : 2 traits, aucun fait avant de les apprendre")
