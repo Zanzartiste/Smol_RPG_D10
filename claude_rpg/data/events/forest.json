@@ -649,5 +649,82 @@
 				}
 			}
 		]
+	},
+	{
+		"id": "forest_old_cairn",
+		"location": "forest",
+		"weight": 3,
+		"title": "Un cairn moussu",
+		"text": "Au pied d'un chêne, des pierres plates sont empilées avec soin. La mousse en a effacé les marques, mais quelque chose brille entre deux blocs.",
+		"choices": [
+			{
+				"id": "dig",
+				"text": "Écarter les pierres",
+				"check": {"skill": "physique", "difficulty": 2},
+				"success": {
+					"text": "Les blocs cèdent. Dessous, une bourse de cuir pourrie et quelques pièces ternies.",
+					"effects": [{"type": "gold", "amount": 9}, {"type": "xp", "amount": 30}]
+				},
+				"failure": {
+					"text": "Un bloc glisse et vous écrase la main.",
+					"effects": [{"type": "hp", "amount": -1, "cause": "Écrasé par un cairn"}]
+				}
+			},
+			{
+				"id": "study",
+				"text": "Examiner les marques avant d'y toucher",
+				"check": {"skill": "lore", "difficulty": 2},
+				"success": {
+					"text": "C'est une tombe de voyageur, rien de maudit. Vous prélevez l'offrande qui y dormait et laissez une pierre en retour.",
+					"effects": [{"type": "add_item", "id": "healing_herbs"}, {"type": "xp", "amount": 30}]
+				},
+				"failure": {"text": "Les signes restent muets. Vous préférez ne pas troubler le lieu.", "effects": []}
+			},
+			{
+				"id": "leave",
+				"text": "Laisser les morts en paix",
+				"outcome": {"text": "Vous ajoutez une pierre au tas et poursuivez votre route.", "effects": []}
+			}
+		]
+	},
+	{
+		"id": "forest_wounded_stranger",
+		"location": "forest",
+		"weight": 3,
+		"title": "L'inconnu blessé",
+		"text": "Un homme est assis contre un tronc, une main pressée sur le flanc. Il ne porte pas d'arme visible. « Un peu d'aide, voyageu{g:r|se|r·se} ? Je paierai. Je crois. »",
+		"choices": [
+			{
+				"id": "help",
+				"text": "Soigner sa blessure",
+				"check": {"skill": "medicine", "difficulty": 2},
+				"success": {
+					"text": "Le pansement tient. L'homme vous remet quelques pièces et file sans donner son nom.",
+					"effects": [{"type": "gold", "amount": 10}, {"type": "xp", "amount": 40}]
+				},
+				"failure": {
+					"text": "Vous serrez maladroitement trop fort. Il grogne et vous repousse, et sa manche vous entaille au passage.",
+					"effects": [{"type": "hp", "amount": -1, "cause": "Blessé par un inconnu"}]
+				}
+			},
+			{
+				"id": "question",
+				"text": "Lui demander d'où vient sa blessure",
+				"check": {"skill": "insight", "difficulty": 2},
+				"success": {
+					"text": "Il hésite trop longtemps : c'est une blessure de lame, et ses poursuivants ne sont pas loin. Vous vous éclipsez à temps.",
+					"effects": [{"type": "xp", "amount": 30}]
+				},
+				"failure": {
+					"text": "Il vous raconte une histoire de sanglier. Vous la croyez, puis vous croisez ses poursuivants, qui vous prennent pour un complice.",
+					"effects": [{"type": "hp", "amount": -3, "cause": "Pris pour un fuyard"}]
+				}
+			},
+			{
+				"id": "leave",
+				"text": "Vous éloigner sans un mot",
+				"outcome": {"text": "Son regard vous suit jusqu'au détour du sentier.", "effects": []}
+			}
+		]
 	}
 ]

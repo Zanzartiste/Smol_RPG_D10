@@ -1,11 +1,18 @@
 [
 	{
 		"id": "blacksmith", "name": "Forgeronne", "location": "town", "regular": true, "shop": "forge", "class": "fighter",
+		"requests": [
+			{"id": "ore", "name": "Du minerai pour {npc}", "text": "{npc} manque de minerai de fer pour sa forge.", "item": "iron_ore", "count": 5, "gold": 9, "friendship": 5},
+			{"id": "pelts", "name": "Un tablier de forge", "text": "{npc} veut des peaux de loup pour se tailler un tablier solide.", "item": "wolf_pelt", "count": 2, "gold": 11, "friendship": 5}
+		],
 		"fixed": {"name": "Hilde", "species": "dwarf", "gender": "female"},
 		"art": {"headgear": "", "outfit": "#5a4a3a", "accent": "#c06030"}
 	},
 	{
 		"id": "armorer", "name": "Armurier", "location": "town", "regular": true, "shop": "armorer", "class": "fighter",
+		"requests": [
+			{"id": "padding", "name": "Du rembourrage pour {npc}", "text": "{npc} cherche des peaux de loup pour doubler ses armures.", "item": "wolf_pelt", "count": 3, "gold": 16, "friendship": 5}
+		],
 		"fixed": {"name": "Gorvald", "species": "human", "gender": "male", "age": 52},
 		"art": {"headgear": "", "outfit": "#4a4a52", "accent": "#9a2f2f"}
 	},
