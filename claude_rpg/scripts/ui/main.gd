@@ -371,6 +371,8 @@ func _show_location_menu(location_id: String) -> void:
 	body_text.text = loc.get("description", "")
 	_clear_choices()
 	_add_choice(tr("Se promener (événement au hasard)"), _show_event_from.bind(location_id))
+	if not EventEngine.gather_event(location_id).is_empty():
+		_add_choice(tr("Chercher des ressources"), func(): _show_event(EventEngine.gather_event(location_id)))
 	if _has_people(location_id):
 		_add_choice(tr("Parler à quelqu'un"), _show_people.bind(location_id))
 	for shop_id in Shops.of_location(location_id):

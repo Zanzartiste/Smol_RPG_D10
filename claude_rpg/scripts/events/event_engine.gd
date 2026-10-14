@@ -76,6 +76,37 @@ static func visible_choices(ev: Dictionary, life: LifeState, meta: MetaState,
 	return result
 
 
+## Événement de récolte d'un lieu sauvage (locations.json › gather) : un choix par ressource, avec un test
+## (réussite : la ressource ; réussite critique : le double ; échec critique : une blessure), puis Retour.
+## Ressource : {"id", "name", "item", "count"? (1), "skill", "ability"?, "difficulty", "failure"?, "fumble"?,
+## "fumble_hp"?}. Retourne {} si le lieu n'a rien à récolter.
+static func gather_event(location_id: String) -> Dictionary:
+	var location: Dictionary = DB.locations.get(location_id, {})
+	var resources: Array = location.get("gather", [])
+	if resources.is_empty():
+		return {}
+	var choices: Array = []
+	for res: Dictionary in resources:
+		var count := int(res.get("count", 1))
+		var check := {"skill": res["skill"], "difficulty": int(res.get("difficulty", 1))}
+		if res.has("ability"):
+			check["ability"] = res["ability"]
+		var got := Loc.ui("Vous récoltez : %s ×%d.")
+		choices.append({
+			"id": res["id"], "text": res["name"], "check": check,
+			"critical_success": {"text": got % [Items.name_of(res["item"]), count * 2],
+				"effects": [{"type": "add_item", "id": res["item"], "count": count * 2}]},
+			"success": {"text": got % [Items.name_of(res["item"]), count],
+				"effects": [{"type": "add_item", "id": res["item"], "count": count}]},
+			"failure": {"text": res.get("failure", Loc.ui("Vous rentrez bredouille.")), "effects": []},
+			"critical_failure": {"text": res.get("fumble", Loc.ui("Vous vous blessez.")),
+				"effects": [{"type": "hp", "amount": int(res.get("fumble_hp", -1)), "cause": Loc.ui("Mort en cherchant des ressources")}]},
+		})
+	choices.append({"id": "back", "text": Loc.ui("Renoncer"), "outcome": {"text": Loc.ui("Vous laissez tomber."), "effects": []}})
+	return {"id": "gather_" + location_id, "location": null, "title": Loc.ui("Récolte — %s") % location["name"],
+		"text": Loc.ui("Vous prenez le temps de fouiller les environs. Que cherchez-vous ?"), "choices": choices}
+
+
 ## Résout un choix : jet éventuel, puis effets du résultat. Une réussite critique utilise l'issue
 ## "critical_success" si le choix en a une (sinon "success"), un échec critique "critical_failure" (sinon
 ## "failure").

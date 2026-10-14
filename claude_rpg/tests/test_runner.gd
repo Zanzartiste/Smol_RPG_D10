@@ -419,6 +419,17 @@ func _test_engine() -> bool:
 	var shrine: Dictionary = DB.events["forest_shrine"]
 	_expect(EventEngine.visible_choices(shrine, life, meta).size() == 2, "choix secrets cachés sans le flag ni le passé")
 
+	# Récolte dans un lieu sauvage : un test par ressource.
+	var gather := EventEngine.gather_event("forest")
+	_expect(EventEngine.gather_event("town").is_empty() and gather["choices"].size() == 3, "récolte : seulement dans les lieux sauvages")
+	var errors_gather: Array[String] = []
+	DataValidator._validate_event(DB, gather, errors_gather)
+	_expect(errors_gather.is_empty(), "récolte : un événement valide %s" % str(errors_gather))
+	var herbs: Dictionary = gather["choices"][0]
+	var herbs_before := life.character.item_count("healing_herbs")
+	var gathered := EventEngine.resolve_choice(gather, herbs, life, meta, {"success": true, "critical": 0, "fumble": false})
+	_expect(gathered["outcome"] == "success" and life.character.item_count("healing_herbs") == herbs_before + 1, "récolte réussie : une herbe")
+
 	# Validation : un événement dont tous les choix ont des conditions pourrait bloquer le joueur.
 	var errors: Array[String] = []
 	var trap := {"id": "trap", "location": "town", "text": "?", "choices": [
