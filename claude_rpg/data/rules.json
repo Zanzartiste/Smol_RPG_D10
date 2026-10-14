@@ -33,6 +33,19 @@
 		"size_offset": 2,
 		"base": 7
 	},
+	"appearance": {
+		"_doc": "Apparence choisie à la création (onglet Apparence). Les couleurs de peau viennent de l'espèce (species.json › art.skin) ; cheveux et yeux : celles de l'espèce, plus ces teintes communes. bodies.width : largeur des épaules en pixels (-2 à +2).",
+		"hair_styles": [
+			{"id": "short", "name": "Courts"}, {"id": "long", "name": "Longs"}, {"id": "tied", "name": "Chignon"},
+			{"id": "braids", "name": "Tresses"}, {"id": "crest", "name": "Crête"}, {"id": "bald", "name": "Rasés"}
+		],
+		"bodies": [
+			{"id": "slim", "name": "Mince", "width": -2}, {"id": "average", "name": "Moyenne", "width": 0},
+			{"id": "broad", "name": "Large", "width": 2}
+		],
+		"hair_colors": ["#e8e4dc", "#8a8a8a", "#c8462a", "#e0c070", "#2a3460", "#5a2a6a"],
+		"eye_colors": ["#7a7a80", "#c08a2a", "#3a8ac0"]
+	},
 	"calendar": {
 		"_doc": "Saisons (l'année est partagée en parts égales, le jour 1 ouvre le printemps) et météo du jour, tirée selon les poids de la saison. light : un combat sous cette météo est dans la pénombre (Couvert +1) ou le noir (+2).",
 		"seasons": [

@@ -21,11 +21,11 @@ static func portrait(ch: Character) -> Texture2D:
 	var file := "%s%s_%s_%s.png" % [PORTRAIT_DIR, ch.species_id, ch.class_id, stage]
 	if ResourceLoader.exists(file):
 		return load(file)
-	var key := "portrait:%s:%s:%s:%d" % [ch.species_id, ch.class_id, stage, ch.art_seed]
+	var key := "portrait:%s:%s:%s:%d:%d" % [ch.species_id, ch.class_id, stage, ch.art_seed, hash(ch.look)]
 	if not _cache.has(key):
 		var species_art: Dictionary = DB.species[ch.species_id].get("art", {})
 		var class_art: Dictionary = DB.classes[ch.class_id].get("art", {})
-		_cache[key] = ImageTexture.create_from_image(PixelArt.portrait(species_art, class_art, stage, ch.art_seed))
+		_cache[key] = ImageTexture.create_from_image(PixelArt.portrait(species_art, class_art, stage, ch.art_seed, true, ch.look))
 	return _cache[key]
 
 
@@ -49,11 +49,11 @@ static func creature(creature_id: String) -> Texture2D:
 
 ## Sprite détouré d'un personnage (héros, compagnon) pour le champ de bataille.
 static func character_sprite(ch: Character) -> Texture2D:
-	var key := "sprite:%s:%s:%s:%d" % [ch.species_id, ch.class_id, ch.life_stage(), ch.art_seed]
+	var key := "sprite:%s:%s:%s:%d:%d" % [ch.species_id, ch.class_id, ch.life_stage(), ch.art_seed, hash(ch.look)]
 	if not _cache.has(key):
 		var species_art: Dictionary = DB.species[ch.species_id].get("art", {})
 		var class_art: Dictionary = DB.classes[ch.class_id].get("art", {})
-		_cache[key] = ImageTexture.create_from_image(PixelArt.portrait(species_art, class_art, ch.life_stage(), ch.art_seed, false))
+		_cache[key] = ImageTexture.create_from_image(PixelArt.portrait(species_art, class_art, ch.life_stage(), ch.art_seed, false, ch.look))
 	return _cache[key]
 
 

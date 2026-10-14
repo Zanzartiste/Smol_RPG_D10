@@ -29,6 +29,7 @@ var inventory: Dictionary = {}  # id d'objet -> quantité
 var start_age := 18
 var age_days := 0  # jours vécus depuis le début de la partie
 var art_seed := 0  # graine des variations du portrait procédural
+var look := {}  # apparence choisie à la création (PixelArt.portrait) ; vide : tout vient de la graine
 var template_id := ""  # pour un compagnon : son id dans companions.json
 var npc_id := ""  # PNJ du monde lié à ce personnage (compagnon recruté, ou compagnon avec relation)
 var auto_combat := false  # en combat, l'IA joue ce personnage
@@ -1002,7 +1003,7 @@ func to_dict() -> Dictionary:
 		"pending_ability_points": pending_ability_points, "equipment": equipment, "defenses": defenses.to_dict(),
 		"pending_skill_points": pending_skill_points, "skill_points": skill_points,
 		"level": level, "xp": xp, "hp": hp, "max_hp": max_hp, "gold": gold, "inventory": inventory,
-		"start_age": start_age, "age_days": age_days, "art_seed": art_seed, "template_id": template_id, "npc_id": npc_id, "auto_combat": auto_combat,
+		"start_age": start_age, "age_days": age_days, "art_seed": art_seed, "look": look, "template_id": template_id, "npc_id": npc_id, "auto_combat": auto_combat,
 		"resources": resources, "equipped_spells": equipped_spells, "seen_spells": seen_spells,
 	}
 
@@ -1045,6 +1046,7 @@ static func from_dict(data: Dictionary) -> Character:
 	c.start_age = int(data.get("start_age", 18))
 	c.age_days = int(data.get("age_days", 0))
 	c.art_seed = int(data.get("art_seed", 0))
+	c.look = data.get("look", {})
 	c.template_id = data.get("template_id", "")
 	c.npc_id = data.get("npc_id", "")
 	c.auto_combat = data.get("auto_combat", false)

@@ -472,6 +472,21 @@ func _test_creation() -> bool:
 	_expect(ch.abilities["str"] == 5 and ch.abilities["cha"] == 5 and ch.abilities["dex"] == 6,
 		"création : l'achat de points et les bonus modifient le personnage")
 	screen._on_class_selected("wizard")
+	var page_titles := range(screen.pages.get_tab_count()).map(func(i): return screen.pages.get_tab_title(i))
+	_expect(page_titles[1] == "Apparence", "creation : onglet Apparence %s" % str(page_titles))
+	var goblin_skin: String = DB.species["goblin"]["art"]["skin"][2]
+	screen._on_class_selected("fighter")
+	screen.set_look("skin", goblin_skin)
+	screen.set_look("hair_style", "braids")
+	screen.set_look("body", "broad")
+	ch = screen.build_character()
+	_expect(ch.look["skin"] == goblin_skin and ch.look["hair_style"] == "braids" and ch.look["body"] == "broad"
+		and Character.from_dict(JSON.parse_string(JSON.stringify(ch.to_dict()))).look == ch.look, "creation : apparence choisie et sauvegardee")
+	_expect("#e8e4dc" in screen.look_palette("hair") and not ("#e8e4dc" in screen.look_palette("skin")), "creation : teintes communes pour les cheveux")
+	screen._on_species_selected("human")
+	_expect(screen._look["skin"] in DB.species["human"]["art"]["skin"] and screen._look["hair_style"] == "braids",
+		"creation : changer d'espece retire les couleurs, garde la coupe")
+	screen._on_class_selected("wizard")
 	_expect(screen.build_character().abilities["int"] == 7, "création : changer de classe réapplique son modèle")
 	screen.free()
 	return true
@@ -2203,6 +2218,12 @@ func _test_art() -> bool:
 	_expect(img.get_width() == PixelArt.PORTRAIT_SIZE, "portrait généré")
 	_expect(img.get_data() == PixelArt.portrait(DB.species["goblin"]["art"], DB.classes["wizard"]["art"], "adult", 7).get_data(),
 		"portrait déterministe")
+	var looks_differ := {}
+	for style in PixelArt.HAIR_STYLES:
+		for body in ["slim", "broad"]:
+			var look := {"hair_style": style, "body": body, "skin": "#d9a57b", "hair": "#c8462a", "eyes": "#3a8ac0", "beard": false, "headgear": false}
+			looks_differ[PixelArt.portrait(DB.species["human"]["art"], DB.classes["fighter"]["art"], "adult", 7, true, look).get_data()] = true
+	_expect(looks_differ.size() == PixelArt.HAIR_STYLES.size() * 2, "apparence : chaque coupe et corpulence se voit")
 	_expect(ArtProvider.portrait(c) != null, "ArtProvider fournit un portrait")
 	for kind in ["forest", "town", "home", "unknown"]:
 		_expect(PixelArt.scene(kind, "evening", 3).get_width() == PixelArt.SCENE_W, "décor %s généré" % kind)

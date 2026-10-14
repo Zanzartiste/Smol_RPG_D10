@@ -19,9 +19,15 @@ const SKY := {
 
 # --- Portraits ---------------------------------------------------------------
 
+## Coupes dessinées ; les anciennes graines tirent 0 courts, 1 longs, 2 rasés.
+const HAIR_STYLES := ["short", "long", "bald", "tied", "braids", "crest"]
+
+
 ## `with_background` = false : personnage détouré (sprites de combat).
+## `look` : apparence choisie à la création ({"skin", "hair", "eyes" : couleurs ; "hair_style", "body" : ids ;
+## "beard", "headgear" : bool}) ; ce qui manque est tiré de la graine.
 static func portrait(species_art: Dictionary, class_art: Dictionary, stage: String, seed_value: int,
-		with_background := true) -> Image:
+		with_background := true, look: Dictionary = {}) -> Image:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
 	var s := PORTRAIT_SIZE
@@ -38,6 +44,21 @@ static func portrait(species_art: Dictionary, class_art: Dictionary, stage: Stri
 	if ears == "goblin" and rng.randf() < 0.4:
 		hair_style = 2
 	var bearded := rng.randf() < float(species_art.get("beard_chance", 0.35 if ears == "round" else 0.0))
+	var style: String = HAIR_STYLES[hair_style]
+	if look.has("skin"):
+		skin = Color(String(look["skin"]))
+	if look.has("hair"):
+		hair = Color(String(look["hair"]))
+	if look.has("eyes"):
+		eye = Color(String(look["eyes"]))
+	style = String(look.get("hair_style", style))
+	bearded = bool(look.get("beard", bearded))
+	if not look.get("headgear", true):
+		headgear = ""
+	var body_width := 0
+	for b: Dictionary in DB.rules.get("appearance", {}).get("bodies", []):
+		if b["id"] == look.get("body", ""):
+			body_width = int(b.get("width", 0))
 	match stage:
 		"elder":
 			hair = hair.lerp(Color(0.6, 0.6, 0.6), 0.65)
@@ -45,8 +66,10 @@ static func portrait(species_art: Dictionary, class_art: Dictionary, stage: Stri
 			hair = hair.lerp(Color(0.9, 0.9, 0.9), 0.85)
 	var child := stage == "child"
 	var young := child or stage == "teen"
-	if young and hair_style == 2:
-		hair_style = 0
+	if young and style in ["bald", "crest"]:
+		style = "short"
+	if child:
+		body_width = int(body_width / 2.0)
 
 	# Géométrie de la tête (centre horizontal = 16, symétrie x <-> 31 - x).
 	var hx := 5 if child else 6  # demi-largeur entière de la tête
@@ -64,7 +87,7 @@ static func portrait(species_art: Dictionary, class_art: Dictionary, stage: Stri
 
 	# Buste et cou.
 	var torso_top := chin + 1
-	var half := 8 if child else 11
+	var half := (8 if child else 11) + body_width
 	for y in range(torso_top, s):
 		var h := half - maxi(0, 2 - (y - torso_top))
 		_hline(fig, 16 - h, 15 + h, y, outfit)
@@ -80,7 +103,7 @@ static func portrait(species_art: Dictionary, class_art: Dictionary, stage: Stri
 	# Arrière-plan de la tête : capuche, cheveux longs, oreilles.
 	if headgear == "hood":
 		_ellipse(fig, 16.0, cy - 0.5, rx + 2.0, ry + 1.5, outfit.darkened(0.15))
-	elif hair_style == 1:
+	elif style == "long":
 		for y in range(ey - 2, chin + 3):
 			_hline(fig, 16 - hx - 1, 15 + hx + 1, y, hair.darkened(0.1))
 	_draw_ears(fig, ears, ey, hx, skin)
@@ -92,16 +115,26 @@ static func portrait(species_art: Dictionary, class_art: Dictionary, stage: Stri
 			_shade(fig, x, y, 0.12)
 
 	# Cheveux.
-	if hair_style != 2 and headgear != "helmet":
+	if style not in ["bald", "crest"] and headgear != "helmet":
 		for y in range(head_top - 1, ey - 1):
 			for x in s:
 				if _inside(x, y, 16.0, cy, rx + 0.5, ry + 0.8) and y <= cy - ry * 0.4:
 					fig.set_pixel(x, y, hair)
 		for y in range(int(cy - ry * 0.4), ey):
 			_sym(fig, 16 - hx, y, hair)
+	if headgear == "":
+		match style:
+			"tied":
+				_ellipse(fig, 16.0, head_top - 1.5, 2.2, 1.6, hair)
+			"crest":
+				for y in range(head_top - 3, ey - 2):
+					_hline(fig, 15, 16, y, hair if y > head_top - 2 else hair.lightened(0.1))
+	if style == "braids" and headgear != "hood":
+		for y in range(ey - 1, chin + 4):
+			_sym(fig, 16 - hx - 1, y, hair if y % 2 == 0 else hair.darkened(0.25))
 
 	# Yeux, sourcils, nez, bouche.
-	var brow := hair.darkened(0.3) if hair_style != 2 else skin.darkened(0.4)
+	var brow := hair.darkened(0.3) if style != "bald" else skin.darkened(0.4)
 	if ears == "goblin":
 		_sym(fig, 12, ey, eye)
 		_sym(fig, 13, ey, eye.lightened(0.4))
@@ -145,7 +178,7 @@ static func portrait(species_art: Dictionary, class_art: Dictionary, stage: Stri
 	if stage in ["elder", "venerable"]:
 		_sym(fig, 11, ey + 1, skin.darkened(0.3))
 		_sym(fig, 12, ey + 1, skin.darkened(0.2))
-		if hair_style == 2 or headgear == "":
+		if style in ["bald", "crest"] or headgear == "":
 			_hline(fig, 14, 17, head_top + 3, skin.darkened(0.2))
 
 	# Couvre-chef de classe.
