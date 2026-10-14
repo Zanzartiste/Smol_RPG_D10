@@ -1713,17 +1713,17 @@ func _test_skill_ranks() -> bool:
 	_expect(fighter.resist_pool("con")["count"] == fighter.skill_rank("physique") + 1
 		and fighter.resist_pool("dex")["count"] == fighter.skill_rank("physique"), "résister : +1 dé si la classe maîtrise")
 
-	# Points de compétence : un par niveau atteint, +1 rang au choix, jusqu'à un plafond selon le niveau.
+	# Points de compétence : un par niveau atteint, +1 rang au choix, sans plafond.
 	var learner := Character.create("human", "fighter", "Élève")
 	learner.add_xp(Progression.xp_for(3) - learner.xp)
 	_level_up(learner)
 	var lore_before := learner.skill_rank("lore")
-	_expect(learner.pending_skill_points == 2 and learner.has_pending_advancement() and learner.max_trained_rank() == 5 + 1,
-		"niveau 3 : deux points de compétence, rang 6 au plus")
+	_expect(learner.pending_skill_points == 2 and learner.has_pending_advancement(),
+		"niveau 3 : deux points de compétence")
 	_expect(learner.spend_skill_point("lore") and learner.skill_rank("lore") == lore_before + 1 and learner.pending_skill_points == 1,
 		"un point : +1 rang")
 	learner.skill_points["lore"] = 10
-	_expect(not learner.can_raise_skill("lore"), "plafond de rang")
+	_expect(learner.can_raise_skill("lore") and not learner.can_raise_skill("nope"), "pas de plafond de rang après la création")
 	var reloaded := Character.from_dict(JSON.parse_string(JSON.stringify(learner.to_dict())))
 	_expect(reloaded.skill_points == learner.skill_points and reloaded.pending_skill_points == 1, "points de compétence sauvegardés")
 

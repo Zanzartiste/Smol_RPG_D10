@@ -366,14 +366,9 @@ static func _skill_rules() -> Dictionary:
 	return DB.rules.get("skill_points", {})
 
 
-## Rang le plus haut qu'on peut atteindre avec des points de compétence à ce niveau.
-func max_trained_rank() -> int:
-	var rules := _skill_rules()
-	return int(rules.get("max_rank_base", 5)) + floori((level - 1) * float(rules.get("max_rank_per_level", 0.5)))
-
-
+## Après la création, pas de plafond : chaque point de compétence fait monter une compétence d'un seul rang.
 func can_raise_skill(skill_id: String) -> bool:
-	return pending_skill_points > 0 and skill_rank(skill_id) < max_trained_rank()
+	return pending_skill_points > 0 and Skills.has(Skills.resolve(skill_id))
 
 
 ## Reste-t-il un point de compétence à placer (et une compétence sous le plafond) ?

@@ -114,7 +114,8 @@ chance de réussite (calculée exactement).
 
 - À chaque niveau à partir du 2 (`rules.json › skill_points › by_level`, réglable niveau par niveau), le personnage
   gagne 1 point de compétence à dépenser à la montée de niveau : chaque point monte d'un rang une compétence.
-- Rang maximal d'une compétence : 5 + (niveau − 1) ÷ 2 (arrondi à l'inférieur) : 5 au niveau 1, 14 au niveau 20.
+- Après la création, pas de plafond : chaque point fait monter une compétence d'un rang, jamais de +2 d'un coup
+  (décision du 2026-10-14).
 
 ---
 

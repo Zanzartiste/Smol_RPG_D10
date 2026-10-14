@@ -489,8 +489,8 @@ Calcul des dégâts subis :
 - **PV max** (`rules.json › hit_points`) : (taille + `size_offset` 2) × CON + `base` 7, au moins 1
   (`Character.hp_from`), + modificateurs (don Robuste). Ni la classe ni le niveau ne les augmentent pour l'instant.
   Les créatures suivent la même formule, sauf `hp` explicite.
-- **Points de compétence** (`rules.json › skill_points`) : `by_level` (niveau -> points gagnés), rang maximal
-  `max_rank_base` + niveau × `max_rank_per_level`. `Character.pending_skill_points` (à dépenser, écran de choix au
+- **Points de compétence** (`rules.json › skill_points`) : `by_level` (niveau -> points gagnés), un point = +1 rang,
+  sans plafond. `Character.pending_skill_points` (à dépenser, écran de choix au
   hub) et `skill_points` (rangs achetés, par compétence), sauvegardés.
 - **Inconscience** : en combat, un membre du groupe à 0 PV est inconscient tant qu'un autre tient debout ; après une
   victoire ou une fuite, il revient à 1 PV. Si tout le groupe tombe dans un combat mortel, le héros et les

@@ -309,8 +309,7 @@ func _show_ability_choice(member: Character) -> void:
 ## Point de compétence gagné en montant de niveau : +1 rang dans la compétence choisie.
 func _show_skill_point_choice(member: Character) -> void:
 	title_label.text = tr("Compétences — %s") % member.name
-	body_text.text = tr("%s a progressé : choisissez la compétence qui gagne un rang (rang %d au plus à ce niveau).") % [
-		member.name, member.max_trained_rank()]
+	body_text.text = tr("%s a progressé : choisissez la compétence qui gagne un rang.") % member.name
 	if member.pending_skill_points > 1:
 		body_text.text += " " + tr("(%d points à placer)") % member.pending_skill_points
 	_clear_choices()
