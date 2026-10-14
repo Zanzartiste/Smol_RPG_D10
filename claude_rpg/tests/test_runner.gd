@@ -39,6 +39,7 @@ const TESTS := [
 	"_test_companions",
 	"_test_creation",
 	"_test_creator_points",
+	"_test_enemy_support",
 	"_test_dice_tray",
 	"_test_quests",
 	"_test_side_drawer",
@@ -489,6 +490,32 @@ func _test_creation() -> bool:
 	screen._on_class_selected("wizard")
 	_expect(screen.build_character().abilities["int"] == 7, "création : changer de classe réapplique son modèle")
 	screen.free()
+	return true
+
+
+func _test_enemy_support() -> bool:
+	Game.start_life(Character.create("human", "fighter", "Heros"), 4)
+	var combat := Game.start_combat({"enemies": ["bandit_mender", "bandit"]})
+	var mender := combat.enemies()[0]
+	var bandit := combat.enemies()[1]
+	var heal: Dictionary = mender.combat_actions().filter(func(a): return a["name"] == "Onguent")[0]
+	var cover: Dictionary = mender.combat_actions().filter(func(a): return a["name"] == "Couvrir un camarade")[0]
+	_expect(Combat.support_role(heal) == "heal" and Combat.support_role(cover) == "protect", "IA : roles de soutien reconnus")
+	_expect(combat._support_weight(mender, heal) == 0.0 and combat._support_weight(mender, cover) == 0.0,
+		"IA : pas de soins ni de protection quand personne n'est blesse")
+	bandit.hp = 2
+	_expect(combat._support_weight(mender, heal) > float(heal["weight"]) and combat._support_weight(mender, cover) > 0.0,
+		"IA : soigner devient prioritaire quand un allie est mal en point")
+	var helped := false
+	for i in 12:
+		bandit.hp = 2
+		combat.turn = combat.order.find(mender)
+		combat.start_turn()
+		await combat.ai_turn(mender)
+		if bandit.hp > 2 or bandit.stacks("shielded") > 0:
+			helped = true
+			break
+	_expect(helped, "IA : le rebouteux soigne ou couvre le brigand blesse")
 	return true
 
 

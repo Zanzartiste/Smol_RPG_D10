@@ -601,5 +601,53 @@
 				}
 			}
 		]
+	},
+	{
+		"id": "forest_bandit_camp",
+		"location": "forest",
+		"weight": 2,
+		"conditions": [{"type": "level", "min": 2}],
+		"title": "Le camp des brigands",
+		"text": "Une odeur de feu de bois vous mène à une clairière : deux brigands y jouent aux dés pendant qu'un vieil homme panse la jambe d'un troisième. Il lève les yeux vers vous.",
+		"choices": [
+			{
+				"id": "attack",
+				"text": "Attaquer le camp",
+				"outcome": {
+					"text": "« Aux armes ! » Le vieux rebouteux recule derrière ses camarades, ses onguents à la main.",
+					"effects": [
+						{
+							"type": "combat",
+							"enemies": ["bandit", "bandit", "bandit_mender"],
+							"victory": {
+								"text": "Le camp est à vous : quelques pièces, des bandages, et une marmite encore chaude.",
+								"effects": [{"type": "gold", "amount": 8}]
+							},
+							"fled": {
+								"text": "Vous vous enfoncez dans les fourrés, les brigands à vos trousses.",
+								"effects": []
+							}
+						}
+					]
+				}
+			},
+			{
+				"id": "sneak",
+				"text": "Contourner le camp sans bruit",
+				"check": {"skill": "stealth", "difficulty": 2},
+				"success": {"text": "Vous passez à quelques pas d'eux sans qu'aucun ne lève le nez de ses dés.", "effects": []},
+				"failure": {
+					"text": "Une branche craque. « Là ! » Il faut se battre.",
+					"effects": [
+						{
+							"type": "combat",
+							"enemies": ["bandit", "bandit", "bandit_mender"],
+							"victory": {"text": "Les brigands ne surprendront plus personne.", "effects": []},
+							"fled": {"text": "Vous détalez entre les arbres.", "effects": []}
+						}
+					]
+				}
+			}
+		]
 	}
 ]

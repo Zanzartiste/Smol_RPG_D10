@@ -422,9 +422,13 @@ func ai_turn(actor: Combatant) -> Array[Dictionary]:
 			if candidates.is_empty():
 				break
 			candidates.sort_custom(func(a, b): return a.hp < b.hp)
-			# Les invocations alliées et les chasseurs visent le plus faible, les autres ennemis au hasard.
+			# Les invocations alliées et les chasseurs visent le plus faible, les autres ennemis au hasard ;
+			# soins et protections vont à l'allié le plus mal en point (en proportion de ses PV).
 			var weakest := actor.is_ally() or actor.ai_kind() == "hunter"
 			chosen = candidates[0] if weakest else candidates[rng.randi_range(0, candidates.size() - 1)]
+			if target_mode == "ally":
+				candidates.sort_custom(func(a, b): return float(a.hp) / a.max_hp() < float(b.hp) / b.max_hp())
+				chosen = candidates[0]
 		_beat(beats, Loc.ui("%s : %s.") % [actor.name, action["name"]])
 		if not await _counterspell(actor, action, beats):
 			beats.append_array(await _resolve(actor, action.get("effects", []), target_mode, chosen, not actor.is_ally()))
@@ -450,16 +454,41 @@ func _breaks(actor: Combatant) -> bool:
 func _pick_action(actor: Combatant, allow_announced: bool) -> Dictionary:
 	var actions := actor.combat_actions().filter(func(a): return (a.get("target") == "none" \
 		or not targets(actor, a.get("target", "enemy")).is_empty()) and actor.unavailable_reason(a) == "" \
-		and (allow_announced or not a.get("announced", false)))
+		and (allow_announced or not a.get("announced", false)) and _support_weight(actor, a) != 0.0)
 	var total := 0.0
 	for a: Dictionary in actions:
-		total += float(a.get("weight", 1))
+		total += _support_weight(actor, a)
 	var r := rng.randf() * total
 	for a: Dictionary in actions:
-		r -= float(a.get("weight", 1))
+		r -= _support_weight(actor, a)
 		if r < 0.0:
 			return a
 	return actions.back() if not actions.is_empty() else {}
+
+
+## Rôle de soutien d'une action : "heal" (elle soigne), "protect" (elle vise des alliés sans soigner :
+## protection, bénédiction…), "" sinon.
+static func support_role(action: Dictionary) -> String:
+	var effects: Array = action.get("effects", [])
+	if effects.any(func(e): return e.get("type") == "heal"):
+		return "heal"
+	if action.get("target", "enemy") in ["ally", "all_allies"]:
+		return "protect"
+	return ""
+
+
+## Poids d'une action pour l'IA. Soigner ne sert que si un allié (ou soi) est sous ai_heal_below de ses PV,
+## protéger que si un allié est sous ai_protect_below ; alors l'action devient prioritaire (× ai_support_bonus).
+func _support_weight(actor: Combatant, action: Dictionary) -> float:
+	var weight := float(action.get("weight", 1))
+	var role := support_role(action)
+	if role == "":
+		return weight
+	var limit := float(setting("ai_heal_below" if role == "heal" else "ai_protect_below", 0.5 if role == "heal" else 0.75))
+	var pool := targets(actor, action.get("target", "self")) if action.get("target", "self") != "none" else [actor]
+	if pool.any(func(c): return float(c.hp) / c.max_hp() < limit):
+		return weight * float(setting("ai_support_bonus", 3.0))
+	return 0.0
 
 
 ## Joue automatiquement toutes les actions d'un personnage pour ce tour (tests, banc d'équilibrage,
