@@ -217,7 +217,7 @@ func _test_feats() -> bool:
 	var hero := Character.create("goblin", "fighter", "Héros")  # pas d'humain : il a un don en plus dès le départ
 	hero.add_xp(300)
 	_level_up(hero)
-	_expect(hero.level == 2 and not hero.has_pending_advancement(), "niveau 2 : pas d'amélioration")
+	_expect(hero.level == 2 and hero.pending_ability_points == 0 and hero.pending_feats == 0 and hero.pending_skill_points == 1, "niveau 2 : pas d'amélioration, un point de compétence")
 	hero.add_xp(2700 - 300)
 	_level_up(hero)
 	_expect(hero.level == 4 and hero.pending_feats == 1 and hero.pending_ability_points == 1, "niveau 4 : attribut + don")
@@ -1019,7 +1019,7 @@ func _test_class_features() -> bool:
 
 	# Roublard : Expertise, Attaque sournoise, Esquive instinctive, Dérobade, Talent fiable.
 	var rogue := _at_level("goblin", "rogue", 11)
-	_expect(rogue.skill_rank("stealth") == 4 and rogue.skill_pool("stealth")["count"] == 4 - rogue.roll_penalty("dex")
+	_expect(rogue.skill_rank("stealth") - int(rogue.skill_points.get("stealth", 0)) == 4 and rogue.skill_pool("stealth")["count"] == rogue.skill_rank("stealth") - rogue.roll_penalty("dex")
 		and rogue.skill_pool("stealth")["threshold"] == rogue.ability_score("dex"), "Expertise : instinctive 2 + choix de classe + Expertise")
 	var sneak := Combatant.from_character(rogue, true)
 	var sneak_effect: Dictionary = Actions.def("sneak_attack")["effects"][0]
@@ -1556,6 +1556,20 @@ func _test_skill_ranks() -> bool:
 		"mains nues : le meilleur rang")
 	_expect(fighter.resist_pool("con")["count"] == fighter.skill_rank("physique") + 1
 		and fighter.resist_pool("dex")["count"] == fighter.skill_rank("physique"), "résister : +1 dé si la classe maîtrise")
+
+	# Points de compétence : un par niveau atteint, +1 rang au choix, jusqu'à un plafond selon le niveau.
+	var learner := Character.create("human", "fighter", "Élève")
+	learner.add_xp(Progression.xp_for(3) - learner.xp)
+	_level_up(learner)
+	var lore_before := learner.skill_rank("lore")
+	_expect(learner.pending_skill_points == 2 and learner.has_pending_advancement() and learner.max_trained_rank() == 3 + 1,
+		"niveau 3 : deux points de compétence, rang 4 au plus")
+	_expect(learner.spend_skill_point("lore") and learner.skill_rank("lore") == lore_before + 1 and learner.pending_skill_points == 1,
+		"un point : +1 rang")
+	learner.skill_points["lore"] = 10
+	_expect(not learner.can_raise_skill("lore"), "plafond de rang")
+	var reloaded := Character.from_dict(JSON.parse_string(JSON.stringify(learner.to_dict())))
+	_expect(reloaded.skill_points == learner.skill_points and reloaded.pending_skill_points == 1, "points de compétence sauvegardés")
 
 	# Langues : une langue à choisir par rang de Langues, en plus du Commun.
 	_expect(fighter.known_languages() == ["common"] and fighter.choice_options("skill/languages").size() == 5, "langues à choisir")

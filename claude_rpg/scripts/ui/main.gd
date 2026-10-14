@@ -130,6 +130,9 @@ func _show_hub() -> void:
 		if member.can_choose_feat():
 			_show_feat_choice(member)
 			return
+		if member.can_spend_skill_point():
+			_show_skill_point_choice(member)
+			return
 	var life := Game.life
 	var visit := Social.initiative_event(life)  # un PNJ vient parfois vous voir
 	if not visit.is_empty():
@@ -295,6 +298,27 @@ func _show_ability_choice(member: Character) -> void:
 		var button := _add_choice("%s : %d → %d" % [Abilities.name_of(id), score, score + 1],
 			_on_ability_chosen.bind(member, id), member.can_raise(id))
 		button.tooltip_text = Abilities.description_of(id)
+
+
+## Point de compétence gagné en montant de niveau : +1 rang dans la compétence choisie.
+func _show_skill_point_choice(member: Character) -> void:
+	title_label.text = tr("Compétences — %s") % member.name
+	body_text.text = tr("%s a progressé : choisissez la compétence qui gagne un rang (rang %d au plus à ce niveau).") % [
+		member.name, member.max_trained_rank()]
+	if member.pending_skill_points > 1:
+		body_text.text += " " + tr("(%d points à placer)") % member.pending_skill_points
+	_clear_choices()
+	for skill_id in Skills.ids():
+		var rank := member.skill_rank(skill_id)
+		var button := _add_choice("%s : %d → %d" % [Skills.name_of(skill_id), rank, rank + 1],
+			_on_skill_point_chosen.bind(member, skill_id), member.can_raise_skill(skill_id))
+		button.tooltip_text = Skills.description_of(skill_id)
+
+
+func _on_skill_point_chosen(member: Character, skill_id: String) -> void:
+	member.spend_skill_point(skill_id)
+	_refresh_sheet()
+	_show_hub()
 
 
 func _show_feat_choice(member: Character) -> void:
