@@ -40,6 +40,7 @@ const TESTS := [
 	"_test_creation",
 	"_test_creator_points",
 	"_test_enemy_support",
+	"_test_npc_requests",
 	"_test_dice_tray",
 	"_test_quests",
 	"_test_side_drawer",
@@ -516,6 +517,32 @@ func _test_enemy_support() -> bool:
 			helped = true
 			break
 	_expect(helped, "IA : le rebouteux soigne ou couvre le brigand blesse")
+	return true
+
+
+func _test_npc_requests() -> bool:
+	Saves.enabled = false
+	Game.start_life(Character.create("human", "fighter", "Heros"), 5)
+	var life := Game.life
+	var herbalist: Npc = Social.at_location("town", life.rng).filter(func(x): return x.role == "herbalist")[0]
+	var session := {}
+	_expect(Social.unavailable_reason("deliver", herbalist, life, session) != "", "demande : rien à remettre au départ")
+	_expect(Social.unavailable_reason("ask_work", herbalist, life, session) == "", "demande : l'herboriste a du travail")
+	var result := Social.perform("ask_work", herbalist, life, session)
+	var quest_id := Social.active_request(herbalist, life)
+	_expect(quest_id != "" and life.quests[quest_id]["status"] == "active" and "herbes" in Quests.step_text(quest_id, 0).to_lower(),
+		"demande : une quête générée %s" % str(result["lines"]))
+	_expect(Social.unavailable_reason("ask_work", herbalist, life, session) != "", "demande : une seule à la fois")
+	_expect(Social.unavailable_reason("deliver", herbalist, life, session).begins_with("il vous manque"), "demande : il manque les herbes")
+	var loaded := LifeState.from_dict(JSON.parse_string(JSON.stringify(life.to_dict())))
+	_expect(loaded.quest_defs.has(quest_id) and loaded.quests[quest_id]["status"] == "active", "demande : sauvegardée")
+	life.character.add_item("healing_herbs", 3)
+	var gold := life.character.gold
+	var friendship := int(herbalist.player["friendship"])
+	Social.perform("deliver", herbalist, life, session)
+	_expect(life.quests[quest_id]["status"] == "done" and life.character.gold == gold + 12 and life.character.item_count("healing_herbs") == 0
+		and int(herbalist.player["friendship"]) > friendship, "demande : remise contre l'or promis et de l'amitié")
+	_expect(Social.unavailable_reason("ask_work", herbalist, life, session) == "rien pour l'instant", "demande : délai avant la suivante")
 	return true
 
 

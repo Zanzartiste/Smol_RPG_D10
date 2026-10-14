@@ -23,6 +23,7 @@ var quests: Dictionary = {}  # id de quête -> {"status": "active" | "done" | "f
 ## level, world (voir JOURNAL_KINDS).
 var journal: Array[Dictionary] = []
 var notes := ""  # notes libres du joueur (onglet Notes du tiroir)
+var quest_defs: Dictionary = {}  # quêtes générées (demandes des PNJ) : id -> définition (voir Quests)
 
 const JOURNAL_KINDS := {"event": "Événements", "combat": "Combats", "quest": "Quêtes", "social": "Relations",
 	"level": "Progression", "world": "Le monde"}
@@ -327,7 +328,7 @@ func to_dict() -> Dictionary:
 		"day": day, "slot": slot, "flags": flags, "seen": seen, "last_seen_day": last_seen_day,
 		"dead": dead, "death_cause": death_cause, "recorded": recorded, "notices": notices,
 		"pending_combat": pending_combat, "shops": shops, "reputation": reputation, "location": location,
-		"crafted": crafted, "last_initiative_day": last_initiative_day, "quests": quests, "journal": journal, "notes": notes,
+		"crafted": crafted, "last_initiative_day": last_initiative_day, "quests": quests, "journal": journal, "notes": notes, "quest_defs": quest_defs,
 	}
 
 
@@ -351,6 +352,7 @@ static func from_dict(data: Dictionary) -> LifeState:
 	life.location = data.get("location", "")
 	life.crafted = Character._int_dict(data.get("crafted", {}))
 	life.notes = String(data.get("notes", ""))
+	life.quest_defs = data.get("quest_defs", {})
 	for entry: Dictionary in data.get("journal", []):
 		life.journal.append({"day": int(entry.get("day", 1)), "slot": int(entry.get("slot", 0)),
 			"kind": String(entry.get("kind", "event")), "text": String(entry.get("text", ""))})

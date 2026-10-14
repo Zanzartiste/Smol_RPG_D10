@@ -310,6 +310,20 @@ static func unavailable_reason(action_id: String, n: Npc, life: LifeState, sessi
 				return Loc.ui("pas aventurier")
 			if life.companions.size() >= int(DB.rules.get("max_companions", 1)):
 				return Loc.ui("groupe complet")
+		"request":
+			if n.role_def().get("requests", []).is_empty():
+				return Loc.ui("n'a besoin de rien")
+			if active_request(n, life) != "":
+				return Loc.ui("une demande est déjà en cours")
+			if Meta.world_day - int(n.player.get("request_day", -999)) < int(setting("request_cooldown_days", 3)):
+				return Loc.ui("rien pour l'instant")
+		"deliver":
+			var quest_id := active_request(n, life)
+			if quest_id == "":
+				return Loc.ui("aucune demande en cours")
+			var request: Dictionary = Quests.def(quest_id)["request"]
+			if life.character.item_count(request["item"]) < int(request["count"]):
+				return Loc.ui("il vous manque : %s ×%d") % [Items.name_of(request["item"]), int(request["count"]) - life.character.item_count(request["item"])]
 		"gestures":
 			if shares_language(life.character, n) or session.get("understood", false):
 				return Loc.ui("vous vous comprenez déjà")
@@ -376,6 +390,10 @@ static func perform(action_id: String, n: Npc, life: LifeState, session: Diction
 		"recruit":
 			var companion := recruit(n, life)
 			success = companion != null
+		"request":
+			lines.append(offer_request(n, life))
+		"deliver":
+			lines.append(deliver_request(n, life))
 		"gestures":
 			if success:
 				session["understood"] = true
@@ -412,6 +430,45 @@ static func perform(action_id: String, n: Npc, life: LifeState, session: Diction
 		lines.append(speak(Loc.gendered(String(_pick(pool, life.rng)).replace("{npc}", n.name), n.gender),
 			life.character, n, session.get("understood", false)))
 	return result
+
+
+## Quête générée en cours confiée par ce PNJ ("" si aucune).
+static func active_request(n: Npc, life: LifeState) -> String:
+	for quest_id: String in Quests.with_status(life, "active"):
+		if life.quest_defs.get(quest_id, {}).get("request", {}).get("npc", "") == n.id:
+			return quest_id
+	return ""
+
+
+## Le PNJ confie une demande de son métier (npc_roles.json › requests : {"id", "name", "text", "item",
+## "count", "gold", "friendship"} ; {npc} = son nom) ; elle devient une quête. Retourne la ligne du journal.
+static func offer_request(n: Npc, life: LifeState) -> String:
+	var options: Array = n.role_def().get("requests", [])
+	var req: Dictionary = options[life.rng.randi_range(0, options.size() - 1)]
+	var quest_id := "request_%s_%d" % [n.id, Meta.world_day]
+	var item_name := Items.name_of(req["item"])
+	life.quest_defs[quest_id] = {
+		"id": quest_id, "name": String(req["name"]).replace("{npc}", n.name), "giver": n.name, "location": n.location,
+		"description": String(req["text"]).replace("{npc}", n.name),
+		"steps": [Loc.ui("Rapporter %s ×%d à %s (%d po promises).") % [item_name, int(req["count"]), n.name, int(req["gold"])],
+			Loc.ui("%s vous a payé.") % n.name],
+		"request": {"npc": n.id, "item": req["item"], "count": int(req["count"]), "gold": int(req["gold"]),
+			"friendship": int(req.get("friendship", 0))},
+	}
+	n.player["request_day"] = Meta.world_day
+	return Quests.apply(life, quest_id, "start")
+
+
+## Remet la commande : les objets contre l'or promis et un peu d'amitié. Retourne la ligne du journal.
+static func deliver_request(n: Npc, life: LifeState) -> String:
+	var quest_id := active_request(n, life)
+	var req: Dictionary = Quests.def(quest_id)["request"]
+	life.character.remove_item(req["item"], int(req["count"]))
+	life.character.gold += int(req["gold"])
+	change(n, "friendship", int(req["friendship"]))
+	n.player["request_day"] = Meta.world_day
+	n.remember(Meta.world_day, Loc.ui("%s lui a rendu service.") % life.character.name)
+	return Quests.apply(life, quest_id, "complete") + " " + Loc.ui("+%d po.") % int(req["gold"])
 
 
 ## Tromper un partenaire : les partenaires sans relation libre l'apprennent parfois (jaloux : plus fort).
@@ -687,7 +744,7 @@ static func die(n: Npc, cause: String, life: LifeState) -> void:
 
 
 static func _npc_interact(a: Npc, b: Npc, life: LifeState) -> void:
-	if not a.relations.has(b.id):
+	if not a.relations.has(b.id) or not b.relations.has(a.id):
 		_link(a, b, "friend", 0)
 	var delta := life.rng.randi_range(-2, 3)
 	for trait_id in a.traits:

@@ -763,6 +763,12 @@ static func _validate_social(db: Node, errors: Array[String]) -> void:
 			_expect_ref(db.species, role["fixed"]["species"], "espèce", ctx, errors)
 		for item_id: String in role.get("inventory", {}):
 			_expect_item(db, item_id, ctx, errors)
+		for req: Dictionary in role.get("requests", []):
+			for field in ["id", "name", "text", "item", "count", "gold"]:
+				if not req.has(field):
+					errors.append(ctx + " › requests : champ « %s » manquant" % field)
+			if req.has("item"):
+				_expect_item(db, req["item"], ctx + " › requests", errors)
 	for trait_def: Dictionary in db.traits.values():
 		var ctx := "traits.json › %s" % trait_def["id"]
 		for action_id: String in trait_def.get("reactions", {}):
@@ -782,7 +788,7 @@ static func _validate_social(db: Node, errors: Array[String]) -> void:
 			_expect_ref(db.skills, a["check"].get("skill"), "compétence", ctx, errors)
 			if a["check"].has("vs"):
 				_expect_ref(db.skills, a["check"]["vs"], "compétence", ctx, errors)
-		if a.get("special", "") not in ["", "reveal_fact", "trade", "recruit", "gestures", "child", "break_up"]:
+		if a.get("special", "") not in ["", "reveal_fact", "trade", "recruit", "gestures", "child", "break_up", "request", "deliver"]:
 			errors.append(ctx + " : special inconnu « %s »" % a["special"])
 
 
