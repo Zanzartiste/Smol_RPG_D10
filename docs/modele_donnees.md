@@ -486,9 +486,12 @@ Calcul des dégâts subis :
 - **Tailles** (`rules.json › sizes`) : échelle de −4 à 5 (`species.json › size`, `creatures.json › size`). Places au
   combat (`combat › size_slots`) et taille des sprites (`combat › sprite_scale`) par valeur ; condition d'événement
   `{"type": "size", "in": [-1]}` ou `{"type": "size", "max": -1}`.
-- **PV max** (`rules.json › hit_points`) : Constitution × `size_base` (1,4142)^taille, au moins 1, + modificateurs
-  (`hp_per_level` × niveau, don Robuste). Ni la classe ni le niveau ne les augmentent. Les créatures gardent leurs PV
-  en dés.
+- **PV max** (`rules.json › hit_points`) : (taille + `size_offset` 2) × CON + `base` 7, au moins 1
+  (`Character.hp_from`), + modificateurs (don Robuste). Ni la classe ni le niveau ne les augmentent pour l'instant.
+  Les créatures suivent la même formule, sauf `hp` explicite.
+- **Points de compétence** (`rules.json › skill_points`) : `by_level` (niveau -> points gagnés), rang maximal
+  `max_rank_base` + niveau × `max_rank_per_level`. `Character.pending_skill_points` (à dépenser, écran de choix au
+  hub) et `skill_points` (rangs achetés, par compétence), sauvegardés.
 - **Inconscience** : en combat, un membre du groupe à 0 PV est inconscient tant qu'un autre tient debout ; après une
   victoire ou une fuite, il revient à 1 PV. Si tout le groupe tombe dans un combat mortel, le héros et les
   compagnons meurent.
@@ -510,6 +513,11 @@ Calcul des dégâts subis :
 - Effet `{"type": "quest", "id", "action": "start" | "advance" | "complete" | "fail", "step"?}` ; condition
   `{"type": "quest", "id", "status"?: "active" (par défaut) | "done" | "failed" | "none", "step"?: minimum}`.
 - Première quête : « Des herbes pour Ysolde » (événements `town_merchant_meet` et `town_merchant_return`).
+- **Quêtes générées** (demandes des PNJ) : `npc_roles.json › requests` : `[{"id", "name", "text", "item", "count",
+  "gold", "friendship"?}]` ({npc} = le nom du PNJ). Actions sociales `ask_work` (special `request`) et `deliver`
+  (special `deliver`). La définition va dans `LifeState.quest_defs` (sauvegardé) avec `"request": {"npc", "item",
+  "count", "gold", "friendship"}` ; `Quests.def` la cherche là après `quests.json`. Délai entre deux demandes :
+  `rules.json › social › request_cooldown_days` (3).
 
 ## Sorts : emplacements et sorts équipés
 
@@ -523,11 +531,14 @@ Calcul des dégâts subis :
 ## Interface : le tiroir latéral
 
 - `scripts/ui/side_drawer.gd` (`SideDrawer`) : onglets à droite (PV, or, quêtes, journal, relations, sorts pour un
-  lanceur) ; survol = la page se déroule, clic = épinglée. Pages : personnage (portrait, identité, XP, PV et
+  lanceur, notes) ; survol = la page se déroule, clic = épinglée. Pages : personnage (portrait, identité, XP, PV et
   initiative, Esquive naturelle et Armure, attributs, compétences repliables, aptitudes et dons, avec le détail au
   survol), inventaire et équipement, quêtes, journal, réputation et relations, sorts (emplacements, sorts équipés à
   cocher hors combat ; les tours de magie sont toujours prêts).
 - Compétences : `skills.json › description`, affichée au survol.
+- Notes libres : `LifeState.notes`, sauvegardées.
+- Raccourcis (`SideDrawer.SHORTCUTS`) : P personnage, Q quêtes, J journal, E relations, M sorts, N notes ; Échap
+  replie une page épinglée. Ils marchent aussi en combat.
 
 ## Journal
 
@@ -544,9 +555,43 @@ Calcul des dégâts subis :
 
 ## Archétypes d'IA
 
-- `creatures.json › ai` : `brute` (par défaut, cible au hasard), `hunter` (vise le plus blessé : loups, rats),
-  `coward` (sous `rules.json › combat › coward_hp`, 30 % de ses PV, une chance sur deux par tour de s'enfuir : ni
-  XP ni butin ; brigands).
+- `creatures.json › ai` : `brute` (par défaut, cible au hasard), `hunter` (vise le plus blessé : loups, rats).
+- `creatures.json › morale` : `fearless` (par défaut), `coward` (sous `rules.json › combat › coward_hp`, 30 % de ses
+  PV, une chance sur deux par tour de s'enfuir ; brigands), `pack` (fuit quand le chef, `"leader": true`, tombe ou
+  que la moitié du camp est hors de combat ; loups). Une créature enfuie (`Combatant.fled`) ne rapporte ni XP ni
+  butin.
+- **Soutien** (`Combat.support_role`) : une action qui soigne (`heal`) ou qui vise des alliés (protection) n'est
+  tirée que si un allié est sous `combat › ai_heal_below` (0,5) ou `ai_protect_below` (0,75) de ses PV ; son poids
+  est alors multiplié par `ai_support_bonus` (3) et elle vise l'allié le plus mal en point. Exemple : le Rebouteux
+  des brigands (`bandit_mender`).
+- **Contresort** (`Combat._counterspell`) : réaction d'un lanceur de sorts à un sort ennemi, Magie contre Magie.
+- **Réactions automatiques** : `Meta.settings["auto_reactions"]` (case de l'écran titre).
+
+## Saisons et météo (`rules.json › calendar`)
+
+- `seasons` : `[{"id", "name", "weather": {id de météo: poids}}]`, l'année partagée en parts égales (jour 1 = début
+  du printemps). `weathers` : `[{"id", "name", "light"?: "dim" | "dark"}]`.
+- `Weather.season_of(day)`, `Weather.weather_of(day)` (déterministe pour un jour donné), `Weather.describe(day)`
+  (titre du hub). Conditions `{"type": "season", "in": [...]}` et `{"type": "weather", "in": [...]}`.
+- Un combat dans un lieu de camp prend la lumière de la météo (`light`).
+
+## Récolte (`locations.json › gather`)
+
+- `[{"id", "name", "item", "count"? (1), "skill", "ability"?, "difficulty", "failure"?, "fumble"?, "fumble_hp"?}]`.
+- `EventEngine.gather_event(location)` construit un événement (un choix par ressource + « Renoncer ») ; bouton
+  « Chercher des ressources » dans les lieux qui en ont.
+
+## Emplois du temps des PNJ
+
+- `npc_roles.json › schedule` : `{"morning": "forest"}` (moment -> lieu) ; ailleurs, le PNJ est à son lieu
+  habituel. `Npc.location_at(slot)`, `Social.at_location(lieu, rng, slot)`, `Social.roles_in(lieu)`.
+
+## Apparence (`rules.json › appearance`)
+
+- `hair_styles` (courts, longs, chignon, tresses, crête, rasés), `bodies` (`width` : largeur des épaules),
+  `hair_colors` et `eye_colors` (teintes communes, en plus de celles de l'espèce ; la peau vient de l'espèce).
+- `Character.look` : `{"skin", "hair", "eyes", "hair_style", "body", "beard", "headgear"}`, choisi dans l'onglet
+  Apparence de la création, sauvegardé ; `PixelArt.portrait(..., look)` l'applique, la graine complète le reste.
 
 ## Repos et multiclassage
 
