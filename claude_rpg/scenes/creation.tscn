@@ -197,7 +197,7 @@ text = "Revenir au modèle de la classe"
 [node name="AbilityHelp" type="RichTextLabel" parent="Margin/Columns/Options/OptionsBox/Pages/Attributs"]
 layout_mode = 2
 theme_override_colors/default_color = Color(0.549, 0.51, 0.451, 1)
-text = "Chaque attribut part de 8 et monte jusqu'à 15 ; les dernières valeurs coûtent plus cher. Ajoutez ensuite +2 à un attribut et +1 à un autre. Changer de classe réapplique son modèle."
+text = "Chaque attribut part de 3, quelles que soient l'espèce et la classe. Répartissez 9 points (1 point = +1), sans dépasser 6. Changer de classe ne touche pas aux attributs ; le bouton ci-dessus applique la répartition suggérée par la classe."
 fit_content = true
 
 [node name="Creator Points" type="VBoxContainer" parent="Margin/Columns/Options/OptionsBox/Pages"]

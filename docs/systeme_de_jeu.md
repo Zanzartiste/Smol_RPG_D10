@@ -77,8 +77,9 @@ chance de réussite (calculée exactement).
 ## Attributs
 
 - De **3 à 8** pour un humain ; une personne ordinaire a **4** partout. Maximum : 10 (`max_ability_score`).
-- **Création** : chaque attribut part de 3 ; 10 points à répartir (coût total : 4 → 1, 5 → 2, 6 → 4), 6 au plus
-  avant les bonus ; puis deux bonus de +1 sur des attributs différents. Modèle par classe : 6, 5, 5, 4, 4, 3.
+- **Création** (décision du 2026-10-14) : chaque attribut part de 3, quelles que soient l'espèce et la classe ;
+  9 points à répartir (1 point = +1), 6 au plus ; tous les points doivent être dépensés. Pas de bonus. Modèle
+  suggéré par classe : 6, 5, 5, 4, 4, 3.
 - Améliorations : +1 à un attribut tous les 4 niveaux (comme avant).
 - **Vieillesse** : passé l'âge limite, chaque année a 40 % de chances de retirer 1 point (`aging_chance`).
 
@@ -100,11 +101,20 @@ chance de réussite (calculée exactement).
 - Certains dons modifieront les PV (Robuste). La progression des PV par niveau reste à décider.
 - Les dégâts sont à la même échelle : un coup fait le plus souvent 2 à 5 points.
 
+## Compétences à la création
+
+- Rang de départ : 2 pour une compétence instinctive, 1 pour les autres, 0 pour la Magie.
+- Le **passé** donne 4 rangs, et la **classe** 4 rangs (Guerrier : Armes de mêlée 2, Armes de trait 1, Physique 1 ;
+  Magicien : Magie 3, Érudition 1 ; Roublard : Furtivité 2, Armes de mêlée 1, Armes de trait 1).
+- Puis **12 rangs libres**, sans qu'aucune compétence dépasse 5 ; tous doivent être répartis. Une répartition
+  suggérée par la classe est proposée.
+- Au total, 20 rangs répartis ; à la création, les compétences vont de 0 à 5.
+
 ## Points de compétence
 
 - À chaque niveau à partir du 2 (`rules.json › skill_points › by_level`, réglable niveau par niveau), le personnage
   gagne 1 point de compétence à dépenser à la montée de niveau : chaque point monte d'un rang une compétence.
-- Rang maximal d'une compétence : 3 + niveau ÷ 2 (arrondi à l'inférieur).
+- Rang maximal d'une compétence : 5 + (niveau − 1) ÷ 2 (arrondi à l'inférieur) : 5 au niveau 1, 14 au niveau 20.
 
 ---
 

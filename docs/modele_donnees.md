@@ -693,10 +693,10 @@ Le détail de conception est dans [social.md](social.md). Données : `npc_roles.
 | `category` | `combat`, `social`, `roguery` (Roublardise), `knowledge` (Connaissances et métiers) |
 | `abilities` | Attributs utilisables ; un test sans attribut imposé prend le meilleur (encombrement compris) |
 | `instinctive` | Rang de départ 2 au lieu de 1 |
-| `base_rank`, `caster_base_rank` | Rang de départ particulier (Magie : 0, ou 2 pour un lanceur de sorts) |
+| `base_rank` | Rang de départ particulier (Magie : 0 ; la classe de magicien donne 3 rangs) |
 
-- **Rang** = départ + 1 par passé qui donne la compétence + `classes.json › skill_ranks` + modificateurs
-  `skill_rank` (choix de classe, dons, Expertise, objets). Un test lance [rang] d10 contre l'attribut.
+- **Rang** = départ + rangs du passé + `classes.json › skill_ranks` (le meilleur de ses classes) + rangs répartis
+  (`skill_points`) + modificateurs `skill_rank` (dons, Expertise, objets). Un test lance [rang] d10 contre l'attribut.
 - **Attaques** : [rang de la compétence de l'arme] d10 contre l'attribut (`Equipment.skills_for` : `skill` de l'arme,
   sinon Armes de trait pour une arme à distance, Armes de mêlée sinon ; mains nues : le meilleur avec Physique).
   Sorts : [rang de Magie] d10 contre l'attribut d'incantation.
@@ -768,11 +768,23 @@ Une espèce, une classe, une aptitude (y compris de sous-classe) ou un don peut 
 
 ## Attributs : achat de points
 
-Le système est le même que dans Baldur's Gate 3. Il se règle dans `rules.json › point_buy` :
+Réglages : `rules.json › point_buy`.
 
-- chaque attribut part de `min` (8) et peut monter jusqu'à `max` (15) ;
-- le joueur dispose de `budget` points (27), dépensés selon le barème `costs` : 9 → 1, … 13 → 5, 14 → 7, 15 → 9 ;
-- `bonuses` ([2, 1]) : un +2 et un +1 à placer sur deux attributs différents.
+- Chaque attribut part de `min` (3) et peut monter jusqu'à `max` (6), quelles que soient l'espèce et la classe.
+- Le joueur dispose de `budget` points (9), dépensés selon le barème `costs` (4 → 1, 5 → 2, 6 → 3) ; tout doit
+  être dépensé (`PointBuy.is_valid`). `bonuses` : aucun.
+- Modèle d'une classe : `standard_array` (6, 5, 5, 4, 4, 3) selon `classes.json › ability_priority`. À l'écran, les
+  attributs viennent avant la classe : changer de classe ne les touche pas.
+
+## Compétences à la création
+
+- `backgrounds.json › skills` : `{compétence: rangs}`, 4 rangs au total ; `classes.json › skill_ranks` : idem
+  (vérifié par le validateur).
+- `rules.json › creation_skills` : `free_ranks` (12) rangs libres, `max_rank` (5) au plus par compétence. Ils vont
+  dans `Character.skill_points` (comme les points de compétence des niveaux) ; option `"skill_ranks"` de
+  `Character.create`, sinon `Character.suggested_skill_ranks()` (3, 3, 2, 2, 1, 1 selon
+  `classes.json › skill_priority`).
+- Il n'y a plus de choix de compétences de classe (`class/skills`).
 
 ## Vieillesse
 

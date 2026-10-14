@@ -4,7 +4,7 @@
 	{"id": "weapon_firearms", "name": "Armes à poudre", "description": "Manier les armes à poudre (aucune n'existe encore).", "category": "combat", "abilities": ["dex"]},
 	{"id": "weapon_siege", "name": "Machines de guerre", "description": "Servir les machines de guerre : balistes, catapultes… (aucune n'existe encore).", "category": "combat", "abilities": ["int", "str"]},
 	{"id": "physique", "name": "Physique", "description": "Votre forme physique : se bagarrer à mains nues, lancer, grimper, nager, sauter, forcer une porte, faire des acrobaties, garder l'équilibre, esquiver, tenir en apnée, monter à cheval. Sert aussi à résister (FOR, DEX, CON).", "category": "combat", "instinctive": true, "abilities": ["str", "dex", "con"]},
-	{"id": "magic", "name": "Magie", "description": "Votre maîtrise des arcanes : attaques de sort et sorts que la cible doit repousser.", "category": "combat", "abilities": ["int", "wis", "cha"], "base_rank": 0, "caster_base_rank": 2},
+	{"id": "magic", "name": "Magie", "description": "Votre maîtrise des arcanes : attaques de sort et sorts que la cible doit repousser.", "category": "combat", "abilities": ["int", "wis", "cha"], "base_rank": 0},
 
 	{"id": "languages", "name": "Langues", "description": "Se faire comprendre d'un peuple sans langue commune, par signes et sons. Chaque rang donne une langue de plus.", "category": "social", "abilities": ["cha", "int"]},
 	{"id": "persuasion", "name": "Persuasion", "description": "Convaincre, négocier, séduire, marchander, tromper, mentir, manipuler ; intimider avec la Force. Fait baisser les prix.", "category": "social", "instinctive": true, "abilities": ["cha"]},

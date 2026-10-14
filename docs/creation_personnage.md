@@ -26,7 +26,11 @@ L'écran a un aperçu à gauche (portrait, nom, fiche mise à jour en direct) et
 
 ### Attributs
 
-- **Achat de points** façon BG3 : 27 points, valeurs de 8 à 15, puis +2 et +1.
+- **Répartition** (décision du 2026-10-14) : 3 partout, 9 points à répartir, 6 au plus.
+
+### Compétences
+
+- Le passé et la classe donnent 4 rangs chacun, puis 12 rangs libres (5 au plus par compétence).
 - Bouton « Revenir au modèle de la classe ».
 
 ### Creator Points

@@ -1,17 +1,15 @@
 class_name PointBuy
 extends RefCounted
-## Répartition des attributs par achat de points, façon Baldur's Gate 3 / D&D 5e :
-## chaque attribut part du minimum, les points s'achètent selon un barème (rules.json › point_buy),
-## puis des bonus (+2 et +1) s'appliquent à des attributs différents.
-## L'espèce n'a aucune influence sur les attributs.
+## Répartition des attributs à la création (rules.json › point_buy) : chaque attribut part de 3, on répartit
+## 9 points (1 point = +1) sans dépasser 6. Des bonus éventuels (« bonuses ») s'appliquent ensuite à des
+## attributs différents (aucun par défaut). L'espèce et la classe n'ont aucune influence sur les attributs.
 
 var base: Dictionary = {}  # id d'attribut -> valeur avant bonus
 var bonuses: Array = []  # bonuses[i] = id de l'attribut qui reçoit le i-ème bonus (ex. [+2, +1])
 var extra_budget := 0  # points en plus (Creator Points)
 
 
-## Modèle proposé par une classe : répartition standard selon ses priorités,
-## +2 sur l'attribut principal et +1 sur le secondaire.
+## Modèle proposé par une classe : répartition standard (6, 5, 5, 4, 4, 3) selon ses priorités.
 static func from_class(class_id: String) -> PointBuy:
 	var pb := PointBuy.new()
 	var priority: Array = DB.classes[class_id]["ability_priority"]
@@ -110,8 +108,11 @@ func final_scores() -> Dictionary:
 	return result
 
 
+## Répartition complète : tous les points dépensés (ou plus aucun attribut ne peut monter), bornes respectées.
 func is_valid() -> bool:
 	if remaining() < 0:
+		return false
+	if remaining() > 0 and base.keys().any(func(id): return can_increase(id)):
 		return false
 	for id: String in base:
 		if base[id] < min_score() or base[id] > max_score():

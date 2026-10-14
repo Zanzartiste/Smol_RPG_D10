@@ -222,11 +222,25 @@ static func _validate_classes(db: Node, errors: Array[String]) -> void:
 			_validate_choices(db, feature.get("choices", []), fctx, errors)
 
 
+## Rangs de compétence donnés à la création par un passé ou une classe : {compétence: rangs}, 4 au total.
+static func _validate_creation_ranks(db: Node, ranks: Dictionary, ctx: String, errors: Array[String]) -> void:
+	var total := 0
+	for skill_id: String in ranks:
+		_expect_ref(db.skills, skill_id, "compétence", ctx, errors)
+		total += int(ranks[skill_id])
+	if total != 4:
+		errors.append(ctx + " : %d rangs au lieu de 4" % total)
+
+
 static func _validate_backgrounds(db: Node, errors: Array[String]) -> void:
+	for cls: Dictionary in db.classes.values():
+		_validate_creation_ranks(db, cls.get("skill_ranks", {}), "classes.json › %s › skill_ranks" % cls["id"], errors)
+		for skill_id: String in cls.get("skill_priority", []):
+			_expect_ref(db.skills, skill_id, "compétence", "classes.json › %s › skill_priority" % cls["id"], errors)
 	for background: Dictionary in db.backgrounds.values():
 		var ctx := "backgrounds.json › %s" % background["id"]
-		if background.get("skills", []).is_empty():
-			errors.append(ctx + " : aucune compétence maîtrisée")
+		var ranks: Dictionary = background.get("skills", {})
+		_validate_creation_ranks(db, ranks, ctx + " › skills", errors)
 		if background.has("feat"):
 			_expect_ref(db.feats, background["feat"], "don", ctx, errors)
 		else:

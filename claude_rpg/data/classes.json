@@ -4,13 +4,10 @@
 		"name": "Guerrier",
 		"description": "Maître des armes et des armures, il règle les problèmes de front.",
 		"ability_priority": ["str", "con", "dex", "wis", "cha", "int"],
+		"skill_ranks": {"weapon_melee": 2, "weapon_ranged": 1, "physique": 1},
+		"skill_priority": ["physique", "weapon_melee", "perception", "survival", "persuasion", "insight", "animal_handling"],
 		"resist_proficiencies": ["str", "con"],
-		"choices": [
-			{"id": "skills", "name": "Compétences de classe", "type": "skill", "count": 2, "at_creation": true,
-				"options": ["physique", "animal_handling", "lore", "insight", "persuasion", "perception", "survival"],
-				"modifiers": [{"type": "skill_rank", "id": "$", "amount": 1}], "default": ["physique", "perception"]}
-		],
-		"skill_ranks": {"weapon_melee": 1, "weapon_ranged": 1},
+		"choices": [],
 		"equipment": {"main_hand": "longsword", "armor": "chain_mail"},
 		"actions": ["weapon_attack", "second_wind", "defensive_stance", "pommel_strike"],
 		"features": [
@@ -44,11 +41,10 @@
 		"name": "Magicien",
 		"description": "Érudit des arcanes, fragile mais redoutable.",
 		"ability_priority": ["int", "con", "dex", "wis", "cha", "str"],
+		"skill_ranks": {"magic": 3, "lore": 1},
+		"skill_priority": ["magic", "lore", "perception", "insight", "medicine", "potions_cooking", "languages"],
 		"resist_proficiencies": ["int", "wis"],
 		"choices": [
-			{"id": "skills", "name": "Compétences de classe", "type": "skill", "count": 2, "at_creation": true,
-				"options": ["lore", "insight", "perception", "medicine", "languages", "potions_cooking"],
-				"modifiers": [{"type": "skill_rank", "id": "$", "amount": 1}], "default": ["lore", "perception"]},
 			{"id": "cantrips", "name": "Tours de magie", "type": "action", "count": 2, "at_creation": true, "multiclass": true,
 				"options": ["fire_bolt", "ray_of_frost"], "default": ["fire_bolt", "ray_of_frost"]},
 			{"id": "spells", "name": "Sorts du grimoire", "type": "action", "count": 3, "at_creation": true, "multiclass": true,
@@ -92,13 +88,10 @@
 		"unlock_hint": "Réussir un larcin audacieux à Brumeval.",
 		"unlock_cost": 10,
 		"ability_priority": ["dex", "con", "cha", "wis", "int", "str"],
+		"skill_ranks": {"stealth": 2, "weapon_melee": 1, "weapon_ranged": 1},
+		"skill_priority": ["stealth", "sleight_of_hand", "perception", "persuasion", "insight", "physique", "languages"],
 		"resist_proficiencies": ["dex", "int"],
-		"choices": [
-			{"id": "skills", "name": "Compétences de classe", "type": "skill", "count": 4, "at_creation": true,
-				"options": ["physique", "persuasion", "insight", "perception", "sleight_of_hand", "stealth", "languages"],
-				"modifiers": [{"type": "skill_rank", "id": "$", "amount": 1}], "default": ["stealth", "sleight_of_hand", "physique", "perception"]}
-		],
-		"skill_ranks": {"weapon_melee": 1, "weapon_ranged": 1},
+		"choices": [],
 		"equipment": {"main_hand": "rapier", "armor": "leather"},
 		"actions": ["weapon_attack", "sneak_attack", "poisoned_blade"],
 		"features": [

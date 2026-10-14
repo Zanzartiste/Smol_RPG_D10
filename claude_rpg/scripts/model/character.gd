@@ -66,7 +66,12 @@ static func create(species: String, cls: String, char_name: String, options: Dic
 		for value: String in given[key]:
 			c.choose(key, value)
 	c.apply_default_choices(true)
-
+	# Rangs de compétence répartis à la création (rules.json › creation_skills) : ceux donnés, sinon la
+	# répartition suggérée par la classe.
+	if options.has("skill_ranks"):
+		c.skill_points = Character._int_dict(options["skill_ranks"])
+	else:
+		c.skill_points = c.suggested_skill_ranks()
 
 	c.max_hp = c.compute_max_hp()
 	c.hp = c.max_hp
@@ -79,6 +84,35 @@ static func create(species: String, cls: String, char_name: String, options: Dic
 			c.add_item(item_id, int(start_items[item_id]))
 	c.start_age = int(DB.species[species].get("start_age", 18))
 	return c
+
+
+## Répartition suggérée des rangs libres de la création : 3, 3, 2, 2, 1, 1 selon les priorités de la classe
+## (classes.json › skill_priority), sans dépasser le rang maximal de création ; le reste va aux suivantes.
+func suggested_skill_ranks() -> Dictionary:
+	var rules: Dictionary = DB.rules.get("creation_skills", {})
+	var left := int(rules.get("free_ranks", 12))
+	var cap := int(rules.get("max_rank", 5))
+	var saved := skill_points
+	skill_points = {}
+	var order: Array = DB.classes[class_id].get("skill_priority", []).duplicate()
+	for id in Skills.ids():
+		if id not in order:
+			order.append(id)
+	var wanted := [3, 3, 2, 2, 1, 1]
+	var result := {}
+	for pass_index in 2:
+		for i in order.size():
+			if left <= 0:
+				break
+			var id: String = order[i]
+			var want: int = (wanted[i] if i < wanted.size() else 0) if pass_index == 0 else left
+			var room := cap - fixed_skill_rank(id) - int(result.get(id, 0))
+			var amount := mini(mini(want, room), left)
+			if amount > 0:
+				result[id] = int(result.get(id, 0)) + amount
+				left -= amount
+	skill_points = saved
+	return result
 
 
 ## Personnage aléatoire parmi les espèces et classes débloquées.
@@ -159,9 +193,9 @@ func ability_score(ability_id: String) -> int:
 
 # --- Compétences : rangs et réserves de dés ---------------------------------------------
 # Attributs : de 3 à 8 pour un humain (4 pour une personne ordinaire) ; la valeur sert de seuil.
-# Rang = rang de départ (1, 2 si instinctive ; Magie : 0, ou 2 pour un lanceur de sorts)
-#        + 1 par passé qui la donne + rangs de la classe (skill_ranks) + modificateurs "skill_rank"
-#        (choix de classe, dons, Expertise, équipement…).
+# Rang = rang de départ (1, 2 si instinctive ; Magie : 0) + rangs du passé (backgrounds.json › skills)
+#        + rangs de la classe (skill_ranks) + rangs répartis (skill_points : 12 à la création, puis les points
+#        de compétence des niveaux) + modificateurs "skill_rank" (dons, Expertise, équipement…).
 # Test = [rang] d10 contre un seuil égal à l'attribut (voir Dice).
 
 ## Le personnage lance-t-il des sorts par sa classe ?
@@ -178,14 +212,22 @@ func _class_skill_ranks(skill_id: String) -> int:
 
 
 func skill_base_rank(skill_id: String) -> int:
-	return Skills.base_rank(Skills.resolve(skill_id), is_caster())
+	return Skills.base_rank(Skills.resolve(skill_id))
+
+
+## Rangs donnés par le passé (backgrounds.json › skills : {compétence: rangs}).
+func background_skill_ranks(skill_id: String) -> int:
+	return int(DB.backgrounds.get(background_id, {}).get("skills", {}).get(skill_id, 0))
+
+
+## Rang sans les rangs répartis : départ + passé + classe + modificateurs.
+func fixed_skill_rank(skill_id: String) -> int:
+	return skill_rank(skill_id) - int(skill_points.get(Skills.resolve(skill_id), 0))
 
 
 func skill_rank(skill_id: String) -> int:
 	var id := Skills.resolve(skill_id)
-	var rank := skill_base_rank(id) + _class_skill_ranks(id) + int(skill_points.get(id, 0))
-	if id in DB.backgrounds.get(background_id, {}).get("skills", []):
-		rank += 1
+	var rank := skill_base_rank(id) + background_skill_ranks(id) + _class_skill_ranks(id) + int(skill_points.get(id, 0))
 	return rank + Modifiers.sum(modifiers(), "skill_rank", id)
 
 
@@ -195,10 +237,10 @@ func skill_rank_parts(skill_id: String) -> Array:
 	var parts: Array = [[Loc.ui("départ"), skill_base_rank(id)]]
 	if _class_skill_ranks(id) > 0:
 		parts.append([Loc.ui("classe"), _class_skill_ranks(id)])
-	if id in DB.backgrounds.get(background_id, {}).get("skills", []):
-		parts.append([Loc.ui("passé"), 1])
+	if background_skill_ranks(id) > 0:
+		parts.append([Loc.ui("passé"), background_skill_ranks(id)])
 	if int(skill_points.get(id, 0)) > 0:
-		parts.append([Loc.ui("points de compétence"), int(skill_points[id])])
+		parts.append([Loc.ui("rangs répartis"), int(skill_points[id])])
 	var bonus := Modifiers.sum(modifiers(), "skill_rank", id)
 	if bonus != 0:
 		parts.append([Loc.ui("choix, dons, aptitudes, objets"), bonus])
@@ -327,7 +369,7 @@ static func _skill_rules() -> Dictionary:
 ## Rang le plus haut qu'on peut atteindre avec des points de compétence à ce niveau.
 func max_trained_rank() -> int:
 	var rules := _skill_rules()
-	return int(rules.get("max_rank_base", 3)) + floori(level * float(rules.get("max_rank_per_level", 0.5)))
+	return int(rules.get("max_rank_base", 5)) + floori((level - 1) * float(rules.get("max_rank_per_level", 0.5)))
 
 
 func can_raise_skill(skill_id: String) -> bool:
@@ -383,10 +425,8 @@ func choice_specs() -> Array[Dictionary]:
 
 ## Rang de Langues, lu sans passer par les choix (pour éviter une boucle choix -> modificateurs).
 func _languages_rank() -> int:
-	var rank := skill_base_rank("languages") + _class_skill_ranks("languages") + int(skill_points.get("languages", 0))
-	if "languages" in DB.backgrounds.get(background_id, {}).get("skills", []):
-		rank += 1
-	return rank
+	return skill_base_rank("languages") + background_skill_ranks("languages") + _class_skill_ranks("languages") \
+		+ int(skill_points.get("languages", 0))
 
 
 func _choice_entry(key: String) -> Dictionary:
