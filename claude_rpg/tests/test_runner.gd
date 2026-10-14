@@ -55,8 +55,19 @@ func _ready() -> void:
 	Saves.enabled = false
 	Saves.directory = "user://test_saves"
 	Meta.reset()  # indépendant des sauvegardes éventuelles du joueur
-	var verbose := "--verbose" in OS.get_cmdline_user_args()  # godot … -- --verbose : nom de chaque test
+	var args := OS.get_cmdline_user_args()
+	var verbose := "--verbose" in args  # godot … -- --verbose : nom de chaque test
+	# godot … -- quick : sans la simulation (la plus lente) ; godot … -- creation,quests : seulement les tests
+	# dont le nom contient l'un de ces mots (toujours avec _test_data).
+	var filters: PackedStringArray = []
+	for arg in args:
+		if not arg.begins_with("--") and arg != "quick":
+			filters.append_array(arg.split(",", false))
 	for test: String in TESTS:
+		if "quick" in args and test == "_test_simulation":
+			continue
+		if not filters.is_empty() and test != "_test_data" and not Array(filters).any(func(f): return f in test):
+			continue
 		if verbose:
 			printerr("> " + test)
 		# Une erreur de script interrompt la fonction, qui retourne alors null au lieu de true.
