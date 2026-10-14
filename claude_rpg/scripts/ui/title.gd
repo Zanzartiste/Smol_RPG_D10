@@ -66,6 +66,14 @@ func open_options() -> void:
 		Meta.settings["many_dice"] = on
 		Saves.save_meta())
 	box.add_child(many)
+	var reactions := CheckBox.new()
+	reactions.text = tr("Réactions automatiques pour tout le groupe")
+	reactions.tooltip_text = tr("En combat, le jeu choisit seul d'esquiver, de parer, de contre-attaquer ou de contrer un sort.")
+	reactions.button_pressed = Meta.settings.get("auto_reactions", false)
+	reactions.toggled.connect(func(on: bool):
+		Meta.settings["auto_reactions"] = on
+		Saves.save_meta())
+	box.add_child(reactions)
 	var close := Button.new()
 	close.text = tr("Fermer")
 	close.pressed.connect(overlay.queue_free)

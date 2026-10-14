@@ -323,6 +323,9 @@ func perform(actor: Combatant, action: Dictionary, target: Combatant = null) -> 
 		actions_left -= 1
 	var beats: Array[Dictionary] = []
 	_beat(beats, Loc.ui("%s : %s.") % [actor.name, action["name"]])
+	if await _counterspell(actor, action, beats):
+		_check_end()
+		return beats
 	var attacks := 1 + (actor.extra_attacks() if action.get("attack_action", false) else 0)
 	for i in attacks:
 		if i > 0:
@@ -424,7 +427,8 @@ func ai_turn(actor: Combatant) -> Array[Dictionary]:
 			var weakest := actor.is_ally() or actor.ai_kind() == "hunter"
 			chosen = candidates[0] if weakest else candidates[rng.randi_range(0, candidates.size() - 1)]
 		_beat(beats, Loc.ui("%s : %s.") % [actor.name, action["name"]])
-		beats.append_array(await _resolve(actor, action.get("effects", []), target_mode, chosen, not actor.is_ally()))
+		if not await _counterspell(actor, action, beats):
+			beats.append_array(await _resolve(actor, action.get("effects", []), target_mode, chosen, not actor.is_ally()))
 		_check_end()
 	return beats
 
@@ -700,6 +704,38 @@ func _dodge(target: Combatant, beats: Array[Dictionary], fast: bool) -> int:
 	_beat(beats, Loc.ui("%s esquive : %d succès.") % [target.name, int(roll["successes"])],
 		_roll_info(Loc.ui("Esquive (%s)") % target.name, roll), fast)
 	return int(roll["successes"])
+
+
+## Contresort (une réaction) : quand un adversaire lance un sort, un combattant qui connaît la Magie et
+## garde une réaction peut le contrer, sans savoir s'il aurait touché. Opposition Magie contre Magie : il
+## faut plus de succès que le lanceur (à égalité, le sort passe). Contré, le sort est perdu (emplacement
+## compris). Retourne true si le sort est contré.
+func _counterspell(caster: Combatant, action: Dictionary, beats: Array[Dictionary]) -> bool:
+	if not Spellcasting.is_spell(action):
+		return false
+	var candidates := living("enemy" if caster.is_ally() else "ally").filter(
+		func(c): return c.reactions > 0 and c.skill_rank("magic") > 0)
+	if candidates.is_empty():
+		return false
+	candidates.sort_custom(func(a, b): return Dice.expected(a.spell_pool()["count"], a.spell_pool()["threshold"]) \
+		> Dice.expected(b.spell_pool()["count"], b.spell_pool()["threshold"]))
+	var counter: Combatant = candidates[0]
+	var mine := counter.spell_pool()
+	var theirs := caster.spell_pool()
+	var auto := Dice.expected(mine["count"], mine["threshold"]) > Dice.expected(theirs["count"], theirs["threshold"])
+	var info := {"attacker": caster, "spell": action["name"], "counter": mine, "caster_pool": theirs, "beats": beats}
+	if not await _decide(counter, "counterspell", info, auto):
+		return false
+	counter.reactions -= 1
+	_beat(beats, Loc.ui("%s tente de contrer le sort !") % counter.name)
+	var c_roll := Dice.roll_pool(rng, int(mine["count"]) + counter.use_prepared(), int(mine["threshold"]))
+	var s_roll := Dice.roll_pool(rng, int(theirs["count"]), int(theirs["threshold"]))
+	_beat(beats, Loc.ui("%s : %d succès.") % [caster.name, int(s_roll["successes"])], _roll_info(Loc.ui("Magie (%s)") % caster.name, s_roll), true)
+	var countered := int(c_roll["successes"]) > int(s_roll["successes"])
+	_beat(beats, Loc.ui("%s : %d succès — %s") % [counter.name, int(c_roll["successes"]),
+		Loc.ui("le sort est contré !") if countered else Loc.ui("le sort passe.")],
+		_roll_info(Loc.ui("Contresort (%s)") % counter.name, c_roll), false)
+	return countered
 
 
 ## La cible peut-elle contre-attaquer ? Il lui faut une attaque ; contre un tir, une arme de tir.
@@ -1035,10 +1071,11 @@ func _beat(beats: Array[Dictionary], text: String, roll: Dictionary = {}, fast :
 	log.append(text)
 
 
-## Décide d'une réaction : le joueur choisit pour ses personnages (sauf en mode automatique), sinon le
-## choix automatique `auto`.
+## Décide d'une réaction : le joueur choisit pour ses personnages (sauf en mode IA, ou avec l'option
+## « réactions automatiques »), sinon le choix automatique `auto`.
 func _decide(target: Combatant, kind: String, info: Dictionary, auto: bool) -> bool:
-	if reaction_chooser.is_valid() and target.is_player_controlled() and not target.is_auto():
+	if reaction_chooser.is_valid() and target.is_player_controlled() and not target.is_auto() \
+			and not Meta.settings.get("auto_reactions", false):
 		var chosen: bool = await reaction_chooser.call(target, kind, info)
 		return chosen
 	return auto

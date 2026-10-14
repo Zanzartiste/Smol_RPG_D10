@@ -898,6 +898,24 @@ func _test_actions() -> bool:
 	asked.clear()
 	await combat._attack(duelist, hero, archer, beats, true)
 	_expect(not asked.has("counter"), "pas de contre-attaque contre un tir sans arme de tir")
+	# Option « réactions automatiques » : plus de question au joueur.
+	asked.clear()
+	hero.reactions = 2
+	Meta.settings["auto_reactions"] = true
+	await combat._attack(duelist, hero, lunge, beats, true)
+	_expect(asked.is_empty(), "option : réactions automatiques pour tout le groupe")
+	Meta.settings["auto_reactions"] = false
+	# Contresort : Magie contre Magie, quand un adversaire lance un sort.
+	DB.creatures["_witch"] = {"id": "_witch", "name": "Sorcière", "hp": 30, "abilities": {"int": 8},
+		"skills": {"magic": 30}, "actions": [{"name": "Rien", "weight": 1, "target": "self", "effects": [{"type": "status", "status": "shielded", "stacks": 0}]}]}
+	var witch := Combatant.from_creature("_witch", "Sorcière", "enemy")
+	combat._add(witch)
+	witch.reactions = 1
+	var counter_beats: Array[Dictionary] = []
+	var countered: bool = await combat._counterspell(hero, Actions.def("fire_bolt"), counter_beats)
+	_expect(countered and witch.reactions == 0, "contresort : la sorcière contre le sort (Magie 30 contre 0)")
+	_expect(not await combat._counterspell(hero, Actions.def("weapon_attack"), counter_beats), "pas de contresort contre une attaque d'arme")
+	DB.creatures.erase("_witch")
 	asked.clear()
 	hero.reactions = 2
 	hero.character.auto_combat = true
