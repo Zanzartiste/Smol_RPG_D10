@@ -76,7 +76,13 @@ func _ready() -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
-	if key == null or not key.pressed or key.echo or combat_view.visible or _overlay != null:
+	if key == null or not key.pressed or key.echo or _overlay != null:
+		return
+	# Raccourcis du tiroir (P, Q, J, E, M, N ; Échap replie une page épinglée), même en combat.
+	if not dice_tray.is_playing() and drawer.handle_key(key.keycode):
+		accept_event()
+		return
+	if combat_view.visible:
 		return
 	if key.keycode == KEY_I and not dice_tray.is_playing():
 		open_inventory()

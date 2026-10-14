@@ -3,7 +3,8 @@ extends Control
 ## Tiroir latéral droit : caché hors de l'écran, il ne laisse dépasser que des onglets. Survoler un
 ## onglet déroule sa page ; elle se replie quand la souris s'en va. Cliquer sur un onglet épingle la page
 ## (elle reste ouverte jusqu'au clic suivant).
-## Onglets : Personnage (PV), Inventaire (or), Quêtes, Journal, Relations, Sorts (lanceurs de sorts seulement).
+## Onglets : Personnage (PV), Inventaire (or), Quêtes, Journal, Relations, Sorts (lanceurs de sorts seulement),
+## Notes. Raccourcis (voir SHORTCUTS) : P, I (page), Q, J, E, M, N ; Échap replie une page épinglée.
 ## Les détails (calculs, descriptions) s'affichent au survol de chaque ligne.
 
 signal inventory_requested
@@ -16,7 +17,9 @@ const TOP_MARGIN := 60.0
 const CLOSE_DELAY := 0.35  # secondes hors du tiroir avant qu'il se replie
 const SPEED := 7.0  # vitesse d'ouverture (fraction par seconde)
 
-const PAGES := ["character", "inventory", "quests", "journal", "social", "spells"]
+const PAGES := ["character", "inventory", "quests", "journal", "social", "spells", "notes"]
+## Touche -> page (l'inventaire complet reste sur I, le carnet sur C).
+const SHORTCUTS := {KEY_P: "character", KEY_Q: "quests", KEY_J: "journal", KEY_E: "social", KEY_M: "spells", KEY_N: "notes"}
 const JOURNAL_SHOWN := 150  # entrées affichées au plus (les plus récentes)
 
 var life: LifeState
@@ -150,6 +153,9 @@ func _refresh_tabs() -> void:
 	_tab_buttons["quests"].text = tr("Quêtes (%d)") % Quests.with_status(life, "active").size()
 	_tab_buttons["social"].text = tr("Relations")
 	_tab_buttons["journal"].text = tr("Journal")
+	_tab_buttons["notes"].text = tr("Notes")
+	for key: int in SHORTCUTS:
+		_tab_buttons[SHORTCUTS[key]].tooltip_text = tr("Raccourci : %s") % OS.get_keycode_string(key)
 	var casters := life.party().filter(func(c): return c.max_resource(Spellcasting.SLOT_KEY) > 0 or not c.known_spells().is_empty())
 	_tab_buttons["spells"].visible = not casters.is_empty()
 	if not casters.is_empty():
@@ -190,6 +196,8 @@ func _build_page() -> void:
 			_build_quests()
 		"journal":
 			_build_journal()
+		"notes":
+			_build_notes()
 		"social":
 			_build_social()
 		"spells":
@@ -457,6 +465,29 @@ func _build_journal() -> void:
 			_add_label(tr("Jour %d") % current_day, "", "", UITheme.GOLD)
 		var slot_name: String = slots[clampi(int(entry["slot"]), 0, slots.size() - 1)]["name"]
 		_add_label("%s — %s" % [slot_name, entry["text"]], tr(LifeState.JOURNAL_KINDS.get(entry["kind"], "")))
+
+
+## Notes libres du joueur, sauvegardées avec la vie.
+func _build_notes() -> void:
+	_add_label(tr("Notes"), tr("Ce que vous voulez retenir : pistes, prix, noms…"), "SectionLabel")
+	var edit := TextEdit.new()
+	edit.text = life.notes
+	edit.placeholder_text = tr("Écrivez ici…")
+	edit.custom_minimum_size = Vector2(0, 420)
+	edit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	edit.text_changed.connect(func(): life.notes = edit.text)
+	_content.add_child(edit)
+
+
+## Raccourci clavier : ouvre (épingle) ou replie la page correspondante. Retourne true si la touche est prise.
+func handle_key(keycode: int) -> bool:
+	if keycode == KEY_ESCAPE and _pinned:
+		close()
+		return true
+	if not SHORTCUTS.has(keycode):
+		return false
+	_on_tab_pressed(SHORTCUTS[keycode])
+	return true
 
 
 func _build_social() -> void:

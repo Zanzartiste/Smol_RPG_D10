@@ -579,6 +579,13 @@ func _test_side_drawer() -> bool:
 	journal_texts = drawer._content.find_children("*", "Label", true, false).map(func(c): return c.text)
 	_expect(not journal_texts.any(func(t): return "Victoire" in t) and journal_texts.any(func(t): return "Nouvelle quête" in t),
 		"journal : filtre par sorte")
+	_expect(drawer.handle_key(KEY_N) and drawer._current == "notes" and drawer._pinned, "raccourci N : notes épinglées")
+	var note_edit: TextEdit = drawer._content.find_children("*", "TextEdit", true, false)[0]
+	note_edit.text = "Ysolde paie bien."
+	note_edit.text_changed.emit()
+	_expect(life.notes == "Ysolde paie bien." and LifeState.from_dict(JSON.parse_string(JSON.stringify(life.to_dict()))).notes == life.notes,
+		"notes libres sauvegardées")
+	_expect(drawer.handle_key(KEY_ESCAPE) and not drawer.is_open(), "Échap replie la page épinglée")
 	drawer.close()
 	_expect(not drawer.is_open(), "replier le tiroir")
 	var fighter_life := _new_life("human", "fighter")
