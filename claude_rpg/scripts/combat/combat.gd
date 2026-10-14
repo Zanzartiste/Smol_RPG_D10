@@ -388,9 +388,8 @@ func ai_turn(actor: Combatant) -> Array[Dictionary]:
 	var beats: Array[Dictionary] = []
 	var keep := 1 if actions_left > 1 and rng.randf() < float(setting("ai_guard_chance", 0.25)) else 0
 	var intent_ready := not actor.intent.is_empty()
-	# Lâche : sous coward_hp (30 % de ses PV), une chance sur deux de s'enfuir.
-	if actor.ai_kind() == "coward" and not actor.is_ally() and actor.hp <= actor.max_hp() * float(setting("coward_hp", 0.3)) \
-			and rng.randf() < 0.5:
+	# Moral : un lâche mal en point, ou une meute qui a perdu son chef (ou la moitié des siens), peut fuir.
+	if not actor.is_ally() and _breaks(actor) and rng.randf() < 0.5:
 		actor.fled = true
 		actor.intent = {}
 		_beat(beats, Loc.ui("%s prend la fuite !") % actor.name)
@@ -431,6 +430,21 @@ func ai_turn(actor: Combatant) -> Array[Dictionary]:
 			beats.append_array(await _resolve(actor, action.get("effects", []), target_mode, chosen, not actor.is_ally()))
 		_check_end()
 	return beats
+
+
+## Le moral d'une créature flanche-t-il ? Lâche : sous coward_hp (30 %) de ses PV. Meute : son chef est
+## tombé, ou la moitié de son camp (hors invocations) est hors de combat.
+func _breaks(actor: Combatant) -> bool:
+	match actor.morale():
+		"coward":
+			return actor.hp <= actor.max_hp() * float(setting("coward_hp", 0.3))
+		"pack":
+			var side := combatants.filter(func(c): return c.side == actor.side and not c.summoned)
+			if side.any(func(c): return c.is_leader() and not c.is_alive()):
+				return true
+			var down := side.filter(func(c): return not c.is_alive()).size()
+			return side.size() >= 2 and down * 2 >= side.size()
+	return false
 
 
 func _pick_action(actor: Combatant, allow_announced: bool) -> Dictionary:

@@ -1979,6 +1979,13 @@ func _test_combat_turns() -> bool:
 			fled = true
 			break
 	_expect(fled and not coward.is_alive() and combat.living("enemy").size() == 1, "le brigand lâche s'enfuit")
+	# Meute : quand le chef tombe, les loups peuvent fuir.
+	var pack_combat := Combat.new({"enemies": ["dire_wolf", "wolf"]}, Game.life)
+	var alpha_leader := pack_combat.enemies()[0]
+	var pack_wolf := pack_combat.enemies()[1]
+	_expect(not pack_combat._breaks(pack_wolf), "la meute tient tant que le chef est debout")
+	alpha_leader.hp = 0
+	_expect(pack_combat._breaks(pack_wolf), "chef tombé : la meute flanche")
 	hunter.hp = 0
 	combat._check_end()
 	var xp_before := Game.life.character.xp

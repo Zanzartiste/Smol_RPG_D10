@@ -2,6 +2,7 @@
 	{
 		"id": "wolf",
 		"ai": "hunter",
+		"morale": "pack",
 		"skills": {"perception": 3, "stealth": 2, "physique": 2},
 		"name": "Loup",
 		"size": -1,
@@ -31,6 +32,7 @@
 	{
 		"id": "dire_wolf",
 		"ai": "hunter",
+		"leader": true,
 		"skills": {"perception": 3, "stealth": 2, "physique": 3},
 		"name": "Alpha des loups",
 		"size": 1,
@@ -59,7 +61,7 @@
 	},
 	{
 		"id": "bandit",
-		"ai": "coward",
+		"morale": "coward",
 		"skills": {"weapon_melee": 2, "stealth": 2, "persuasion": 2, "perception": 2, "physique": 2},
 		"armor": 1,
 		"name": "Brigand",
@@ -129,6 +131,7 @@
 	{
 		"id": "giant_rat",
 		"ai": "hunter",
+		"morale": "pack",
 		"name": "Rat géant",
 		"size": -2,
 		"abilities": {"str": 3, "dex": 6, "con": 4, "int": 1, "wis": 4, "cha": 2},

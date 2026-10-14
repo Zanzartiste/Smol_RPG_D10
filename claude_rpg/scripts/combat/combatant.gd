@@ -78,10 +78,21 @@ func is_alive() -> bool:
 	return hp > 0 and not fled
 
 
-## Archétype d'IA d'une créature (creatures.json › "ai") : "brute" (par défaut, cible au hasard),
-## "hunter" (vise le plus blessé), "coward" (s'enfuit quand ses PV sont bas).
+## Archétype d'IA d'une créature (creatures.json › "ai") : "brute" (par défaut, cible au hasard) ou
+## "hunter" (vise le plus blessé).
 func ai_kind() -> String:
 	return creature.get("ai", "brute")
+
+
+## Moral d'une créature (creatures.json › "morale") : "fearless" (par défaut), "coward" (s'enfuit quand
+## ses PV sont bas), "pack" (s'enfuit quand le chef de meute tombe, ou la moitié du groupe).
+func morale() -> String:
+	return creature.get("morale", "fearless")
+
+
+## Chef de meute (creatures.json › "leader") : sa chute fait fuir la meute.
+func is_leader() -> bool:
+	return creature.get("leader", false)
 
 
 func max_hp() -> int:
