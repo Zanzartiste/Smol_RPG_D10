@@ -10,8 +10,14 @@ Réponses, docs, textes du jeu et commits **en français**. Dire « espèce », 
   la suite complète (`bash tools/test.sh`, ~2 min, simulation comprise) une fois, avant le commit.
 - Pas de captures d'écran ni de banc d'équilibrage (`tools/combat_bench.tscn`, très long) sans demande ou
   besoin réel (nouvel écran, changement d'équilibrage).
-- Pas de sous-agents sauf demande explicite.
 - Réponses courtes ; pas de récapitulatif de ce qui vient d'être montré.
+
+## Répartition des modèles (demandée par l'utilisateur)
+- Tâche simple et délimitée (contenu JSON, textes, petite correction, mise à jour de doc) : la déléguer à
+  l'agent `petites-taches` (Sonnet) avec une consigne précise (fichiers, ids, valeurs attendues), puis relire
+  son rapport et commiter. Pas d'autre sous-agent.
+- Conception ou modification d'un système (combat, IA, règles, sauvegardes, interface) : la faire soi-même.
+- Une fonctionnalité finie et commitée : proposer à l'utilisateur de taper `/clear` (un hook le rappelle aussi).
 
 ## Commandes (depuis `claude_rpg/`)
 - Godot : `/c/Program Files (x86)/Godot_v4.4.1-stable_win64.exe/Godot_v4.4.1-stable_win64_console.exe`
