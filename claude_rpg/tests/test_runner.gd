@@ -548,8 +548,7 @@ func _test_side_drawer() -> bool:
 	drawer.open("spells")
 	var checks: Array = drawer._content.get_children().filter(func(c): return c is CheckBox)
 	_expect(checks.size() == hero.known_spells().size(), "page des sorts : un sort connu par ligne")
-	var unchecked: CheckBox = checks.filter(func(c): return not c.button_pressed)[0]
-	_expect(unchecked.disabled, "sorts équipés au maximum : les autres sont grisés")
+	_expect(checks.filter(func(c): return c.disabled and c.button_pressed).size() == 2, "tours de magie : cochés et grisés (toujours prêts)")
 	life.log_journal("combat", "Victoire contre : Loup.")
 	life.log_journal("quest", "Nouvelle quête : Test.")
 	drawer.open("journal")
@@ -599,12 +598,12 @@ func _test_dice_tray() -> bool:
 	_expect(tray._notation() == "Physique : 14d10 ≤ 6", "réserve : notation")
 	elapsed = 0.0
 	on_tray = true
-	while tray.is_playing() and elapsed < 10.0:
+	while tray.is_playing() and elapsed < 20.0:
 		tray._process(1.0 / 60.0)
 		for d in tray._dice:
-			on_tray = on_tray and Rect2(Vector2.ZERO, tray.size).grow(1.0).has_point(d["pos"])
+			on_tray = on_tray and Rect2(Vector2.ZERO, tray.size).grow(DiceTray.DIE_RADIUS).has_point(d["pos"])
 		elapsed += 1.0 / 60.0
-	_expect(not tray.is_playing() and on_tray, "réserve de 14 dés : animation terminée, dés sur le plateau")
+	_expect(not tray.is_playing() and on_tray, "réserve de 14 dés : animation terminée, dés sur le plateau (%.1f s)" % elapsed)
 	tray.free()
 	return true
 
@@ -964,14 +963,27 @@ func _test_spell_progression() -> bool:
 	# Sorts connus et équipés : seuls les sorts équipés sont proposés en combat.
 	var wizard := Character.create("human", "wizard", "W")
 	var known := wizard.known_spells()
-	_expect(known.size() == 7 and "weapon_attack" not in known and wizard.max_equipped_spells() == 2 + wizard.skill_rank("magic"),
-		"magicien : 7 sorts connus, 2 + rang de Magie équipés")
-	_expect(wizard.equipped_spells.size() == wizard.max_equipped_spells() and "find_familiar" not in wizard.combat_actions()
-		and "weapon_attack" in wizard.combat_actions(), "les sorts non équipés sont rangés")
+	_expect(known.size() == 5 and "weapon_attack" not in known and wizard.max_equipped_spells() == 2 + wizard.skill_rank("magic"),
+		"magicien : 2 tours de magie et 3 sorts choisis à la création ; 2 + rang de Magie équipés")
+	_expect(wizard.equipped_spells.size() == 3 and "find_familiar" not in wizard.combat_actions()
+		and "weapon_attack" in wizard.combat_actions(), "les sorts choisis sont équipés d'office")
 	_expect("fire_bolt" not in wizard.equipped_spells and wizard.is_spell_equipped("fire_bolt") and "ray_of_frost" in wizard.combat_actions()
 		and not wizard.equip_spell("fire_bolt") and not wizard.unequip_spell("fire_bolt"), "tours de magie : toujours prêts, hors limite")
-	_expect(not wizard.equip_spell("find_familiar") and wizard.unequip_spell("mage_shield") and wizard.equip_spell("find_familiar")
-		and "find_familiar" in wizard.combat_actions() and "mage_shield" not in wizard.combat_actions(), "changer de sort équipé")
+	_expect(wizard.unequip_spell("sleep") and "sleep" not in wizard.combat_actions() and wizard.equip_spell("sleep")
+		and "sleep" in wizard.combat_actions(), "changer de sort équipé")
+	_expect(not wizard.equip_spell("find_familiar"), "on n'équipe qu'un sort connu")
+	# Sorts appris au choix en montant de niveau, parmi ceux qu'on peut lancer.
+	var apprentice := Character.create("human", "wizard", "A")
+	apprentice.add_xp(300)
+	_level_up(apprentice)
+	var key := "feature:new_spell_2/spell"
+	_expect(apprentice.choice_options(key) == ["mage_shield", "find_familiar"],
+		"niveau 2 : un nouveau sort au choix, parmi les sorts de niveau 1 inconnus")
+	apprentice.choose(key, "find_familiar")
+	_expect("find_familiar" in apprentice.known_spells() and "find_familiar" in apprentice.equipped_spells, "le sort appris est équipé s'il reste de la place")
+	apprentice.add_xp(Progression.xp_for(3) - apprentice.xp)
+	_level_up(apprentice)
+	_expect(apprentice.choice_options("feature:new_spell_3/spell")[0] == "scorching_ray", "niveau 3 : les sorts de niveau 2 s'ouvrent")
 	var reloaded := Character.from_dict(JSON.parse_string(JSON.stringify(wizard.to_dict())))
 	_expect(reloaded.equipped_spells == wizard.equipped_spells, "sorts équipés sauvegardés")
 
@@ -1793,6 +1805,8 @@ func _test_multiclass_and_rest() -> bool:
 	var lines := hero.assign_class_level("wizard")
 	_expect(hero.class_level("wizard") == 1 and hero.has_class("wizard") and lines[0].contains("magicien de niveau 1"),
 		"un niveau de Magicien")
+	_expect(hero.choice_options("class:wizard/cantrips") == ["fire_bolt", "ray_of_frost"], "multiclassage : les sorts du magicien sont à choisir")
+	hero.apply_default_choices()
 	_expect(hero.is_caster() and hero.skill_rank("magic") == 2 and hero.max_resource("spell_slot") == 2
 		and "fire_bolt" in hero.combat_actions() and "second_wind" in hero.combat_actions(), "actions et sorts des deux classes")
 	hero.assign_class_level("fighter")

@@ -9,7 +9,10 @@ extends RefCounted
 ##    "from"? : "trained" (compétences déjà entraînées, pour l'Expertise),
 ##    "category"? : catégorie de don (type "feat"), "cost"? : ressource des actions choisies (type "action"),
 ##    "allow_repeat"? : la même valeur peut être choisie plusieurs fois (Amélioration d'attribut),
-##    "at_creation"? : proposé à l'écran de création (sinon au hub, à la première occasion)}
+##    "at_creation"? : proposé à l'écran de création (sinon au hub, à la première occasion),
+##    "multiclass"? : choix de classe aussi proposé (au hub) à qui prend cette classe en multiclassage}
+## Type "action" : on ne propose ni une action déjà connue, ni un sort d'un niveau que le personnage ne
+## peut pas encore lancer (sauf si le choix a un "cost" propre, comme Initié à la magie).
 ## Une option (type "option") est un objet {"id", "name", "description", "modifiers"?, "actions"?,
 ## "features"? (aptitudes par niveau : une sous-classe)}.
 ## Les valeurs choisies sont dans Character.choices, sous la clé « source/id du choix »
@@ -82,7 +85,9 @@ static func options_for(spec: Dictionary, ch: Character, taken: Array) -> Array[
 			candidates = Feats.ids().filter(func(id): return Feats.category_of(id) == spec.get("category", Feats.category_of(id)) \
 				and not ch.has_feat(id) and Feats.meets_prerequisites(id, ch))
 		"action":
-			candidates = spec.get("options", [])
+			var known: Array = ch._all_combat_actions()
+			candidates = spec.get("options", []).filter(func(id): return id not in known and (spec.has("cost")
+				or int(Actions.def(id).get("spell_level", 0)) <= ch.max_spell_level()))
 		"option":
 			candidates = spec.get("options", []).map(func(o): return o["id"])
 		"language":

@@ -356,6 +356,15 @@ func choice_specs() -> Array[Dictionary]:
 		result.append({"key": "species/" + spec["id"], "spec": spec, "source": DB.species[species_id]["name"]})
 	for spec: Dictionary in DB.classes[class_id].get("choices", []):
 		result.append({"key": "class/" + spec["id"], "spec": spec, "source": DB.classes[class_id]["name"]})
+	# Classes prises en multiclassage : leurs choix marqués "multiclass" (sorts du magicien…).
+	for cls: String in class_levels:
+		if cls == class_id:
+			continue
+		for spec: Dictionary in DB.classes[cls].get("choices", []):
+			if spec.get("multiclass", false):
+				var multi: Dictionary = spec.duplicate()
+				multi.erase("at_creation")
+				result.append({"key": "class:%s/%s" % [cls, spec["id"]], "spec": multi, "source": DB.classes[cls]["name"]})
 	for pair in _class_features():
 		var feature: Dictionary = pair[1]
 		for spec: Dictionary in feature.get("choices", []):
@@ -417,6 +426,8 @@ func choose(key: String, value: String) -> bool:
 	if entry["spec"].get("type") == "feat":
 		feats.append(value)
 	refresh_max_hp()
+	if entry["spec"].get("type") == "action":
+		sync_spells()  # un sort appris s'équipe d'office s'il reste de la place
 	return true
 
 
