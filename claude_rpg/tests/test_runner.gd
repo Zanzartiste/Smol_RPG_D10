@@ -1722,10 +1722,18 @@ func _test_skill_ranks() -> bool:
 		"niveau 3 : deux points de compétence")
 	_expect(learner.spend_skill_point("lore") and learner.skill_rank("lore") == lore_before + 1 and learner.pending_skill_points == 1,
 		"un point : +1 rang")
-	learner.skill_points["lore"] = 10
-	_expect(learner.can_raise_skill("lore") and not learner.can_raise_skill("nope"), "pas de plafond de rang après la création")
+	_expect(learner.can_raise_skill("lore") and learner.spend_skill_point("lore") and learner.pending_skill_points == 0,
+		"deux niveaux d'un coup : deux rangs possibles dans la même compétence")
+	var steady := Character.create("human", "fighter", "Pas à pas")
+	steady.add_xp(Progression.xp_for(2) - steady.xp)
+	_level_up(steady)
+	steady.pending_skill_points = 2  # deux points pour un seul niveau
+	_expect(steady.spend_skill_point("lore") and not steady.can_raise_skill("lore") and steady.can_raise_skill("arts"),
+		"un rang par compétence et par niveau au plus")
+	steady.skill_points["lore"] = 10
+	_expect(steady.skill_rank("lore") > 10, "pas de plafond de rang après la création")
 	var reloaded := Character.from_dict(JSON.parse_string(JSON.stringify(learner.to_dict())))
-	_expect(reloaded.skill_points == learner.skill_points and reloaded.pending_skill_points == 1, "points de compétence sauvegardés")
+	_expect(reloaded.skill_points == learner.skill_points and reloaded.level_raises == learner.level_raises, "points de compétence sauvegardés")
 
 	# Langues : une langue à choisir par rang de Langues, en plus du Commun.
 	_expect(fighter.known_languages() == ["common"] and fighter.choice_options("skill/languages").size() == 5, "langues à choisir")

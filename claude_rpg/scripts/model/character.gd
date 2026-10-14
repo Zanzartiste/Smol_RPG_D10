@@ -18,6 +18,7 @@ var pending_feats := 0  # dons à choisir (gagnés en montant de niveau)
 var pending_ability_points := 0  # points d'attribut à répartir (gagnés en montant de niveau)
 var pending_skill_points := 0  # points de compétence à répartir (gagnés en montant de niveau)
 var skill_points: Dictionary = {}  # id de compétence -> rangs achetés avec des points de compétence
+var level_raises: Dictionary = {}  # id de compétence -> points de niveau dépensés dessus (un par niveau au plus)
 var equipment: Dictionary = {}  # emplacement (Equipment.SLOTS) -> id d'équipement
 var defenses := Defenses.new()  # défenses propres au personnage (accordées par des événements)
 var level := 1
@@ -366,9 +367,17 @@ static func _skill_rules() -> Dictionary:
 	return DB.rules.get("skill_points", {})
 
 
-## Après la création, pas de plafond : chaque point de compétence fait monter une compétence d'un seul rang.
+## Après la création, pas de plafond de rang, mais une compétence monte d'un rang par niveau au plus : elle ne
+## reçoit jamais plus de points que de niveaux atteints qui en ont donné.
 func can_raise_skill(skill_id: String) -> bool:
-	return pending_skill_points > 0 and Skills.has(Skills.resolve(skill_id))
+	var id := Skills.resolve(skill_id)
+	return pending_skill_points > 0 and Skills.has(id) and int(level_raises.get(id, 0)) < _point_levels()
+
+
+## Nombre de niveaux atteints qui ont donné des points de compétence (rules.json › skill_points › by_level).
+func _point_levels() -> int:
+	var by_level: Dictionary = _skill_rules().get("by_level", {})
+	return range(2, level + 1).filter(func(l): return int(by_level.get(str(l), 0)) > 0).size()
 
 
 ## Reste-t-il un point de compétence à placer (et une compétence sous le plafond) ?
@@ -382,6 +391,7 @@ func spend_skill_point(skill_id: String) -> bool:
 		return false
 	pending_skill_points -= 1
 	skill_points[skill_id] = int(skill_points.get(skill_id, 0)) + 1
+	level_raises[skill_id] = int(level_raises.get(skill_id, 0)) + 1
 	return true
 
 
@@ -1036,7 +1046,7 @@ func to_dict() -> Dictionary:
 		"class_levels": class_levels, "pending_class_levels": pending_class_levels,
 		"gender": gender, "abilities": abilities, "feats": feats, "choices": choices, "pending_feats": pending_feats,
 		"pending_ability_points": pending_ability_points, "equipment": equipment, "defenses": defenses.to_dict(),
-		"pending_skill_points": pending_skill_points, "skill_points": skill_points,
+		"pending_skill_points": pending_skill_points, "skill_points": skill_points, "level_raises": level_raises,
 		"level": level, "xp": xp, "hp": hp, "max_hp": max_hp, "gold": gold, "inventory": inventory,
 		"start_age": start_age, "age_days": age_days, "art_seed": art_seed, "look": look, "template_id": template_id, "npc_id": npc_id, "auto_combat": auto_combat,
 		"resources": resources, "equipped_spells": equipped_spells, "seen_spells": seen_spells,
@@ -1063,6 +1073,7 @@ static func from_dict(data: Dictionary) -> Character:
 	c.pending_ability_points = int(data.get("pending_ability_points", 0))
 	c.pending_skill_points = int(data.get("pending_skill_points", 0))
 	c.skill_points = _int_dict(data.get("skill_points", {}))
+	c.level_raises = _int_dict(data.get("level_raises", {}))
 	c.equipment = data.get("equipment", {})
 	# Anciennes sauvegardes : amulet -> neck, ring -> ring_1.
 	for old_slot: String in {"amulet": "neck", "ring": "ring_1"}:
