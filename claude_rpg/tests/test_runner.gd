@@ -109,7 +109,8 @@ func _test_character() -> bool:
 		and not c.is_trained("physique"), "rangs de départ : instinctive 2, autre 1, Magie 2 pour un lanceur")
 	_expect(Character.create("goblin", "fighter", "F").skill_rank("magic") == 0, "Magie : 0 pour un non-lanceur")
 	_expect(c.skill_pool("athletics") == c.skill_pool("physique"), "ancien id (Athlétisme) traduit en Physique")
-	_expect(c.max_hp == roundi(6 * pow(1.4142, -1)), "PV : CON 6 × 1,414^taille (gobelin : −1)")
+	_expect(c.max_hp == (-1 + 2) * 6 + 7 and Character.hp_from(4, 0) == 15 and Character.hp_from(8, 4) == 55,
+		"PV : (taille + 2) × CON + 7 ; humain moyen 15, colosse endurant 55")
 	_expect(c.size() == -1 and Character.create("human", "wizard", "H").size() == 0 and DB.size_name(-1) == "Petite",
 		"la taille dépend de l'espèce")
 	_expect(c.age_years() == 18 and c.life_stage() == "adult", "gobelin de 18 ans adulte (majorité)")
@@ -118,15 +119,15 @@ func _test_character() -> bool:
 	# PV : Constitution × 1,414^taille ; humain (taille 0) au modèle du guerrier : CON 6.
 	var life := _new_life("human", "fighter")
 	var f := life.character
-	_expect(f.max_hp == 6 and f.hp == 6, "PV du guerrier humain : CON 6")
-	f.hp = 4
+	_expect(f.max_hp == 19 and f.hp == 19, "PV du guerrier humain : 2 × CON 6 + 7")
+	f.hp = 10
 	life.change_ability("con", -2, "test")
-	_expect(f.max_hp == 4 and f.hp == 2, "CON 6 -> 4 : PV max et actuels -2")
+	_expect(f.max_hp == 15 and f.hp == 6, "CON 6 -> 4 : PV max et actuels -4")
 	life.change_ability("con", 4, "test")
-	_expect(f.max_hp == 8 and f.hp == 6, "CON 4 -> 8 : PV max et actuels +4")
+	_expect(f.max_hp == 23 and f.hp == 14, "CON 4 -> 8 : PV max et actuels +8")
 	f.add_xp(300)
-	_expect(f.level == 2 and f.max_hp == 8, "niveau 2 : les PV ne montent pas avec le niveau")
-	_expect(Character.create("dwarf", "fighter", "N").max_hp == 4, "nain (taille −1) : CON 6 / 1,414 = 4 PV")
+	_expect(f.level == 2 and f.max_hp == 23, "niveau 2 : les PV ne montent pas avec le niveau")
+	_expect(Character.create("dwarf", "fighter", "N").max_hp == 13, "nain (taille −1) : 1 × CON 6 + 7 = 13 PV")
 	_expect(f.natural_dodge() == 1 and f.armor() == 3 and f.initiative_base() == 5 + 3,
 		"Esquive naturelle DEX 5 / 3 = 1, Armure 3 (cotte de mailles), initiative DEX + INT")
 	f.hp = 1
@@ -727,7 +728,7 @@ func _test_combat() -> bool:
 	_expect(combat.combatants.size() == 3 and combat.order.size() == 3, "combat : héros + 2 loups")
 	_expect(combat.enemies()[0].name == "Loup A" and combat.enemies()[1].name == "Loup B", "ennemis identiques numérotés")
 	var wolf := combat.enemies()[0]
-	_expect(wolf.max_hp() == roundi(5 * pow(1.4142, -1)) and wolf.natural_dodge() == 2 and wolf.armor() == 0,
+	_expect(wolf.max_hp() == Character.hp_from(5, -1) and wolf.natural_dodge() == 2 and wolf.armor() == 0,
 		"loup : PV selon CON et taille, Esquive naturelle 2")
 	_expect(combat.cover(wolf) == 1 and combat.cover(combat.hero) == 1, "Couvert : 1 par défaut")
 	await _play_out(combat)

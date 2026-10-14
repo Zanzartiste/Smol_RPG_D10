@@ -253,8 +253,8 @@ func _build_character() -> void:
 		initiative += tr(" + Physique %d (Vigilant)") % ch.skill_rank("physique")
 	if ch.roll_penalty("dex") > 0:
 		initiative += tr(" − %d (encombrement)") % ch.roll_penalty("dex")
-	_add_pair(_make_label(tr("PV : %d / %d") % [ch.hp, ch.max_hp], tr("Constitution %d × 1,414^taille (%d)%s") % [
-		ch.ability_score("con"), ch.size(), _extra_hp_text(ch)]),
+	_add_pair(_make_label(tr("PV : %d / %d") % [ch.hp, ch.max_hp], tr("(taille %d + 2) × Constitution %d + 7%s") % [
+		ch.size(), ch.ability_score("con"), _extra_hp_text(ch)]),
 		_make_label(tr("Initiative : %d") % ch.initiative_base(), initiative + tr("\n+ 1d10 au début du combat.")))
 	_add_pair(_make_label(tr("Esquive naturelle : %d") % ch.natural_dodge(), tr("Dextérité %d ÷ 3 = %d (au moins 1)%s.\nC'est la difficulté des attaques de mêlée contre %s.") % [
 		dex, maxi(1, floori(dex / 3.0)), _signed_extra(Modifiers.sum(ch.modifiers(), "natural_dodge")), ch.name]),

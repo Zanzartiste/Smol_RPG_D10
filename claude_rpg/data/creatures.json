@@ -34,7 +34,6 @@
 		"skills": {"perception": 3, "stealth": 2, "physique": 3},
 		"name": "Alpha des loups",
 		"size": 1,
-		"hp": 12,
 		"armor": 1,
 		"natural_armor": true,
 		"abilities": {"str": 7, "dex": 6, "con": 6, "int": 1, "wis": 5, "cha": 3},

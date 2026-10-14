@@ -169,7 +169,7 @@
 				},
 				"failure": {
 					"text": "Il éclate de rire et vous colle une gifle monumentale.",
-					"effects": [{"type": "hp", "amount": -1, "cause": "Une gifle de trop"}]
+					"effects": [{"type": "hp", "amount": -2, "cause": "Une gifle de trop"}]
 				}
 			},
 			{
@@ -214,7 +214,7 @@
 				},
 				"failure": {
 					"text": "Une main gantée vous rattrape par le col. Les coups de bâton pleuvent.",
-					"effects": [{"type": "hp", "amount": -1, "cause": "Bastonné par la garde"}]
+					"effects": [{"type": "hp", "amount": -2, "cause": "Bastonné par la garde"}]
 				}
 			},
 			{
@@ -255,7 +255,7 @@
 				},
 				"failure": {
 					"text": "Les symboles se mettent à danser devant vos yeux. Une migraine atroce vous saisit.",
-					"effects": [{"type": "hp", "amount": -1, "cause": "Terrassé par un savoir interdit"}]
+					"effects": [{"type": "hp", "amount": -2, "cause": "Terrassé par un savoir interdit"}]
 				}
 			},
 			{
@@ -283,7 +283,7 @@
 				},
 				"failure": {
 					"text": "« Au voleur ! » La garde vous tombe dessus.",
-					"effects": [{"type": "hp", "amount": -2, "cause": "Lynché pour un larcin raté"}]
+					"effects": [{"type": "hp", "amount": -4, "cause": "Lynché pour un larcin raté"}]
 				}
 			},
 			{

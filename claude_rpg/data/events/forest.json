@@ -19,7 +19,7 @@
 			{
 				"id": "wander",
 				"text": "Profiter de la promenade",
-				"outcome": {"text": "L'air frais vous fait du bien.", "effects": [{"type": "hp", "amount": 1}]}
+				"outcome": {"text": "L'air frais vous fait du bien.", "effects": [{"type": "hp", "amount": 2}]}
 			}
 		]
 	},
@@ -93,7 +93,7 @@
 				},
 				"failure": {
 					"text": "Le sort vous claque entre les doigts. Le loup en profite.",
-					"effects": [{"type": "hp", "amount": -2, "cause": "Dévoré par un loup"}]
+					"effects": [{"type": "hp", "amount": -4, "cause": "Dévoré par un loup"}]
 				}
 			},
 			{
@@ -106,7 +106,7 @@
 				},
 				"failure": {
 					"text": "Le loup n'est pas impressionné. Pas du tout.",
-					"effects": [{"type": "hp", "amount": -2, "cause": "Dévoré par un loup"}]
+					"effects": [{"type": "hp", "amount": -4, "cause": "Dévoré par un loup"}]
 				}
 			},
 			{
@@ -116,7 +116,7 @@
 				"success": {"text": "Vous vous éclipsez sans un bruit.", "effects": []},
 				"failure": {
 					"text": "Une branche craque sous votre pied. Le loup bondit.",
-					"effects": [{"type": "hp", "amount": -2, "cause": "Dévoré par un loup"}]
+					"effects": [{"type": "hp", "amount": -4, "cause": "Dévoré par un loup"}]
 				}
 			}
 		]
@@ -165,7 +165,7 @@
 				"success": {"text": "Vous semez vos poursuivants entre les arbres.", "effects": []},
 				"failure": {
 					"text": "Un gourdin vous atteint dans le dos pendant votre fuite.",
-					"effects": [{"type": "hp", "amount": -2, "cause": "Tué par des brigands"}]
+					"effects": [{"type": "hp", "amount": -4, "cause": "Tué par des brigands"}]
 				}
 			}
 		]
@@ -216,7 +216,7 @@
 				},
 				"failure": {
 					"text": "L'alpha vous flaire et vous charge avant de disparaître dans les bois.",
-					"effects": [{"type": "hp", "amount": -3, "cause": "Dévoré par l'alpha des loups"}]
+					"effects": [{"type": "hp", "amount": -6, "cause": "Dévoré par l'alpha des loups"}]
 				}
 			}
 		]
@@ -248,7 +248,7 @@
 				},
 				"failure": {
 					"text": "Vous écorchez un mot. Une décharge vous projette hors du cercle.",
-					"effects": [{"type": "hp", "amount": -1, "cause": "Foudroyé par une magie ancienne"}]
+					"effects": [{"type": "hp", "amount": -2, "cause": "Foudroyé par une magie ancienne"}]
 				}
 			},
 			{
@@ -283,7 +283,7 @@
 				},
 				"failure": {
 					"text": "Les runes restent muettes. Un picotement désagréable remonte le long de vos bras.",
-					"effects": [{"type": "hp", "amount": -1, "cause": "Foudroyé par une magie ancienne"}]
+					"effects": [{"type": "hp", "amount": -2, "cause": "Foudroyé par une magie ancienne"}]
 				}
 			},
 			{
@@ -343,7 +343,7 @@
 				},
 				"failure": {
 					"text": "Le sol se dérobe : un terrier ! Vous vous tordez la cheville en tombant.",
-					"effects": [{"type": "hp", "amount": -2, "cause": "Égaré dans la brume"}]
+					"effects": [{"type": "hp", "amount": -4, "cause": "Égaré dans la brume"}]
 				}
 			},
 			{

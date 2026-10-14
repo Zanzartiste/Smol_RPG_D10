@@ -60,9 +60,8 @@ static func from_creature(creature_id: String, label: String, side_id: String, _
 	if c.creature.has("hp"):
 		c._max_hp = maxi(1, int(c.creature["hp"]))
 	else:
-		# Comme un personnage : Constitution × 1,414^taille.
-		var base := float(DB.rules.get("hit_points", {}).get("size_base", 1.4142))
-		c._max_hp = maxi(1, roundi(c.ability_score("con") * pow(base, c.size())))
+		# Comme un personnage : (taille + 2) × CON + 7.
+		c._max_hp = Character.hp_from(c.ability_score("con"), c.size())
 	c._hp = c._max_hp
 	return c
 

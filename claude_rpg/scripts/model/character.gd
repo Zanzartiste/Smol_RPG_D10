@@ -878,13 +878,18 @@ func life_stage() -> String:
 
 # --- PV et niveaux -----------------------------------------------------------
 
-## PV max : Constitution × size_base ^ taille (rules.json › hit_points), au moins 1, + les PV des
+## PV d'une Constitution et d'une taille : (taille + 2) × CON + 7, au moins 1 (rules.json › hit_points).
+## Humain moyen : 15 ; créature immense et endurante (taille 4, CON 8) : 55. Sert aussi aux créatures.
+static func hp_from(con: int, size: int) -> int:
+	var rules: Dictionary = DB.rules.get("hit_points", {})
+	return maxi(1, (size + int(rules.get("size_offset", 2))) * con + int(rules.get("base", 7)))
+
+
+## PV max : selon la Constitution et la taille (hp_from), + les PV des
 ## modificateurs (don Robuste : par niveau). Ni la classe ni le niveau ne les font monter : un
 ## personnage reste fragile.
 func compute_max_hp() -> int:
-	var rules: Dictionary = DB.rules.get("hit_points", {})
-	var base := float(rules.get("size_base", 1.4142))
-	var hp := maxi(1, roundi(ability_score("con") * float(rules.get("per_con", 1.0)) * pow(base, size())))
+	var hp := hp_from(ability_score("con"), size())
 	var mods := modifiers()
 	return hp + Modifiers.sum(mods, "max_hp") + Modifiers.sum(mods, "hp_per_level") * level
 

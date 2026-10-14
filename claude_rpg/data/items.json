@@ -6,7 +6,7 @@
 		"name": "Potion de soins",
 		"description": "Une fiole rouge qui referme les plaies.",
 		"value": 10,
-		"use": {"heal": {"dice": 3, "threshold": 7}, "target": "ally"}
+		"use": {"heal": {"dice": 6, "threshold": 7}, "target": "ally"}
 	},
 	{
 		"id": "antidote",

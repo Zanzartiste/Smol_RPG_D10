@@ -29,9 +29,9 @@
 		{"value": 5, "name": "Colossale", "example": "au-delà"}
 	],
 	"hit_points": {
-		"_doc": "PV max = Constitution × size_base ^ taille, arrondi (au moins 1), + modificateurs (don Robuste…). Ils ne dépendent ni de la classe ni du niveau (fragilité voulue).",
-		"size_base": 1.4142,
-		"per_con": 1.0
+		"_doc": "PV max = (taille + size_offset) × Constitution + base (au moins 1), + modificateurs (don Robuste…). Humain moyen (taille 0, CON 4) : 15 PV ; créature immense et endurante (taille 4, CON 8) : 55. Ils ne dépendent ni de la classe ni du niveau.",
+		"size_offset": 2,
+		"base": 7
 	},
 	"time_slots": [{"id": "morning", "name": "Matin"}, {"id": "afternoon", "name": "Après-midi"}, {"id": "evening", "name": "Soir"}],
 	"days_per_year": 365,
