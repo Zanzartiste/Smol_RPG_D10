@@ -60,9 +60,8 @@ static func from_creature(creature_id: String, label: String, side_id: String, _
 	if c.creature.has("hp"):
 		c._max_hp = maxi(1, int(c.creature["hp"]))
 	else:
-		# Comme un personnage : Constitution × 1,414^taille.
-		var base := float(DB.rules.get("hit_points", {}).get("size_base", 1.4142))
-		c._max_hp = maxi(1, roundi(c.ability_score("con") * pow(base, c.size())))
+		# Comme un personnage : (taille + 2) × CON + 7.
+		c._max_hp = Character.hp_from(c.ability_score("con"), c.size())
 	c._hp = c._max_hp
 	return c
 
@@ -79,10 +78,21 @@ func is_alive() -> bool:
 	return hp > 0 and not fled
 
 
-## Archétype d'IA d'une créature (creatures.json › "ai") : "brute" (par défaut, cible au hasard),
-## "hunter" (vise le plus blessé), "coward" (s'enfuit quand ses PV sont bas).
+## Archétype d'IA d'une créature (creatures.json › "ai") : "brute" (par défaut, cible au hasard) ou
+## "hunter" (vise le plus blessé).
 func ai_kind() -> String:
 	return creature.get("ai", "brute")
+
+
+## Moral d'une créature (creatures.json › "morale") : "fearless" (par défaut), "coward" (s'enfuit quand
+## ses PV sont bas), "pack" (s'enfuit quand le chef de meute tombe, ou la moitié du groupe).
+func morale() -> String:
+	return creature.get("morale", "fearless")
+
+
+## Chef de meute (creatures.json › "leader") : sa chute fait fuir la meute.
+func is_leader() -> bool:
+	return creature.get("leader", false)
 
 
 func max_hp() -> int:

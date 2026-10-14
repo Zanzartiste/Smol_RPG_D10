@@ -169,7 +169,7 @@
 				},
 				"failure": {
 					"text": "Il éclate de rire et vous colle une gifle monumentale.",
-					"effects": [{"type": "hp", "amount": -1, "cause": "Une gifle de trop"}]
+					"effects": [{"type": "hp", "amount": -2, "cause": "Une gifle de trop"}]
 				}
 			},
 			{
@@ -214,7 +214,7 @@
 				},
 				"failure": {
 					"text": "Une main gantée vous rattrape par le col. Les coups de bâton pleuvent.",
-					"effects": [{"type": "hp", "amount": -1, "cause": "Bastonné par la garde"}]
+					"effects": [{"type": "hp", "amount": -2, "cause": "Bastonné par la garde"}]
 				}
 			},
 			{
@@ -255,7 +255,7 @@
 				},
 				"failure": {
 					"text": "Les symboles se mettent à danser devant vos yeux. Une migraine atroce vous saisit.",
-					"effects": [{"type": "hp", "amount": -1, "cause": "Terrassé par un savoir interdit"}]
+					"effects": [{"type": "hp", "amount": -2, "cause": "Terrassé par un savoir interdit"}]
 				}
 			},
 			{
@@ -283,7 +283,7 @@
 				},
 				"failure": {
 					"text": "« Au voleur ! » La garde vous tombe dessus.",
-					"effects": [{"type": "hp", "amount": -2, "cause": "Lynché pour un larcin raté"}]
+					"effects": [{"type": "hp", "amount": -4, "cause": "Lynché pour un larcin raté"}]
 				}
 			},
 			{
@@ -328,6 +328,80 @@
 				"id": "leave",
 				"text": "Décliner",
 				"outcome": {"text": "Mira hausse les épaules. « Comme vous voudrez. »", "effects": []}
+			}
+		]
+	},
+	{
+		"id": "town_storyteller",
+		"location": "town",
+		"weight": 5,
+		"title": "Le conteur de la taverne",
+		"text": "Près de l'âtre, un vieux conteur tient la salle en haleine. Sa voix grave évoque un roi sans couronne et un trésor sous la colline. Son chapeau, posé à ses pieds, attend la monnaie.",
+		"choices": [
+			{
+				"id": "tip",
+				"text": "Lui jeter quelques pièces (3 po)",
+				"conditions": [{"type": "gold", "min": 3}],
+				"outcome": {
+					"text": "Le conteur vous salue d'un hochement de tête et glisse un conseil sur les sentiers de la forêt.",
+					"effects": [{"type": "gold", "amount": -3}, {"type": "xp", "amount": 20}]
+				}
+			},
+			{
+				"id": "listen_closely",
+				"text": "Écouter attentivement, à la recherche d'un détail utile",
+				"check": {"skill": "lore", "difficulty": 2},
+				"success": {
+					"text": "Sous la légende, vous reconnaissez une vieille histoire de brigands. Vous en retenez de quoi vous méfier.",
+					"effects": [{"type": "xp", "amount": 40}]
+				},
+				"failure": {"text": "Les mots se mélangent et vous perdez le fil. Le conteur s'incline sous les applaudissements.", "effects": []}
+			},
+			{
+				"id": "leave",
+				"text": "Boire un verre et partir",
+				"outcome": {"text": "La chaleur de la salle vous détend un moment.", "effects": []}
+			}
+		]
+	},
+	{
+		"id": "town_dice_game",
+		"location": "town",
+		"weight": 4,
+		"conditions": [{"type": "gold", "min": 4}],
+		"title": "Dés pipés",
+		"text": "Dans une ruelle derrière le marché, un homme au sourire trop large secoue des dés dans un gobelet. « Un petit pari, {g:l'ami|l'amie|l'ami·e} ? Quatre pièces, et vous en gagnez huit. »",
+		"choices": [
+			{
+				"id": "play",
+				"text": "Jouer (4 po)",
+				"check": {"skill": "insight", "difficulty": 2},
+				"success": {
+					"text": "Vous voyez le dé lesté glisser dans sa manche. Vous le dénoncez à voix haute, et il vous rend votre mise avec un surplus pour vous faire taire.",
+					"effects": [{"type": "gold", "amount": 8}]
+				},
+				"failure": {
+					"text": "Les dés tombent mal, encore et encore. Le joueur empoche votre mise en s'excusant à peine.",
+					"effects": [{"type": "gold", "amount": -4}]
+				}
+			},
+			{
+				"id": "pickpocket",
+				"text": "Subtiliser sa bourse pendant qu'il parle",
+				"check": {"skill": "sleight_of_hand", "difficulty": 3},
+				"success": {
+					"text": "Un geste léger, et sa bourse change de main sans qu'il s'en aperçoive.",
+					"effects": [{"type": "gold", "amount": 12}]
+				},
+				"failure": {
+					"text": "Il vous attrape le poignet. Un coup de coude bien placé vous plie en deux avant qu'il ne disparaisse.",
+					"effects": [{"type": "hp", "amount": -2, "cause": "Rossé dans une ruelle"}]
+				}
+			},
+			{
+				"id": "refuse",
+				"text": "Passer votre chemin",
+				"outcome": {"text": "L'homme hausse les épaules et cherche une autre dupe.", "effects": []}
 			}
 		]
 	}

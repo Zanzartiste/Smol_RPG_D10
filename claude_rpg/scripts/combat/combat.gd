@@ -323,6 +323,9 @@ func perform(actor: Combatant, action: Dictionary, target: Combatant = null) -> 
 		actions_left -= 1
 	var beats: Array[Dictionary] = []
 	_beat(beats, Loc.ui("%s : %s.") % [actor.name, action["name"]])
+	if await _counterspell(actor, action, beats):
+		_check_end()
+		return beats
 	var attacks := 1 + (actor.extra_attacks() if action.get("attack_action", false) else 0)
 	for i in attacks:
 		if i > 0:
@@ -385,9 +388,8 @@ func ai_turn(actor: Combatant) -> Array[Dictionary]:
 	var beats: Array[Dictionary] = []
 	var keep := 1 if actions_left > 1 and rng.randf() < float(setting("ai_guard_chance", 0.25)) else 0
 	var intent_ready := not actor.intent.is_empty()
-	# Lâche : sous coward_hp (30 % de ses PV), une chance sur deux de s'enfuir.
-	if actor.ai_kind() == "coward" and not actor.is_ally() and actor.hp <= actor.max_hp() * float(setting("coward_hp", 0.3)) \
-			and rng.randf() < 0.5:
+	# Moral : un lâche mal en point, ou une meute qui a perdu son chef (ou la moitié des siens), peut fuir.
+	if not actor.is_ally() and _breaks(actor) and rng.randf() < 0.5:
 		actor.fled = true
 		actor.intent = {}
 		_beat(beats, Loc.ui("%s prend la fuite !") % actor.name)
@@ -420,28 +422,73 @@ func ai_turn(actor: Combatant) -> Array[Dictionary]:
 			if candidates.is_empty():
 				break
 			candidates.sort_custom(func(a, b): return a.hp < b.hp)
-			# Les invocations alliées et les chasseurs visent le plus faible, les autres ennemis au hasard.
+			# Les invocations alliées et les chasseurs visent le plus faible, les autres ennemis au hasard ;
+			# soins et protections vont à l'allié le plus mal en point (en proportion de ses PV).
 			var weakest := actor.is_ally() or actor.ai_kind() == "hunter"
 			chosen = candidates[0] if weakest else candidates[rng.randi_range(0, candidates.size() - 1)]
+			if target_mode == "ally":
+				candidates.sort_custom(func(a, b): return float(a.hp) / a.max_hp() < float(b.hp) / b.max_hp())
+				chosen = candidates[0]
 		_beat(beats, Loc.ui("%s : %s.") % [actor.name, action["name"]])
-		beats.append_array(await _resolve(actor, action.get("effects", []), target_mode, chosen, not actor.is_ally()))
+		if not await _counterspell(actor, action, beats):
+			beats.append_array(await _resolve(actor, action.get("effects", []), target_mode, chosen, not actor.is_ally()))
 		_check_end()
 	return beats
+
+
+## Le moral d'une créature flanche-t-il ? Lâche : sous coward_hp (30 %) de ses PV. Meute : son chef est
+## tombé, ou la moitié de son camp (hors invocations) est hors de combat.
+func _breaks(actor: Combatant) -> bool:
+	match actor.morale():
+		"coward":
+			return actor.hp <= actor.max_hp() * float(setting("coward_hp", 0.3))
+		"pack":
+			var side := combatants.filter(func(c): return c.side == actor.side and not c.summoned)
+			if side.any(func(c): return c.is_leader() and not c.is_alive()):
+				return true
+			var down := side.filter(func(c): return not c.is_alive()).size()
+			return side.size() >= 2 and down * 2 >= side.size()
+	return false
 
 
 func _pick_action(actor: Combatant, allow_announced: bool) -> Dictionary:
 	var actions := actor.combat_actions().filter(func(a): return (a.get("target") == "none" \
 		or not targets(actor, a.get("target", "enemy")).is_empty()) and actor.unavailable_reason(a) == "" \
-		and (allow_announced or not a.get("announced", false)))
+		and (allow_announced or not a.get("announced", false)) and _support_weight(actor, a) != 0.0)
 	var total := 0.0
 	for a: Dictionary in actions:
-		total += float(a.get("weight", 1))
+		total += _support_weight(actor, a)
 	var r := rng.randf() * total
 	for a: Dictionary in actions:
-		r -= float(a.get("weight", 1))
+		r -= _support_weight(actor, a)
 		if r < 0.0:
 			return a
 	return actions.back() if not actions.is_empty() else {}
+
+
+## Rôle de soutien d'une action : "heal" (elle soigne), "protect" (elle vise des alliés sans soigner :
+## protection, bénédiction…), "" sinon.
+static func support_role(action: Dictionary) -> String:
+	var effects: Array = action.get("effects", [])
+	if effects.any(func(e): return e.get("type") == "heal"):
+		return "heal"
+	if action.get("target", "enemy") in ["ally", "all_allies"]:
+		return "protect"
+	return ""
+
+
+## Poids d'une action pour l'IA. Soigner ne sert que si un allié (ou soi) est sous ai_heal_below de ses PV,
+## protéger que si un allié est sous ai_protect_below ; alors l'action devient prioritaire (× ai_support_bonus).
+func _support_weight(actor: Combatant, action: Dictionary) -> float:
+	var weight := float(action.get("weight", 1))
+	var role := support_role(action)
+	if role == "":
+		return weight
+	var limit := float(setting("ai_heal_below" if role == "heal" else "ai_protect_below", 0.5 if role == "heal" else 0.75))
+	var pool := targets(actor, action.get("target", "self")) if action.get("target", "self") != "none" else [actor]
+	if pool.any(func(c): return float(c.hp) / c.max_hp() < limit):
+		return weight * float(setting("ai_support_bonus", 3.0))
+	return 0.0
 
 
 ## Joue automatiquement toutes les actions d'un personnage pour ce tour (tests, banc d'équilibrage,
@@ -700,6 +747,38 @@ func _dodge(target: Combatant, beats: Array[Dictionary], fast: bool) -> int:
 	_beat(beats, Loc.ui("%s esquive : %d succès.") % [target.name, int(roll["successes"])],
 		_roll_info(Loc.ui("Esquive (%s)") % target.name, roll), fast)
 	return int(roll["successes"])
+
+
+## Contresort (une réaction) : quand un adversaire lance un sort, un combattant qui connaît la Magie et
+## garde une réaction peut le contrer, sans savoir s'il aurait touché. Opposition Magie contre Magie : il
+## faut plus de succès que le lanceur (à égalité, le sort passe). Contré, le sort est perdu (emplacement
+## compris). Retourne true si le sort est contré.
+func _counterspell(caster: Combatant, action: Dictionary, beats: Array[Dictionary]) -> bool:
+	if not Spellcasting.is_spell(action):
+		return false
+	var candidates := living("enemy" if caster.is_ally() else "ally").filter(
+		func(c): return c.reactions > 0 and c.skill_rank("magic") > 0)
+	if candidates.is_empty():
+		return false
+	candidates.sort_custom(func(a, b): return Dice.expected(a.spell_pool()["count"], a.spell_pool()["threshold"]) \
+		> Dice.expected(b.spell_pool()["count"], b.spell_pool()["threshold"]))
+	var counter: Combatant = candidates[0]
+	var mine := counter.spell_pool()
+	var theirs := caster.spell_pool()
+	var auto := Dice.expected(mine["count"], mine["threshold"]) > Dice.expected(theirs["count"], theirs["threshold"])
+	var info := {"attacker": caster, "spell": action["name"], "counter": mine, "caster_pool": theirs, "beats": beats}
+	if not await _decide(counter, "counterspell", info, auto):
+		return false
+	counter.reactions -= 1
+	_beat(beats, Loc.ui("%s tente de contrer le sort !") % counter.name)
+	var c_roll := Dice.roll_pool(rng, int(mine["count"]) + counter.use_prepared(), int(mine["threshold"]))
+	var s_roll := Dice.roll_pool(rng, int(theirs["count"]), int(theirs["threshold"]))
+	_beat(beats, Loc.ui("%s : %d succès.") % [caster.name, int(s_roll["successes"])], _roll_info(Loc.ui("Magie (%s)") % caster.name, s_roll), true)
+	var countered := int(c_roll["successes"]) > int(s_roll["successes"])
+	_beat(beats, Loc.ui("%s : %d succès — %s") % [counter.name, int(c_roll["successes"]),
+		Loc.ui("le sort est contré !") if countered else Loc.ui("le sort passe.")],
+		_roll_info(Loc.ui("Contresort (%s)") % counter.name, c_roll), false)
+	return countered
 
 
 ## La cible peut-elle contre-attaquer ? Il lui faut une attaque ; contre un tir, une arme de tir.
@@ -1035,10 +1114,11 @@ func _beat(beats: Array[Dictionary], text: String, roll: Dictionary = {}, fast :
 	log.append(text)
 
 
-## Décide d'une réaction : le joueur choisit pour ses personnages (sauf en mode automatique), sinon le
-## choix automatique `auto`.
+## Décide d'une réaction : le joueur choisit pour ses personnages (sauf en mode IA, ou avec l'option
+## « réactions automatiques »), sinon le choix automatique `auto`.
 func _decide(target: Combatant, kind: String, info: Dictionary, auto: bool) -> bool:
-	if reaction_chooser.is_valid() and target.is_player_controlled() and not target.is_auto():
+	if reaction_chooser.is_valid() and target.is_player_controlled() and not target.is_auto() \
+			and not Meta.settings.get("auto_reactions", false):
 		var chosen: bool = await reaction_chooser.call(target, kind, info)
 		return chosen
 	return auto

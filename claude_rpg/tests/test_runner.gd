@@ -39,6 +39,8 @@ const TESTS := [
 	"_test_companions",
 	"_test_creation",
 	"_test_creator_points",
+	"_test_enemy_support",
+	"_test_npc_requests",
 	"_test_dice_tray",
 	"_test_quests",
 	"_test_side_drawer",
@@ -53,8 +55,19 @@ func _ready() -> void:
 	Saves.enabled = false
 	Saves.directory = "user://test_saves"
 	Meta.reset()  # indépendant des sauvegardes éventuelles du joueur
-	var verbose := "--verbose" in OS.get_cmdline_user_args()  # godot … -- --verbose : nom de chaque test
+	var args := OS.get_cmdline_user_args()
+	var verbose := "--verbose" in args  # godot … -- --verbose : nom de chaque test
+	# godot … -- quick : sans la simulation (la plus lente) ; godot … -- creation,quests : seulement les tests
+	# dont le nom contient l'un de ces mots (toujours avec _test_data).
+	var filters: PackedStringArray = []
+	for arg in args:
+		if not arg.begins_with("--") and arg != "quick":
+			filters.append_array(arg.split(",", false))
 	for test: String in TESTS:
+		if "quick" in args and test == "_test_simulation":
+			continue
+		if not filters.is_empty() and test != "_test_data" and not Array(filters).any(func(f): return f in test):
+			continue
 		if verbose:
 			printerr("> " + test)
 		# Une erreur de script interrompt la fonction, qui retourne alors null au lieu de true.
@@ -109,7 +122,8 @@ func _test_character() -> bool:
 		and not c.is_trained("physique"), "rangs de départ : instinctive 2, autre 1, Magie 2 pour un lanceur")
 	_expect(Character.create("goblin", "fighter", "F").skill_rank("magic") == 0, "Magie : 0 pour un non-lanceur")
 	_expect(c.skill_pool("athletics") == c.skill_pool("physique"), "ancien id (Athlétisme) traduit en Physique")
-	_expect(c.max_hp == roundi(6 * pow(1.4142, -1)), "PV : CON 6 × 1,414^taille (gobelin : −1)")
+	_expect(c.max_hp == (-1 + 2) * 6 + 7 and Character.hp_from(4, 0) == 15 and Character.hp_from(8, 4) == 55,
+		"PV : (taille + 2) × CON + 7 ; humain moyen 15, colosse endurant 55")
 	_expect(c.size() == -1 and Character.create("human", "wizard", "H").size() == 0 and DB.size_name(-1) == "Petite",
 		"la taille dépend de l'espèce")
 	_expect(c.age_years() == 18 and c.life_stage() == "adult", "gobelin de 18 ans adulte (majorité)")
@@ -118,15 +132,15 @@ func _test_character() -> bool:
 	# PV : Constitution × 1,414^taille ; humain (taille 0) au modèle du guerrier : CON 6.
 	var life := _new_life("human", "fighter")
 	var f := life.character
-	_expect(f.max_hp == 6 and f.hp == 6, "PV du guerrier humain : CON 6")
-	f.hp = 4
+	_expect(f.max_hp == 19 and f.hp == 19, "PV du guerrier humain : 2 × CON 6 + 7")
+	f.hp = 10
 	life.change_ability("con", -2, "test")
-	_expect(f.max_hp == 4 and f.hp == 2, "CON 6 -> 4 : PV max et actuels -2")
+	_expect(f.max_hp == 15 and f.hp == 6, "CON 6 -> 4 : PV max et actuels -4")
 	life.change_ability("con", 4, "test")
-	_expect(f.max_hp == 8 and f.hp == 6, "CON 4 -> 8 : PV max et actuels +4")
+	_expect(f.max_hp == 23 and f.hp == 14, "CON 4 -> 8 : PV max et actuels +8")
 	f.add_xp(300)
-	_expect(f.level == 2 and f.max_hp == 8, "niveau 2 : les PV ne montent pas avec le niveau")
-	_expect(Character.create("dwarf", "fighter", "N").max_hp == 4, "nain (taille −1) : CON 6 / 1,414 = 4 PV")
+	_expect(f.level == 2 and f.max_hp == 23, "niveau 2 : les PV ne montent pas avec le niveau")
+	_expect(Character.create("dwarf", "fighter", "N").max_hp == 13, "nain (taille −1) : 1 × CON 6 + 7 = 13 PV")
 	_expect(f.natural_dodge() == 1 and f.armor() == 3 and f.initiative_base() == 5 + 3,
 		"Esquive naturelle DEX 5 / 3 = 1, Armure 3 (cotte de mailles), initiative DEX + INT")
 	f.hp = 1
@@ -216,7 +230,7 @@ func _test_feats() -> bool:
 	var hero := Character.create("goblin", "fighter", "Héros")  # pas d'humain : il a un don en plus dès le départ
 	hero.add_xp(300)
 	_level_up(hero)
-	_expect(hero.level == 2 and not hero.has_pending_advancement(), "niveau 2 : pas d'amélioration")
+	_expect(hero.level == 2 and hero.pending_ability_points == 0 and hero.pending_feats == 0 and hero.pending_skill_points == 1, "niveau 2 : pas d'amélioration, un point de compétence")
 	hero.add_xp(2700 - 300)
 	_level_up(hero)
 	_expect(hero.level == 4 and hero.pending_feats == 1 and hero.pending_ability_points == 1, "niveau 4 : attribut + don")
@@ -326,6 +340,14 @@ func _test_conditions() -> bool:
 	_expect(Conditions.check({"type": "any", "conditions": [
 		{"type": "flag", "id": "nope"}, {"type": "gold", "min": 1}]}, life, meta), "any")
 	_expect(Conditions.check({"type": "time", "in": ["morning"]}, life, meta), "matin au départ")
+	_expect(Weather.season_of(1)["id"] == "spring" and Weather.season_of(100)["id"] == "summer" and Weather.season_of(300)["id"] == "winter"
+		and Conditions.check({"type": "season", "in": ["spring"]}, life, meta), "saisons : le jour 1 ouvre le printemps")
+	_expect(Weather.weather_of(5) == Weather.weather_of(5) and not Weather.weather_of(5).is_empty()
+		and Conditions.check({"type": "weather", "in": [Weather.weather_of(life.day)["id"]]}, life, meta), "météo du jour stable")
+	var seen_weather := {}
+	for d in range(1, 120):
+		seen_weather[Weather.weather_of(d)["id"]] = true
+	_expect(seen_weather.size() >= 4, "la météo varie d'un jour à l'autre")
 	_expect(Conditions.describe({"type": "ability", "id": "int", "min": 5}) == "INT 5+", "description de condition")
 	meta.free()
 	return true
@@ -410,6 +432,17 @@ func _test_engine() -> bool:
 	var shrine: Dictionary = DB.events["forest_shrine"]
 	_expect(EventEngine.visible_choices(shrine, life, meta).size() == 2, "choix secrets cachés sans le flag ni le passé")
 
+	# Récolte dans un lieu sauvage : un test par ressource.
+	var gather := EventEngine.gather_event("forest")
+	_expect(EventEngine.gather_event("town").is_empty() and gather["choices"].size() == 3, "récolte : seulement dans les lieux sauvages")
+	var errors_gather: Array[String] = []
+	DataValidator._validate_event(DB, gather, errors_gather)
+	_expect(errors_gather.is_empty(), "récolte : un événement valide %s" % str(errors_gather))
+	var herbs: Dictionary = gather["choices"][0]
+	var herbs_before := life.character.item_count("healing_herbs")
+	var gathered := EventEngine.resolve_choice(gather, herbs, life, meta, {"success": true, "critical": 0, "fumble": false})
+	_expect(gathered["outcome"] == "success" and life.character.item_count("healing_herbs") == herbs_before + 1, "récolte réussie : une herbe")
+
 	# Validation : un événement dont tous les choix ont des conditions pourrait bloquer le joueur.
 	var errors: Array[String] = []
 	var trap := {"id": "trap", "location": "town", "text": "?", "choices": [
@@ -452,8 +485,78 @@ func _test_creation() -> bool:
 	_expect(ch.abilities["str"] == 5 and ch.abilities["cha"] == 5 and ch.abilities["dex"] == 6,
 		"création : l'achat de points et les bonus modifient le personnage")
 	screen._on_class_selected("wizard")
+	var sheet_labels: Array = screen._sheet.find_children("*", "Label", true, false).map(func(l): return l.text)
+	_expect(sheet_labels.any(func(t): return t.begins_with("PV : ")) and not sheet_labels.any(func(t): return "≤" in t or "d10" in t),
+		"creation : fiche comme celle du tiroir, sans formules de des")
+	var page_titles := range(screen.pages.get_tab_count()).map(func(i): return screen.pages.get_tab_title(i))
+	_expect(page_titles[1] == "Apparence", "creation : onglet Apparence %s" % str(page_titles))
+	var goblin_skin: String = DB.species["goblin"]["art"]["skin"][2]
+	screen._on_class_selected("fighter")
+	screen.set_look("skin", goblin_skin)
+	screen.set_look("hair_style", "braids")
+	screen.set_look("body", "broad")
+	ch = screen.build_character()
+	_expect(ch.look["skin"] == goblin_skin and ch.look["hair_style"] == "braids" and ch.look["body"] == "broad"
+		and Character.from_dict(JSON.parse_string(JSON.stringify(ch.to_dict()))).look == ch.look, "creation : apparence choisie et sauvegardee")
+	_expect("#e8e4dc" in screen.look_palette("hair") and not ("#e8e4dc" in screen.look_palette("skin")), "creation : teintes communes pour les cheveux")
+	screen._on_species_selected("human")
+	_expect(screen._look["skin"] in DB.species["human"]["art"]["skin"] and screen._look["hair_style"] == "braids",
+		"creation : changer d'espece retire les couleurs, garde la coupe")
+	screen._on_class_selected("wizard")
 	_expect(screen.build_character().abilities["int"] == 7, "création : changer de classe réapplique son modèle")
 	screen.free()
+	return true
+
+
+func _test_enemy_support() -> bool:
+	Game.start_life(Character.create("human", "fighter", "Heros"), 4)
+	var combat := Game.start_combat({"enemies": ["bandit_mender", "bandit"]})
+	var mender := combat.enemies()[0]
+	var bandit := combat.enemies()[1]
+	var heal: Dictionary = mender.combat_actions().filter(func(a): return a["name"] == "Onguent")[0]
+	var cover: Dictionary = mender.combat_actions().filter(func(a): return a["name"] == "Couvrir un camarade")[0]
+	_expect(Combat.support_role(heal) == "heal" and Combat.support_role(cover) == "protect", "IA : roles de soutien reconnus")
+	_expect(combat._support_weight(mender, heal) == 0.0 and combat._support_weight(mender, cover) == 0.0,
+		"IA : pas de soins ni de protection quand personne n'est blesse")
+	bandit.hp = 2
+	_expect(combat._support_weight(mender, heal) > float(heal["weight"]) and combat._support_weight(mender, cover) > 0.0,
+		"IA : soigner devient prioritaire quand un allie est mal en point")
+	var helped := false
+	for i in 12:
+		bandit.hp = 2
+		combat.turn = combat.order.find(mender)
+		combat.start_turn()
+		await combat.ai_turn(mender)
+		if bandit.hp > 2 or bandit.stacks("shielded") > 0:
+			helped = true
+			break
+	_expect(helped, "IA : le rebouteux soigne ou couvre le brigand blesse")
+	return true
+
+
+func _test_npc_requests() -> bool:
+	Saves.enabled = false
+	Game.start_life(Character.create("human", "fighter", "Heros"), 5)
+	var life := Game.life
+	var herbalist: Npc = Social.at_location("town", life.rng).filter(func(x): return x.role == "herbalist")[0]
+	var session := {}
+	_expect(Social.unavailable_reason("deliver", herbalist, life, session) != "", "demande : rien à remettre au départ")
+	_expect(Social.unavailable_reason("ask_work", herbalist, life, session) == "", "demande : l'herboriste a du travail")
+	var result := Social.perform("ask_work", herbalist, life, session)
+	var quest_id := Social.active_request(herbalist, life)
+	_expect(quest_id != "" and life.quests[quest_id]["status"] == "active" and "herbes" in Quests.step_text(quest_id, 0).to_lower(),
+		"demande : une quête générée %s" % str(result["lines"]))
+	_expect(Social.unavailable_reason("ask_work", herbalist, life, session) != "", "demande : une seule à la fois")
+	_expect(Social.unavailable_reason("deliver", herbalist, life, session).begins_with("il vous manque"), "demande : il manque les herbes")
+	var loaded := LifeState.from_dict(JSON.parse_string(JSON.stringify(life.to_dict())))
+	_expect(loaded.quest_defs.has(quest_id) and loaded.quests[quest_id]["status"] == "active", "demande : sauvegardée")
+	life.character.add_item("healing_herbs", 3)
+	var gold := life.character.gold
+	var friendship := int(herbalist.player["friendship"])
+	Social.perform("deliver", herbalist, life, session)
+	_expect(life.quests[quest_id]["status"] == "done" and life.character.gold == gold + 12 and life.character.item_count("healing_herbs") == 0
+		and int(herbalist.player["friendship"]) > friendship, "demande : remise contre l'or promis et de l'amitié")
+	_expect(Social.unavailable_reason("ask_work", herbalist, life, session) == "rien pour l'instant", "demande : délai avant la suivante")
 	return true
 
 
@@ -539,7 +642,7 @@ func _test_side_drawer() -> bool:
 		and drawer._tab_buttons["spells"].visible, "onglets : PV, or, sorts (lanceur)")
 	for page_id: String in SideDrawer.PAGES:
 		drawer.open(page_id)
-		_expect(drawer.is_open() and drawer._content.get_child_count() > 1, "page %s remplie" % page_id)
+		_expect(drawer.is_open() and drawer._content.find_children("*", "Control", true, false).size() > 1, "page %s remplie" % page_id)
 	drawer.open("character")
 	var texts: Array = drawer._content.find_children("*", "Label", true, false).map(func(c): return c.text)
 	_expect(texts.has("Bergot") and texts.has("Humain Homme") and texts.has("Magicien niv. 1")
@@ -547,8 +650,7 @@ func _test_side_drawer() -> bool:
 	drawer.open("spells")
 	var checks: Array = drawer._content.get_children().filter(func(c): return c is CheckBox)
 	_expect(checks.size() == hero.known_spells().size(), "page des sorts : un sort connu par ligne")
-	var unchecked: CheckBox = checks.filter(func(c): return not c.button_pressed)[0]
-	_expect(unchecked.disabled, "sorts équipés au maximum : les autres sont grisés")
+	_expect(checks.filter(func(c): return c.disabled and c.button_pressed).size() == 2, "tours de magie : cochés et grisés (toujours prêts)")
 	life.log_journal("combat", "Victoire contre : Loup.")
 	life.log_journal("quest", "Nouvelle quête : Test.")
 	drawer.open("journal")
@@ -560,6 +662,13 @@ func _test_side_drawer() -> bool:
 	journal_texts = drawer._content.find_children("*", "Label", true, false).map(func(c): return c.text)
 	_expect(not journal_texts.any(func(t): return "Victoire" in t) and journal_texts.any(func(t): return "Nouvelle quête" in t),
 		"journal : filtre par sorte")
+	_expect(drawer.handle_key(KEY_N) and drawer._current == "notes" and drawer._pinned, "raccourci N : notes épinglées")
+	var note_edit: TextEdit = drawer._content.find_children("*", "TextEdit", true, false)[0]
+	note_edit.text = "Ysolde paie bien."
+	note_edit.text_changed.emit()
+	_expect(life.notes == "Ysolde paie bien." and LifeState.from_dict(JSON.parse_string(JSON.stringify(life.to_dict()))).notes == life.notes,
+		"notes libres sauvegardées")
+	_expect(drawer.handle_key(KEY_ESCAPE) and not drawer.is_open(), "Échap replie la page épinglée")
 	drawer.close()
 	_expect(not drawer.is_open(), "replier le tiroir")
 	var fighter_life := _new_life("human", "fighter")
@@ -598,12 +707,12 @@ func _test_dice_tray() -> bool:
 	_expect(tray._notation() == "Physique : 14d10 ≤ 6", "réserve : notation")
 	elapsed = 0.0
 	on_tray = true
-	while tray.is_playing() and elapsed < 10.0:
+	while tray.is_playing() and elapsed < 20.0:
 		tray._process(1.0 / 60.0)
 		for d in tray._dice:
-			on_tray = on_tray and Rect2(Vector2.ZERO, tray.size).grow(1.0).has_point(d["pos"])
+			on_tray = on_tray and Rect2(Vector2.ZERO, tray.size).grow(DiceTray.DIE_RADIUS).has_point(d["pos"])
 		elapsed += 1.0 / 60.0
-	_expect(not tray.is_playing() and on_tray, "réserve de 14 dés : animation terminée, dés sur le plateau")
+	_expect(not tray.is_playing() and on_tray, "réserve de 14 dés : animation terminée, dés sur le plateau (%.1f s)" % elapsed)
 	tray.free()
 	return true
 
@@ -727,7 +836,7 @@ func _test_combat() -> bool:
 	_expect(combat.combatants.size() == 3 and combat.order.size() == 3, "combat : héros + 2 loups")
 	_expect(combat.enemies()[0].name == "Loup A" and combat.enemies()[1].name == "Loup B", "ennemis identiques numérotés")
 	var wolf := combat.enemies()[0]
-	_expect(wolf.max_hp() == roundi(5 * pow(1.4142, -1)) and wolf.natural_dodge() == 2 and wolf.armor() == 0,
+	_expect(wolf.max_hp() == Character.hp_from(5, -1) and wolf.natural_dodge() == 2 and wolf.armor() == 0,
 		"loup : PV selon CON et taille, Esquive naturelle 2")
 	_expect(combat.cover(wolf) == 1 and combat.cover(combat.hero) == 1, "Couvert : 1 par défaut")
 	await _play_out(combat)
@@ -897,6 +1006,24 @@ func _test_actions() -> bool:
 	asked.clear()
 	await combat._attack(duelist, hero, archer, beats, true)
 	_expect(not asked.has("counter"), "pas de contre-attaque contre un tir sans arme de tir")
+	# Option « réactions automatiques » : plus de question au joueur.
+	asked.clear()
+	hero.reactions = 2
+	Meta.settings["auto_reactions"] = true
+	await combat._attack(duelist, hero, lunge, beats, true)
+	_expect(asked.is_empty(), "option : réactions automatiques pour tout le groupe")
+	Meta.settings["auto_reactions"] = false
+	# Contresort : Magie contre Magie, quand un adversaire lance un sort.
+	DB.creatures["_witch"] = {"id": "_witch", "name": "Sorcière", "hp": 30, "abilities": {"int": 8},
+		"skills": {"magic": 30}, "actions": [{"name": "Rien", "weight": 1, "target": "self", "effects": [{"type": "status", "status": "shielded", "stacks": 0}]}]}
+	var witch := Combatant.from_creature("_witch", "Sorcière", "enemy")
+	combat._add(witch)
+	witch.reactions = 1
+	var counter_beats: Array[Dictionary] = []
+	var countered: bool = await combat._counterspell(hero, Actions.def("fire_bolt"), counter_beats)
+	_expect(countered and witch.reactions == 0, "contresort : la sorcière contre le sort (Magie 30 contre 0)")
+	_expect(not await combat._counterspell(hero, Actions.def("weapon_attack"), counter_beats), "pas de contresort contre une attaque d'arme")
+	DB.creatures.erase("_witch")
 	asked.clear()
 	hero.reactions = 2
 	hero.character.auto_combat = true
@@ -945,14 +1072,27 @@ func _test_spell_progression() -> bool:
 	# Sorts connus et équipés : seuls les sorts équipés sont proposés en combat.
 	var wizard := Character.create("human", "wizard", "W")
 	var known := wizard.known_spells()
-	_expect(known.size() == 7 and "weapon_attack" not in known and wizard.max_equipped_spells() == 2 + wizard.skill_rank("magic"),
-		"magicien : 7 sorts connus, 2 + rang de Magie équipés")
-	_expect(wizard.equipped_spells.size() == wizard.max_equipped_spells() and "find_familiar" not in wizard.combat_actions()
-		and "weapon_attack" in wizard.combat_actions(), "les sorts non équipés sont rangés")
+	_expect(known.size() == 5 and "weapon_attack" not in known and wizard.max_equipped_spells() == 2 + wizard.skill_rank("magic"),
+		"magicien : 2 tours de magie et 3 sorts choisis à la création ; 2 + rang de Magie équipés")
+	_expect(wizard.equipped_spells.size() == 3 and "find_familiar" not in wizard.combat_actions()
+		and "weapon_attack" in wizard.combat_actions(), "les sorts choisis sont équipés d'office")
 	_expect("fire_bolt" not in wizard.equipped_spells and wizard.is_spell_equipped("fire_bolt") and "ray_of_frost" in wizard.combat_actions()
 		and not wizard.equip_spell("fire_bolt") and not wizard.unequip_spell("fire_bolt"), "tours de magie : toujours prêts, hors limite")
-	_expect(not wizard.equip_spell("find_familiar") and wizard.unequip_spell("mage_shield") and wizard.equip_spell("find_familiar")
-		and "find_familiar" in wizard.combat_actions() and "mage_shield" not in wizard.combat_actions(), "changer de sort équipé")
+	_expect(wizard.unequip_spell("sleep") and "sleep" not in wizard.combat_actions() and wizard.equip_spell("sleep")
+		and "sleep" in wizard.combat_actions(), "changer de sort équipé")
+	_expect(not wizard.equip_spell("find_familiar"), "on n'équipe qu'un sort connu")
+	# Sorts appris au choix en montant de niveau, parmi ceux qu'on peut lancer.
+	var apprentice := Character.create("human", "wizard", "A")
+	apprentice.add_xp(300)
+	_level_up(apprentice)
+	var key := "feature:new_spell_2/spell"
+	_expect(apprentice.choice_options(key) == ["mage_shield", "find_familiar"],
+		"niveau 2 : un nouveau sort au choix, parmi les sorts de niveau 1 inconnus")
+	apprentice.choose(key, "find_familiar")
+	_expect("find_familiar" in apprentice.known_spells() and "find_familiar" in apprentice.equipped_spells, "le sort appris est équipé s'il reste de la place")
+	apprentice.add_xp(Progression.xp_for(3) - apprentice.xp)
+	_level_up(apprentice)
+	_expect(apprentice.choice_options("feature:new_spell_3/spell")[0] == "scorching_ray", "niveau 3 : les sorts de niveau 2 s'ouvrent")
 	var reloaded := Character.from_dict(JSON.parse_string(JSON.stringify(wizard.to_dict())))
 	_expect(reloaded.equipped_spells == wizard.equipped_spells, "sorts équipés sauvegardés")
 
@@ -1018,7 +1158,7 @@ func _test_class_features() -> bool:
 
 	# Roublard : Expertise, Attaque sournoise, Esquive instinctive, Dérobade, Talent fiable.
 	var rogue := _at_level("goblin", "rogue", 11)
-	_expect(rogue.skill_rank("stealth") == 4 and rogue.skill_pool("stealth")["count"] == 4 - rogue.roll_penalty("dex")
+	_expect(rogue.skill_rank("stealth") - int(rogue.skill_points.get("stealth", 0)) == 4 and rogue.skill_pool("stealth")["count"] == rogue.skill_rank("stealth") - rogue.roll_penalty("dex")
 		and rogue.skill_pool("stealth")["threshold"] == rogue.ability_score("dex"), "Expertise : instinctive 2 + choix de classe + Expertise")
 	var sneak := Combatant.from_character(rogue, true)
 	var sneak_effect: Dictionary = Actions.def("sneak_attack")["effects"][0]
@@ -1556,6 +1696,20 @@ func _test_skill_ranks() -> bool:
 	_expect(fighter.resist_pool("con")["count"] == fighter.skill_rank("physique") + 1
 		and fighter.resist_pool("dex")["count"] == fighter.skill_rank("physique"), "résister : +1 dé si la classe maîtrise")
 
+	# Points de compétence : un par niveau atteint, +1 rang au choix, jusqu'à un plafond selon le niveau.
+	var learner := Character.create("human", "fighter", "Élève")
+	learner.add_xp(Progression.xp_for(3) - learner.xp)
+	_level_up(learner)
+	var lore_before := learner.skill_rank("lore")
+	_expect(learner.pending_skill_points == 2 and learner.has_pending_advancement() and learner.max_trained_rank() == 3 + 1,
+		"niveau 3 : deux points de compétence, rang 4 au plus")
+	_expect(learner.spend_skill_point("lore") and learner.skill_rank("lore") == lore_before + 1 and learner.pending_skill_points == 1,
+		"un point : +1 rang")
+	learner.skill_points["lore"] = 10
+	_expect(not learner.can_raise_skill("lore"), "plafond de rang")
+	var reloaded := Character.from_dict(JSON.parse_string(JSON.stringify(learner.to_dict())))
+	_expect(reloaded.skill_points == learner.skill_points and reloaded.pending_skill_points == 1, "points de compétence sauvegardés")
+
 	# Langues : une langue à choisir par rang de Langues, en plus du Commun.
 	_expect(fighter.known_languages() == ["common"] and fighter.choice_options("skill/languages").size() == 5, "langues à choisir")
 	fighter.choose("skill/languages", "elvish")
@@ -1626,6 +1780,11 @@ func _test_social() -> bool:
 	_expect(people.size() >= 4 and people.any(func(n): return n.name == "Hilde" and n.species == "dwarf"),
 		"habitués de Brumeval (Hilde la forgeronne…)")
 	_expect(Social.at_location("town", rng).size() == people.size(), "les habitués ne sont créés qu'une fois")
+	var herbalist_seen := func(loc: String, slot: String) -> bool:
+		return Social.at_location(loc, rng, slot).any(func(n): return n.role == "herbalist")
+	_expect(herbalist_seen.call("forest", "morning") and not herbalist_seen.call("town", "morning")
+		and herbalist_seen.call("town", "afternoon") and not herbalist_seen.call("forest", "evening"),
+		"emploi du temps : l'herboriste cueille en forêt le matin, tient boutique ensuite")
 	var guard := Social.generate("guard", rng)
 	_expect(guard.location == "town" and guard.traits.size() == 2 and guard.facts.is_empty() and guard.age(Meta.world_day) >= 18,
 		"garde généré : 2 traits, aucun fait avant de les apprendre")
@@ -1760,6 +1919,8 @@ func _test_multiclass_and_rest() -> bool:
 	var lines := hero.assign_class_level("wizard")
 	_expect(hero.class_level("wizard") == 1 and hero.has_class("wizard") and lines[0].contains("magicien de niveau 1"),
 		"un niveau de Magicien")
+	_expect(hero.choice_options("class:wizard/cantrips") == ["fire_bolt", "ray_of_frost"], "multiclassage : les sorts du magicien sont à choisir")
+	hero.apply_default_choices()
 	_expect(hero.is_caster() and hero.skill_rank("magic") == 2 and hero.max_resource("spell_slot") == 2
 		and "fire_bolt" in hero.combat_actions() and "second_wind" in hero.combat_actions(), "actions et sorts des deux classes")
 	hero.assign_class_level("fighter")
@@ -1946,6 +2107,13 @@ func _test_combat_turns() -> bool:
 			fled = true
 			break
 	_expect(fled and not coward.is_alive() and combat.living("enemy").size() == 1, "le brigand lâche s'enfuit")
+	# Meute : quand le chef tombe, les loups peuvent fuir.
+	var pack_combat := Combat.new({"enemies": ["dire_wolf", "wolf"]}, Game.life)
+	var alpha_leader := pack_combat.enemies()[0]
+	var pack_wolf := pack_combat.enemies()[1]
+	_expect(not pack_combat._breaks(pack_wolf), "la meute tient tant que le chef est debout")
+	alpha_leader.hp = 0
+	_expect(pack_combat._breaks(pack_wolf), "chef tombé : la meute flanche")
 	hunter.hp = 0
 	combat._check_end()
 	var xp_before := Game.life.character.xp
@@ -2118,6 +2286,12 @@ func _test_art() -> bool:
 	_expect(img.get_width() == PixelArt.PORTRAIT_SIZE, "portrait généré")
 	_expect(img.get_data() == PixelArt.portrait(DB.species["goblin"]["art"], DB.classes["wizard"]["art"], "adult", 7).get_data(),
 		"portrait déterministe")
+	var looks_differ := {}
+	for style in PixelArt.HAIR_STYLES:
+		for body in ["slim", "broad"]:
+			var look := {"hair_style": style, "body": body, "skin": "#d9a57b", "hair": "#c8462a", "eyes": "#3a8ac0", "beard": false, "headgear": false}
+			looks_differ[PixelArt.portrait(DB.species["human"]["art"], DB.classes["fighter"]["art"], "adult", 7, true, look).get_data()] = true
+	_expect(looks_differ.size() == PixelArt.HAIR_STYLES.size() * 2, "apparence : chaque coupe et corpulence se voit")
 	_expect(ArtProvider.portrait(c) != null, "ArtProvider fournit un portrait")
 	for kind in ["forest", "town", "home", "unknown"]:
 		_expect(PixelArt.scene(kind, "evening", 3).get_width() == PixelArt.SCENE_W, "décor %s généré" % kind)

@@ -54,6 +54,12 @@
 
 	{"id": "recruit", "name": "Proposer de vous accompagner", "category": "special", "special": "recruit", "requires": {"friendship": 60},
 		"lines": {"success": ["{npc} prend ses affaires : « Allons-y ! »"], "failure": ["{npc} ne peut pas partir à l'aventure."]}},
+	{"id": "ask_work", "name": "Proposer ses services", "category": "special", "special": "request",
+		"success": {"friendship": 1},
+		"lines": {"success": ["{npc} réfléchit : « Justement, j'aurais besoin d'un coup de main… »"]}},
+	{"id": "deliver", "name": "Remettre la commande", "category": "special", "special": "deliver",
+		"success": {"trust": 3},
+		"lines": {"success": ["{npc} compte la marchandise et vous paie : « Marché conclu. »"]}},
 	{"id": "gestures", "name": "Communiquer par gestes", "category": "special", "special": "gestures", "check": {"skill": "languages", "difficulty": 2},
 		"lines": {"success": ["À force de gestes, vous finissez par vous comprendre."], "failure": ["{npc} hausse les épaules : rien à faire."]}}
 ]

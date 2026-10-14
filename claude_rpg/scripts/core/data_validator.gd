@@ -17,6 +17,7 @@ static func validate(db: Node) -> void:
 	_validate_economy(db, errors)
 	_validate_social(db, errors)
 	_validate_quests(db, errors)
+	_validate_schedules(db, errors)
 	for id: String in db.events:
 		_validate_event(db, db.events[id], errors)
 
@@ -254,8 +255,10 @@ static func _validate_combat_data(db: Node, errors: Array[String]) -> void:
 			_expect_ref(db.abilities, ability_id, "attribut", ctx, errors)
 		if creature.has("gold") and not Dice.is_valid_expr(creature["gold"]):
 			errors.append(ctx + " : or invalide « %s »" % creature["gold"])
-		if creature.get("ai", "brute") not in ["brute", "hunter", "coward"]:
-			errors.append(ctx + " : archétype d'IA inconnu « %s » (brute, hunter, coward)" % creature.get("ai"))
+		if creature.get("ai", "brute") not in ["brute", "hunter"]:
+			errors.append(ctx + " : archétype d'IA inconnu « %s » (brute, hunter)" % creature.get("ai"))
+		if creature.get("morale", "fearless") not in ["fearless", "coward", "pack"]:
+			errors.append(ctx + " : moral inconnu « %s » (fearless, coward, pack)" % creature.get("morale"))
 		if int(creature.get("size", 0)) not in size_ids:
 			errors.append(ctx + " : taille inconnue « %s »" % creature.get("size"))
 		_validate_ai_actions(db, creature.get("actions", []), ctx, errors)
@@ -477,6 +480,11 @@ static func _validate_conditions(db: Node, conditions: Variant, ctx: String, err
 				_expect_ref(db.abilities, c["id"], "attribut", ctx, errors)
 			"skill_proficient":
 				_expect_ref(db.skills, c["id"], "compétence", ctx, errors)
+			"season", "weather":
+				var known: Array = db.rules.get("calendar", {}).get("seasons" if type == "season" else "weathers", []).map(func(x): return x["id"])
+				for id in c["in"]:
+					if id not in known:
+						errors.append(ctx + " : %s inconnue « %s »" % ["saison" if type == "season" else "météo", id])
 			"quest":
 				_expect_ref(db.quests, c["id"], "quête", ctx, errors)
 				if c.get("status", "active") not in Quests.STATUSES + ["none"]:
@@ -636,6 +644,16 @@ static func _validate_damage_types(db: Node, errors: Array[String]) -> void:
 				errors.append(ctx + " : status.chance doit être entre 0 et 1")
 
 
+static func _validate_schedules(db: Node, errors: Array[String]) -> void:
+	var slots: Array = db.rules.get("time_slots", []).map(func(s): return s["id"])
+	for role: Dictionary in db.npc_roles.values():
+		for slot_id: String in role.get("schedule", {}):
+			var ctx := "npc_roles.json › %s › schedule" % role["id"]
+			if slot_id not in slots:
+				errors.append(ctx + " : moment inconnu « %s »" % slot_id)
+			_expect_ref(db.locations, role["schedule"][slot_id], "lieu", ctx, errors)
+
+
 static func _validate_quests(db: Node, errors: Array[String]) -> void:
 	for quest: Dictionary in db.quests.values():
 		var ctx := "quests.json › %s" % quest["id"]
@@ -745,6 +763,12 @@ static func _validate_social(db: Node, errors: Array[String]) -> void:
 			_expect_ref(db.species, role["fixed"]["species"], "espèce", ctx, errors)
 		for item_id: String in role.get("inventory", {}):
 			_expect_item(db, item_id, ctx, errors)
+		for req: Dictionary in role.get("requests", []):
+			for field in ["id", "name", "text", "item", "count", "gold"]:
+				if not req.has(field):
+					errors.append(ctx + " › requests : champ « %s » manquant" % field)
+			if req.has("item"):
+				_expect_item(db, req["item"], ctx + " › requests", errors)
 	for trait_def: Dictionary in db.traits.values():
 		var ctx := "traits.json › %s" % trait_def["id"]
 		for action_id: String in trait_def.get("reactions", {}):
@@ -764,7 +788,7 @@ static func _validate_social(db: Node, errors: Array[String]) -> void:
 			_expect_ref(db.skills, a["check"].get("skill"), "compétence", ctx, errors)
 			if a["check"].has("vs"):
 				_expect_ref(db.skills, a["check"]["vs"], "compétence", ctx, errors)
-		if a.get("special", "") not in ["", "reveal_fact", "trade", "recruit", "gestures", "child", "break_up"]:
+		if a.get("special", "") not in ["", "reveal_fact", "trade", "recruit", "gestures", "child", "break_up", "request", "deliver"]:
 			errors.append(ctx + " : special inconnu « %s »" % a["special"])
 
 

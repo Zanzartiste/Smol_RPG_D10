@@ -236,6 +236,10 @@ func _reaction_text() -> String:
 		"parry":
 			return tr("%s va subir %d dégâts de %s. Parer avec %s ? Chaque succès retire un point (%s).") % [target.name,
 				info["damage"], attacker.name, Dice.pool_text(info["parry"]["count"], info["parry"]["threshold"]), left]
+		"counterspell":
+			return tr("%s lance %s. Contrer le sort ? Magie %s contre %s ; il faut plus de succès que lui (%s).") % [
+				attacker.name, info["spell"], Dice.pool_text(info["counter"]["count"], info["counter"]["threshold"]),
+				Dice.pool_text(info["caster_pool"]["count"], info["caster_pool"]["threshold"]), left]
 	return ""
 
 
@@ -256,6 +260,9 @@ func _fill_reaction_bar() -> void:
 		"parry":
 			yes = tr("Parer")
 			no = tr("Encaisser")
+		"counterspell":
+			yes = tr("Contrer le sort")
+			no = tr("Laisser faire")
 	_action_buttons.append(_button("1. " + yes, _on_reaction.bind(true), true))
 	_action_buttons.append(_button("2. " + no, _on_reaction.bind(false), true))
 

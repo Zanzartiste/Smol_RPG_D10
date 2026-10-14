@@ -1,36 +1,59 @@
 [
 	{
 		"id": "blacksmith", "name": "Forgeronne", "location": "town", "regular": true, "shop": "forge", "class": "fighter",
+		"requests": [
+			{"id": "ore", "name": "Du minerai pour {npc}", "text": "{npc} manque de minerai de fer pour sa forge.", "item": "iron_ore", "count": 5, "gold": 9, "friendship": 5},
+			{"id": "pelts", "name": "Un tablier de forge", "text": "{npc} veut des peaux de loup pour se tailler un tablier solide.", "item": "wolf_pelt", "count": 2, "gold": 11, "friendship": 5}
+		],
 		"fixed": {"name": "Hilde", "species": "dwarf", "gender": "female"},
 		"art": {"headgear": "", "outfit": "#5a4a3a", "accent": "#c06030"}
 	},
 	{
 		"id": "armorer", "name": "Armurier", "location": "town", "regular": true, "shop": "armorer", "class": "fighter",
+		"requests": [
+			{"id": "padding", "name": "Du rembourrage pour {npc}", "text": "{npc} cherche des peaux de loup pour doubler ses armures.", "item": "wolf_pelt", "count": 3, "gold": 16, "friendship": 5}
+		],
 		"fixed": {"name": "Gorvald", "species": "human", "gender": "male", "age": 52},
 		"art": {"headgear": "", "outfit": "#4a4a52", "accent": "#9a2f2f"}
 	},
 	{
-		"id": "herbalist", "name": "Herboriste", "location": "town", "regular": true, "shop": "apothecary", "class": "wizard",
+		"id": "herbalist", "name": "Herboriste", "location": "town", "schedule": {"morning": "forest"}, "regular": true, "shop": "apothecary", "class": "wizard",
+		"requests": [
+			{"id": "herbs", "name": "Les simples de {npc}", "text": "{npc} manque d'herbes médicinales pour ses onguents.", "item": "healing_herbs", "count": 3, "gold": 12, "friendship": 6}
+		],
 		"fixed": {"name": "Maëlle", "species": "elf", "gender": "female", "age": 160},
 		"art": {"headgear": "hood", "outfit": "#3a5a3a", "accent": "#a0c060"}
 	},
 	{
 		"id": "innkeeper", "name": "Aubergiste", "location": "town", "regular": true,
+		"requests": [
+			{"id": "pelts", "name": "Des fourrures pour l'auberge", "text": "{npc} veut des peaux de loup pour garnir les bancs de la salle commune avant l'hiver.", "item": "wolf_pelt", "count": 2, "gold": 16, "friendship": 5},
+			{"id": "herbs", "name": "Une tisane pour {npc}", "text": "{npc} a mal au dos et voudrait des herbes pour une tisane.", "item": "healing_herbs", "count": 1, "gold": 5, "friendship": 6}
+		],
 		"inventory": {"potion_heal": 1, "healing_herbs": 2}, "gold": "4d10",
 		"art": {"headgear": "", "outfit": "#6a4a2a", "accent": "#d4b06a"}
 	},
 	{
 		"id": "guard", "name": "Garde", "location": "town", "searchable": true, "class": "fighter",
+		"requests": [
+			{"id": "wolves", "name": "Les loups de la route", "text": "Des loups attaquent les voyageurs. {npc} paiera une prime contre leurs peaux.", "item": "wolf_pelt", "count": 2, "gold": 20, "friendship": 4}
+		],
 		"inventory": {"dagger": 1}, "gold": "2d6",
 		"art": {"headgear": "helmet", "outfit": "#4a5a7a", "accent": "#c0c0c0"}
 	},
 	{
 		"id": "villager", "name": "Villageois", "location": "town", "searchable": true, "foreign_chance": 0.15,
+		"requests": [
+			{"id": "remedy", "name": "Un remède pour {npc}", "text": "L'enfant de {npc} a de la fièvre ; il lui faut des herbes médicinales.", "item": "healing_herbs", "count": 1, "gold": 4, "friendship": 10}
+		],
 		"inventory": {"healing_herbs": 1, "wolf_pelt": 1}, "gold": "1d10",
 		"art": {"headgear": "", "outfit": "#7a6a4a", "accent": "#a08060"}
 	},
 	{
-		"id": "woodcutter", "name": "Bûcheron", "location": "forest", "searchable": true, "class": "fighter",
+		"id": "woodcutter", "name": "Bûcheron", "location": "forest", "schedule": {"evening": "town"}, "searchable": true, "class": "fighter",
+		"requests": [
+			{"id": "antidote", "name": "Une morsure de vipère", "text": "{npc} s'est fait mordre en forêt et cherche un antidote.", "item": "antidote", "count": 1, "gold": 10, "friendship": 8}
+		],
 		"inventory": {"handaxe": 1, "wolf_pelt": 1}, "gold": "1d6",
 		"art": {"headgear": "hood", "outfit": "#4a3a2a", "accent": "#6a8a3a"}
 	}

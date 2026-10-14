@@ -20,7 +20,7 @@
 				"conditions": [{"type": "item", "id": "potion_heal"}],
 				"outcome": {
 					"text": "Le liquide rouge pique la gorge, mais vos plaies se referment à vue d'œil.",
-					"effects": [{"type": "remove_item", "id": "potion_heal"}, {"type": "hp", "amount": 3}]
+					"effects": [{"type": "remove_item", "id": "potion_heal"}, {"type": "hp", "amount": 6}]
 				}
 			},
 			{
@@ -30,7 +30,7 @@
 				"check": {"skill": "medicine", "difficulty": 1},
 				"success": {
 					"text": "Le cataplasme apaise vos blessures.",
-					"effects": [{"type": "remove_item", "id": "healing_herbs"}, {"type": "hp", "amount": 2}]
+					"effects": [{"type": "remove_item", "id": "healing_herbs"}, {"type": "hp", "amount": 4}]
 				},
 				"failure": {
 					"text": "Le mélange tourne en une bouillie inutilisable.",
@@ -58,7 +58,7 @@
 				},
 				"failure": {
 					"text": "Impossible de fermer l'œil de la nuit.",
-					"effects": [{"type": "hp", "amount": -1}]
+					"effects": [{"type": "hp", "amount": -2}]
 				}
 			}
 		]
@@ -76,7 +76,7 @@
 				"text": "Accepter la soupe",
 				"outcome": {
 					"text": "Une soupe au lard comme on n'en fait plus. Vous vous sentez revigoré.",
-					"effects": [{"type": "hp", "amount": 1}]
+					"effects": [{"type": "hp", "amount": 2}]
 				}
 			},
 			{

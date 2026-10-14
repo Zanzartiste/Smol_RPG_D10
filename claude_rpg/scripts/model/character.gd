@@ -16,6 +16,8 @@ var feats: Array[String] = []  # dons
 var choices: Dictionary = {}  # « source/id du choix » -> valeurs choisies (voir Choices)
 var pending_feats := 0  # dons à choisir (gagnés en montant de niveau)
 var pending_ability_points := 0  # points d'attribut à répartir (gagnés en montant de niveau)
+var pending_skill_points := 0  # points de compétence à répartir (gagnés en montant de niveau)
+var skill_points: Dictionary = {}  # id de compétence -> rangs achetés avec des points de compétence
 var equipment: Dictionary = {}  # emplacement (Equipment.SLOTS) -> id d'équipement
 var defenses := Defenses.new()  # défenses propres au personnage (accordées par des événements)
 var level := 1
@@ -27,6 +29,7 @@ var inventory: Dictionary = {}  # id d'objet -> quantité
 var start_age := 18
 var age_days := 0  # jours vécus depuis le début de la partie
 var art_seed := 0  # graine des variations du portrait procédural
+var look := {}  # apparence choisie à la création (PixelArt.portrait) ; vide : tout vient de la graine
 var template_id := ""  # pour un compagnon : son id dans companions.json
 var npc_id := ""  # PNJ du monde lié à ce personnage (compagnon recruté, ou compagnon avec relation)
 var auto_combat := false  # en combat, l'IA joue ce personnage
@@ -180,7 +183,7 @@ func skill_base_rank(skill_id: String) -> int:
 
 func skill_rank(skill_id: String) -> int:
 	var id := Skills.resolve(skill_id)
-	var rank := skill_base_rank(id) + _class_skill_ranks(id)
+	var rank := skill_base_rank(id) + _class_skill_ranks(id) + int(skill_points.get(id, 0))
 	if id in DB.backgrounds.get(background_id, {}).get("skills", []):
 		rank += 1
 	return rank + Modifiers.sum(modifiers(), "skill_rank", id)
@@ -194,6 +197,8 @@ func skill_rank_parts(skill_id: String) -> Array:
 		parts.append([Loc.ui("classe"), _class_skill_ranks(id)])
 	if id in DB.backgrounds.get(background_id, {}).get("skills", []):
 		parts.append([Loc.ui("passé"), 1])
+	if int(skill_points.get(id, 0)) > 0:
+		parts.append([Loc.ui("points de compétence"), int(skill_points[id])])
 	var bonus := Modifiers.sum(modifiers(), "skill_rank", id)
 	if bonus != 0:
 		parts.append([Loc.ui("choix, dons, aptitudes, objets"), bonus])
@@ -310,7 +315,37 @@ func can_increase_ability() -> bool:
 
 ## Une amélioration (attribut ou don) attend-elle un choix du joueur ?
 func has_pending_advancement() -> bool:
-	return can_increase_ability() or can_choose_feat()
+	return can_increase_ability() or can_choose_feat() or can_spend_skill_point()
+
+
+# --- Points de compétence (rules.json › skill_points) ----------------------------
+
+static func _skill_rules() -> Dictionary:
+	return DB.rules.get("skill_points", {})
+
+
+## Rang le plus haut qu'on peut atteindre avec des points de compétence à ce niveau.
+func max_trained_rank() -> int:
+	var rules := _skill_rules()
+	return int(rules.get("max_rank_base", 3)) + floori(level * float(rules.get("max_rank_per_level", 0.5)))
+
+
+func can_raise_skill(skill_id: String) -> bool:
+	return pending_skill_points > 0 and skill_rank(skill_id) < max_trained_rank()
+
+
+## Reste-t-il un point de compétence à placer (et une compétence sous le plafond) ?
+func can_spend_skill_point() -> bool:
+	return pending_skill_points > 0 and Skills.ids().any(func(id): return can_raise_skill(id))
+
+
+## Dépense un point de compétence : +1 rang.
+func spend_skill_point(skill_id: String) -> bool:
+	if not can_raise_skill(skill_id):
+		return false
+	pending_skill_points -= 1
+	skill_points[skill_id] = int(skill_points.get(skill_id, 0)) + 1
+	return true
 
 
 # --- Choix (compétences de classe, ascendance, styles, sous-classe, options de dons) ---
@@ -322,6 +357,15 @@ func choice_specs() -> Array[Dictionary]:
 		result.append({"key": "species/" + spec["id"], "spec": spec, "source": DB.species[species_id]["name"]})
 	for spec: Dictionary in DB.classes[class_id].get("choices", []):
 		result.append({"key": "class/" + spec["id"], "spec": spec, "source": DB.classes[class_id]["name"]})
+	# Classes prises en multiclassage : leurs choix marqués "multiclass" (sorts du magicien…).
+	for cls: String in class_levels:
+		if cls == class_id:
+			continue
+		for spec: Dictionary in DB.classes[cls].get("choices", []):
+			if spec.get("multiclass", false):
+				var multi: Dictionary = spec.duplicate()
+				multi.erase("at_creation")
+				result.append({"key": "class:%s/%s" % [cls, spec["id"]], "spec": multi, "source": DB.classes[cls]["name"]})
 	for pair in _class_features():
 		var feature: Dictionary = pair[1]
 		for spec: Dictionary in feature.get("choices", []):
@@ -339,7 +383,7 @@ func choice_specs() -> Array[Dictionary]:
 
 ## Rang de Langues, lu sans passer par les choix (pour éviter une boucle choix -> modificateurs).
 func _languages_rank() -> int:
-	var rank := skill_base_rank("languages") + _class_skill_ranks("languages")
+	var rank := skill_base_rank("languages") + _class_skill_ranks("languages") + int(skill_points.get("languages", 0))
 	if "languages" in DB.backgrounds.get(background_id, {}).get("skills", []):
 		rank += 1
 	return rank
@@ -383,6 +427,8 @@ func choose(key: String, value: String) -> bool:
 	if entry["spec"].get("type") == "feat":
 		feats.append(value)
 	refresh_max_hp()
+	if entry["spec"].get("type") == "action":
+		sync_spells()  # un sort appris s'équipe d'office s'il reste de la place
 	return true
 
 
@@ -401,6 +447,15 @@ func apply_default_choices(creation_only := false) -> void:
 func complete_all_choices() -> void:
 	while pending_class_levels > 0:
 		assign_class_level(class_id)  # niveaux en attente : dans la classe principale
+	# Points de compétence : dans les compétences déjà les plus fortes (spécialisation).
+	for guard in 40:
+		if not can_spend_skill_point():
+			break
+		var best := ""
+		for id in Skills.ids():
+			if can_raise_skill(id) and (best == "" or skill_rank(id) > skill_rank(best)):
+				best = id
+		spend_skill_point(best)
 	apply_default_choices()
 	for i in 50:
 		var entry := pending_choice()
@@ -878,13 +933,18 @@ func life_stage() -> String:
 
 # --- PV et niveaux -----------------------------------------------------------
 
-## PV max : Constitution × size_base ^ taille (rules.json › hit_points), au moins 1, + les PV des
+## PV d'une Constitution et d'une taille : (taille + 2) × CON + 7, au moins 1 (rules.json › hit_points).
+## Humain moyen : 15 ; créature immense et endurante (taille 4, CON 8) : 55. Sert aussi aux créatures.
+static func hp_from(con: int, size: int) -> int:
+	var rules: Dictionary = DB.rules.get("hit_points", {})
+	return maxi(1, (size + int(rules.get("size_offset", 2))) * con + int(rules.get("base", 7)))
+
+
+## PV max : selon la Constitution et la taille (hp_from), + les PV des
 ## modificateurs (don Robuste : par niveau). Ni la classe ni le niveau ne les font monter : un
 ## personnage reste fragile.
 func compute_max_hp() -> int:
-	var rules: Dictionary = DB.rules.get("hit_points", {})
-	var base := float(rules.get("size_base", 1.4142))
-	var hp := maxi(1, roundi(ability_score("con") * float(rules.get("per_con", 1.0)) * pow(base, size())))
+	var hp := hp_from(ability_score("con"), size())
 	var mods := modifiers()
 	return hp + Modifiers.sum(mods, "max_hp") + Modifiers.sum(mods, "hp_per_level") * level
 
@@ -905,6 +965,7 @@ func add_xp(amount: int) -> Array[int]:
 	while level < Progression.max_level() and xp >= Progression.xp_for(level + 1):
 		level += 1
 		pending_class_levels += 1
+		pending_skill_points += int(_skill_rules().get("by_level", {}).get(str(level), 0))
 		reached.append(level)
 	if not reached.is_empty():
 		refresh_max_hp()
@@ -940,8 +1001,9 @@ func to_dict() -> Dictionary:
 		"class_levels": class_levels, "pending_class_levels": pending_class_levels,
 		"gender": gender, "abilities": abilities, "feats": feats, "choices": choices, "pending_feats": pending_feats,
 		"pending_ability_points": pending_ability_points, "equipment": equipment, "defenses": defenses.to_dict(),
+		"pending_skill_points": pending_skill_points, "skill_points": skill_points,
 		"level": level, "xp": xp, "hp": hp, "max_hp": max_hp, "gold": gold, "inventory": inventory,
-		"start_age": start_age, "age_days": age_days, "art_seed": art_seed, "template_id": template_id, "npc_id": npc_id, "auto_combat": auto_combat,
+		"start_age": start_age, "age_days": age_days, "art_seed": art_seed, "look": look, "template_id": template_id, "npc_id": npc_id, "auto_combat": auto_combat,
 		"resources": resources, "equipped_spells": equipped_spells, "seen_spells": seen_spells,
 	}
 
@@ -964,6 +1026,8 @@ static func from_dict(data: Dictionary) -> Character:
 		c.choices[key] = c.choices[key].map(func(v): return Skills.resolve(v) if Skills.ALIASES.has(v) else v)
 	c.pending_feats = int(data.get("pending_feats", 0))
 	c.pending_ability_points = int(data.get("pending_ability_points", 0))
+	c.pending_skill_points = int(data.get("pending_skill_points", 0))
+	c.skill_points = _int_dict(data.get("skill_points", {}))
 	c.equipment = data.get("equipment", {})
 	# Anciennes sauvegardes : amulet -> neck, ring -> ring_1.
 	for old_slot: String in {"amulet": "neck", "ring": "ring_1"}:
@@ -982,6 +1046,7 @@ static func from_dict(data: Dictionary) -> Character:
 	c.start_age = int(data.get("start_age", 18))
 	c.age_days = int(data.get("age_days", 0))
 	c.art_seed = int(data.get("art_seed", 0))
+	c.look = data.get("look", {})
 	c.template_id = data.get("template_id", "")
 	c.npc_id = data.get("npc_id", "")
 	c.auto_combat = data.get("auto_combat", false)

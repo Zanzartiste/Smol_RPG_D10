@@ -19,7 +19,7 @@
 			{
 				"id": "wander",
 				"text": "Profiter de la promenade",
-				"outcome": {"text": "L'air frais vous fait du bien.", "effects": [{"type": "hp", "amount": 1}]}
+				"outcome": {"text": "L'air frais vous fait du bien.", "effects": [{"type": "hp", "amount": 2}]}
 			}
 		]
 	},
@@ -93,7 +93,7 @@
 				},
 				"failure": {
 					"text": "Le sort vous claque entre les doigts. Le loup en profite.",
-					"effects": [{"type": "hp", "amount": -2, "cause": "Dévoré par un loup"}]
+					"effects": [{"type": "hp", "amount": -4, "cause": "Dévoré par un loup"}]
 				}
 			},
 			{
@@ -106,7 +106,7 @@
 				},
 				"failure": {
 					"text": "Le loup n'est pas impressionné. Pas du tout.",
-					"effects": [{"type": "hp", "amount": -2, "cause": "Dévoré par un loup"}]
+					"effects": [{"type": "hp", "amount": -4, "cause": "Dévoré par un loup"}]
 				}
 			},
 			{
@@ -116,7 +116,7 @@
 				"success": {"text": "Vous vous éclipsez sans un bruit.", "effects": []},
 				"failure": {
 					"text": "Une branche craque sous votre pied. Le loup bondit.",
-					"effects": [{"type": "hp", "amount": -2, "cause": "Dévoré par un loup"}]
+					"effects": [{"type": "hp", "amount": -4, "cause": "Dévoré par un loup"}]
 				}
 			}
 		]
@@ -165,7 +165,7 @@
 				"success": {"text": "Vous semez vos poursuivants entre les arbres.", "effects": []},
 				"failure": {
 					"text": "Un gourdin vous atteint dans le dos pendant votre fuite.",
-					"effects": [{"type": "hp", "amount": -2, "cause": "Tué par des brigands"}]
+					"effects": [{"type": "hp", "amount": -4, "cause": "Tué par des brigands"}]
 				}
 			}
 		]
@@ -216,7 +216,7 @@
 				},
 				"failure": {
 					"text": "L'alpha vous flaire et vous charge avant de disparaître dans les bois.",
-					"effects": [{"type": "hp", "amount": -3, "cause": "Dévoré par l'alpha des loups"}]
+					"effects": [{"type": "hp", "amount": -6, "cause": "Dévoré par l'alpha des loups"}]
 				}
 			}
 		]
@@ -248,7 +248,7 @@
 				},
 				"failure": {
 					"text": "Vous écorchez un mot. Une décharge vous projette hors du cercle.",
-					"effects": [{"type": "hp", "amount": -1, "cause": "Foudroyé par une magie ancienne"}]
+					"effects": [{"type": "hp", "amount": -2, "cause": "Foudroyé par une magie ancienne"}]
 				}
 			},
 			{
@@ -283,7 +283,7 @@
 				},
 				"failure": {
 					"text": "Les runes restent muettes. Un picotement désagréable remonte le long de vos bras.",
-					"effects": [{"type": "hp", "amount": -1, "cause": "Foudroyé par une magie ancienne"}]
+					"effects": [{"type": "hp", "amount": -2, "cause": "Foudroyé par une magie ancienne"}]
 				}
 			},
 			{
@@ -343,7 +343,7 @@
 				},
 				"failure": {
 					"text": "Le sol se dérobe : un terrier ! Vous vous tordez la cheville en tombant.",
-					"effects": [{"type": "hp", "amount": -2, "cause": "Égaré dans la brume"}]
+					"effects": [{"type": "hp", "amount": -4, "cause": "Égaré dans la brume"}]
 				}
 			},
 			{
@@ -529,16 +529,8 @@
 	{
 		"id": "forest_storm",
 		"location": "forest",
-		"weight": 2,
-		"conditions": [
-			{
-				"type": "time",
-				"in": [
-					"afternoon",
-					"evening"
-				]
-			}
-		],
+		"weight": 6,
+		"conditions": [{"type": "weather", "in": ["rain", "storm"]}],
 		"title": "L'orage",
 		"text": "Le ciel se fend d'un éclair. En quelques instants, une pluie glacée transperce le feuillage.",
 		"choices": [
@@ -607,6 +599,131 @@
 						}
 					]
 				}
+			}
+		]
+	},
+	{
+		"id": "forest_bandit_camp",
+		"location": "forest",
+		"weight": 2,
+		"conditions": [{"type": "level", "min": 2}],
+		"title": "Le camp des brigands",
+		"text": "Une odeur de feu de bois vous mène à une clairière : deux brigands y jouent aux dés pendant qu'un vieil homme panse la jambe d'un troisième. Il lève les yeux vers vous.",
+		"choices": [
+			{
+				"id": "attack",
+				"text": "Attaquer le camp",
+				"outcome": {
+					"text": "« Aux armes ! » Le vieux rebouteux recule derrière ses camarades, ses onguents à la main.",
+					"effects": [
+						{
+							"type": "combat",
+							"enemies": ["bandit", "bandit", "bandit_mender"],
+							"victory": {
+								"text": "Le camp est à vous : quelques pièces, des bandages, et une marmite encore chaude.",
+								"effects": [{"type": "gold", "amount": 8}]
+							},
+							"fled": {
+								"text": "Vous vous enfoncez dans les fourrés, les brigands à vos trousses.",
+								"effects": []
+							}
+						}
+					]
+				}
+			},
+			{
+				"id": "sneak",
+				"text": "Contourner le camp sans bruit",
+				"check": {"skill": "stealth", "difficulty": 2},
+				"success": {"text": "Vous passez à quelques pas d'eux sans qu'aucun ne lève le nez de ses dés.", "effects": []},
+				"failure": {
+					"text": "Une branche craque. « Là ! » Il faut se battre.",
+					"effects": [
+						{
+							"type": "combat",
+							"enemies": ["bandit", "bandit", "bandit_mender"],
+							"victory": {"text": "Les brigands ne surprendront plus personne.", "effects": []},
+							"fled": {"text": "Vous détalez entre les arbres.", "effects": []}
+						}
+					]
+				}
+			}
+		]
+	},
+	{
+		"id": "forest_old_cairn",
+		"location": "forest",
+		"weight": 3,
+		"title": "Un cairn moussu",
+		"text": "Au pied d'un chêne, des pierres plates sont empilées avec soin. La mousse en a effacé les marques, mais quelque chose brille entre deux blocs.",
+		"choices": [
+			{
+				"id": "dig",
+				"text": "Écarter les pierres",
+				"check": {"skill": "physique", "difficulty": 2},
+				"success": {
+					"text": "Les blocs cèdent. Dessous, une bourse de cuir pourrie et quelques pièces ternies.",
+					"effects": [{"type": "gold", "amount": 9}, {"type": "xp", "amount": 30}]
+				},
+				"failure": {
+					"text": "Un bloc glisse et vous écrase la main.",
+					"effects": [{"type": "hp", "amount": -1, "cause": "Écrasé par un cairn"}]
+				}
+			},
+			{
+				"id": "study",
+				"text": "Examiner les marques avant d'y toucher",
+				"check": {"skill": "lore", "difficulty": 2},
+				"success": {
+					"text": "C'est une tombe de voyageur, rien de maudit. Vous prélevez l'offrande qui y dormait et laissez une pierre en retour.",
+					"effects": [{"type": "add_item", "id": "healing_herbs"}, {"type": "xp", "amount": 30}]
+				},
+				"failure": {"text": "Les signes restent muets. Vous préférez ne pas troubler le lieu.", "effects": []}
+			},
+			{
+				"id": "leave",
+				"text": "Laisser les morts en paix",
+				"outcome": {"text": "Vous ajoutez une pierre au tas et poursuivez votre route.", "effects": []}
+			}
+		]
+	},
+	{
+		"id": "forest_wounded_stranger",
+		"location": "forest",
+		"weight": 3,
+		"title": "L'inconnu blessé",
+		"text": "Un homme est assis contre un tronc, une main pressée sur le flanc. Il ne porte pas d'arme visible. « Un peu d'aide, voyageu{g:r|se|r·se} ? Je paierai. Je crois. »",
+		"choices": [
+			{
+				"id": "help",
+				"text": "Soigner sa blessure",
+				"check": {"skill": "medicine", "difficulty": 2},
+				"success": {
+					"text": "Le pansement tient. L'homme vous remet quelques pièces et file sans donner son nom.",
+					"effects": [{"type": "gold", "amount": 10}, {"type": "xp", "amount": 40}]
+				},
+				"failure": {
+					"text": "Vous serrez maladroitement trop fort. Il grogne et vous repousse, et sa manche vous entaille au passage.",
+					"effects": [{"type": "hp", "amount": -1, "cause": "Blessé par un inconnu"}]
+				}
+			},
+			{
+				"id": "question",
+				"text": "Lui demander d'où vient sa blessure",
+				"check": {"skill": "insight", "difficulty": 2},
+				"success": {
+					"text": "Il hésite trop longtemps : c'est une blessure de lame, et ses poursuivants ne sont pas loin. Vous vous éclipsez à temps.",
+					"effects": [{"type": "xp", "amount": 30}]
+				},
+				"failure": {
+					"text": "Il vous raconte une histoire de sanglier. Vous la croyez, puis vous croisez ses poursuivants, qui vous prennent pour un complice.",
+					"effects": [{"type": "hp", "amount": -3, "cause": "Pris pour un fuyard"}]
+				}
+			},
+			{
+				"id": "leave",
+				"text": "Vous éloigner sans un mot",
+				"outcome": {"text": "Son regard vous suit jusqu'au détour du sentier.", "effects": []}
 			}
 		]
 	}

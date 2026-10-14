@@ -1,5 +1,5 @@
 extends Control
-## Écran de création de personnage, en onglets : espèce et genre, classe, passé, attributs, Creator Points.
+## Écran de création de personnage, en onglets : espèce et genre, apparence, classe, passé, attributs, Creator Points.
 ## Les Creator Points (gagnés par les vies précédentes) achètent des bonus pour cette vie (dépensés au
 ## lancement) ou des déblocages définitifs d'espèces et de classes (dépensés tout de suite).
 ## L'aperçu (portrait, nom, fiche) reste visible à gauche et se met à jour en direct.
@@ -35,6 +35,9 @@ var _class := ""
 var _background := ""
 var _gender := ""
 var _art_seed := 0
+var _look := {}  # apparence choisie (onglet Apparence) : skin, hair, eyes, hair_style, beard, body
+var _look_box := VBoxContainer.new()
+var _sheet := CharacterPage.new()  # fiche en direct, comme celle du tiroir
 var _point_buy: PointBuy
 var _name_is_random := true  # le nom suit l'espèce tant que le joueur ne l'a pas tapé lui-même
 var _rng := RandomNumberGenerator.new()
@@ -52,6 +55,20 @@ func _ready() -> void:
 	theme = UITheme.build()
 	_rng.randomize()
 	_art_seed = _rng.randi()
+	# La fiche remplace l'ancien texte : mêmes libellés que le tiroir, détail des jets au survol.
+	var sheet_scroll := ScrollContainer.new()
+	sheet_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	sheet_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_sheet.with_portrait = false
+	_sheet.with_xp = false
+	_sheet.with_gear = true
+	sheet_scroll.add_child(_sheet)
+	sheet_text.get_parent().add_child(sheet_scroll)
+	sheet_text.visible = false
+	_look_box.name = tr("Apparence")
+	_look_box.add_theme_constant_override("separation", 8)
+	pages.add_child(_look_box)
+	pages.move_child(_look_box, 1)
 	_build_tabs()
 
 	var species := _fill_buttons(species_buttons, DB.species, Meta.is_species_available, _on_species_selected)
@@ -98,6 +115,7 @@ func build_character() -> Character:
 		"choices": _creation_choices,
 	})
 	ch.art_seed = _art_seed
+	ch.look = _look.duplicate()
 	CreatorPoints.apply(ch, _cp_ranks)  # niveau de départ et or en plus
 	return ch
 
@@ -324,9 +342,97 @@ func _on_bonus(index: int, ability_id: String) -> void:
 	_refresh()
 
 
+## « Autre apparence » : tout retirer au hasard (couleurs de l'espèce, coupe, corpulence).
 func _on_appearance_pressed() -> void:
 	_art_seed = _rng.randi()
+	_randomize_look()
 	_refresh()
+
+
+func _randomize_look() -> void:
+	var art: Dictionary = DB.species[_species].get("art", {})
+	var rules: Dictionary = DB.rules.get("appearance", {})
+	var pick := func(list: Array): return list[_rng.randi_range(0, list.size() - 1)]
+	var styles: Array = rules.get("hair_styles", []).map(func(s): return s["id"])
+	_look = {
+		"skin": pick.call(art.get("skin", ["#d9a57b"])), "hair": pick.call(art.get("hair", ["#3a2b1a"])),
+		"eyes": pick.call(art.get("eyes", ["#3b5d8a"])), "hair_style": pick.call(styles),
+		"beard": _rng.randf() < float(art.get("beard_chance", 0.35 if art.get("ears", "round") == "round" else 0.0)),
+		"body": "average",
+	}
+
+
+## Couleurs proposées : celles de l'espèce, plus (cheveux, yeux) les teintes communes de rules.json › appearance.
+func look_palette(part: String) -> Array:
+	var art: Dictionary = DB.species[_species].get("art", {})
+	var extra: Dictionary = {"hair": "hair_colors", "eyes": "eye_colors"}
+	var list: Array = art.get(part, []).duplicate()
+	for c in DB.rules.get("appearance", {}).get(extra.get(part, ""), []):
+		if c not in list:
+			list.append(c)
+	return list
+
+
+func set_look(part: String, value: Variant) -> void:
+	_look[part] = value
+	_refresh()
+
+
+func _fill_look_page() -> void:
+	for child in _look_box.get_children():
+		child.queue_free()
+	var rules: Dictionary = DB.rules.get("appearance", {})
+	for row: Array in [["skin", tr("Peau")], ["hair", tr("Couleur des cheveux")], ["eyes", tr("Yeux")]]:
+		_look_label(row[1])
+		var flow := HFlowContainer.new()
+		for c: String in look_palette(row[0]):
+			flow.add_child(_swatch(c, _look.get(row[0], "") == c, set_look.bind(row[0], c)))
+		_look_box.add_child(flow)
+	for row: Array in [["hair_style", tr("Coupe"), rules.get("hair_styles", [])], ["body", tr("Corpulence"), rules.get("bodies", [])]]:
+		_look_label(row[1])
+		var flow := HFlowContainer.new()
+		for opt: Dictionary in row[2]:
+			var b := Button.new()
+			b.text = opt["name"]
+			b.toggle_mode = true
+			b.button_pressed = _look.get(row[0], "") == opt["id"]
+			b.custom_minimum_size = Vector2(100, 0)
+			b.pressed.connect(set_look.bind(row[0], opt["id"]))
+			flow.add_child(b)
+		_look_box.add_child(flow)
+	var beard := CheckBox.new()
+	beard.text = tr("Barbe (adulte)")
+	beard.button_pressed = bool(_look.get("beard", false))
+	beard.toggled.connect(func(on): set_look("beard", on))
+	_look_box.add_child(beard)
+	var headgear := CheckBox.new()
+	headgear.text = tr("Couvre-chef de classe (casque, chapeau, capuche)")
+	headgear.button_pressed = bool(_look.get("headgear", true))
+	headgear.toggled.connect(func(on): set_look("headgear", on))
+	_look_box.add_child(headgear)
+
+
+func _look_label(text: String) -> void:
+	var label := Label.new()
+	label.text = text
+	label.theme_type_variation = "SectionLabel"
+	_look_box.add_child(label)
+
+
+## Pastille de couleur cliquable (bordure claire si choisie).
+func _swatch(color: String, selected: bool, on_pressed: Callable) -> Button:
+	var b := Button.new()
+	b.custom_minimum_size = Vector2(34, 34)
+	b.tooltip_text = color
+	for state in ["normal", "hover", "pressed", "focus"]:
+		var box := StyleBoxFlat.new()
+		box.bg_color = Color(color)
+		box.set_border_width_all(3 if selected else (2 if state == "hover" else 1))
+		box.border_color = Color(0.95, 0.85, 0.55) if selected else Color(0.1, 0.08, 0.06)
+		box.set_corner_radius_all(4)
+		b.add_theme_stylebox_override(state, box)
+	b.pressed.connect(on_pressed)
+	return b
 
 
 func _on_name_typed(_text: String) -> void:
@@ -450,9 +556,17 @@ func _refresh_creator_points() -> void:
 func _refresh() -> void:
 	if _species == "" or _class == "" or _background == "" or _gender == "" or _point_buy == null:
 		return
+	if _look.is_empty() or _look.get("skin", "") not in look_palette("skin"):
+		var keep := _look.duplicate()
+		_randomize_look()
+		for part in ["hair_style", "body", "beard", "headgear"]:
+			if keep.has(part):
+				_look[part] = keep[part]
+	_fill_look_page()
 	var ch := build_character()
 	portrait.texture = ArtProvider.portrait(ch)
 	sheet_text.text = CharacterSheet.bbcode(ch)
+	_sheet.show_character(ch)
 	species_text.text = _species_info(DB.species[_species])
 	class_text.text = _class_info(DB.classes[_class])
 	_fill_creation_choices(_class_choice_box, "class/", DB.classes[_class])

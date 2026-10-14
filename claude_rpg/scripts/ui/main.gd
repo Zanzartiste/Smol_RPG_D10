@@ -76,7 +76,13 @@ func _ready() -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
-	if key == null or not key.pressed or key.echo or combat_view.visible or _overlay != null:
+	if key == null or not key.pressed or key.echo or _overlay != null:
+		return
+	# Raccourcis du tiroir (P, Q, J, E, M, N ; Échap replie une page épinglée), même en combat.
+	if not dice_tray.is_playing() and drawer.handle_key(key.keycode):
+		accept_event()
+		return
+	if combat_view.visible:
 		return
 	if key.keycode == KEY_I and not dice_tray.is_playing():
 		open_inventory()
@@ -130,13 +136,16 @@ func _show_hub() -> void:
 		if member.can_choose_feat():
 			_show_feat_choice(member)
 			return
+		if member.can_spend_skill_point():
+			_show_skill_point_choice(member)
+			return
 	var life := Game.life
 	var visit := Social.initiative_event(life)  # un PNJ vient parfois vous voir
 	if not visit.is_empty():
 		_show_event(visit)
 		return
 	illustration.texture = ArtProvider.location_image("town", life)
-	title_label.text = tr("Jour %d — %s") % [life.day, life.slot_name()]
+	title_label.text = tr("Jour %d — %s — %s") % [life.day, life.slot_name(), Weather.describe(life.day)]
 	var text := ""
 	for notice in life.take_notices():
 		text += "[color=%s]• %s[/color]\n" % [UITheme.GOLD.to_html(false), notice]
@@ -297,6 +306,27 @@ func _show_ability_choice(member: Character) -> void:
 		button.tooltip_text = Abilities.description_of(id)
 
 
+## Point de compétence gagné en montant de niveau : +1 rang dans la compétence choisie.
+func _show_skill_point_choice(member: Character) -> void:
+	title_label.text = tr("Compétences — %s") % member.name
+	body_text.text = tr("%s a progressé : choisissez la compétence qui gagne un rang (rang %d au plus à ce niveau).") % [
+		member.name, member.max_trained_rank()]
+	if member.pending_skill_points > 1:
+		body_text.text += " " + tr("(%d points à placer)") % member.pending_skill_points
+	_clear_choices()
+	for skill_id in Skills.ids():
+		var rank := member.skill_rank(skill_id)
+		var button := _add_choice("%s : %d → %d" % [Skills.name_of(skill_id), rank, rank + 1],
+			_on_skill_point_chosen.bind(member, skill_id), member.can_raise_skill(skill_id))
+		button.tooltip_text = Skills.description_of(skill_id)
+
+
+func _on_skill_point_chosen(member: Character, skill_id: String) -> void:
+	member.spend_skill_point(skill_id)
+	_refresh_sheet()
+	_show_hub()
+
+
 func _show_feat_choice(member: Character) -> void:
 	title_label.text = tr("Nouveau don — %s") % member.name
 	body_text.text = tr("%s a atteint le niveau %d et peut choisir un nouveau don.") % [member.name, member.level]
@@ -335,7 +365,7 @@ func _on_location_chosen(location_id: String) -> void:
 
 
 func _has_people(location_id: String) -> bool:
-	return DB.npc_roles.values().any(func(r): return r.get("location") == location_id)
+	return not Social.roles_in(location_id).is_empty()
 
 
 ## Menu d'un lieu : se promener (événement au hasard), entrer dans une boutique, ou revenir.
@@ -347,6 +377,8 @@ func _show_location_menu(location_id: String) -> void:
 	body_text.text = loc.get("description", "")
 	_clear_choices()
 	_add_choice(tr("Se promener (événement au hasard)"), _show_event_from.bind(location_id))
+	if not EventEngine.gather_event(location_id).is_empty():
+		_add_choice(tr("Chercher des ressources"), func(): _show_event(EventEngine.gather_event(location_id)))
 	if _has_people(location_id):
 		_add_choice(tr("Parler à quelqu'un"), _show_people.bind(location_id))
 	for shop_id in Shops.of_location(location_id):
@@ -359,9 +391,9 @@ func _show_location_menu(location_id: String) -> void:
 ## Les gens présents dans un lieu, et la possibilité de chercher un garde, un villageois…
 func _show_people(location_id: String) -> void:
 	title_label.text = tr("%s — Parler à quelqu'un") % DB.locations[location_id]["name"]
-	body_text.text = tr("Qui allez-vous voir ?")
+	body_text.text = tr("Qui allez-vous voir ? (Les gens vont et viennent selon le moment de la journée.)")
 	_clear_choices()
-	for n in Social.at_location(location_id, Game.life.rng):
+	for n in Social.at_location(location_id, Game.life.rng, Game.life.slot_id()):
 		var label := "%s — %s" % [n.name, n.role_name()]
 		if n.player.get("met", false):
 			label += " (%s)" % Social.status_name(n)

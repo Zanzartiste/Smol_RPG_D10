@@ -48,14 +48,27 @@
 		"choices": [
 			{"id": "skills", "name": "Compétences de classe", "type": "skill", "count": 2, "at_creation": true,
 				"options": ["lore", "insight", "perception", "medicine", "languages", "potions_cooking"],
-				"modifiers": [{"type": "skill_rank", "id": "$", "amount": 1}], "default": ["lore", "perception"]}
+				"modifiers": [{"type": "skill_rank", "id": "$", "amount": 1}], "default": ["lore", "perception"]},
+			{"id": "cantrips", "name": "Tours de magie", "type": "action", "count": 2, "at_creation": true, "multiclass": true,
+				"options": ["fire_bolt", "ray_of_frost"], "default": ["fire_bolt", "ray_of_frost"]},
+			{"id": "spells", "name": "Sorts du grimoire", "type": "action", "count": 3, "at_creation": true, "multiclass": true,
+				"options": ["magic_missile", "burning_hands", "sleep", "mage_shield", "find_familiar"],
+				"default": ["magic_missile", "burning_hands", "sleep"]}
 		],
 		"equipment": {"main_hand": "quarterstaff", "armor": "robe"},
 		"spellcasting": "int",
 		"spell_slots": "full",
-		"actions": ["weapon_attack", "fire_bolt", "ray_of_frost", "magic_missile", "burning_hands", "sleep", "mage_shield", "find_familiar"],
+		"actions": ["weapon_attack"],
 		"features": [
-			{"level": 3, "id": "spells_level_2", "name": "Sorts du 2e niveau", "description": "Vous apprenez Rayons ardents.", "actions": ["scorching_ray"]},
+			{"level": 2, "id": "new_spell_2", "name": "Nouveau sort", "description": "Vous apprenez un sort de votre choix parmi ceux que votre niveau permet de lancer.", "choices": [{"id": "spell", "name": "Nouveau sort", "type": "action", "count": 1, "options": ["fireball", "scorching_ray", "magic_missile", "burning_hands", "sleep", "mage_shield", "find_familiar"]}]},
+			{"level": 3, "id": "new_spell_3", "name": "Nouveau sort", "description": "Vous apprenez un sort de votre choix parmi ceux que votre niveau permet de lancer.", "choices": [{"id": "spell", "name": "Nouveau sort", "type": "action", "count": 1, "options": ["fireball", "scorching_ray", "magic_missile", "burning_hands", "sleep", "mage_shield", "find_familiar"]}]},
+			{"level": 4, "id": "new_spell_4", "name": "Nouveau sort", "description": "Vous apprenez un sort de votre choix parmi ceux que votre niveau permet de lancer.", "choices": [{"id": "spell", "name": "Nouveau sort", "type": "action", "count": 1, "options": ["fireball", "scorching_ray", "magic_missile", "burning_hands", "sleep", "mage_shield", "find_familiar"]}]},
+			{"level": 5, "id": "new_spell_5", "name": "Nouveau sort", "description": "Vous apprenez un sort de votre choix parmi ceux que votre niveau permet de lancer.", "choices": [{"id": "spell", "name": "Nouveau sort", "type": "action", "count": 1, "options": ["fireball", "scorching_ray", "magic_missile", "burning_hands", "sleep", "mage_shield", "find_familiar"]}]},
+			{"level": 6, "id": "new_spell_6", "name": "Nouveau sort", "description": "Vous apprenez un sort de votre choix parmi ceux que votre niveau permet de lancer.", "choices": [{"id": "spell", "name": "Nouveau sort", "type": "action", "count": 1, "options": ["fireball", "scorching_ray", "magic_missile", "burning_hands", "sleep", "mage_shield", "find_familiar"]}]},
+			{"level": 7, "id": "new_spell_7", "name": "Nouveau sort", "description": "Vous apprenez un sort de votre choix parmi ceux que votre niveau permet de lancer.", "choices": [{"id": "spell", "name": "Nouveau sort", "type": "action", "count": 1, "options": ["fireball", "scorching_ray", "magic_missile", "burning_hands", "sleep", "mage_shield", "find_familiar"]}]},
+			{"level": 8, "id": "new_spell_8", "name": "Nouveau sort", "description": "Vous apprenez un sort de votre choix parmi ceux que votre niveau permet de lancer.", "choices": [{"id": "spell", "name": "Nouveau sort", "type": "action", "count": 1, "options": ["fireball", "scorching_ray", "magic_missile", "burning_hands", "sleep", "mage_shield", "find_familiar"]}]},
+			{"level": 9, "id": "new_spell_9", "name": "Nouveau sort", "description": "Vous apprenez un sort de votre choix parmi ceux que votre niveau permet de lancer.", "choices": [{"id": "spell", "name": "Nouveau sort", "type": "action", "count": 1, "options": ["fireball", "scorching_ray", "magic_missile", "burning_hands", "sleep", "mage_shield", "find_familiar"]}]},
+			{"level": 10, "id": "new_spell_10", "name": "Nouveau sort", "description": "Vous apprenez un sort de votre choix parmi ceux que votre niveau permet de lancer.", "choices": [{"id": "spell", "name": "Nouveau sort", "type": "action", "count": 1, "options": ["fireball", "scorching_ray", "magic_missile", "burning_hands", "sleep", "mage_shield", "find_familiar"]}]},
 			{"level": 3, "id": "subclass", "name": "Tradition arcanique", "description": "Vous choisissez votre tradition arcanique (sous-classe).",
 				"choices": [{"id": "subclass", "name": "Tradition arcanique", "type": "option", "count": 1, "default": ["evoker"], "options": [
 					{"id": "evoker", "name": "Évocateur", "description": "Vous façonnez les énergies destructrices : feu, froid, foudre et force pure.", "features": [
@@ -66,7 +79,6 @@
 						{"level": 14, "id": "overchannel", "name": "Surcharge", "description": "Vous pouvez pousser un sort à son maximum (pas encore de mécanique)."}
 					]}
 				]}]},
-			{"level": 5, "id": "spells_level_3", "name": "Sorts du 3e niveau", "description": "Vous apprenez Boule de feu.", "actions": ["fireball"]},
 			{"level": 5, "id": "cantrip_2", "name": "Tours de magie renforcés", "description": "Vos tours de magie gagnent un dé de dégâts (puis un autre aux niveaux 11 et 17)."}
 		],
 		"start_items": {},

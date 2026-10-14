@@ -3,7 +3,8 @@ extends Control
 ## Tiroir latéral droit : caché hors de l'écran, il ne laisse dépasser que des onglets. Survoler un
 ## onglet déroule sa page ; elle se replie quand la souris s'en va. Cliquer sur un onglet épingle la page
 ## (elle reste ouverte jusqu'au clic suivant).
-## Onglets : Personnage (PV), Inventaire (or), Quêtes, Journal, Relations, Sorts (lanceurs de sorts seulement).
+## Onglets : Personnage (PV), Inventaire (or), Quêtes, Journal, Relations, Sorts (lanceurs de sorts seulement),
+## Notes. Raccourcis (voir SHORTCUTS) : P, I (page), Q, J, E, M, N ; Échap replie une page épinglée.
 ## Les détails (calculs, descriptions) s'affichent au survol de chaque ligne.
 
 signal inventory_requested
@@ -16,7 +17,9 @@ const TOP_MARGIN := 60.0
 const CLOSE_DELAY := 0.35  # secondes hors du tiroir avant qu'il se replie
 const SPEED := 7.0  # vitesse d'ouverture (fraction par seconde)
 
-const PAGES := ["character", "inventory", "quests", "journal", "social", "spells"]
+const PAGES := ["character", "inventory", "quests", "journal", "social", "spells", "notes"]
+## Touche -> page (l'inventaire complet reste sur I, le carnet sur C).
+const SHORTCUTS := {KEY_P: "character", KEY_Q: "quests", KEY_J: "journal", KEY_E: "social", KEY_M: "spells", KEY_N: "notes"}
 const JOURNAL_SHOWN := 150  # entrées affichées au plus (les plus récentes)
 
 var life: LifeState
@@ -150,6 +153,9 @@ func _refresh_tabs() -> void:
 	_tab_buttons["quests"].text = tr("Quêtes (%d)") % Quests.with_status(life, "active").size()
 	_tab_buttons["social"].text = tr("Relations")
 	_tab_buttons["journal"].text = tr("Journal")
+	_tab_buttons["notes"].text = tr("Notes")
+	for key: int in SHORTCUTS:
+		_tab_buttons[SHORTCUTS[key]].tooltip_text = tr("Raccourci : %s") % OS.get_keycode_string(key)
 	var casters := life.party().filter(func(c): return c.max_resource(Spellcasting.SLOT_KEY) > 0 or not c.known_spells().is_empty())
 	_tab_buttons["spells"].visible = not casters.is_empty()
 	if not casters.is_empty():
@@ -190,6 +196,8 @@ func _build_page() -> void:
 			_build_quests()
 		"journal":
 			_build_journal()
+		"notes":
+			_build_notes()
 		"social":
 			_build_social()
 		"spells":
@@ -221,153 +229,11 @@ func _member_selector(only: Callable = Callable()) -> void:
 
 func _build_character() -> void:
 	_member_selector()
-	var ch := member
-	# En-tête : portrait, nom, espèce et genre, classes.
-	var header := HBoxContainer.new()
-	header.add_theme_constant_override("separation", 12)
-	var portrait := TextureRect.new()
-	portrait.texture = ArtProvider.portrait(ch)
-	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	portrait.custom_minimum_size = Vector2(88, 88)
-	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	header.add_child(portrait)
-	var identity := VBoxContainer.new()
-	identity.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	identity.alignment = BoxContainer.ALIGNMENT_CENTER
-	header.add_child(identity)
-	identity.add_child(_make_label(ch.name, "", "TitleLabel"))
-	var species_name: String = DB.species[ch.species_id]["name"]
-	identity.add_child(_make_label("%s %s" % [species_name, DB.gender_name(ch.gender)], tr("Taille : %s · %d ans (%s)") % [
-		DB.size_name(ch.size()), ch.age_years(), DB.life_stage_name(ch.life_stage())]))
-	var classes := PackedStringArray()
-	for cls: String in ch.class_levels:
-		classes.append(tr("%s niv. %d") % [DB.classes[cls]["name"], int(ch.class_levels[cls])])
-	identity.add_child(_make_label(", ".join(classes), _subclass_text(ch)))
-	_content.add_child(header)
-	_add_xp_bar(ch)
-	_add_separator()
-	var dex := ch.ability_score("dex")
-	var initiative := tr("Dextérité %d + Intelligence %d") % [dex, ch.ability_score("int")]
-	if ch.has_modifier("initiative_rank"):
-		initiative += tr(" + Physique %d (Vigilant)") % ch.skill_rank("physique")
-	if ch.roll_penalty("dex") > 0:
-		initiative += tr(" − %d (encombrement)") % ch.roll_penalty("dex")
-	_add_pair(_make_label(tr("PV : %d / %d") % [ch.hp, ch.max_hp], tr("Constitution %d × 1,414^taille (%d)%s") % [
-		ch.ability_score("con"), ch.size(), _extra_hp_text(ch)]),
-		_make_label(tr("Initiative : %d") % ch.initiative_base(), initiative + tr("\n+ 1d10 au début du combat.")))
-	_add_pair(_make_label(tr("Esquive naturelle : %d") % ch.natural_dodge(), tr("Dextérité %d ÷ 3 = %d (au moins 1)%s.\nC'est la difficulté des attaques de mêlée contre %s.") % [
-		dex, maxi(1, floori(dex / 3.0)), _signed_extra(Modifiers.sum(ch.modifiers(), "natural_dodge")), ch.name]),
-		_make_label(tr("Armure : %d") % ch.armor(), _parts_text(ch.armor_parts(), tr("Aucune armure.")) +
-			tr("\nBaisse d'autant le seuil des dégâts subis (sans passer sous 1).")))
-	if ch.is_encumbered():
-		_add_label(tr("Encombré : −%d dé(s) aux jets de FOR et DEX") % ch.encumbrance_penalty(), "", "", UITheme.BAD)
-	_add_separator()
-	var grid := GridContainer.new()
-	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", 28)
-	for ability_id: String in Abilities.ids():
-		var resist := ch.resist_pool(ability_id)
-		var tip := "%s\n%s" % [Abilities.description_of(ability_id), tr("Résister : %s%s") % [
-			Dice.pool_text(int(resist["count"]), int(resist["threshold"])), tr(" (maîtrisée)") if ch.is_proficient_save(ability_id) else ""]]
-		grid.add_child(_make_label("%s %d" % [Abilities.short_of(ability_id), ch.ability_score(ability_id)], tip))
-	_content.add_child(grid)
-	_add_separator()
-	var fold := Button.new()
-	fold.flat = true
-	fold.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	fold.text = ("▾ " if _skills_open else "▸ ") + tr("Compétences")
-	fold.add_theme_color_override("font_color", UITheme.GOLD)
-	fold.pressed.connect(func():
-		_skills_open = not _skills_open
-		_build_page())
-	_content.add_child(fold)
-	for category: String in Skills.CATEGORY_NAMES:
-		var ids := Skills.ids_in(category)
-		if ids.is_empty() or not _skills_open:
-			continue
-		_add_label(tr(Skills.CATEGORY_NAMES[category]), "", "", UITheme.TEXT_DIM)
-		var skills := GridContainer.new()
-		skills.columns = 2
-		skills.add_theme_constant_override("h_separation", 24)
-		for skill_id in ids:
-			var label := _make_label("%s %d" % [Skills.name_of(skill_id), ch.skill_rank(skill_id)], _skill_tip(ch, skill_id))
-			if not ch.is_trained(skill_id):
-				label.add_theme_color_override("font_color", UITheme.TEXT_DIM)
-			label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			skills.add_child(label)
-		_content.add_child(skills)
-	var features := ch.features()
-	if not features.is_empty() or not ch.feats.is_empty():
-		_add_separator()
-		_add_label(tr("Aptitudes et dons"), "", "", UITheme.TEXT_DIM)
-		for feature: Dictionary in features:
-			_add_label(feature["name"], feature.get("description", ""))
-		for feat_id in ch.feats:
-			_add_label(Feats.name_of(feat_id), DB.feats.get(feat_id, {}).get("description", ""))
-	var defenses := ch.all_defenses()
-	if not defenses.is_empty():
-		_add_label(defenses.describe(), "")
-
-
-func _subclass_text(ch: Character) -> String:
-	var parts := PackedStringArray()
-	for key: String in ch.choices:
-		if key.ends_with("/subclass"):
-			parts.append(ch.choice_label(key))
-	return (tr("Voie : %s") % ", ".join(parts)) if not parts.is_empty() else ""
-
-
-func _extra_hp_text(ch: Character) -> String:
-	var mods := ch.modifiers()
-	var extra := Modifiers.sum(mods, "max_hp") + Modifiers.sum(mods, "hp_per_level") * ch.level
-	return tr(" + %d (dons, objets)") % extra if extra != 0 else ""
-
-
-static func _signed_extra(value: int) -> String:
-	return (" %s %d" % ["+" if value > 0 else "−", absi(value)]) if value != 0 else ""
-
-
-static func _parts_text(parts: Array, empty: String) -> String:
-	if parts.is_empty():
-		return empty
-	return "\n".join(PackedStringArray(parts.map(func(p): return "%s : %+d" % [p[0], int(p[1])])))
-
-
-## Au survol d'une compétence : ce qu'elle permet de faire, puis son jet.
-func _skill_tip(ch: Character, skill_id: String) -> String:
-	var abilities := PackedStringArray(Skills.abilities_of(skill_id).map(func(id): return Abilities.short_of(id)))
-	var pool := ch.skill_pool(skill_id)
-	var lines := PackedStringArray([Skills.description_of(skill_id)])
-	if skill_id == "languages":
-		lines.append(tr("Langues connues : %s.") % ", ".join(PackedStringArray(ch.known_languages().map(
-			func(l): return Skills.language_name(l)))))
-	lines.append("")
-	lines.append(tr("%s · jet : %s%s") % [" / ".join(abilities), Dice.pool_text(int(pool["count"]), int(pool["threshold"])),
-		tr(" · instinctive") if Skills.is_instinctive(skill_id) else ""])
-	return "\n".join(lines)
-
-
-func _add_xp_bar(ch: Character) -> void:
-	var bar := ProgressBar.new()
-	bar.show_percentage = false
-	bar.custom_minimum_size = Vector2(0, 6)
-	bar.mouse_filter = Control.MOUSE_FILTER_STOP
-	var fill := StyleBoxFlat.new()
-	fill.bg_color = UITheme.GOLD
-	var back := StyleBoxFlat.new()
-	back.bg_color = Color("#3a3128")
-	bar.add_theme_stylebox_override("fill", fill)
-	bar.add_theme_stylebox_override("background", back)
-	if ch.level >= Progression.max_level():
-		bar.value = 100
-		bar.tooltip_text = tr("XP %d — niveau maximum") % ch.xp
-	else:
-		var floor_xp := Progression.xp_for(ch.level)
-		var next_xp := Progression.xp_for(ch.level + 1)
-		bar.value = 100.0 * (ch.xp - floor_xp) / maxf(1.0, next_xp - floor_xp)
-		bar.tooltip_text = tr("XP %d / %d (niveau %d)") % [ch.xp, next_xp, ch.level + 1]
-	_content.add_child(bar)
+	var page := CharacterPage.new()
+	page.skills_open = _skills_open
+	page.skills_toggled.connect(func(open): _skills_open = open)
+	_content.add_child(page)
+	page.show_character(member)
 
 
 func _build_inventory() -> void:
@@ -459,6 +325,29 @@ func _build_journal() -> void:
 		_add_label("%s — %s" % [slot_name, entry["text"]], tr(LifeState.JOURNAL_KINDS.get(entry["kind"], "")))
 
 
+## Notes libres du joueur, sauvegardées avec la vie.
+func _build_notes() -> void:
+	_add_label(tr("Notes"), tr("Ce que vous voulez retenir : pistes, prix, noms…"), "SectionLabel")
+	var edit := TextEdit.new()
+	edit.text = life.notes
+	edit.placeholder_text = tr("Écrivez ici…")
+	edit.custom_minimum_size = Vector2(0, 420)
+	edit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	edit.text_changed.connect(func(): life.notes = edit.text)
+	_content.add_child(edit)
+
+
+## Raccourci clavier : ouvre (épingle) ou replie la page correspondante. Retourne true si la touche est prise.
+func handle_key(keycode: int) -> bool:
+	if keycode == KEY_ESCAPE and _pinned:
+		close()
+		return true
+	if not SHORTCUTS.has(keycode):
+		return false
+	_on_tab_pressed(SHORTCUTS[keycode])
+	return true
+
+
 func _build_social() -> void:
 	_add_label(tr("Réputation"), "", "SectionLabel")
 	for location_id: String in DB.location_order:
@@ -520,19 +409,7 @@ func _build_spells() -> void:
 # --- Petits éléments ---------------------------------------------------------------
 
 func _make_label(text: String, tooltip: String, variation := "", color := Color(0, 0, 0, 0)) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.custom_minimum_size.x = 60
-	if tooltip != "":
-		label.tooltip_text = tooltip
-		label.mouse_filter = Control.MOUSE_FILTER_STOP
-		label.mouse_default_cursor_shape = Control.CURSOR_HELP
-	if variation != "":
-		label.theme_type_variation = variation
-	if color.a > 0.0:
-		label.add_theme_color_override("font_color", color)
-	return label
+	return CharacterPage.make_label(text, tooltip, variation, color)
 
 
 func _add_label(text: String, tooltip: String, variation := "", color := Color(0, 0, 0, 0)) -> Label:

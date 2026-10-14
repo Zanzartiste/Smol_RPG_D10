@@ -2,7 +2,14 @@
 	{"id": "town", "name": "Brumeval", "description": "Le bourg, son marché et sa taverne.", "art": "town",
 		"rest": {"type": "inn", "name": "Passer une nuit à l'auberge", "cost": 5}},
 	{"id": "forest", "name": "Forêt des Murmures", "description": "Des bois profonds où rôdent loups et secrets.", "art": "forest", "wild": true,
-		"rest": {"type": "camp", "name": "Camper", "event_chance": 0.25}},
+		"rest": {"type": "camp", "name": "Camper", "event_chance": 0.25},
+		"gather": [
+			{"id": "herbs", "name": "Cueillir des plantes médicinales", "item": "healing_herbs", "count": 1,
+				"skill": "potions_cooking", "ability": "wis", "difficulty": 1,
+				"failure": "Vous ne trouvez que des orties et du chiendent.", "fumble": "Vous vous écorchez dans un roncier.", "fumble_hp": -2},
+			{"id": "snares", "name": "Poser des collets", "item": "wolf_pelt", "count": 1, "skill": "survival", "difficulty": 2,
+				"failure": "Les collets restent vides.", "fumble": "Un collet se referme sur votre main.", "fumble_hp": -2}
+		]},
 	{"id": "home", "name": "Chez soi", "description": "Se reposer et panser ses plaies.", "art": "home",
 		"rest": {"type": "home", "name": "Dormir chez soi"}}
 ]

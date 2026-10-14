@@ -2,6 +2,7 @@
 	{
 		"id": "wolf",
 		"ai": "hunter",
+		"morale": "pack",
 		"skills": {"perception": 3, "stealth": 2, "physique": 2},
 		"name": "Loup",
 		"size": -1,
@@ -31,10 +32,10 @@
 	{
 		"id": "dire_wolf",
 		"ai": "hunter",
+		"leader": true,
 		"skills": {"perception": 3, "stealth": 2, "physique": 3},
 		"name": "Alpha des loups",
 		"size": 1,
-		"hp": 12,
 		"armor": 1,
 		"natural_armor": true,
 		"abilities": {"str": 7, "dex": 6, "con": 6, "int": 1, "wis": 5, "cha": 3},
@@ -60,7 +61,7 @@
 	},
 	{
 		"id": "bandit",
-		"ai": "coward",
+		"morale": "coward",
 		"skills": {"weapon_melee": 2, "stealth": 2, "persuasion": 2, "perception": 2, "physique": 2},
 		"armor": 1,
 		"name": "Brigand",
@@ -92,6 +93,44 @@
 			"type": "humanoid",
 			"species_art": {"ears": "round", "skin": ["#d9a57b", "#b07a50"], "hair": ["#2b1d14", "#5a3a1e"], "eyes": ["#3a2a1a"]},
 			"class_art": {"headgear": "hood", "outfit": "#5a4030", "accent": "#9a2f2f"}
+		}
+	},
+	{
+		"id": "bandit_mender",
+		"morale": "coward",
+		"skills": {"weapon_melee": 1, "medicine": 3, "perception": 2, "persuasion": 2},
+		"armor": 0,
+		"name": "Rebouteux des brigands",
+		"size": 0,
+		"abilities": {"str": 3, "dex": 4, "con": 4, "int": 5, "wis": 6, "cha": 4},
+		"actions": [
+			{
+				"name": "Bâton",
+				"weight": 2,
+				"target": "enemy",
+				"effects": [{"type": "attack", "weapon": "quarterstaff"}]
+			},
+			{
+				"name": "Onguent",
+				"weight": 2,
+				"target": "ally",
+				"effects": [{"type": "heal", "amount": {"skill": "medicine", "threshold": "wis", "dice": 3}}]
+			},
+			{
+				"name": "Couvrir un camarade",
+				"weight": 1,
+				"target": "ally",
+				"effects": [{"type": "status", "status": "shielded", "stacks": 2}]
+			}
+		],
+		"xp": 30,
+		"gold": "1d6",
+		"loot": [{"item": "healing_herbs", "chance": 0.6}, {"item": "potion_heal", "chance": 0.2}],
+		"death_cause": "Tué par des brigands",
+		"art": {
+			"type": "humanoid",
+			"species_art": {"ears": "round", "skin": ["#d9a57b", "#b07a50"], "hair": ["#7a7a7a", "#5a3a1e"], "eyes": ["#3a2a1a"]},
+			"class_art": {"headgear": "hood", "outfit": "#4a5a3a", "accent": "#c0b080"}
 		}
 	},
 	{
@@ -130,6 +169,7 @@
 	{
 		"id": "giant_rat",
 		"ai": "hunter",
+		"morale": "pack",
 		"name": "Rat géant",
 		"size": -2,
 		"abilities": {"str": 3, "dex": 6, "con": 4, "int": 1, "wis": 4, "cha": 2},

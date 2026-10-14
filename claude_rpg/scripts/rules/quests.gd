@@ -3,6 +3,8 @@ extends RefCounted
 ## API des quêtes. Définitions : data/quests.json.
 ##   {"id", "name", "description", "giver"?: qui la confie, "location"?: id de lieu,
 ##    "steps": ["Rapporter trois herbes à Ysolde.", ...]}
+## Les quêtes générées (demandes des PNJ, voir Social.offer_request) ont leur définition dans
+## LifeState.quest_defs, avec en plus "request": {"npc", "item", "count", "gold", "friendship"}.
 ## L'avancement est dans LifeState.quests : id -> {"status": "active" | "done" | "failed", "step": N}.
 ## Les événements la font avancer avec l'effet {"type": "quest", "id", "action": "start" | "advance" |
 ## "complete" | "fail", "step"?: N} et la testent avec la condition {"type": "quest", "id",
@@ -13,11 +15,13 @@ const ACTIONS := ["start", "advance", "complete", "fail"]
 
 
 static func has(id: String) -> bool:
-	return DB.quests.has(id)
+	return not def(id).is_empty()
 
 
 static func def(id: String) -> Dictionary:
-	return DB.quests.get(id, {})
+	if DB.quests.has(id):
+		return DB.quests[id]
+	return Game.life.quest_defs.get(id, {}) if Game.life != null else {}
 
 
 static func name_of(id: String) -> String:

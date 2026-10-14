@@ -94,8 +94,17 @@ chance de réussite (calculée exactement).
 
 ## Points de vie
 
-- Inchangés dans leur principe : **Constitution × 1,414^taille** (humain CON 6 → 6 PV ; nain CON 6 → 4 PV).
-- Les dégâts sont à la même échelle : un coup fait le plus souvent 1 à 3 points.
+- **(Taille + 2) × CON + 7**, au moins 1 (décision du 2026-10-14 ; `rules.json › hit_points`). Humain moyen (taille
+  0, CON 4) : 15 PV ; humain CON 6 : 19 PV ; nain (taille −1) CON 6 : 13 PV ; un grand colosse dépasse 40 PV.
+- Fourchette visée : de 1 à 55 PV selon la Constitution et la taille.
+- Certains dons modifieront les PV (Robuste). La progression des PV par niveau reste à décider.
+- Les dégâts sont à la même échelle : un coup fait le plus souvent 2 à 5 points.
+
+## Points de compétence
+
+- À chaque niveau à partir du 2 (`rules.json › skill_points › by_level`, réglable niveau par niveau), le personnage
+  gagne 1 point de compétence à dépenser à la montée de niveau : chaque point monte d'un rang une compétence.
+- Rang maximal d'une compétence : 3 + niveau ÷ 2 (arrondi à l'inférieur).
 
 ---
 
@@ -146,6 +155,10 @@ chance de réussite (calculée exactement).
   jet d'attaque en opposition ; le plus de succès touche (égalité : l'attaquant initial), avec un critique selon
   l'écart ; le perdant ne peut ni esquiver ni parer cette attaque. Contre un tir, il faut soi-même une arme de tir
   (le Couvert tombe alors à 0).
+- **Contresort** : quand un ennemi lance un sort, un lanceur de sorts peut le contrer, avant de savoir si le sort
+  touchera : jet de Magie contre jet de Magie ; s'il a plus de succès, le sort est annulé (l'action est perdue).
+  Il dépense sa réaction.
+- **Réactions automatiques** (option de l'écran titre) : tout le groupe réagit seul, comme l'IA.
 - **Qui choisit** : le joueur, pour ses personnages, sauf ceux joués par l'IA. Pendant le tour ennemi, le jeu
   s'arrête à chaque occasion (« Contre-attaquer / Laisser venir », « Esquiver / Ne pas esquiver », « Parer /
   Encaisser ») et montre les dés de chacun. Les créatures et les personnages en mode IA réagissent seuls.
@@ -172,6 +185,15 @@ chance de réussite (calculée exactement).
 ### Autres règles de combat
 
 - **Fuite** : Physique (DEX) contre la difficulté de fuite (2 par défaut, `flee_difficulty`).
+- **Moral des ennemis** (`creatures.json › morale`) :
+  - lâche : sous 30 % de ses PV, il peut prendre la fuite (une chance sur deux par tour) ;
+  - meute : elle peut fuir quand son chef (`leader`) tombe, ou quand la moitié des siens est hors de combat ;
+  - sans peur : se bat jusqu'au bout.
+  Une créature enfuie ne rapporte ni XP ni butin.
+- **IA des ennemis** : les chasseurs (`"ai": "hunter"`) visent le plus faible, les brutes frappent au hasard.
+  Soigner ne sert que si un allié est sous 50 % de ses PV, protéger que sous 75 % ; ces actions deviennent alors
+  prioritaires et visent l'allié le plus mal en point (`ai_heal_below`, `ai_protect_below`, `ai_support_bonus`).
+- **Météo** : brouillard et orage plongent les combats en plein air dans la pénombre (Couvert +1).
 - **Sorts** : attaque de sort contre le Couvert ; dégâts = rang de Magie (+ dés du sort) contre l'attribut
   d'incantation + bonus ; les sorts de zone se résistent (DEX : chaque succès retire un point).
 - **Paliers** : les tours de magie gagnent un dé de dégâts aux niveaux 5, 11 et 17 ; l'Attaque sournoise ajoute un
@@ -201,6 +223,11 @@ chance de réussite (calculée exactement).
   (1 par défaut).
 - **Prix** : la remise vaut 5 % par succès moyen de la Persuasion du meilleur négociateur, au plus 15 %.
 - **Talent fiable** (Roublard) : un test d'une compétence entraînée a toujours au moins un succès.
+- **Récolte** (« Chercher des ressources », lieux sauvages, `locations.json › gather`) : un test par ressource ;
+  réussite : la ressource ; critique : le double ; échec critique : une petite blessure.
+- **Demandes des PNJ** (« Proposer ses services ») : le PNJ confie une demande de son métier (`npc_roles.json ›
+  requests`) qui devient une quête ; « Remettre la commande » rapporte l'or promis et de l'amitié. Une demande à la
+  fois par PNJ, trois jours entre deux.
 
 ---
 
@@ -213,7 +240,7 @@ chance de réussite (calculée exactement).
    chances de l'emporter, esquiver dès qu'une attaque touche, puis parer. Les ennemis gardent parfois une action
    pour se défendre (25 %).
 4. **Sorts** : leurs dégâts gardent un bonus de seuil (Trait de feu : seuil INT +2) ; seules les armes et les
-   attaques des créatures sont passées aux dés en plus.
+   attaques des créatures sont passées aux dés en plus (voir la question 3).
 5. **Créatures** : attributs convertis (÷ 2,5) ; PV calculés comme ceux des personnages (sauf l'Alpha : 12) ;
    l'Alpha a une armure naturelle de 1, le brigand une armure de cuir (1).
 6. **Échelles converties** : anciens DD → difficulté (11 et moins → 1, 12-14 → 2, 15-17 → 3, 18-20 → 4) ; dégâts
@@ -233,3 +260,8 @@ chance de réussite (calculée exactement).
 2. **Test d'attribut sans compétence** (2 dés contre l'attribut) : la règle existe, mais aucun contenu ne s'en sert
    pour l'instant (les deux tests d'attribut des événements sont devenus des tests de compétence). À garder pour
    les cas sans compétence évidente (soulever une herse, résister au sommeil sans Perspicacité…) ?
+3. **Puissance des sorts** (reformulation de la question 13) : les grosses armes lancent plus de dés (une hache à
+   deux mains : +1 dé). Les sorts, eux, rendent leur seuil plus facile : Trait de feu lance autant de dés que le
+   rang de Magie, et chaque dé réussit sur INT + 2 au lieu de INT. Faut-il plutôt donner aux sorts des dés en plus,
+   comme les armes (Trait de feu : rang de Magie + 1 dé, seuil INT) ? Les dés en plus montent plus haut (plus de
+   critiques), le seuil facile rend les dégâts plus réguliers.
