@@ -37,6 +37,7 @@ var _gender := ""
 var _art_seed := 0
 var _look := {}  # apparence choisie (onglet Apparence) : skin, hair, eyes, hair_style, beard, body
 var _look_box := VBoxContainer.new()
+var _sheet := CharacterPage.new()  # fiche en direct, comme celle du tiroir
 var _point_buy: PointBuy
 var _name_is_random := true  # le nom suit l'espèce tant que le joueur ne l'a pas tapé lui-même
 var _rng := RandomNumberGenerator.new()
@@ -54,6 +55,16 @@ func _ready() -> void:
 	theme = UITheme.build()
 	_rng.randomize()
 	_art_seed = _rng.randi()
+	# La fiche remplace l'ancien texte : mêmes libellés que le tiroir, détail des jets au survol.
+	var sheet_scroll := ScrollContainer.new()
+	sheet_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	sheet_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_sheet.with_portrait = false
+	_sheet.with_xp = false
+	_sheet.with_gear = true
+	sheet_scroll.add_child(_sheet)
+	sheet_text.get_parent().add_child(sheet_scroll)
+	sheet_text.visible = false
 	_look_box.name = tr("Apparence")
 	_look_box.add_theme_constant_override("separation", 8)
 	pages.add_child(_look_box)
@@ -555,6 +566,7 @@ func _refresh() -> void:
 	var ch := build_character()
 	portrait.texture = ArtProvider.portrait(ch)
 	sheet_text.text = CharacterSheet.bbcode(ch)
+	_sheet.show_character(ch)
 	species_text.text = _species_info(DB.species[_species])
 	class_text.text = _class_info(DB.classes[_class])
 	_fill_creation_choices(_class_choice_box, "class/", DB.classes[_class])

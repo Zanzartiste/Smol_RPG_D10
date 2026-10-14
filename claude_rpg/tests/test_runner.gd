@@ -485,6 +485,9 @@ func _test_creation() -> bool:
 	_expect(ch.abilities["str"] == 5 and ch.abilities["cha"] == 5 and ch.abilities["dex"] == 6,
 		"création : l'achat de points et les bonus modifient le personnage")
 	screen._on_class_selected("wizard")
+	var sheet_labels: Array = screen._sheet.find_children("*", "Label", true, false).map(func(l): return l.text)
+	_expect(sheet_labels.any(func(t): return t.begins_with("PV : ")) and not sheet_labels.any(func(t): return "≤" in t or "d10" in t),
+		"creation : fiche comme celle du tiroir, sans formules de des")
 	var page_titles := range(screen.pages.get_tab_count()).map(func(i): return screen.pages.get_tab_title(i))
 	_expect(page_titles[1] == "Apparence", "creation : onglet Apparence %s" % str(page_titles))
 	var goblin_skin: String = DB.species["goblin"]["art"]["skin"][2]
@@ -639,7 +642,7 @@ func _test_side_drawer() -> bool:
 		and drawer._tab_buttons["spells"].visible, "onglets : PV, or, sorts (lanceur)")
 	for page_id: String in SideDrawer.PAGES:
 		drawer.open(page_id)
-		_expect(drawer.is_open() and drawer._content.get_child_count() > 1, "page %s remplie" % page_id)
+		_expect(drawer.is_open() and drawer._content.find_children("*", "Control", true, false).size() > 1, "page %s remplie" % page_id)
 	drawer.open("character")
 	var texts: Array = drawer._content.find_children("*", "Label", true, false).map(func(c): return c.text)
 	_expect(texts.has("Bergot") and texts.has("Humain Homme") and texts.has("Magicien niv. 1")
