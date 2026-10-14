@@ -139,7 +139,7 @@ func _show_hub() -> void:
 		_show_event(visit)
 		return
 	illustration.texture = ArtProvider.location_image("town", life)
-	title_label.text = tr("Jour %d — %s") % [life.day, life.slot_name()]
+	title_label.text = tr("Jour %d — %s — %s") % [life.day, life.slot_name(), Weather.describe(life.day)]
 	var text := ""
 	for notice in life.take_notices():
 		text += "[color=%s]• %s[/color]\n" % [UITheme.GOLD.to_html(false), notice]

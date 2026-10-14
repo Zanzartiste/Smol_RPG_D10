@@ -479,6 +479,11 @@ static func _validate_conditions(db: Node, conditions: Variant, ctx: String, err
 				_expect_ref(db.abilities, c["id"], "attribut", ctx, errors)
 			"skill_proficient":
 				_expect_ref(db.skills, c["id"], "compétence", ctx, errors)
+			"season", "weather":
+				var known: Array = db.rules.get("calendar", {}).get("seasons" if type == "season" else "weathers", []).map(func(x): return x["id"])
+				for id in c["in"]:
+					if id not in known:
+						errors.append(ctx + " : %s inconnue « %s »" % ["saison" if type == "season" else "météo", id])
 			"quest":
 				_expect_ref(db.quests, c["id"], "quête", ctx, errors)
 				if c.get("status", "active") not in Quests.STATUSES + ["none"]:

@@ -529,16 +529,8 @@
 	{
 		"id": "forest_storm",
 		"location": "forest",
-		"weight": 2,
-		"conditions": [
-			{
-				"type": "time",
-				"in": [
-					"afternoon",
-					"evening"
-				]
-			}
-		],
+		"weight": 6,
+		"conditions": [{"type": "weather", "in": ["rain", "storm"]}],
 		"title": "L'orage",
 		"text": "Le ciel se fend d'un éclair. En quelques instants, une pluie glacée transperce le feuillage.",
 		"choices": [

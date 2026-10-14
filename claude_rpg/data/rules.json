@@ -33,6 +33,23 @@
 		"size_offset": 2,
 		"base": 7
 	},
+	"calendar": {
+		"_doc": "Saisons (l'année est partagée en parts égales, le jour 1 ouvre le printemps) et météo du jour, tirée selon les poids de la saison. light : un combat sous cette météo est dans la pénombre (Couvert +1) ou le noir (+2).",
+		"seasons": [
+			{"id": "spring", "name": "Printemps", "weather": {"clear": 4, "cloudy": 3, "rain": 3, "fog": 2, "storm": 1}},
+			{"id": "summer", "name": "Été", "weather": {"clear": 7, "cloudy": 2, "rain": 1, "storm": 2}},
+			{"id": "autumn", "name": "Automne", "weather": {"clear": 3, "cloudy": 3, "rain": 4, "fog": 3, "storm": 1}},
+			{"id": "winter", "name": "Hiver", "weather": {"clear": 3, "cloudy": 3, "fog": 2, "snow": 4, "storm": 1}}
+		],
+		"weathers": [
+			{"id": "clear", "name": "Beau temps"},
+			{"id": "cloudy", "name": "Nuageux"},
+			{"id": "rain", "name": "Pluie"},
+			{"id": "fog", "name": "Brouillard", "light": "dim"},
+			{"id": "storm", "name": "Orage", "light": "dim"},
+			{"id": "snow", "name": "Neige"}
+		]
+	},
 	"time_slots": [{"id": "morning", "name": "Matin"}, {"id": "afternoon", "name": "Après-midi"}, {"id": "evening", "name": "Soir"}],
 	"days_per_year": 365,
 	"majority_age": 18,

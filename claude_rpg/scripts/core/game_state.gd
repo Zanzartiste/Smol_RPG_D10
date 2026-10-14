@@ -65,6 +65,12 @@ var combat: Combat
 
 
 func start_combat(spec: Dictionary) -> Combat:
+	# Brouillard, orage : un combat en plein air se déroule dans la pénombre (Couvert +1).
+	if not spec.has("light") and DB.locations.get(life.location, {}).get("rest", {}).get("type", "") == "camp":
+		var light: String = Weather.weather_of(life.day).get("light", "")
+		if light != "":
+			spec = spec.duplicate()
+			spec["light"] = light
 	life.pending_combat = spec
 	life.refresh_load()
 	combat = Combat.new(spec, life)

@@ -14,7 +14,9 @@ const SCHEMA := {
 	"skill_proficient": ["id"],
 	"passive": ["skill", "min"],
 	"reputation": ["location"],  # {"location", "min"?, "max"?} : réputation du héros dans un lieu
-	"quest": ["id"],  # {"id", "status"?: active | done | failed | none, "step"?: minimum} (voir Quests)
+	"quest": ["id"],
+	"season": ["in"],  # saison du jour (Weather)
+	"weather": ["in"],  # météo du jour (Weather)  # {"id", "status"?: active | done | failed | none, "step"?: minimum} (voir Quests)
 	"species": ["in"],
 	"class": ["in"],
 	"background": ["in"],
@@ -62,6 +64,10 @@ static func check(c: Dictionary, life: LifeState, meta: MetaState) -> bool:
 		"reputation":
 			var value := int(life.reputation.get(c["location"], 0))
 			return value >= int(c.get("min", -100)) and value <= int(c.get("max", 100))
+		"season":
+			return Weather.season_of(life.day).get("id", "") in c["in"]
+		"weather":
+			return Weather.weather_of(life.day).get("id", "") in c["in"]
 		"quest":
 			var state: Dictionary = life.quests.get(c["id"], {})
 			var status: String = c.get("status", "active")
@@ -154,6 +160,10 @@ static func describe(c: Dictionary) -> String:
 			return " / ".join(PackedStringArray(names))
 		"level":
 			return _range_text(Loc.ui("Niveau"), c)
+		"season":
+			return " / ".join(PackedStringArray(Weather.seasons().filter(func(s): return s["id"] in c["in"]).map(func(s): return s["name"])))
+		"weather":
+			return " / ".join(PackedStringArray(Weather.weathers().filter(func(w): return w["id"] in c["in"]).map(func(w): return w["name"])))
 	return ""
 
 

@@ -327,6 +327,14 @@ func _test_conditions() -> bool:
 	_expect(Conditions.check({"type": "any", "conditions": [
 		{"type": "flag", "id": "nope"}, {"type": "gold", "min": 1}]}, life, meta), "any")
 	_expect(Conditions.check({"type": "time", "in": ["morning"]}, life, meta), "matin au départ")
+	_expect(Weather.season_of(1)["id"] == "spring" and Weather.season_of(100)["id"] == "summer" and Weather.season_of(300)["id"] == "winter"
+		and Conditions.check({"type": "season", "in": ["spring"]}, life, meta), "saisons : le jour 1 ouvre le printemps")
+	_expect(Weather.weather_of(5) == Weather.weather_of(5) and not Weather.weather_of(5).is_empty()
+		and Conditions.check({"type": "weather", "in": [Weather.weather_of(life.day)["id"]]}, life, meta), "météo du jour stable")
+	var seen_weather := {}
+	for d in range(1, 120):
+		seen_weather[Weather.weather_of(d)["id"]] = true
+	_expect(seen_weather.size() >= 4, "la météo varie d'un jour à l'autre")
 	_expect(Conditions.describe({"type": "ability", "id": "int", "min": 5}) == "INT 5+", "description de condition")
 	meta.free()
 	return true
