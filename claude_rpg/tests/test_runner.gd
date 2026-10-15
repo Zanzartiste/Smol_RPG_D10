@@ -107,6 +107,11 @@ func _test_data() -> bool:
 	return true
 
 func _test_character() -> bool:
+	# Quartier de départ selon le passé : le Marin commence au port, l'Ermite dans la forêt.
+	Game.start_life(Character.create("human", "fighter", "Mousse", {"background": "sailor"}), 3)
+	_expect(Game.life.has_flag("district_port") and Game.life.location == "town", "Marin : départ au port")
+	Game.start_life(Character.create("human", "fighter", "Sage", {"background": "hermit"}), 3)
+	_expect(Game.life.has_flag("district_woods") and Game.life.location == "forest", "Ermite : départ en forêt")
 	# Modèle du magicien : 3 partout + 9 points, soit 6/5/5/4/4/3 selon ses priorités. Aucun effet de l'espèce.
 	var c := Character.create("goblin", "wizard", "Grik", {"background": "sage", "gender": "female"})
 	_expect(c.abilities["int"] == 6 and c.abilities["con"] == 5, "modèle du magicien : INT 6, CON 5")

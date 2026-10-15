@@ -253,6 +253,9 @@ static func _validate_backgrounds(db: Node, errors: Array[String]) -> void:
 		if not specs.any(func(c): return c.get("type") == "feat"):
 			errors.append(ctx + " : chaque passé doit proposer un don (choix de type feat)")
 		_validate_choices(db, specs, ctx, errors)
+		var district_ids: Array = db.rules.get("districts", {}).get("list", []).map(func(d): return d["id"])
+		if background.has("start_district") and background["start_district"] not in district_ids:
+			errors.append(ctx + " : quartier de départ inconnu « %s »" % background["start_district"])
 		_validate_skills_and_items(db, background, ctx, errors)
 
 

@@ -22,10 +22,22 @@ func start_life(character: Character, seed_value: int = 0) -> void:
 	life = LifeState.new()
 	life.rng.seed = seed_value if seed_value != 0 else randi()
 	life.character = character
+	_place_in_start_district(life)
 	Social.on_new_life()  # les relations avec le héros repartent de zéro, les souvenirs restent
 	current_event = {}
 	life_changed.emit()
 	Saves.save_all()
+
+
+## Quartier de départ selon le passé (rules.json › districts) : lieu de départ, marqueur district_<id>, annonce.
+static func _place_in_start_district(life: LifeState) -> void:
+	var districts: Dictionary = DB.rules.get("districts", {})
+	var district_id: String = DB.backgrounds.get(life.character.background_id, {}).get("start_district", districts.get("default", ""))
+	for d: Dictionary in districts.get("list", []):
+		if d["id"] == district_id:
+			life.location = d["location"]
+			life.flags["district_" + district_id] = true
+			life.notices.append(Loc.ui("Votre vie commence dans %s.") % d["name"])
 
 
 ## Commence une vie avec un personnage aléatoire (tests, lancement direct de la scène principale).

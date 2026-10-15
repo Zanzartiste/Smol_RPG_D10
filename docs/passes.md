@@ -43,6 +43,10 @@
 - **Description** : le texte affiché à la création.
 ```
 
+- **Quartier de départ** (`start_district`, quartiers dans `rules.json › districts`) : port (Marin, Pirate,
+  Contrebandier), fermes (Fermier, Vagabond, Héros du peuple), temple (Acolyte), cabane en forêt (Ermite), place du
+  marché (les autres). La vie y commence ; le marqueur `district_<id>` permet des événements propres au quartier.
+
 ## Catalogue
 
 Toutes les compétences sont à +1. Statut : disponible, sauf mention contraire.

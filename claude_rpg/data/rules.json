@@ -71,6 +71,17 @@
 		{"id": "afternoon", "name": "Après-midi"}, {"id": "evening", "name": "Soirée"}, {"id": "late", "name": "Coucher"}],
 	"_time_doc": "Six périodes de 4 h (0-4 nuit, 4-8 aube…). Une vie commence à start_slot. Repos court : 1 période, la moitié des PV manquants ; repos long : 2 périodes, tout revient.",
 	"start_slot": 2,
+	"districts": {
+		"_doc": "Quartiers de départ (backgrounds.json › start_district, sinon default) : lieu où commence la vie, et marqueur district_<id> (condition flag).",
+		"default": "market",
+		"list": [
+			{"id": "market", "name": "la place du marché de Brumeval", "location": "town"},
+			{"id": "port", "name": "le port de Brumeval", "location": "town"},
+			{"id": "temple", "name": "le temple de Brumeval", "location": "town"},
+			{"id": "farms", "name": "les fermes autour de Brumeval", "location": "town"},
+			{"id": "woods", "name": "une cabane dans la Forêt des Murmures", "location": "forest"}
+		]
+	},
 	"days_per_year": 365,
 	"majority_age": 18,
 	"common_actions": ["prepare", "hide", "intimidate", "first_aid"],
