@@ -482,7 +482,7 @@ func _breaks(actor: Combatant) -> bool:
 func _pick_action(actor: Combatant, allow_announced: bool) -> Dictionary:
 	var actions := actor.combat_actions().filter(func(a): return (a.get("target") == "none" \
 		or not targets(actor, a.get("target", "enemy")).is_empty()) and actor.unavailable_reason(a) == "" \
-		and (allow_announced or not a.get("announced", false)) and _support_weight(actor, a) != 0.0)
+		and not actor.needs_blood(a) and (allow_announced or not a.get("announced", false)) and _support_weight(actor, a) != 0.0)
 	var total := 0.0
 	for a: Dictionary in actions:
 		total += _support_weight(actor, a)

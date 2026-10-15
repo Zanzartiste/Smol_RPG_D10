@@ -340,6 +340,12 @@ func unavailable_reason(action: Dictionary) -> String:
 	return ""
 
 
+## Le sort demande-t-il de puiser dans les PV (pas assez de mana) ? L'IA ne le fait pas.
+func needs_blood(action: Dictionary) -> bool:
+	return character != null and resource_key(action) == Spellcasting.SLOT_KEY \
+		and int(character.resources.get(Spellcasting.SLOT_KEY, 0)) < resource_amount(action)
+
+
 ## Décompte une utilisation (par combat) et la ressource éventuelle (mana…). Le mana manquant se paie
 ## en PV (jusqu'à 0) : retourne les PV dépensés.
 func consume(action: Dictionary) -> int:
