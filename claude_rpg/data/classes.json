@@ -4,34 +4,26 @@
 		"name": "Guerrier",
 		"description": "Maître des armes et des armures, il règle les problèmes de front.",
 		"ability_priority": ["str", "con", "dex", "wis", "cha", "int"],
-		"skill_ranks": {"weapon_melee": 2, "weapon_ranged": 1, "physique": 1},
-		"skill_priority": ["physique", "weapon_melee", "perception", "survival", "persuasion", "insight", "animal_handling"],
-		"resist_proficiencies": ["str", "con"],
+		"skill_ranks": {"weapon_melee": 2, "weapon_ranged": 2, "weapon_siege": 1, "physique": 2, "determination": 1},
+		"skill_priority": ["physique", "weapon_melee", "perception", "determination", "survival", "persuasion", "insight", "animal_handling"],
 		"choices": [],
 		"equipment": {"main_hand": "longsword", "armor": "chain_mail"},
 		"actions": ["weapon_attack", "second_wind", "defensive_stance", "pommel_strike"],
 		"features": [
-			{"level": 1, "id": "fighting_style", "name": "Style de combat", "description": "Vous choisissez un style de combat (un don de style).",
-				"choices": [{"id": "style", "name": "Style de combat", "type": "feat", "category": "fighting_style", "count": 1, "default": ["defense"]}]},
-			{"level": 2, "id": "action_surge", "name": "Fougue", "description": "Une fois par combat, vous pouvez agir une deuxième fois pendant votre tour.", "actions": ["action_surge"]},
+			{"level": 1, "id": "fighting_style", "name": "Style de combat", "description": "Don de classe : vous choisissez un style de combat, à une main, à mains nues, à deux armes, à deux mains ou à distance.",
+				"choices": [{"id": "style", "name": "Style de combat", "type": "feat", "category": "fighting_style", "count": 1, "default": ["great_weapon_fighting"]}]},
 			{"level": 3, "id": "subclass", "name": "Archétype martial", "description": "Vous choisissez votre archétype martial (sous-classe).",
 				"choices": [{"id": "subclass", "name": "Archétype martial", "type": "option", "count": 1, "default": ["champion"], "options": [
 					{"id": "champion", "name": "Champion", "description": "La force brute et la précision font de vous une machine de guerre.", "features": [
 						{"level": 3, "id": "improved_critical", "name": "Critique amélioré", "description": "Un succès supplémentaire de plus compte pour atteindre un critique.", "modifiers": [{"type": "critical_range", "amount": 1}]},
 						{"level": 3, "id": "remarkable_athlete", "name": "Athlète remarquable", "description": "Deux d10 à l'initiative (le meilleur compte) et un dé de plus aux tests de Physique.", "modifiers": [{"type": "initiative_advantage"}, {"type": "skill_advantage", "id": "physique"}]},
 						{"level": 7, "id": "additional_fighting_style", "name": "Style de combat supplémentaire", "description": "Vous choisissez un second style de combat.",
-							"choices": [{"id": "style", "name": "Style de combat", "type": "feat", "category": "fighting_style", "count": 1, "default": ["dueling"]}]},
+							"choices": [{"id": "style", "name": "Style de combat", "type": "feat", "category": "fighting_style", "count": 1, "default": ["archery"]}]},
 						{"level": 10, "id": "heroic_warrior", "name": "Guerrier héroïque", "description": "Vous puisez dans votre héroïsme (pas encore de mécanique : il faudra le système d'Inspiration héroïque)."},
 						{"level": 15, "id": "superior_critical", "name": "Critique supérieur", "description": "Encore un succès supplémentaire de plus compte pour atteindre un critique.", "modifiers": [{"type": "critical_range", "amount": 1}]},
 						{"level": 18, "id": "survivor", "name": "Survivant", "description": "Au début de votre tour, si vous avez la moitié de vos PV ou moins, vous récupérez la moitié de votre CON en PV (au moins 1).", "modifiers": [{"type": "survivor"}]}
 					]}
-				]}]},
-			{"level": 5, "id": "extra_attack", "name": "Attaque supplémentaire", "description": "L'action Attaque frappe deux fois.", "modifiers": [{"type": "extra_attack", "amount": 1}]},
-			{"level": 9, "id": "indomitable", "name": "Inflexible", "description": "Une fois par repos long, vous relancez automatiquement une résistance ratée.", "resources": {"indomitable": 1}},
-			{"level": 11, "id": "extra_attack_2", "name": "Attaque supplémentaire (2)", "description": "L'action Attaque frappe trois fois.", "modifiers": [{"type": "extra_attack", "amount": 1}]},
-			{"level": 13, "id": "indomitable_2", "name": "Inflexible (2 utilisations)", "description": "Deux relances par repos long.", "resources": {"indomitable": 1}},
-			{"level": 17, "id": "indomitable_3", "name": "Inflexible (3 utilisations)", "description": "Trois relances par repos long.", "resources": {"indomitable": 1}},
-			{"level": 20, "id": "extra_attack_3", "name": "Attaque supplémentaire (3)", "description": "L'action Attaque frappe quatre fois.", "modifiers": [{"type": "extra_attack", "amount": 1}]}
+				]}]}
 		],
 		"start_items": {"potion_heal": 1},
 		"art": {"headgear": "helmet", "outfit": "#6e6e78", "accent": "#9a2f2f"}
@@ -40,10 +32,11 @@
 		"id": "wizard",
 		"name": "Magicien",
 		"description": "Érudit des arcanes, fragile mais redoutable.",
+		"locked": true,
+		"unlock_hint": "Lancer un sort à l'aide d'un parchemin.",
 		"ability_priority": ["int", "con", "dex", "wis", "cha", "str"],
-		"skill_ranks": {"magic": 3, "lore": 1},
-		"skill_priority": ["magic", "lore", "perception", "insight", "medicine", "potions_cooking", "languages"],
-		"resist_proficiencies": ["int", "wis"],
+		"skill_ranks": {"determination": 2, "languages": 2, "lore": 2, "potions_cooking": 1, "medicine": 1},
+		"skill_priority": ["lore", "determination", "perception", "insight", "medicine", "potions_cooking", "languages"],
 		"choices": [
 			{"id": "cantrips", "name": "Tours de magie", "type": "action", "count": 2, "at_creation": true, "multiclass": true,
 				"options": ["fire_bolt", "ray_of_frost"], "default": ["fire_bolt", "ray_of_frost"]},
@@ -53,18 +46,11 @@
 		],
 		"equipment": {"main_hand": "quarterstaff", "armor": "robe"},
 		"spellcasting": "int",
+		"spell_skill": "lore",
 		"spell_slots": "full",
 		"actions": ["weapon_attack"],
 		"features": [
-			{"level": 2, "id": "new_spell_2", "name": "Nouveau sort", "description": "Vous apprenez un sort de votre choix parmi ceux que votre niveau permet de lancer.", "choices": [{"id": "spell", "name": "Nouveau sort", "type": "action", "count": 1, "options": ["fireball", "scorching_ray", "magic_missile", "burning_hands", "sleep", "mage_shield", "find_familiar"]}]},
-			{"level": 3, "id": "new_spell_3", "name": "Nouveau sort", "description": "Vous apprenez un sort de votre choix parmi ceux que votre niveau permet de lancer.", "choices": [{"id": "spell", "name": "Nouveau sort", "type": "action", "count": 1, "options": ["fireball", "scorching_ray", "magic_missile", "burning_hands", "sleep", "mage_shield", "find_familiar"]}]},
-			{"level": 4, "id": "new_spell_4", "name": "Nouveau sort", "description": "Vous apprenez un sort de votre choix parmi ceux que votre niveau permet de lancer.", "choices": [{"id": "spell", "name": "Nouveau sort", "type": "action", "count": 1, "options": ["fireball", "scorching_ray", "magic_missile", "burning_hands", "sleep", "mage_shield", "find_familiar"]}]},
-			{"level": 5, "id": "new_spell_5", "name": "Nouveau sort", "description": "Vous apprenez un sort de votre choix parmi ceux que votre niveau permet de lancer.", "choices": [{"id": "spell", "name": "Nouveau sort", "type": "action", "count": 1, "options": ["fireball", "scorching_ray", "magic_missile", "burning_hands", "sleep", "mage_shield", "find_familiar"]}]},
-			{"level": 6, "id": "new_spell_6", "name": "Nouveau sort", "description": "Vous apprenez un sort de votre choix parmi ceux que votre niveau permet de lancer.", "choices": [{"id": "spell", "name": "Nouveau sort", "type": "action", "count": 1, "options": ["fireball", "scorching_ray", "magic_missile", "burning_hands", "sleep", "mage_shield", "find_familiar"]}]},
-			{"level": 7, "id": "new_spell_7", "name": "Nouveau sort", "description": "Vous apprenez un sort de votre choix parmi ceux que votre niveau permet de lancer.", "choices": [{"id": "spell", "name": "Nouveau sort", "type": "action", "count": 1, "options": ["fireball", "scorching_ray", "magic_missile", "burning_hands", "sleep", "mage_shield", "find_familiar"]}]},
-			{"level": 8, "id": "new_spell_8", "name": "Nouveau sort", "description": "Vous apprenez un sort de votre choix parmi ceux que votre niveau permet de lancer.", "choices": [{"id": "spell", "name": "Nouveau sort", "type": "action", "count": 1, "options": ["fireball", "scorching_ray", "magic_missile", "burning_hands", "sleep", "mage_shield", "find_familiar"]}]},
-			{"level": 9, "id": "new_spell_9", "name": "Nouveau sort", "description": "Vous apprenez un sort de votre choix parmi ceux que votre niveau permet de lancer.", "choices": [{"id": "spell", "name": "Nouveau sort", "type": "action", "count": 1, "options": ["fireball", "scorching_ray", "magic_missile", "burning_hands", "sleep", "mage_shield", "find_familiar"]}]},
-			{"level": 10, "id": "new_spell_10", "name": "Nouveau sort", "description": "Vous apprenez un sort de votre choix parmi ceux que votre niveau permet de lancer.", "choices": [{"id": "spell", "name": "Nouveau sort", "type": "action", "count": 1, "options": ["fireball", "scorching_ray", "magic_missile", "burning_hands", "sleep", "mage_shield", "find_familiar"]}]},
+			{"level": 1, "id": "arcane_spells", "name": "Sorts arcaniques", "description": "Don de classe : vous lancez des sorts en puisant dans vos connaissances ésotériques de la magie. Ils utilisent la compétence Érudition (INT)."},
 			{"level": 3, "id": "subclass", "name": "Tradition arcanique", "description": "Vous choisissez votre tradition arcanique (sous-classe).",
 				"choices": [{"id": "subclass", "name": "Tradition arcanique", "type": "option", "count": 1, "default": ["evoker"], "options": [
 					{"id": "evoker", "name": "Évocateur", "description": "Vous façonnez les énergies destructrices : feu, froid, foudre et force pure.", "features": [
@@ -84,22 +70,14 @@
 		"id": "rogue",
 		"name": "Roublard",
 		"description": "Discret, agile et beau parleur. Les serrures n'ont pas de secret pour lui.",
-		"locked": true,
-		"unlock_hint": "Réussir un larcin audacieux à Brumeval.",
-		"unlock_cost": 10,
 		"ability_priority": ["dex", "con", "cha", "wis", "int", "str"],
-		"skill_ranks": {"stealth": 2, "weapon_melee": 1, "weapon_ranged": 1},
-		"skill_priority": ["stealth", "sleight_of_hand", "perception", "persuasion", "insight", "physique", "languages"],
-		"resist_proficiencies": ["dex", "int"],
+		"skill_ranks": {"persuasion": 2, "sleight_of_hand": 2, "stealth": 2, "perception": 2},
+		"skill_priority": ["stealth", "weapon_melee", "sleight_of_hand", "perception", "persuasion", "insight", "physique", "languages"],
 		"choices": [],
 		"equipment": {"main_hand": "rapier", "armor": "leather"},
-		"actions": ["weapon_attack", "sneak_attack", "poisoned_blade"],
+		"actions": ["weapon_attack", "poisoned_blade"],
 		"features": [
-			{"level": 1, "id": "expertise", "name": "Expertise", "description": "+1 rang dans deux compétences déjà entraînées.",
-				"choices": [{"id": "skills", "name": "Expertise", "type": "skill", "count": 2, "from": "trained",
-					"modifiers": [{"type": "skill_rank", "id": "$", "amount": 1}], "default": ["stealth", "sleight_of_hand"]}]},
-			{"level": 2, "id": "cunning_action", "name": "Ruse", "description": "Se cacher devient une action bonus.", "modifiers": [{"type": "cunning_action"}]},
-			{"level": 3, "id": "sneak_attack_2", "name": "Attaque sournoise (+2 dés)", "description": "L'Attaque sournoise gagne un dé de dégâts tous les deux niveaux (2 au niveau 3, 3 au niveau 5…)."},
+			{"level": 1, "id": "precise_attacks", "name": "Attaques précises", "description": "Don de classe : vos attaques critiques infligent 3 dés de dégâts supplémentaires.", "modifiers": [{"type": "critical_damage_dice", "amount": 3}]},
 			{"level": 3, "id": "subclass", "name": "Archétype de roublard", "description": "Vous choisissez votre archétype (sous-classe).",
 				"choices": [{"id": "subclass", "name": "Archétype de roublard", "type": "option", "count": 1, "default": ["thief"], "options": [
 					{"id": "thief", "name": "Voleur", "description": "Cambrioleur, pickpocket et chasseur de trésors.", "features": [
@@ -109,15 +87,25 @@
 						{"level": 13, "id": "use_magic_device", "name": "Utilisation d'objets magiques", "description": "Vous savez vous servir de n'importe quel objet magique (pas encore de mécanique)."},
 						{"level": 17, "id": "thiefs_reflexes", "name": "Réflexes de voleur", "description": "Vous agissez deux fois au premier round (pas encore de mécanique)."}
 					]}
-				]}]},
-			{"level": 5, "id": "uncanny_dodge", "name": "Esquive instinctive", "description": "Une fois par round, les dégâts d'une attaque qui vous touche sont divisés par deux.", "modifiers": [{"type": "uncanny_dodge"}]},
-			{"level": 6, "id": "expertise_2", "name": "Expertise (2)", "description": "+1 rang dans deux autres compétences déjà entraînées.",
-				"choices": [{"id": "skills", "name": "Expertise", "type": "skill", "count": 2, "from": "trained",
-					"modifiers": [{"type": "skill_rank", "id": "$", "amount": 1}], "default": ["physique", "perception"]}]},
-			{"level": 7, "id": "evasion", "name": "Dérobade", "description": "Quand vous résistez à des dégâts avec la Dextérité, chaque succès en retire deux.", "modifiers": [{"type": "evasion"}]},
-			{"level": 11, "id": "reliable_talent", "name": "Talent fiable", "description": "Un test d'une compétence entraînée a toujours au moins un succès.", "modifiers": [{"type": "reliable_talent"}]}
+				]}]}
 		],
 		"start_items": {},
 		"art": {"headgear": "hood", "outfit": "#3a4a2e", "accent": "#6b4a2a"}
+	},
+	{
+		"id": "barbarian",
+		"name": "Barbare",
+		"description": "Guerrier des terres sauvages, il puise dans sa fureur une force terrifiante.",
+		"ability_priority": ["str", "con", "dex", "wis", "cha", "int"],
+		"skill_ranks": {"weapon_melee": 2, "physique": 2, "perception": 1, "survival": 2, "animal_handling": 1},
+		"skill_priority": ["weapon_melee", "physique", "survival", "perception", "animal_handling", "determination", "insight"],
+		"choices": [],
+		"equipment": {"main_hand": "greataxe", "armor": "hide"},
+		"actions": ["weapon_attack"],
+		"features": [
+			{"level": 1, "id": "rage", "name": "Rage", "description": "Don de classe : action gratuite, jusqu'au début de votre prochain tour. Vous ne pouvez plus qu'attaquer au corps à corps, et les succès des jets d'attaque que vous faites et que vous subissez sont doublés.", "actions": ["rage"]}
+		],
+		"start_items": {"potion_heal": 1},
+		"art": {"headgear": "", "outfit": "#7a5a3a", "accent": "#b03a2a"}
 	}
 ]

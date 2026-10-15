@@ -2,40 +2,46 @@
 
 > Document de conception : c'est ici qu'on décrit les classes (existantes et à venir) avant de les saisir dans
 > `claude_rpg/data/classes.json` et `actions.json`. Les champs techniques sont détaillés dans
-> [modele_donnees.md](modele_donnees.md).
+> [modele_donnees.md](modele_donnees.md). La conception et la progression des classes suivent le tableur
+> [Classes.ods](Classes.ods) (feuille 1 : progression ; feuille 2 : compétences initiales).
 
 ## Règles générales
 
-- Niveaux 1 à 20. La progression suit pour l'instant le **SRD 5.1** : emplacements de sorts, aptitudes, bonus de
-  maîtrise.
-- Améliorations aux niveaux 4, 8, 12, 16 et 20 : +1 à un attribut **et** un don (`rules.json › advancement`).
-- Chaque classe maîtrise **deux résistances** (ex-jets de sauvegarde) : un dé de plus pour résister avec ces
-  attributs (voir [systeme_de_jeu.md](systeme_de_jeu.md)).
-- **Compétences** : les rangs remplacent le bonus de maîtrise (voir [competences.md](competences.md)).
+- Niveaux 1 à 20.
+- **Progression commune à toutes les classes** (tableur, feuille 1) :
+  - Niveau 1 : le **don de classe**, qui définit la classe (voir [dons.md](dons.md)).
+  - Tous les deux niveaux (2, 4, 6… 20) : +1 rang dans une compétence au choix (`rules.json › skill_points`), un
+    rang au plus par compétence et par niveau.
+  - Niveau 3 : la sous-classe.
+  - Niveaux 6, 9, 12 et 16 : une aptitude de sous-classe.
+  - Niveaux 5, 10, 15 et 20 : +1 à un attribut (`rules.json › advancement › ability_levels`).
+  - **Dons de niveau** : il y en aura, à placer dans la courbe de progression (`advancement › feat_levels`, vide
+    pour l'instant).
+- **Pas de maîtrise de résistance** : résister est un simple test de compétence (voir
+  [systeme_de_jeu.md](systeme_de_jeu.md)).
+- **Compétences** : la classe donne **8 rangs** à la création (tableur, feuille 2), en plus du rang de départ, des
+  4 rangs du passé et des 8 rangs libres ; aucune compétence ne dépasse 5 à la création (voir
+  [competences.md](competences.md)).
+- **Ancienne progression du SRD** (Fougue, Attaque supplémentaire, Inflexible, Attaque sournoise, Ruse, Esquive
+  instinctive, Expertise, Dérobade, Talent fiable, sorts appris par niveau) : retirée des classes ; gardée comme
+  idées de dons (voir [dons.md](dons.md)).
+- **Statut** : une classe est disponible, ou à débloquer par un succès en jeu (pas de coût en Creator Points).
 - **Multiclassage** (implémenté, libre) : à chaque niveau gagné, on choisit au hub la classe qui progresse. Les
   aptitudes et les améliorations se comptent par niveau de classe ; les emplacements de sort se cumulent (lanceurs
-  complets + demi-lanceurs ÷ 2) ; les sauvegardes et les compétences de classe restent celles de la classe de
-  départ.
-- **Points de vie** : ils ne dépendent plus de la classe (le dé de vie n'est plus utilisé) : Constitution ×
-  1,414^taille.
-- **Économie d'actions** : une action et une action bonus par tour (Second souffle, Se cacher avec la Ruse) ; les
-  actions gardées deviennent des réactions (esquive, parade).
-- **Classes à venir, dans l'ordre** : Barde, Rôdeur, Clerc, Druide, Artificier. Le système de magie (sorts appris)
-  reste à définir.
-- **Armures** : aucune restriction par classe ; toute armure peut être portée. Chaque type a une Force conseillée
-  (vêtements 0, légère 10, intermédiaire 12, lourde 14) : en dessous, le personnage est encombré et subit des malus
-  (à définir).
-- Une classe **n'impose aucun métier**, mais certaines s'y prêtent mieux (bonus ou actions spéciales dans les
-  sous-systèmes d'artisanat, de cuisine…).
-- ⚠️ Licence : les classes du SRD 5.1 sont réutilisables (CC-BY 4.0). Les autres (Artificier, Alchimiste…) doivent
-  être **conçues par nous**, sans recopier un livre hors SRD.
-- **Sous-classes** : choisies entre les niveaux 1 et 3 selon la classe ; pour l'instant au niveau 3, une par classe
-  (celles du SRD 5.2). Le choix s'ouvre au hub.
-- **Compétences de classe** : le joueur les choisit à la création dans la liste de sa classe, comme dans D&D.
+  complets + demi-lanceurs ÷ 2) ; les rangs de compétence de classe sont ceux de la classe qui en donne le plus.
+- **Points de vie** : ils ne dépendent pas de la classe : (taille + 2) × Constitution + 7.
+- **Économie d'actions** : deux actions par tour ; certaines actions sont gratuites (Rage, Fougue, Se cacher avec la
+  Ruse) ; les actions gardées deviennent des réactions (esquive, parade, contre-attaque, contresort).
+- **Armures** : aucune restriction par classe ; toute armure peut être portée. Sous la Force conseillée, le
+  personnage est encombré.
+- **Sous-classes** : au niveau 3, une par classe implémentée pour l'instant. Le choix s'ouvre au hub.
 - **Choix d'aptitude** (Style de combat, Expertise…) : proposés au hub dès qu'on les obtient. Les compagnons
   arrivent avec leurs choix déjà faits.
-- **Pas encore géré** : actions bonus, réactions autres que l'Esquive instinctive, repos courts, choix des sorts
-  appris (ils sont donnés par les aptitudes), maîtrises d'armes.
+- **Lanceurs de sorts** : chaque famille de magie a sa compétence d'incantation, qui remplace l'ancienne compétence
+  Magie : arcanique → Érudition (INT), divine → Détermination (SAG), primale → Nature (SAG), artistique → Arts
+  (CHA ou DEX).
+- **Équipement de départ** : plus tard, il sera acheté dans une boutique à la création ; en attendant, chaque classe
+  a un équipement fixe.
 
 ---
 
@@ -45,22 +51,17 @@
 ### <Nom> (`<id>`)
 
 - **Concept** : une phrase.
-- **Statut** : disponible / à débloquer (indice, coût en Creator Points).
-- **Dé de vie** : plus utilisé (les PV viennent de la Constitution et de la taille).
-- **Priorité des attributs** (modèle d'achat de points) : ex. FOR > CON > DEX > SAG > CHA > INT.
-- **Résistances maîtrisées** : deux attributs.
-- **Compétences maîtrisées** : …
-- **Équipement de départ** : arme, armure, objets.
-- **Lanceur de sorts** : non / complet / demi — attribut d'incantation.
+- **Statut** : disponible / à débloquer (succès à réussir).
+- **Priorité des attributs** (modèle de répartition) : ex. FOR > CON > DEX > SAG > CHA > INT.
+- **Compétences** : Physique +2, Armes de mêlée +2… (8 rangs au total).
+- **Lanceur de sorts** : non / complet / demi — compétence d'incantation.
 - **Actions de départ** : …
-- **Métiers favorisés** : (facultatif) forge, alchimie, cuisine, commerce…
 
 **Progression**
 
-- Niveau 1 : …
-- Niveau 2 : …
-- Niveau 3 : …
-- (une ligne par niveau qui apporte quelque chose)
+- Niveau 1 : don de classe …
+- Niveau 3 : sous-classe …
+- Niveaux 6, 9, 12, 16 : aptitudes de sous-classe …
 
 **Sous-classes** : …
 
@@ -75,96 +76,44 @@
 
 - **Concept** : maître des armes et des armures, il règle les problèmes de front.
 - **Statut** : disponible.
-- **Dé de vie** : plus utilisé.
 - **Priorité des attributs** : FOR > CON > DEX > SAG > CHA > INT.
-- **Résistances maîtrisées** : Force, Constitution.
-- **Compétences** : +1 rang dans 2 compétences au choix parmi Physique, Dressage, Érudition, Perspicacité,
-  Persuasion, Perception, Survie ; +1 rang en Armes de mêlée et en Armes de trait.
-- **Équipement de départ** : épée longue, cotte de mailles, une potion de soins.
+- **Compétences** : Armes de mêlée +2, Armes de trait +2, Physique +2, Machines de guerre +1, Détermination +1.
+- **Équipement (provisoire)** : épée longue, cotte de mailles, une potion de soins.
 - **Lanceur de sorts** : non.
 - **Actions de départ** : Attaque, Second souffle, Posture défensive, Coup de pommeau.
 
-**Progression** (implémentée)
+**Progression**
 
-- Niveau 1 : Style de combat (un don de style au choix : Archerie, Défense, Armes à deux mains, Duel).
-- Niveau 2 : Fougue (une action de plus, une fois par combat).
-- Niveau 3 : Archétype martial (sous-classe).
-- Niveau 5 : Attaque supplémentaire (deux coups par action Attaque).
-- Niveau 9 : Inflexible (relance automatique d'une résistance ratée, une fois par repos long).
-- Niveau 11 : Attaque supplémentaire (trois coups).
-- Niveau 13 : Inflexible (deux utilisations).
-- Niveau 17 : Inflexible (trois utilisations).
-- Niveau 20 : Attaque supplémentaire (quatre coups).
+- Niveau 1 : **Style de combat** (don de classe) : un don de style au choix, à une main, à mains nues, à deux armes,
+  à deux mains ou à distance.
+- Niveau 3 : sous-classe (à concevoir : le tableur ne propose rien encore ; pour l'instant, le Champion).
 
-**Sous-classe : Champion** (SRD 5.2, implémentée)
+**Sous-classe : Champion** (SRD 5.2, provisoire)
 
-- Niveau 3 : Critique amélioré (un succès supplémentaire compté en plus pour le critique) ; Athlète remarquable
-  (deux d10 à l'initiative, un dé de plus en Physique).
+- Niveau 3 : Critique amélioré (un succès de moins pour le critique) ; Athlète remarquable (deux d10 à
+  l'initiative, un dé de plus en Physique).
 - Niveau 7 : Style de combat supplémentaire.
 - Niveau 10 : Guerrier héroïque (pas encore de mécanique).
-- Niveau 15 : Critique supérieur (critique sur 18-20).
-- Niveau 18 : Survivant (début de tour à moitié de PV ou moins : récupère 5 + CON PV).
-
-### Magicien (`wizard`)
-
-- **Concept** : érudit des arcanes, fragile mais redoutable.
-- **Statut** : disponible.
-- **Dé de vie** : plus utilisé.
-- **Priorité des attributs** : INT > CON > DEX > SAG > CHA > FOR.
-- **Résistances maîtrisées** : Intelligence, Sagesse.
-- **Compétences** : +1 rang dans 2 compétences au choix parmi Érudition, Perspicacité, Perception, Médecine,
-  Langues, Potions et cuisine ; Magie au rang 2 (lanceur de sorts).
-- **Équipement de départ** : bâton, robe d'érudit (vêtement).
-- **Lanceur de sorts** : complet, Intelligence.
-- **Actions de départ** :
-  - tours de magie : Trait de feu, Rayon de givre ;
-  - sorts du 1er niveau : Projectile magique, Mains brûlantes, Sommeil, Bouclier, Appel du familier.
-
-**Progression** (implémentée)
-
-- Emplacements de sort : table du lanceur complet (voir plus bas).
-- Niveau 3 : Rayons ardents (sort du 2e niveau) ; Tradition arcanique (sous-classe).
-- Niveau 5 : Boule de feu (sort du 3e niveau), et tours de magie à deux dés.
-- Niveau 11 : tours de magie à trois dés.
-- Niveau 17 : tours de magie à quatre dés.
-
-**Sous-classe : Évocateur** (SRD 5.2, implémentée)
-
-- Niveau 3 : Tour de magie puissant (un tour de magie raté inflige quand même la moitié des dégâts) ; Savant de
-  l'évocation (pas encore de mécanique).
-- Niveau 6 : Sculpture des sorts (déjà le cas : les sorts de zone épargnent les alliés).
-- Niveau 10 : Évocation renforcée (+ INT aux dégâts des sorts d'évocation).
-- Niveau 14 : Surcharge (pas encore de mécanique).
-
-**À venir (SRD)** : Restauration arcanique (demande les repos courts), sorts des niveaux 4 à 9, choix des sorts
-appris.
+- Niveau 15 : Critique supérieur.
+- Niveau 18 : Survivant (début de tour à moitié de PV ou moins : récupère la moitié de sa CON en PV).
 
 ### Roublard (`rogue`)
 
 - **Concept** : discret, agile et beau parleur. Les serrures n'ont pas de secret pour lui.
-- **Statut** : à débloquer (« Réussir un larcin audacieux à Brumeval », ou 10 Creator Points).
-- **Dé de vie** : plus utilisé.
+- **Statut** : disponible.
 - **Priorité des attributs** : DEX > CON > CHA > SAG > INT > FOR.
-- **Résistances maîtrisées** : Dextérité, Intelligence.
-- **Compétences** : +1 rang dans 4 compétences au choix parmi Physique, Persuasion, Perspicacité, Perception,
-  Escamotage, Furtivité, Langues ; +1 rang en Armes de mêlée et en Armes de trait.
-- **Équipement de départ** : rapière, armure de cuir (Force 10 conseillée : avec le modèle de la classe, FOR 8, il est
-  encombré).
+- **Compétences** : Persuasion +2, Escamotage +2, Furtivité +2, Perception +2.
+- **Équipement (provisoire)** : rapière, armure de cuir.
 - **Lanceur de sorts** : non.
-- **Actions de départ** : Attaque, Attaque sournoise, Lame empoisonnée.
+- **Actions de départ** : Attaque, Lame empoisonnée.
 
-**Progression** (implémentée)
+**Progression**
 
-- Niveau 1 : Expertise : +1 rang dans deux compétences déjà entraînées ; Attaque sournoise (+1 dé de dégâts).
-- Niveau 2 : Ruse (Se cacher devient une action bonus).
-- Niveau 3 : Archétype de roublard (sous-classe).
-- Niveaux 3, 5, 7… 19 : l'Attaque sournoise gagne un dé de dégâts (10 au niveau 19).
-- Niveau 5 : Esquive instinctive (une attaque par round divisée par deux).
-- Niveau 6 : Expertise : +1 rang dans deux autres compétences entraînées.
-- Niveau 7 : Dérobade (en résistant à des dégâts avec la DEX, chaque succès retire deux points).
-- Niveau 11 : Talent fiable (toujours au moins un succès avec une compétence entraînée).
+- Niveau 1 : **Attaques précises** (don de classe) : vos attaques critiques infligent 3 dés de dégâts
+  supplémentaires.
+- Niveau 3 : sous-classe. Pistes du tableur : Assassin, Éclaireur, Voleur, Duelliste ? Implémentée : Voleur.
 
-**Sous-classe : Voleur** (SRD 5.2, implémentée)
+**Sous-classe : Voleur** (SRD 5.2)
 
 - Niveau 3 : Mains lestes (une fois par tour, utiliser un objet ne coûte pas l'action) ; Monte-en-l'air (+1 rang en
   Physique).
@@ -172,13 +121,121 @@ appris.
 - Niveau 13 : Utilisation d'objets magiques (pas encore de mécanique).
 - Niveau 17 : Réflexes de voleur (pas encore de mécanique).
 
-**À venir (SRD)** : Coup de chance au niveau 20.
+### Barbare (`barbarian`)
+
+- **Concept** : guerrier des terres sauvages, il puise dans sa fureur une force terrifiante.
+- **Statut** : disponible.
+- **Priorité des attributs** : FOR > CON > DEX > SAG > CHA > INT.
+- **Compétences** : Armes de mêlée +2, Physique +2, Nature +2, Perception +1, Dressage +1.
+- **Équipement (provisoire)** : hache à deux mains, armure de peaux, une potion de soins.
+- **Lanceur de sorts** : non.
+- **Actions de départ** : Attaque, Rage.
+
+**Progression**
+
+- Niveau 1 : **Rage** (don de classe) : action gratuite, jusqu'au début de votre prochain tour. Vous ne pouvez plus
+  qu'attaquer au corps à corps, et les succès des jets d'attaque que vous faites **et** que vous subissez sont
+  doublés.
+- Niveau 3 : sous-classe (pistes : Berserker, Bête, « Lanceur »).
+
+### Magicien (`wizard`)
+
+- **Concept** : érudit des arcanes, fragile mais redoutable.
+- **Statut** : à débloquer : « Lancer un sort à l'aide d'un parchemin » (parchemins vendus à l'herboristerie de
+  Brumeval ; lus avec la compétence Langues).
+- **Priorité des attributs** : INT > CON > DEX > SAG > CHA > FOR.
+- **Compétences** : Détermination +2, Langues +2, Érudition +2, Alchimie +1, Médecine +1.
+- **Équipement (provisoire)** : bâton, robe d'érudit.
+- **Lanceur de sorts** : complet, Intelligence ; compétence d'incantation : Érudition.
+- **Actions de départ** :
+  - tours de magie : Trait de feu, Rayon de givre ;
+  - sorts du 1er niveau : Projectile magique, Mains brûlantes, Sommeil, Bouclier, Appel du familier.
+
+**Progression**
+
+- Niveau 1 : **Sorts arcaniques** (don de classe) : vous lancez des sorts en puisant dans vos connaissances
+  ésotériques de la magie ; ils utilisent la compétence Érudition (INT).
+- Niveau 3 : sous-classe : une par catégorie de sorts (Nécromancien…). Implémentée : Évocateur.
+- Emplacements de sort du lanceur complet ; tours de magie renforcés (niveaux 5, 11 et 17). Plus de sort appris
+  par niveau pour l'instant (Rayons ardents et Boule de feu ne s'apprennent plus).
+
+**Sous-classe : Évocateur** (SRD 5.2)
+
+- Niveau 3 : Tour de magie puissant (un tour de magie raté inflige quand même la moitié des dégâts) ; Savant de
+  l'évocation (pas encore de mécanique).
+- Niveau 6 : Sculpture des sorts (déjà le cas : les sorts de zone épargnent les alliés).
+- Niveau 10 : Évocation renforcée (un dé de plus aux sorts d'évocation).
+- Niveau 14 : Surcharge (pas encore de mécanique).
+
+---
+
+## Classes prévues (tableur, à débloquer)
+
+Les déblocages sont à définir. Les compétences sont les 8 rangs de la feuille 2.
+
+### Rôdeur
+
+- **Compétences** : Furtivité +2, Perception +2, Nature +2, Armes de trait +1, Physique +1.
+- **Don de classe** : **Traque** : vous choisissez un ennemi ; tant que vous le traquez, tous vos jets qui le
+  concernent ont un bonus de +1 (attaque…).
+- **Sous-classes envisagées** : Maître des bêtes, Lanceur de sorts ?, Pisteur furtif, Chasseur classique, Gardien de
+  l'essaim.
+
+### Druide
+
+- **Compétences** : Alchimie +2, Nature +2, Dressage +2, Persuasion +1, Médecine +1.
+- **Don de classe** : **Sorts de druide** : vous lancez des sorts en puisant dans les pouvoirs de la nature ; ils
+  utilisent la compétence Nature (SAG).
+- **Sous-classes envisagées** : Invocateur, Métamorphe, Sorts de nature, Feu sauvage ?, Champignons.
+
+### Clerc
+
+- **Compétences** : Détermination +2, Perspicacité +2, Érudition +2, Médecine +2.
+- **Don de classe** : **Sorts divins** : vous lancez des sorts en puisant dans les pouvoirs d'une divinité ou d'un
+  domaine divin choisi ; ils utilisent la compétence Détermination (SAG).
+- **Sous-classes envisagées** : divers dieux, divers domaines.
+
+### Barde
+
+- **Compétences** : Détermination +2, Persuasion +2, Perspicacité +2, Arts +2.
+- **Don de classe** : **Représentations bardiques** : vous lancez des sorts en puisant dans vos talents
+  artistiques ; ils utilisent la compétence Arts (CHA ou DEX).
+- **Sous-classes envisagées** : Danseur (proche du moine), Savoir et sorts, Guerrier, « Barde des bardes ».
+
+### Parangon
+
+- **Compétences** : Armes de mêlée +2, Persuasion +2, Perspicacité +2, Érudition +1, Arts +1.
+- **Don de classe** : à définir.
+
+### Paysan
+
+- **Compétences** : Physique +2, Nature +2, Dressage +2, Artisanat +1, Alchimie +1.
+- **Don de classe** : à définir.
+
+### Pistolier
+
+- **Compétences** : Armes à poudre +2, Furtivité +2, Perception +2, Machines de guerre +1, Escamotage +1.
+- **Don de classe** : à définir.
+
+### Artificier
+
+- **Compétences** : Érudition +2, Artisanat +2, Alchimie +2, Machines de guerre +1, Escamotage +1.
+- **Don de classe** : à définir.
+
+### Moine
+
+- **Compétences** : Physique +2, Perspicacité +2, Furtivité +1, Perception +1, Érudition +1, Médecine +1.
+- **Don de classe** : à définir.
+
+### Autres idées (hors tableur)
+
+- Paladin, Ensorceleur, Occultiste, Alchimiste : à reprendre ou à abandonner.
 
 ---
 
 ## Emplacements de sort (SRD 5.1)
 
-Lanceur complet (Magicien, et plus tard Clerc, Druide, Barde, Ensorceleur), emplacements par niveau de sort :
+Lanceur complet (Magicien), emplacements par niveau de sort :
 
 - Niveau 1 : 2 du 1er
 - Niveau 2 : 3 du 1er
@@ -198,75 +255,5 @@ Lanceur complet (Magicien, et plus tard Clerc, Druide, Barde, Ensorceleur), empl
 - Niveau 19 : 4 / 3 / 3 / 3 / 3 / 2 / 1 / 1 / 1
 - Niveau 20 : 4 / 3 / 3 / 3 / 3 / 2 / 2 / 1 / 1
 
-Demi-lanceur (Paladin, Rôdeur) : rien au niveau 1, puis 2 du 1er au niveau 2, et ainsi de suite jusqu'au 5e niveau
-de sort. La table complète est dans `rules.json › spell_slots › half`.
-
----
-
-## Classes candidates (à compléter)
-
-### Clerc (SRD)
-
-- **Rôle envisagé** : soins, protection, magie divine.
-- **Métiers favorisés** : médecine, temple.
-- **Priorité** : ?
-
-### Rôdeur (SRD)
-
-- **Rôle envisagé** : combat à distance, nature, pistage ; demi-lanceur.
-- **Métiers favorisés** : chasse, guide.
-- **Priorité** : ?
-
-### Barbare (SRD)
-
-- **Rôle envisagé** : encaisser les coups, rage.
-- **Métiers favorisés** : —
-- **Priorité** : ?
-
-### Barde (SRD)
-
-- **Rôle envisagé** : soutien, social, magie.
-- **Métiers favorisés** : spectacle, commerce.
-- **Priorité** : ?
-
-### Druide (SRD)
-
-- **Rôle envisagé** : nature, métamorphose.
-- **Métiers favorisés** : herboristerie.
-- **Priorité** : ?
-
-### Moine (SRD)
-
-- **Rôle envisagé** : combat à mains nues, mobilité.
-- **Métiers favorisés** : —
-- **Priorité** : ?
-
-### Paladin (SRD)
-
-- **Rôle envisagé** : combattant sacré ; demi-lanceur.
-- **Métiers favorisés** : —
-- **Priorité** : ?
-
-### Ensorceleur (SRD)
-
-- **Rôle envisagé** : magie innée.
-- **Métiers favorisés** : —
-- **Priorité** : ?
-
-### Occultiste (SRD)
-
-- **Rôle envisagé** : pacte avec une entité, peu de sorts mais rechargés souvent.
-- **Métiers favorisés** : —
-- **Priorité** : ?
-
-### Artificier (à concevoir)
-
-- **Rôle envisagé** : inventions, objets, tourelles.
-- **Métiers favorisés** : forge, artisanat.
-- **Priorité** : ?
-
-### Alchimiste (à concevoir)
-
-- **Rôle envisagé** : potions, bombes, mutagènes.
-- **Métiers favorisés** : alchimie, cuisine.
-- **Priorité** : ?
+Demi-lanceur : rien au niveau 1, puis 2 du 1er au niveau 2, et ainsi de suite jusqu'au 5e niveau de sort. La table
+complète est dans `rules.json › spell_slots › half`.

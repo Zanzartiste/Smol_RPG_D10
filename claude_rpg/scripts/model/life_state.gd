@@ -181,11 +181,11 @@ func refresh_load() -> void:
 
 
 ## Équipe un membre du groupe avec un objet du sac ; les objets retirés retournent dans le sac.
-func equip(member: Character, item_id: String) -> bool:
+func equip(member: Character, item_id: String, slot := "") -> bool:
 	if not Items.is_equipment(item_id) or character.item_count(item_id) <= 0:
 		return false
 	character.remove_item(item_id)
-	for removed in member.equip(item_id):
+	for removed in member.equip(item_id, slot):
 		if removed != Equipment.UNARMED:
 			character.add_item(removed)
 	refresh_load()

@@ -296,8 +296,9 @@ func _on_pending_chosen(member: Character, key: String, value: String) -> void:
 
 func _show_ability_choice(member: Character) -> void:
 	title_label.text = tr("Amélioration — %s") % member.name
-	body_text.text = tr("%s a atteint le niveau %d : choisissez l'attribut à augmenter de 1 (maximum %d).") % [
-		member.name, member.level, Progression.max_ability_score()]
+	body_text.text = tr("%s a atteint le niveau %d : choisissez l'attribut à augmenter de 1.") % [member.name, member.level]
+	if Progression.max_ability_score() > 0:
+		body_text.text += " " + tr("(maximum %d)") % Progression.max_ability_score()
 	_clear_choices()
 	for id in Abilities.ids():
 		var score := int(member.abilities[id])

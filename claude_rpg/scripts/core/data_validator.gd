@@ -29,9 +29,10 @@ static func _validate_rules(db: Node, errors: Array[String]) -> void:
 	if db.rules.get("standard_array", []).size() != db.abilities.size():
 		errors.append("rules.json : standard_array doit avoir une valeur par attribut")
 	var xp_table: Array = db.rules.get("xp_by_level", [])
-	for level in db.rules.get("advancement_levels", []):
-		if int(level) < 2 or int(level) > xp_table.size():
-			errors.append("rules.json : niveau d'amélioration hors limites : %s" % level)
+	for key in ["ability_levels", "feat_levels"]:
+		for level in db.rules.get("advancement", {}).get(key, []):
+			if int(level) < 2 or int(level) > xp_table.size():
+				errors.append("rules.json : niveau d'amélioration hors limites (advancement › %s) : %s" % [key, level])
 	var cp: Dictionary = db.rules.get("creator_points", {})
 	for upgrade: Dictionary in cp.get("upgrades", []):
 		var ctx := "rules.json › creator_points › %s" % upgrade.get("id", "?")
@@ -195,13 +196,13 @@ static func _validate_classes(db: Node, errors: Array[String]) -> void:
 				errors.append(ctx + " : emplacement inconnu « %s » (attendu %s)" % [slot, Equipment.SLOTS])
 			elif not db.equipment.has(equipment[slot]):
 				errors.append(ctx + " : équipement inconnu « %s »" % equipment[slot])
-			elif slot not in Equipment.slots_for(equipment[slot]):
+			elif slot not in Equipment.slots_for(equipment[slot]) and not (slot == "off_hand" and Equipment.is_weapon(equipment[slot])):
 				errors.append(ctx + " : « %s » ne va pas dans l'emplacement « %s »" % [equipment[slot], slot])
 		_validate_choices(db, cls.get("choices", []), ctx, errors)
 		for skill_id: String in cls.get("skill_ranks", {}):
 			_expect_ref(db.skills, skill_id, "compétence (skill_ranks)", ctx, errors)
-		for ability_id in cls.get("resist_proficiencies", []):
-			_expect_ref(db.abilities, ability_id, "attribut (resist_proficiencies)", ctx, errors)
+		if cls.has("spell_skill"):
+			_expect_ref(db.skills, cls["spell_skill"], "compétence d'incantation (spell_skill)", ctx, errors)
 		if cls.has("spell_slots") and cls["spell_slots"] not in Spellcasting.progressions():
 			errors.append(ctx + " : spell_slots « %s » inconnu (rules.json › spell_slots : %s)" % [
 				cls["spell_slots"], Spellcasting.progressions()])
@@ -222,19 +223,24 @@ static func _validate_classes(db: Node, errors: Array[String]) -> void:
 			_validate_choices(db, feature.get("choices", []), fctx, errors)
 
 
-## Rangs de compétence donnés à la création par un passé ou une classe : {compétence: rangs}, 4 au total.
-static func _validate_creation_ranks(db: Node, ranks: Dictionary, ctx: String, errors: Array[String]) -> void:
+## Rangs de compétence donnés à la création : {compétence: rangs}. Un passé : 4 au total, 1 par compétence ;
+## une classe : 8 au total, 2 par compétence (instinctive 2 + passé 1 + classe 2 ne dépasse jamais 5).
+static func _validate_creation_ranks(db: Node, ranks: Dictionary, ctx: String, errors: Array[String], expected := 4,
+		max_each := 1) -> void:
 	var total := 0
 	for skill_id: String in ranks:
 		_expect_ref(db.skills, skill_id, "compétence", ctx, errors)
 		total += int(ranks[skill_id])
-	if total != 4:
-		errors.append(ctx + " : %d rangs au lieu de 4" % total)
+		if int(ranks[skill_id]) > max_each:
+			errors.append(ctx + " : %d rangs en %s (au plus %d)" % [int(ranks[skill_id]), skill_id, max_each])
+	if total != expected:
+		errors.append(ctx + " : %d rangs au lieu de %d" % [total, expected])
 
 
 static func _validate_backgrounds(db: Node, errors: Array[String]) -> void:
 	for cls: Dictionary in db.classes.values():
-		_validate_creation_ranks(db, cls.get("skill_ranks", {}), "classes.json › %s › skill_ranks" % cls["id"], errors)
+		_validate_creation_ranks(db, cls.get("skill_ranks", {}), "classes.json › %s › skill_ranks" % cls["id"], errors, 8, 2)
+
 		for skill_id: String in cls.get("skill_priority", []):
 			_expect_ref(db.skills, skill_id, "compétence", "classes.json › %s › skill_priority" % cls["id"], errors)
 	for background: Dictionary in db.backgrounds.values():
@@ -320,6 +326,12 @@ static func _validate_combat_data(db: Node, errors: Array[String]) -> void:
 			_validate_pool_spec(db, use["heal"], "items.json › %s › use.heal" % item["id"], errors)
 		if use.has("cleanse") and use["cleanse"] != "negative":
 			_expect_ref(db.status_effects, use["cleanse"], "état", "items.json › %s" % item["id"], errors)
+		if use.has("spell"):
+			_expect_ref(db.actions, use["spell"], "sort", "items.json › %s" % item["id"], errors)
+			if db.actions.has(use["spell"]) and use.get("target") != db.actions[use["spell"]].get("target", "enemy"):
+				errors.append("items.json › %s : la cible doit être celle du sort (%s)" % [item["id"], db.actions[use["spell"]].get("target", "enemy")])
+		if use.has("unlock"):
+			_validate_unlock_id(db, use["unlock"], "items.json › %s" % item["id"], errors)
 
 
 ## Actions de combat (classes, créatures) : {"name", "target", "effects", "weight"?, "announced"?,
@@ -453,8 +465,8 @@ static func _validate_event(db: Node, ev: Dictionary, errors: Array[String]) -> 
 				errors.append(cctx + " : attribut inconnu « %s »" % check["ability"])
 			elif check.has("resist") and not db.abilities.has(check["resist"]):
 				errors.append(cctx + " : résistance inconnue « %s »" % check["resist"])
-			elif not check.has("skill") and not check.has("ability") and not check.has("resist"):
-				errors.append(cctx + " : le test doit indiquer « skill », « ability » ou « resist »")
+			elif not check.has("skill") and not check.has("resist"):
+				errors.append(cctx + " : le test doit indiquer « skill » ou « resist » (pas de test d'attribut seul)")
 			for key in ["success", "failure"]:
 				if not choice.has(key):
 					errors.append(cctx + " : résultat « %s » manquant" % key)
@@ -640,7 +652,7 @@ static func _validate_pool_spec(db: Node, spec: Variant, ctx: String, errors: Ar
 	for key: String in spec:
 		if key not in ["dice", "skill", "threshold", "bonus"]:
 			errors.append(ctx + " : champ inconnu « %s »" % key)
-	if spec.has("skill"):
+	if spec.has("skill") and spec["skill"] != Skills.SPELL:  # "spell" : compétence d'incantation
 		_expect_ref(db.skills, spec["skill"], "compétence", ctx, errors)
 	var threshold: Variant = spec.get("threshold", "weapon")
 	if threshold is String and threshold not in ["weapon", "spell"] and not db.abilities.has(threshold):

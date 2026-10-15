@@ -28,7 +28,6 @@ const SCHEMA := {
 	"reliable_talent": [],  # test d'une compétence entraînée : au moins un succès
 	"relentless_endurance": [],
 	"critical_range": ["amount"],  # succès comptés en plus pour le critique (Critique amélioré : 1)
-	"initiative_rank": [],  # rang de Physique ajouté à l'initiative (Vigilant)
 	"initiative_advantage": [],  # deux d10 à l'initiative, on garde le meilleur (Champion)
 	"skill_advantage": ["id"],  # un dé de plus aux tests d'une compétence
 	"spellcasting_ability": ["id"],  # attribut d'incantation hors classe (Initié à la magie)
@@ -37,7 +36,10 @@ const SCHEMA := {
 	"ranged_attack": ["amount"],  # dés en plus aux attaques à distance (Archerie)
 	"armored": ["amount"],  # points d'Armure en plus avec une vraie armure (Défense)
 	"great_weapon_fighting": [],  # arme à deux mains : on relance une fois les dés de dégâts ratés
-	"dueling": ["amount"],  # dés de dégâts en plus avec une arme de mêlée à une main (Duel)
+	"dueling": ["amount"],  # dés de dégâts en plus avec une arme de mêlée à une main, l'autre sans arme (À une main)
+	"unarmed_fighting": ["amount"],  # dés de dégâts en plus à mains nues (À mains nues)
+	"two_weapon_fighting": [],  # pas de malus pour l'attaque de la main secondaire (À deux armes)
+	"critical_damage_dice": ["amount"],  # dés de dégâts en plus sur un critique (Attaques précises du Roublard)
 	"armor_strength_reduction": ["amount"],  # Force conseillée des armures réduite
 	"potent_cantrip": [],  # tour de magie raté : moitié des dégâts (Évocateur)
 	"empowered_evocation": [],  # un dé de dégâts de plus aux sorts d'évocation
@@ -124,8 +126,6 @@ static func describe(m: Dictionary) -> String:
 			return Loc.ui("Endurance implacable")
 		"critical_range":
 			return Loc.ui("Critique : %s succès compté(s) en plus") % signed
-		"initiative_rank":
-			return Loc.ui("Rang de Physique à l'initiative")
 		"initiative_advantage":
 			return Loc.ui("Initiative : deux d10, le meilleur")
 		"skill_advantage":
@@ -144,6 +144,13 @@ static func describe(m: Dictionary) -> String:
 			return Loc.ui("Armes à deux mains : relance des dés de dégâts ratés")
 		"dueling":
 			return Loc.ui("%s dé(s) de dégâts à une main") % signed
+		"unarmed_fighting":
+			return Loc.ui("%s dé(s) de dégâts à mains nues") % signed
+		"two_weapon_fighting":
+			return Loc.ui("Deux armes : main secondaire sans malus")
+		"critical_damage_dice":
+			return Loc.ui("%s dé(s) de dégâts sur un critique") % signed
+
 		"armor_strength_reduction":
 			return Loc.ui("Force des armures −%d") % amount
 		"potent_cantrip":

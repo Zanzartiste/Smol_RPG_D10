@@ -11,8 +11,8 @@
   gants, jambes, chaussures, collier (1), anneaux (2).
 - **Armes** (voir [systeme_de_jeu.md](systeme_de_jeu.md)) : on attaque avec [rang de la compétence de l'arme] d10
   contre la FOR (finesse : le meilleur de FOR et DEX ; à distance : la DEX). Les **dégâts** sont autant de d10, plus
-  des dés selon l'arme (plus elle est grosse, plus elle en a), contre le seuil de l'attaque, ou un seuil fixe (arcs) ;
-  chaque succès est un point de dégâts. Une arme polyvalente a un dé de plus à deux mains (sans bouclier).
+  des dés selon l'arme (plus elle est grosse, plus elle en a), contre le seuil de l'attaque, ou un seuil fixe ;
+  chaque succès est un point de dégâts. Les différentes armes ont différents nombre de dégâts.
   Une arme à deux mains et un bouclier s'excluent.
 - **Armures** : leurs points d'**Armure** baissent d'autant le seuil des dégâts subis (sans passer sous 1). Toute
   armure peut être portée, mais sous la **Force conseillée** (vêtement 0, légère 4, intermédiaire 5, lourde 6) le
@@ -32,7 +32,6 @@
     +3 (400 po). +N dés au toucher et aux dégâts pour une arme, +N Armure sinon. Les objets déjà
     magiques ne s'améliorent pas.
   - **Fabrication** à partir de matériaux (voir Recettes ci-dessous).
-- ⚠️ Licence : les armes, armures et objets magiques du SRD 5.1 sont réutilisables (CC-BY 4.0).
 
 ---
 

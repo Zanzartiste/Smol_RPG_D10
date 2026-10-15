@@ -236,6 +236,7 @@ func _on_species_selected(species_id: String) -> void:
 func _on_class_selected(class_id: String) -> void:
 	_class = class_id
 	_reset_creation_choices("class/", DB.classes[class_id])
+	_skills_seeded = false  # la répartition suggérée suit les priorités de la nouvelle classe
 	if _point_buy == null:
 		_apply_class_template()
 	_refresh()
@@ -249,12 +250,13 @@ func _apply_class_template() -> void:
 
 # --- Compétences : rangs libres -------------------------------------------------
 
+## Rangs libres : ceux des règles, plus les rangs perdus par le plafond de création (Character.creation_free_ranks).
 func free_ranks_total() -> int:
-	return int(DB.rules.get("creation_skills", {}).get("free_ranks", 12))
+	return build_character().creation_free_ranks()
 
 
 func max_creation_rank() -> int:
-	return int(DB.rules.get("creation_skills", {}).get("max_rank", 5))
+	return Character.max_creation_rank()
 
 
 func free_ranks_left() -> int:
@@ -283,15 +285,14 @@ func _suggest_skill_ranks() -> void:
 	_refresh()
 
 
-## Un passé ou une classe qui donne déjà des rangs peut faire dépasser le maximum : on rend l'excédent.
+## Un passé ou une classe qui donne déjà des rangs peut faire dépasser le maximum : on reprend alors la
+## répartition suggérée (sinon des rangs resteraient à replacer et bloqueraient le départ).
 func _clamp_skill_ranks() -> void:
 	var ch := build_character()
 	for id: String in _skill_ranks.keys():
-		var excess := ch.skill_rank(id) - max_creation_rank()
-		if excess > 0:
-			_skill_ranks[id] = maxi(0, int(_skill_ranks[id]) - excess)
-			if _skill_ranks[id] == 0:
-				_skill_ranks.erase(id)
+		if int(_skill_ranks[id]) > 0 and ch.skill_rank(id) > max_creation_rank():
+			_skill_ranks = ch.suggested_skill_ranks()
+			return
 
 
 func _fill_skill_page(ch: Character) -> void:
@@ -303,7 +304,7 @@ func _fill_skill_page(ch: Character) -> void:
 	head.theme_type_variation = &"SectionLabel"
 	_skill_box.add_child(head)
 	var help := Label.new()
-	help.text = tr("Le passé et la classe donnent déjà 4 rangs chacun. Aucune compétence ne dépasse %d à la création.") % max_creation_rank()
+	help.text = tr("Le passé donne déjà 4 rangs et la classe 8. Aucune compétence ne dépasse %d à la création : un rang au-delà revient aux rangs à répartir.") % max_creation_rank()
 	help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	help.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	_skill_box.add_child(help)

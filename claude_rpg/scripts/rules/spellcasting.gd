@@ -66,7 +66,7 @@ static func is_cantrip(action: Dictionary) -> bool:
 	return is_spell(action) and not action.has("spell_level") and action.get("cost", "") != SLOT_KEY
 
 
-## Nombre de sorts équipés possibles pour un rang de Magie (tours de magie non compris).
+## Nombre de sorts équipés possibles pour un rang de la compétence d'incantation (tours de magie non compris).
 static func max_equipped(magic_rank: int) -> int:
 	var rules: Dictionary = DB.rules.get("spells", {})
 	return int(rules.get("equipped_base", 2)) + int(rules.get("equipped_per_magic_rank", 1)) * magic_rank

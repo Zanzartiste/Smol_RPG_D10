@@ -16,7 +16,7 @@ dans la console Godot. Les tests automatisés le signalent aussi.
 | `species.json` | Espèces : taille, âges, vieillissement, noms, apparence des portraits |
 | `classes.json` | Classes : dé de vie, modèle d'attributs, compétences maîtrisées, objets de départ |
 | `backgrounds.json` | Passés : compétences maîtrisées, or et objets de départ éventuels |
-| `items.json` | Objets hors équipement, avec une `category` : `consumable` (`use`, ex. `{"heal": {"dice": 3, "threshold": 7}}`), `material`, `treasure`. Les ids sont uniques entre `items.json` et `equipment.json` |
+| `items.json` | Objets hors équipement, avec une `category` : `consumable` (`use`, ex. `{"heal": {"dice": 3, "threshold": 7}}` ; parchemin : `{"spell": "<id d'action>", "target": <cible du sort>, "unlock"?: "class:wizard"}`, voir Parchemins), `material`, `treasure`. Les ids sont uniques entre `items.json` et `equipment.json` |
 | `shops.json`, `recipes.json` | Boutiques et recettes (voir Économie) |
 | `creatures.json` | Bestiaire : ennemis et invocations (API `Creatures`) |
 | `actions.json` | Actions de combat des classes : attaques, sorts, capacités (API `Actions`) |
@@ -81,7 +81,7 @@ Un choix est soit **direct** (`outcome`), soit **avec test** (`check`, `success`
 | Champ | Description |
 |---|---|
 | `conditions` | Si elles ne sont pas remplies, le choix est **caché**. En mode debug (F12), il est affiché grisé, avec la raison (ex. « INT 5+ ») |
-| `check` | Test en réserve de d10 : `{"skill": "<compétence>", "ability"?: "<attribut>", "difficulty": N}`, `{"ability": "<attribut>", "difficulty": N}` (2 dés) ou `{"resist": "<attribut>", "difficulty": N}` (résister) ; `"advantage"` / `"disadvantage"` : difficulté −1 / +1 ; `"bonus"` : dés en plus |
+| `check` | Test en réserve de d10 : `{"skill": "<compétence>", "ability"?: "<attribut>", "difficulty": N}`, `{"resist": "<attribut>", "difficulty": N}` (résister) ; `"advantage"` / `"disadvantage"` : difficulté −1 / +1 ; `"bonus"` : dés en plus |
 | `outcome` / `success` / `failure` | `{"text": "...", "effects": [...]}` |
 | `critical_success`? / `critical_failure`? | Issue d'une réussite critique / d'un échec critique (sinon `success` / `failure`) |
 
@@ -189,7 +189,7 @@ Les règles complètes sont dans [systeme_de_jeu.md](systeme_de_jeu.md) ; les r�
   les coups suivants visent l'ennemi le plus faible.
 - **Résister** : un effet avec `resist` fait lancer à la cible sa réserve de résistance (Physique pour FOR, DEX et
   CON ; Perspicacité pour SAG…). Contre des dégâts, chaque succès retire un point ; contre un autre effet, opposition
-  avec la Magie de l'acteur (il faut plus de succès qu'elle).
+  avec la compétence d'incantation de l'acteur (il faut plus de succès qu'elle).
 - **Créatures** (ennemis, invocations) : elles jouent seules (IA) et gardent parfois une action pour se défendre
   (`ai_guard_chance`). Une action `announced` est d'abord annoncée (« s'apprête à : … »), puis jouée au tour suivant.
 - **Places** : chaque camp a `side_capacity` places (4). Une créature en occupe `size_slots[taille]` : ½ pour une petite,
@@ -233,7 +233,9 @@ d'emplacement disponible (« Projectile magique (niv. 3) »), avec `upcast` ajou
 Chaque classe déclare :
 - `actions` : ses actions dès le niveau 1 ;
 - `features` : ses aptitudes par niveau (voir ci-dessous) ;
-- `resist_proficiencies` : ses deux résistances maîtrisées (un dé de plus pour résister avec ces attributs) ;
+- `skill_ranks` : ses rangs de compétence fixes (8 au total, vérifié par le validateur) ;
+- `spell_skill`? : sa compétence d'incantation (Magicien : `lore`) ; à défaut, celle de l'attribut d'incantation
+  (`rules.json › spells › skill_by_ability` : `{"int": "lore", "wis": "determination", "cha": "arts"}`) ;
 - `equipment` : son équipement ;
 - `spellcasting` : l'attribut d'incantation (pour les sorts, `"ability": "spell"`) ;
 - `spell_slots` : `full` (lanceur complet) ou `half` (demi-lanceur), qui renvoie aux tables de
@@ -241,6 +243,8 @@ Chaque classe déclare :
 - `resources` : d'autres ressources fixes, rechargées par un repos long.
 
 ### Aptitudes de classe (`classes.json › features`)
+
+- Les mécaniques de l'ancienne progression du SRD (Fougue, Attaque supplémentaire, Inflexible, Attaque sournoise, Ruse, Esquive instinctive, Expertise, Dérobade, Talent fiable) ont été retirées des classes (et les sorts appris par niveau `new_spell_N`) ; leurs modificateurs, actions et ressources restent dans le code, pour de futurs dons.
 
 ```json
 {"level": 5, "id": "extra_attack", "name": "Attaque supplémentaire", "description": "L'action Attaque frappe deux fois.",
@@ -264,7 +268,7 @@ Ils sont communs aux actions des classes (`actions.json`) et à celles des créa
 
 | type | Champs | Effet |
 |---|---|---|
-| `attack` | `weapon: true` (arme du personnage), ou `weapon: "<id>"` (arme du catalogue), ou `damage` + `damage_type` ; `skill`? et `ability`? (créatures : Physique et FOR par défaut ; `spell` : Magie), `ranged`? | Jet d'attaque contre l'Esquive naturelle ou le Couvert, puis dégâts. **Les effets qui suivent ne s'appliquent que si l'attaque touche** |
+| `attack` | `weapon: true` (arme du personnage), ou `weapon: "<id>"` (arme du catalogue), ou `damage` + `damage_type` ; `skill`? et `ability`? (créatures : Physique et FOR par défaut ; `"skill": "spell"` (`Skills.SPELL`) : compétence d'incantation), `ranged`? | Jet d'attaque contre l'Esquive naturelle ou le Couvert, puis dégâts. **Les effets qui suivent ne s'appliquent que si l'attaque touche** |
 | `damage` | `damage`, `damage_type` | Dégâts sans jet d'attaque (l'Armure ne compte pas) |
 | `extra_action` | — | Une action de plus ce tour |
 | `heal` | `amount` (réserve) | Soins : un PV par succès, au moins 1 |
@@ -311,6 +315,10 @@ Les états se cumulent en charges. Leur mécanique est entièrement décrite dan
 | `no_hostile_actions` | Aucune action visant un ennemi (Charmé) |
 | `wake_on_damage` | L'état disparaît quand la créature subit des dégâts (Endormi) |
 | `prepared` | Préparé : +2 dés au prochain jet de combat, puis l'état disparaît |
+| `attack_successes_multiplier` | Multiplie les succès des jets d'attaque du porteur et de ceux qui le visent (Enragé : 2) |
+| `melee_only` | Ne peut utiliser que des actions faites d'attaques au corps à corps (Enragé) |
+
+L'état `raging` (Enragé) combine ces deux clés ; l'action `rage` (gratuite, cible soi) l'applique avec 1 charge, qui disparaît au début du tour suivant.
 
 ### Créatures (`creatures.json`)
 
@@ -354,7 +362,7 @@ suivent automatiquement.
 | `StatusEffects` | `status_effects.json` | `ids()`, `name_of(id)`, `tick_damage()`, `skips_turn()`, `absorbs()`… |
 | `Actions` | `actions.json` | `def(id)`, `name_of(id)`, `text_of(id)`, `resource_name(id)` |
 | `Creatures` | `creatures.json` | `def(id)`, `name_of(id)`, `size_of(id)`, `actions_of(id)` |
-| `Progression` | `rules.json` | `xp_for(niveau)`, `advancement_levels()` |
+| `Progression` | `rules.json` | `xp_for(niveau)`, `ability_points_at(niveau)`, `feats_at(niveau)`, `is_advancement_level(niveau)`, `advancement_text(niveau)` |
 | `Spellcasting` | `rules.json` | `slots(progression, niveau)`, `save_dc(personnage)`, `dice_count(table, niveau)`, `at_level(action, niveau)` |
 | `ClassFeatures` | `classes.json` | `of_class(id)`, `up_to(id, niveau)`, `at_level(id, niveau)`, `announce(personnage, niveau)` |
 | `Modifiers` | — | `sum(...)`, `grants(...)`, `defenses(...)`, `describe(...)` : interprète les modificateurs |
@@ -376,11 +384,13 @@ Les prérequis s'écrivent comme les conditions des événements. `category` vau
 
 **Obtention d'un don :**
 - **Passé** : chaque passé accorde un don dès la création (`backgrounds.json › feat`, obligatoire).
-- **Niveau** : aux niveaux d'amélioration (`rules.json › advancement_levels`, par défaut 4, 8, 12, 16 et 20), le
-  personnage, héros ou compagnon, place +1 dans un attribut au choix (20 au maximum) puis choisit un don parmi ceux
-  dont il remplit les prérequis. Le contenu d'une amélioration se règle dans `advancement`, et l'API correspondante est
-  `Progression`. L'écran de choix s'ouvre avant le retour au hub.
-- **Événement** : l'effet `add_feat`.
+- **Niveau** : `rules.json › advancement` vaut `{"ability_levels": [5, 10, 15, 20], "ability_points": 1, "feat_levels": [], "feats": 1}`.
+  Aux niveaux d'`ability_levels`, le personnage, héros ou compagnon, place `ability_points` (1) dans un attribut au
+  choix, sans plafond (`max_ability_score` n'existe plus : `Progression.max_ability_score()` renvoie 0 = aucun).
+  Les dons de niveau restent prévus (`feat_levels` est vide : niveaux à placer, `feats` dons chacun). L'API est
+  `Progression.ability_points_at(niveau)`, `feats_at(niveau)`, `is_advancement_level(niveau)` et
+  `advancement_text(niveau)`. L'écran de choix s'ouvre avant le retour au hub.
+- **Événement** : l'effet `add_feat` existe, mais les dons ne s'obtiennent pas par événement en règle générale.
 - **Compagnon** : il peut en avoir d'office dans `companions.json` (`feats`).
 
 ### Modificateurs
@@ -399,19 +409,22 @@ Les dons, les espèces et les équipements peuvent porter des `modifiers`. Ils s
 | `resist_dice` | `amount` | Dés en plus pour résister |
 | `resistance` / `immunity` / `vulnerability` | `damage_type` | Défense contre un type de dégâts |
 | `status_immunity` | `status` | Immunité à un état |
-| `resist_proficiency` | `id` | Un dé de plus pour résister avec un attribut |
+| `resist_proficiency` | `id` | Un dé de plus pour résister avec un attribut (don Résistant : seule source, les classes n'en donnent plus) |
 | `extra_attack` | `amount` | Attaques en plus pour l'action Attaque |
 | `uncanny_dodge` | — | Une fois par round, les dégâts d'une attaque reçue sont divisés par deux |
 | `evasion` | — | Résister à des dégâts avec la DEX : chaque succès retire deux points |
 | `reliable_talent` | — | Test d'une compétence entraînée : toujours au moins un succès |
 | `relentless_endurance` | — | Tombe à 1 PV au lieu de 0, tant qu'il reste la ressource `relentless_endurance` |
 | `critical_range` | `amount` | Succès supplémentaires comptés en plus pour le critique (Champion) |
-| `initiative_rank`, `initiative_advantage` | — | Rang de Physique à l'initiative (Vigilant) / deux d10, le meilleur |
+| `initiative_advantage` | — | Initiative : deux d10, le meilleur |
 | `skill_advantage` | `id` | Un dé de plus aux tests d'une compétence |
 | `spellcasting_ability` | `id` | Attribut d'incantation hors classe (Initié à la magie) |
 | `savage_attacker` | — | Une fois par tour, dés de dégâts d'arme lancés deux fois, le meilleur gardé |
 | `ignore_resistance` | `damage_type` | Les cibles ne résistent plus à ce type |
-| `ranged_attack`, `armored`, `dueling` | `amount` | Styles Archerie (dés à distance), Défense (Armure en armure), Duel (dés de dégâts à une main) |
+| `ranged_attack`, `armored`, `dueling` | `amount` | Style À distance (dés à distance) ; `armored` (modificateur générique d'armure) ; style À une main (dés de dégâts, sans arme dans l'autre main ni à mains nues ; ne compte plus si l'autre main tient une arme) |
+| `unarmed_fighting` | `amount` | Style À mains nues : dés de dégâts à mains nues |
+| `two_weapon_fighting` | — | Style À deux armes : pas de malus pour l'attaque de la main secondaire. Règle pour tous : `Character.can_dual_wield(id)` (arme de corps à corps à une main, la main principale en tenant une) ; `Character.equip(id, "off_hand")` / `LifeState.equip(membre, id, "off_hand")` (bouton « Main secondaire ») ; chaque attaque de l'arme principale est suivie de `Combatant.off_hand_attack(effet)` (`{"type": "attack", "weapon": id, "off_hand": true, "ability"}`), avec `Combatant.off_hand_penalty()` dés de moins à l'attaque et aux dégâts (`rules.json › combat › off_hand_penalty`, 0 avec le style) |
+| `critical_damage_dice` | `amount` | Dés de dégâts en plus sur un critique (Attaques précises du Roublard) |
 | `great_weapon_fighting` | — | À deux mains, on relance une fois les dés de dégâts ratés |
 | `armor_strength_reduction` | `amount` | Force conseillée des armures réduite |
 | `potent_cantrip`, `empowered_evocation` | — | Évocateur : tour de magie raté = moitié des dégâts ; un dé de dégâts en plus aux sorts d'évocation (`"school": "evocation"`) |
@@ -435,6 +448,16 @@ Champs communs : `weight` (kg) ; facultatifs : `modifiers`, `rarity` (`common`, 
 
 **Emplacements** (`Equipment.SLOTS`) : `main_hand`, `off_hand`, `head`, `armor` (torse), `hands`, `legs`, `feet`,
 `neck`, `ring_1`, `ring_2`. Les anciennes sauvegardes sont converties (`amulet` → `neck`, `ring` → `ring_1`).
+
+### Parchemins
+
+- Objets de `items.json` (catégorie `consumable`) avec `"use": {"spell": "<id d'action>", "target": <cible du sort,
+  vérifiée>, "unlock"?: "class:wizard"}`. Ids : `scroll_fire_bolt`, `scroll_magic_missile`, `scroll_sleep`,
+  `scroll_mage_shield` (vendus à l'herboristerie `apothecary`).
+- En combat, `Combat.use_item` appelle `_read_scroll` : une action, le sort part une fois sans emplacement
+  (contresort possible), avec la compétence `rules.json › scrolls › skill` (`languages`, Langues) et son meilleur
+  attribut, via `Character.spell_override` (non sauvegardé, le temps du sort). Pas utilisables hors combat.
+- `unlock` débloque la classe pour les vies suivantes (`Meta.unlock`).
 
 ### Sac et inventaire
 
@@ -489,7 +512,7 @@ Calcul des dégâts subis :
 - **PV max** (`rules.json › hit_points`) : (taille + `size_offset` 2) × CON + `base` 7, au moins 1
   (`Character.hp_from`), + modificateurs (don Robuste). Ni la classe ni le niveau ne les augmentent pour l'instant.
   Les créatures suivent la même formule, sauf `hp` explicite.
-- **Points de compétence** (`rules.json › skill_points`) : `by_level` (niveau -> points gagnés), un point = +1 rang,
+- **Points de compétence** (`rules.json › skill_points`) : `by_level` (niveau -> points gagnés : un aux niveaux 2, 4, 6… 20, tous les deux niveaux), un point = +1 rang,
   sans plafond. `Character.pending_skill_points` (à dépenser, écran de choix au
   hub) et `skill_points` (rangs achetés, par compétence), sauvegardés.
 - **Inconscience** : en combat, un membre du groupe à 0 PV est inconscient tant qu'un autre tient debout ; après une
@@ -525,7 +548,7 @@ Calcul des dégâts subis :
   de niveau N (ou lancé au niveau N : `slot_level`) coûte N emplacements ; `Character.max_spell_level()` borne les
   variantes proposées. Les anciennes sauvegardes (`spell_slot_1`, `spell_slot_2`…) sont converties.
 - Sorts connus : les actions de classe et d'aptitude qui sont des sorts (`spell_level`, coût `spell_slot`, ou tour de
-  magie) ; équipés : `Character.equipped_spells` (au plus `rules.json › spells` : 2 + rang de Magie), seuls proposés
+  magie) ; équipés : `Character.equipped_spells` (au plus `rules.json › spells` : 2 + rang de la compétence d'incantation), seuls proposés
   en combat. `seen_spells` retient les sorts déjà proposés : un sort appris est équipé d'office s'il reste de la place.
 
 ## Interface : le tiroir latéral
@@ -564,7 +587,7 @@ Calcul des dégâts subis :
   tirée que si un allié est sous `combat › ai_heal_below` (0,5) ou `ai_protect_below` (0,75) de ses PV ; son poids
   est alors multiplié par `ai_support_bonus` (3) et elle vise l'allié le plus mal en point. Exemple : le Rebouteux
   des brigands (`bandit_mender`).
-- **Contresort** (`Combat._counterspell`) : réaction d'un lanceur de sorts à un sort ennemi, Magie contre Magie.
+- **Contresort** (`Combat._counterspell`) : réaction d'un lanceur de sorts à un sort ennemi, opposition des compétences d'incantation.
 - **Réactions automatiques** : `Meta.settings["auto_reactions"]` (case de l'écran titre).
 
 ## Saisons et météo (`rules.json › calendar`)
@@ -629,7 +652,7 @@ L'état des boutiques (stock, jour du dernier réassort) est sauvegardé avec la
 
 `{"id", "result", "count"? (1), "station": "forge" | "alchemy", "materials": {id: quantité}, "gold"? (0), "difficulty"? (1)}`.
 Les matériaux et l'or sont pris dans le sac du groupe. **Test** (`rules.json › crafting`) : la compétence de la
-station (Artisanat avec la DEX à la forge, Potions et cuisine à l'alchimie) contre la difficulté ; un échec gâche
+station (Artisanat avec la DEX à la forge, Alchimie à l'alchimie) contre la difficulté ; un échec gâche
 `failure_loss` (la moitié) des matériaux et l'or. Après `profession_threshold` objets à une station, la fiche
 affiche le **métier** qui se dessine (« Forgeronne (7 objets) »).
 
@@ -684,6 +707,9 @@ Le détail de conception est dans [social.md](social.md). Données : `npc_roles.
 
 ## Compétences (`skills.json`) et rangs
 
+- Compétence `determination` (Détermination, SAG, catégorie combat) ; `potions_cooking` s'affiche « Alchimie » et `survival` « Nature » (ids inchangés). La compétence `magic` n'existe plus : `Skills.ALIASES` mène `magic` à `lore` et `nature` à `survival`. Un test d'événement doit avoir `skill` ou `resist` (plus de test d'attribut seul : `dice › attribute_dice` et `Character.ability_pool` supprimés).
+- **Compétence d'incantation** : `Character.spell_skill()` / `Combatant.spell_skill()`, `Combatant.is_spellcaster()` (créature : si elle a `spell_ability`). Dans les données d'action, `"skill": "spell"` (`Skills.SPELL`) la désigne.
+
 ```json
 {"id": "physique", "name": "Physique", "category": "combat", "instinctive": true, "abilities": ["str", "dex", "con"]}
 ```
@@ -693,15 +719,15 @@ Le détail de conception est dans [social.md](social.md). Données : `npc_roles.
 | `category` | `combat`, `social`, `roguery` (Roublardise), `knowledge` (Connaissances et métiers) |
 | `abilities` | Attributs utilisables ; un test sans attribut imposé prend le meilleur (encombrement compris) |
 | `instinctive` | Rang de départ 2 au lieu de 1 |
-| `base_rank` | Rang de départ particulier (Magie : 0 ; la classe de magicien donne 3 rangs) |
+| `base_rank` | Rang de départ particulier |
 
-- **Rang** = départ + rangs du passé + `classes.json › skill_ranks` (le meilleur de ses classes) + rangs répartis
+- **Rang** = `Character.creation_rank(id)` (min(5, départ + passé + `classes.json › skill_ranks`, le meilleur de ses classes)) + rangs répartis
   (`skill_points`) + modificateurs `skill_rank` (dons, Expertise, objets). Un test lance [rang] d10 contre l'attribut.
 - **Attaques** : [rang de la compétence de l'arme] d10 contre l'attribut (`Equipment.skills_for` : `skill` de l'arme,
   sinon Armes de trait pour une arme à distance, Armes de mêlée sinon ; mains nues : le meilleur avec Physique).
-  Sorts : [rang de Magie] d10 contre l'attribut d'incantation.
-- **Résister** : `rules.json › dice › resist_skills` (Physique pour FOR, DEX, CON ; Perspicacité pour SAG ;
-  Érudition pour INT ; Persuasion pour CHA), +1 dé si la classe de départ maîtrise, +1 par `resist_proficiency`.
+  Sorts : [rang de la compétence d'incantation] d10 contre l'attribut d'incantation (`Character.spell_skill()`, `Combatant.spell_skill()` ; créature : champ `spell_skill`, Érudition par défaut).
+- **Résister** : `rules.json › dice › resist_skills` (Physique pour FOR, DEX, CON ; Détermination (`determination`) pour SAG ;
+  Érudition pour INT ; Persuasion pour CHA), +1 par `resist_proficiency` (don Résistant).
 - **Tests d'événement** : `{"skill": "persuasion", "ability"?: "str", "difficulty": 2}`. Option du joueur
   (`Meta.settings.manual_skill_ability`) : de petits boutons par attribut à côté du choix. Option `many_dice` : règle
   des dés nombreux.
@@ -755,7 +781,7 @@ Une espèce, une classe, une aptitude (y compris de sous-classe) ou un don peut 
   - `modifiers`? : ses traits (résistances, immunités, `relentless_endurance`…) ;
   - `resources`? : ressources rechargées par un repos long (ex. `{"relentless_endurance": 1}` pour l'orc) ;
   - `bonus_feats`? : dons en plus à choisir au début de la partie (1 pour l'humain).
-- **Classe** : `resist_proficiencies`, `choices` (dont les compétences de classe) et `features`
+- **Classe** : `skill_ranks` (rangs fixes, non choisis), `spell_skill`?, `choices` et `features`
   (aptitudes par niveau, dont la sous-classe). `ability_priority` donne le **modèle
   d'attributs** proposé : la répartition standard (15, 14, 13, 12, 10, 8) dans cet ordre, puis +2 sur le premier
   attribut et +1 sur le second.
@@ -778,12 +804,14 @@ Réglages : `rules.json › point_buy`.
 
 ## Compétences à la création
 
-- `backgrounds.json › skills` : `{compétence: rangs}`, 4 rangs au total ; `classes.json › skill_ranks` : idem
-  (vérifié par le validateur).
-- `rules.json › creation_skills` : `free_ranks` (12) rangs libres, `max_rank` (5) au plus par compétence. Ils vont
+- `backgrounds.json › skills` : `{compétence: rangs}`, 4 rangs au total, 1 par compétence ; `classes.json › skill_ranks` : 8 rangs
+  au total (vérifié par le validateur).
+- `rules.json › creation_skills` : `free_ranks` (8) rangs libres (environ 20 rangs avec le passé et la classe), `max_rank` (5) au plus par compétence
+  à la création : `Character.creation_rank(id)` = min(5, départ + passé + classe), et l'excédent s'ajoute aux rangs
+  libres (`Character.creation_free_ranks()` ; `Character.max_creation_rank()`, statique). Ils vont
   dans `Character.skill_points` (comme les points de compétence des niveaux) ; option `"skill_ranks"` de
   `Character.create`, sinon `Character.suggested_skill_ranks()` (3, 3, 2, 2, 1, 1 selon
-  `classes.json › skill_priority`).
+  `classes.json › skill_priority`). Changer de classe à la création reprend la répartition suggérée.
 - Il n'y a plus de choix de compétences de classe (`class/skills`).
 
 ## Vieillesse
@@ -838,7 +866,7 @@ Les Creator Points se règlent dans `rules.json › creator_points`, et l'API co
 | `gold` | Or en plus au départ |
 
   Chaque bonus a un `cost` (un nombre, ou une liste avec un coût par rang) et un `max` (nombre de rangs).
-- **Déblocages définitifs** : une espèce ou une classe verrouillée qui a un `unlock_cost` s'achète dans le même onglet.
+- **Déblocages définitifs** : une espèce ou une classe verrouillée qui a un `unlock_cost` s'achète (les classes verrouillées, comme le Magicien, n'en ont pas : `locked` + `unlock_hint`) dans le même onglet.
   Les points sont dépensés immédiatement.
 
 ## Sauvegarde

@@ -232,6 +232,10 @@ func _fill_bag() -> void:
 		row.add_child(label)
 		if Items.is_equipment(item_id):
 			row.add_child(_small_button(tr("Équiper"), _on_equip.bind(item_id)))
+			if _member.can_dual_wield(item_id):
+				var second := _small_button(tr("Main secondaire"), _on_equip.bind(item_id, "off_hand"))
+				second.tooltip_text = tr("Tenir cette arme dans l'autre main : elle attaque après l'arme principale (−%d dés sans le style À deux armes).") % int(DB.rules.get("combat", {}).get("off_hand_penalty", 2))
+				row.add_child(second)
 			var problem := _member.encumbrance_reason(item_id)
 			if problem != "":
 				label.text += "\n[font_size=14][color=%s]%s : %s[/color][/font_size]" % [UITheme.BAD.to_html(false),
@@ -247,8 +251,8 @@ func _fill_bag() -> void:
 
 # --- Actions ------------------------------------------------------------------
 
-func _on_equip(item_id: String) -> void:
-	if life.equip(_member, item_id):
+func _on_equip(item_id: String, slot := "") -> void:
+	if life.equip(_member, item_id, slot):
 		_after(tr("%s équipe : %s.") % [_member.name, Items.name_of(item_id)])
 
 

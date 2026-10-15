@@ -9,7 +9,9 @@ extends RefCounted
 ## Champs communs : "name", "description"?, "value"? (prix en po), "rarity"? (common, uncommon, rare,
 ## very_rare, legendary). Un objet de items.json a une "category" : consumable, material, treasure ;
 ## l'équipement garde la sienne (weapon, armor, shield, accessory).
-## Un consommable a "use": {"heal"?: "2d4+2", "cleanse"?: "poisoned", "target": "ally"}.
+## Un consommable a "use": {"heal"?: "2d4+2", "cleanse"?: "poisoned", "target": "ally"}. Un parchemin :
+## "use": {"spell": "<id d'action>", "target", "unlock"?} : il lance le sort une fois (compétence Langues,
+## voir rules.json › scrolls) et débloque éventuellement une classe (Magicien).
 ## "weight" : poids en kg (voir l'encombrement). "quest": true : objet de quête, ni vendu ni jeté.
 
 const RARITIES := ["common", "uncommon", "rare", "very_rare", "legendary"]
@@ -121,6 +123,8 @@ static func summary(id: String) -> String:
 		parts.append(Loc.ui("Soigne %s PV") % Dice.pool_text(int(use["heal"].get("dice", 1)), int(use["heal"].get("threshold", 5))))
 	if use.has("cleanse"):
 		parts.append(Loc.ui("Retire %s") % StatusEffects.name_of(use["cleanse"]))
+	if use.has("spell"):
+		parts.append(Loc.ui("Lance %s (Langues), une fois") % Actions.def(use["spell"]).get("name", use["spell"]))
 	if rarity_of(id) != "common":
 		parts.append(Loc.ui(RARITY_NAMES[rarity_of(id)]))
 	if value_of(id) > 0:

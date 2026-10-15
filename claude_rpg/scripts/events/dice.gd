@@ -14,9 +14,8 @@ extends RefCounted
 ##   - échec critique : aucun succès et au moins un 10 (rules.json › dice › fumble_needs_ten).
 ##
 ## Un test s'écrit {"skill": "physique", "difficulty": 2} (avec le meilleur attribut de la compétence),
-## {"skill": "persuasion", "ability": "str", "difficulty": 2} (attribut imposé : intimider),
-## {"ability": "dex", "difficulty": 1} (attribut seul : rules.json › dice › attribute_dice dés) ou
-## {"resist": "con", "difficulty": 1} (résister : voir Character.resist_pool).
+## {"skill": "persuasion", "ability": "str", "difficulty": 2} (attribut imposé : intimider) ou
+## {"resist": "con", "difficulty": 1} (résister : voir Character.resist_pool). Pas de test d'attribut seul.
 ## "bonus" : dés en plus (ou en moins) ; "advantage": true / "disadvantage": true : difficulté −1 / +1.
 
 const MAX_FACE_SUCCESS := 8  # un 9 ou un 10 n'est jamais un succès
@@ -214,9 +213,8 @@ static func check_pool(ch: Character, check: Dictionary) -> Dictionary:
 		bonus += 1
 	if check.has("skill"):
 		return ch.skill_pool(check["skill"], check.get("ability", ""), bonus)
-	if check.has("resist") or check.has("save"):
-		return ch.resist_pool(check.get("resist", check.get("save", "con")), bonus)
-	return ch.ability_pool(check.get("ability", "str"), bonus)
+	return ch.resist_pool(check.get("resist", check.get("save", "con")), bonus)
+
 
 
 static func label(check: Dictionary) -> String:

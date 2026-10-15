@@ -72,8 +72,6 @@ func _build_header(ch: Character) -> void:
 func _build_defenses(ch: Character) -> void:
 	var dex := ch.ability_score("dex")
 	var initiative := tr("Dextérité %d + Intelligence %d") % [dex, ch.ability_score("int")]
-	if ch.has_modifier("initiative_rank"):
-		initiative += tr(" + Physique %d (Vigilant)") % ch.skill_rank("physique")
 	if ch.roll_penalty("dex") > 0:
 		initiative += tr(" − %d (encombrement)") % ch.roll_penalty("dex")
 	_add_pair(make_label(tr("PV : %d / %d") % [ch.hp, ch.max_hp], tr("(taille %d + 2) × Constitution %d + 7%s") % [

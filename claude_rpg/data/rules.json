@@ -9,16 +9,15 @@
 		"bonuses": []
 	},
 	"creation_skills": {
-		"_doc": "Création : le passé et la classe donnent chacun 4 rangs (backgrounds.json › skills, classes.json › skill_ranks), puis on répartit free_ranks rangs librement, sans qu'aucune compétence dépasse max_rank. Tous les rangs doivent être répartis.",
-		"free_ranks": 12,
+		"_doc": "Création : le passé donne 4 rangs (backgrounds.json › skills) et la classe 8 (classes.json › skill_ranks), puis on répartit free_ranks rangs librement, sans qu'aucune compétence dépasse max_rank. Tous les rangs doivent être répartis.",
+		"free_ranks": 8,
 		"max_rank": 5
 	},
 	"dice": {
-		"_doc": "Réserves de d10 : critical_step succès supplémentaires par niveau de réussite critique ; échec critique : aucun succès (et au moins un 10 si fumble_needs_ten) ; attribute_dice dés pour un test d'attribut sans compétence ; resist_skills : compétence utilisée pour résister selon l'attribut.",
+		"_doc": "Réserves de d10 : critical_step succès supplémentaires par niveau de réussite critique ; échec critique : aucun succès (et au moins un 10 si fumble_needs_ten) ; resist_skills : compétence utilisée pour résister selon l'attribut.",
 		"critical_step": 3,
 		"fumble_needs_ten": true,
-		"attribute_dice": 2,
-		"resist_skills": {"str": "physique", "dex": "physique", "con": "physique", "int": "lore", "wis": "insight", "cha": "persuasion"}
+		"resist_skills": {"str": "physique", "dex": "physique", "con": "physique", "int": "lore", "wis": "determination", "cha": "persuasion"}
 	},
 	"genders": [{"id": "female", "name": "Femme"}, {"id": "male", "name": "Homme"}, {"id": "nonbinary", "name": "Non-binaire"}],
 	"sizes": [
@@ -153,10 +152,15 @@
 				[4, 3, 3, 3, 2]
 		]
 	},
+	"scrolls": {
+		"_doc": "Parchemins (items.json › use.spell) : compétence utilisée pour lancer leur sort, avec son meilleur attribut.",
+		"skill": "languages"
+	},
 	"spells": {
-		"_doc": "Sorts équipés (utilisables en combat) parmi les sorts connus : equipped_base + equipped_per_magic_rank × rang de Magie.",
+		"_doc": "Sorts équipés (utilisables en combat) parmi les sorts connus : equipped_base + equipped_per_magic_rank × rang de la compétence d'incantation. Compétence d'incantation : classes.json › spell_skill, sinon celle de l'attribut d'incantation (skill_by_ability : Initié à la magie).",
 		"equipped_base": 2,
-		"equipped_per_magic_rank": 1
+		"equipped_per_magic_rank": 1,
+		"skill_by_ability": {"int": "lore", "wis": "determination", "cha": "arts"}
 	},
 	"dice_scaling": {
 		"_doc": "Dés de dégâts en plus selon le niveau de classe (le palier le plus haut atteint) : tours de magie (palier − 1) et Attaque sournoise (palier).",
@@ -206,10 +210,11 @@
 	},
 	"max_companions": 3,
 	"combat": {
-		"_doc": "actions_per_turn : actions par tour (les actions gardées deviennent des réactions jusqu'au tour suivant ; s'il en reste au début de son tour, on devient Préparé). dodge_divisor : Esquive naturelle = DEX ÷ dodge_divisor (au moins 1). prepared_dice : dés en plus quand on est Préparé. surprise_crit_bonus : succès comptés en plus pour le critique d'une attaque surprise. cover : Couvert des attaques à distance (base, minimum).",
+		"_doc": "actions_per_turn : actions par tour (les actions gardées deviennent des réactions jusqu'au tour suivant ; s'il en reste au début de son tour, on devient Préparé). dodge_divisor : Esquive naturelle = DEX ÷ dodge_divisor (au moins 1). prepared_dice : dés en plus quand on est Préparé. off_hand_penalty : dés en moins à l'attaque et aux dégâts de la main secondaire (aucun avec le style À deux armes). surprise_crit_bonus : succès comptés en plus pour le critique d'une attaque surprise. cover : Couvert des attaques à distance (base, minimum).",
 		"actions_per_turn": 2,
 		"dodge_divisor": 3,
 		"prepared_dice": 2,
+		"off_hand_penalty": 2,
 		"surprise_crit_bonus": 2,
 		"flee_difficulty": 2,
 		"ai_heal_below": 0.5,
@@ -222,13 +227,17 @@
 		"sprite_scale": {"-4": 0.3, "-3": 0.35, "-2": 0.45, "-1": 0.6, "0": 1, "1": 1.3, "2": 1.8, "3": 2.3, "4": 2.6, "5": 2.8}
 	},
 	"xp_by_level": [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000],
-	"advancement_levels": [4, 8, 12, 16, 20],
-	"advancement": {"ability_points": 1, "feats": 1},
-	"skill_points": {
-		"_doc": "Points de compétence gagnés à chaque niveau atteint (by_level : niveau -> points ; absent : 0). Un point = +1 rang dans une compétence, sans plafond : on progresse rang par rang (jamais +2 d'un coup).",
-		"by_level": {"2": 1, "3": 1, "4": 1, "5": 1, "6": 1, "7": 1, "8": 1, "9": 1, "10": 1, "11": 1, "12": 1, "13": 1, "14": 1, "15": 1, "16": 1, "17": 1, "18": 1, "19": 1, "20": 1}
+	"advancement": {
+		"_doc": "Niveaux de classe qui donnent des points d'attribut (ability_levels) et des dons (feat_levels : à placer dans la courbe de progression).",
+		"ability_levels": [5, 10, 15, 20],
+		"ability_points": 1,
+		"feat_levels": [],
+		"feats": 1
 	},
-	"max_ability_score": 10,
+	"skill_points": {
+		"_doc": "Points de compétence gagnés aux niveaux atteints (by_level : niveau -> points ; absent : 0). Un point = +1 rang dans une compétence, sans plafond : on progresse rang par rang (jamais +2 d'un coup).",
+		"by_level": {"2": 1, "4": 1, "6": 1, "8": 1, "10": 1, "12": 1, "14": 1, "16": 1, "18": 1, "20": 1}
+	},
 	"aging_chance": 0.4,
 	"creator_points": {
 		"xp_per_point": 100,

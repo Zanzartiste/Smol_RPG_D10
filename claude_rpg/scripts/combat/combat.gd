@@ -352,8 +352,10 @@ func use_item(actor: Combatant, item_id: String, target: Combatant) -> Array[Dic
 		actor.fast_hands_used = true  # Mains lestes : l'objet ne coûte pas d'action
 	else:
 		actions_left -= 1
-	var effects: Array = []
 	var use: Dictionary = item["use"]
+	if use.has("spell"):
+		return await _read_scroll(actor, item, target)
+	var effects: Array = []
 	if use.has("heal"):
 		effects.append({"type": "heal", "amount": use["heal"]})
 	if use.has("cleanse"):
@@ -361,6 +363,26 @@ func use_item(actor: Combatant, item_id: String, target: Combatant) -> Array[Dic
 	var beats: Array[Dictionary] = []
 	_beat(beats, Loc.ui("%s utilise : %s.") % [actor.name, item["name"]])
 	beats.append_array(await _resolve(actor, effects, "ally", target, false))
+	_check_end()
+	return beats
+
+
+## Lit un parchemin : le sort part une fois, sans emplacement, avec la compétence des parchemins (rules.json ›
+## scrolls › skill : Langues) au lieu de la compétence d'incantation. Il peut débloquer une classe (Magicien).
+func _read_scroll(actor: Combatant, item: Dictionary, target: Combatant) -> Array[Dictionary]:
+	var use: Dictionary = item["use"]
+	var spell := Actions.def(use["spell"])
+	var beats: Array[Dictionary] = []
+	_beat(beats, Loc.ui("%s lit : %s.") % [actor.name, item["name"]])
+	if actor.character != null:
+		actor.character.spell_override = String(DB.rules.get("scrolls", {}).get("skill", "languages"))
+	if not await _counterspell(actor, spell, beats):
+		beats.append_array(await _resolve(actor, spell.get("effects", []), spell.get("target", "enemy"), target,
+			not actor.is_player_controlled()))
+	if actor.character != null:
+		actor.character.spell_override = ""
+	if use.has("unlock") and actor.is_ally() and Meta.unlock(use["unlock"]):
+		_beat(beats, Loc.ui("Débloqué pour les prochaines vies : %s !") % Meta.unlock_name(use["unlock"]))
 	_check_end()
 	return beats
 
@@ -563,6 +585,9 @@ func _action_score(actor: Combatant, action: Dictionary) -> float:
 						score += stacks * (0.8 if hurt else 0.3)
 					"prepared":
 						score += 0.4
+					"raging":
+						score += 0.5 if hurt else 2.5
+
 					"stunned", "asleep":
 						score += 1.5 * spread
 					_:
@@ -624,6 +649,12 @@ func _apply(actor: Combatant, e: Dictionary, target: Combatant, fast: bool) -> D
 	match e.get("type"):
 		"attack":
 			hit = await _attack(actor, target, e, beats, fast)
+			var off_hand := actor.off_hand_attack(e)
+			if not off_hand.is_empty() and target.is_alive() and actor.is_alive():
+				var penalty := actor.off_hand_penalty()
+				_beat(beats, Loc.ui("%s frappe aussi de sa main secondaire%s.") % [actor.name,
+					Loc.ui(" (−%d dés)") % penalty if penalty > 0 else ""])
+				await _attack(actor, target, off_hand, beats, fast)
 		"damage":
 			var pool := actor.damage_pool(e)
 			var dealt: int = await _roll_damage(actor, target, pool, actor.damage_type(e), 0, beats, {"resist": e.get("resist", {})})
@@ -698,6 +729,8 @@ func _attack_roll(actor: Combatant, target: Combatant, e: Dictionary, beats: Arr
 	var crit_bonus := actor.critical_bonus() + (int(setting("surprise_crit_bonus", 2)) if surprise else 0)
 	var bonus := actor.use_prepared()
 	var roll := Dice.roll_pool(rng, int(attack["count"]) + bonus, int(attack["threshold"]))
+	var multiplier := actor.attack_successes_multiplier(target)
+	roll["successes"] = int(roll["successes"]) * multiplier
 	var judged := Dice.judge(int(roll["successes"]), difficulty, crit_bonus, roll["dice"])
 	var against := Loc.ui("Couvert") if actor.is_ranged_attack(e) else Loc.ui("Esquive naturelle")
 	var notes := PackedStringArray()
@@ -705,6 +738,8 @@ func _attack_roll(actor: Combatant, target: Combatant, e: Dictionary, beats: Arr
 		notes.append(Loc.ui("surprise"))
 	if bonus > 0:
 		notes.append(Loc.ui("préparé"))
+	if multiplier > 1:
+		notes.append(Loc.ui("rage : succès ×%d") % multiplier)
 	var note := (" (%s)" % ", ".join(notes)) if not notes.is_empty() else ""
 	_beat(beats, Loc.ui("%s attaque %s%s : %d succès contre %s %d — %s") % [actor.name, target.name, note,
 		int(roll["successes"]), against.to_lower(), difficulty, _attack_verdict(judged)],
@@ -749,15 +784,15 @@ func _dodge(target: Combatant, beats: Array[Dictionary], fast: bool) -> int:
 	return int(roll["successes"])
 
 
-## Contresort (une réaction) : quand un adversaire lance un sort, un combattant qui connaît la Magie et
-## garde une réaction peut le contrer, sans savoir s'il aurait touché. Opposition Magie contre Magie : il
+## Contresort (une réaction) : quand un adversaire lance un sort, un lanceur de sorts qui garde une
+## réaction peut le contrer, sans savoir s'il aurait touché. Opposition des compétences d'incantation : il
 ## faut plus de succès que le lanceur (à égalité, le sort passe). Contré, le sort est perdu (emplacement
 ## compris). Retourne true si le sort est contré.
 func _counterspell(caster: Combatant, action: Dictionary, beats: Array[Dictionary]) -> bool:
 	if not Spellcasting.is_spell(action):
 		return false
 	var candidates := living("enemy" if caster.is_ally() else "ally").filter(
-		func(c): return c.reactions > 0 and c.skill_rank("magic") > 0)
+		func(c): return c.reactions > 0 and c.is_spellcaster())
 	if candidates.is_empty():
 		return false
 	candidates.sort_custom(func(a, b): return Dice.expected(a.spell_pool()["count"], a.spell_pool()["threshold"]) \
@@ -773,7 +808,7 @@ func _counterspell(caster: Combatant, action: Dictionary, beats: Array[Dictionar
 	_beat(beats, Loc.ui("%s tente de contrer le sort !") % counter.name)
 	var c_roll := Dice.roll_pool(rng, int(mine["count"]) + counter.use_prepared(), int(mine["threshold"]))
 	var s_roll := Dice.roll_pool(rng, int(theirs["count"]), int(theirs["threshold"]))
-	_beat(beats, Loc.ui("%s : %d succès.") % [caster.name, int(s_roll["successes"])], _roll_info(Loc.ui("Magie (%s)") % caster.name, s_roll), true)
+	_beat(beats, Loc.ui("%s : %d succès.") % [caster.name, int(s_roll["successes"])], _roll_info(Loc.ui("Sort (%s)") % caster.name, s_roll), true)
 	var countered := int(c_roll["successes"]) > int(s_roll["successes"])
 	_beat(beats, Loc.ui("%s : %d succès — %s") % [counter.name, int(c_roll["successes"]),
 		Loc.ui("le sort est contré !") if countered else Loc.ui("le sort passe.")],
@@ -824,8 +859,8 @@ func _counter(actor: Combatant, target: Combatant, e: Dictionary, attack: Dictio
 		_roll_info(Loc.ui("Attaque (%s)") % actor.name, a_roll), fast)
 	_beat(beats, Loc.ui("%s : %d succès.") % [target.name, int(d_roll["successes"])],
 		_roll_info(Loc.ui("Contre-attaque (%s)") % target.name, d_roll), fast)
-	var a := int(a_roll["successes"])
-	var d := int(d_roll["successes"])
+	var a := int(a_roll["successes"]) * actor.attack_successes_multiplier(target)
+	var d := int(d_roll["successes"]) * target.attack_successes_multiplier(actor)
 	if a >= d:
 		var level := Dice.critical_level(a - d, actor.critical_bonus())
 		_beat(beats, Loc.ui("%s l'emporte%s.") % [actor.name, Loc.ui(" (critique %d)") % level if level > 0 else ""])
@@ -849,7 +884,11 @@ func _hit(actor: Combatant, target: Combatant, e: Dictionary, attack: Dictionary
 	var options := {"armor": not ignore_armor, "from_attack": true, "savage": savage}
 	if can_parry:
 		options["parry"] = {"attacker": actor, "effect": e, "fast": fast}
-	await _roll_damage(actor, target, actor.damage_pool(e, attack), actor.damage_type(e), rerolls, beats, options)
+	var pool := actor.damage_pool(e, attack)
+	if critical > 0 and actor.critical_damage_dice() > 0:
+		pool["count"] = int(pool["count"]) + actor.critical_damage_dice()
+		_beat(beats, Loc.ui("Attaques précises : %d dés de dégâts en plus.") % actor.critical_damage_dice())
+	await _roll_damage(actor, target, pool, actor.damage_type(e), rerolls, beats, options)
 	for part: Dictionary in actor.bonus_damage(e):
 		await _roll_damage(actor, target, {"count": int(part.get("dice", 1)), "threshold": int(part.get("threshold", 5))},
 			part["damage_type"], rerolls, beats, {"armor": not ignore_armor})

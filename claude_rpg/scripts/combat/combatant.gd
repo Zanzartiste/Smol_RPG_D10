@@ -112,7 +112,7 @@ func ability_score(ability_id: String) -> int:
 func skill_rank(skill_id: String) -> int:
 	if character != null:
 		return character.skill_rank(skill_id)
-	var skill := Skills.resolve(skill_id)
+	var skill := Skills.resolve(spell_skill() if skill_id == Skills.SPELL else skill_id)
 	return int(creature.get("skills", {}).get(skill, Skills.base_rank(skill)))
 
 
@@ -176,9 +176,40 @@ func spell_threshold() -> int:
 	return ability_score(creature.get("spell_ability", "int"))
 
 
-## Réserve d'incantation (Magie contre l'attribut d'incantation) pour imposer un effet à une cible.
+## Compétence d'incantation (personnage : voir Character.spell_skill ; créature : "spell_skill", Érudition).
+func spell_skill() -> String:
+	if character != null:
+		return character.spell_skill()
+	return creature.get("spell_skill", "lore")
+
+
+## Lance-t-il des sorts (pour contrer un sort) ? Créature : si elle a un attribut d'incantation.
+func is_spellcaster() -> bool:
+	return character.spell_skill() != "" if character != null else creature.has("spell_ability")
+
+
+## Réserve d'incantation (compétence d'incantation contre l'attribut d'incantation) pour imposer un effet
+## à une cible.
 func spell_pool(bonus := 0) -> Dictionary:
-	return {"count": skill_rank("magic") + bonus, "threshold": spell_threshold(), "ability": "spell"}
+	return {"count": skill_rank(Skills.SPELL) + bonus, "threshold": spell_threshold(), "ability": "spell"}
+
+
+## Dés de dégâts en plus sur un critique (Attaques précises du Roublard).
+func critical_damage_dice() -> int:
+	return Modifiers.sum(character.modifiers(), "critical_damage_dice") if character != null else 0
+
+
+## Multiplicateur des succès d'une attaque de `self` contre `target` (Rage : ×2 pour l'enragé, qu'il
+## attaque ou soit attaqué).
+func attack_successes_multiplier(target: Combatant) -> int:
+	return _status_multiplier() * (target._status_multiplier() if target != null else 1)
+
+
+func _status_multiplier() -> int:
+	var result := 1
+	for status_id: String in statuses:
+		result *= maxi(1, int(StatusEffects.def(status_id).get("attack_successes_multiplier", 1)))
+	return result
 
 
 func has_modifier(type: String) -> bool:
@@ -296,6 +327,8 @@ func parry_pool(bonus := 0) -> Dictionary:
 func unavailable_reason(action: Dictionary) -> String:
 	if action.get("target", "enemy") in ["enemy", "all_enemies"] and has_status_flag("no_hostile_actions"):
 		return Loc.ui("charmé")
+	if has_status_flag("melee_only") and not is_melee_attack_action(action):
+		return Loc.ui("en rage : attaques au corps à corps seulement")
 	if action.has("per_combat") and int(uses.get(action.get("id", ""), 0)) <= 0:
 		return Loc.ui("déjà utilisée")
 	var key := resource_key(action)
@@ -373,7 +406,7 @@ func become_prepared() -> void:
 # --- Attaques ----------------------------------------------------------------
 
 ## Réserve d'attaque d'un effet "attack" : {"count", "threshold", "rank", "skill", "ability"}.
-## Personnage : arme en main (+ modificateurs d'arme), arme donnée, ou sort (Magie). Créature : "skill"
+## Personnage : arme en main (+ modificateurs d'arme), arme donnée, ou sort (compétence d'incantation). Créature : "skill"
 ## et "ability" de l'effet (Physique et FOR par défaut), ou l'arme donnée.
 func attack_pool(effect: Dictionary) -> Dictionary:
 	var pool := {}
@@ -386,11 +419,12 @@ func attack_pool(effect: Dictionary) -> Dictionary:
 			pool = character.attack_pool("weapon", "", bonus)
 			pool["skill"] = _best_weapon_skill(character.weapon_id())
 		elif effect.get("weapon") is String:
-			pool = character.attack_pool(String(effect.get("ability", "weapon")), effect["weapon"])
+			pool = character.attack_pool(String(effect.get("ability", "weapon")), effect["weapon"],
+				-off_hand_penalty() if effect.get("off_hand", false) else 0)
 			pool["skill"] = _best_weapon_skill(effect["weapon"])
 		elif effect.get("ability") == "spell":
 			pool = character.attack_pool("spell")
-			pool["skill"] = "magic"
+			pool["skill"] = spell_skill()
 		else:
 			pool = character.skill_pool(effect.get("skill", "physique"), effect.get("ability", "str"))
 			pool["skill"] = effect.get("skill", "physique")
@@ -401,7 +435,7 @@ func attack_pool(effect: Dictionary) -> Dictionary:
 		pool = {"count": skill_rank(skill), "threshold": ability_score(ability), "ability": ability, "skill": skill}
 	elif effect.get("ability") == "spell":
 		pool = spell_pool()
-		pool["skill"] = "magic"
+		pool["skill"] = spell_skill()
 	else:
 		var skill: String = effect.get("skill", "physique")
 		pool = skill_pool(skill, effect.get("ability", "str"))
@@ -462,8 +496,13 @@ func damage_pool(effect: Dictionary, attack: Dictionary = {}) -> Dictionary:
 		var mods := character.modifiers()
 		if _uses_own_weapon(effect):
 			count += Modifiers.sum(mods, "weapon_damage")
-			if not two_handed_grip() and not Equipment.has_property(character.weapon_id(), "ranged"):
-				count += Modifiers.sum(mods, "dueling")  # style Duel
+			var weapon := character.weapon_id()
+			if weapon == Equipment.UNARMED:
+				count += Modifiers.sum(mods, "unarmed_fighting")  # style À mains nues
+			elif off_hand_weapon() == "" and not two_handed_grip() and not Equipment.has_property(weapon, "ranged"):
+				count += Modifiers.sum(mods, "dueling")  # style À une main
+		if effect.get("off_hand", false):
+			count -= off_hand_penalty()
 		if effect.get("school") == "evocation" and has_modifier("empowered_evocation"):
 			count += 1
 	return {"count": count, "threshold": threshold}
@@ -506,7 +545,43 @@ func is_armed_attack(effect: Dictionary) -> bool:
 	return effect.get("weapon") is String and effect["weapon"] != Equipment.UNARMED
 
 
+## Arme tenue en main secondaire ("" : rien, ou un bouclier).
+func off_hand_weapon() -> String:
+	if character == null:
+		return ""
+	var item: String = character.equipment.get("off_hand", "")
+	return item if item != "" and Equipment.is_weapon(item) and not Equipment.is_shield(item) else ""
+
+
+## Attaque de la main secondaire qui suit une attaque avec l'arme principale (une arme dans chaque main) :
+## l'effet d'attaque, ou {} s'il n'y en a pas.
+func off_hand_attack(effect: Dictionary) -> Dictionary:
+	if not _uses_own_weapon(effect) or off_hand_weapon() == "":
+		return {}
+	var weapon := off_hand_weapon()
+	return {"type": "attack", "weapon": weapon, "off_hand": true, "ability": Equipment.attack_ability(weapon,
+		ability_score("str") - character.roll_penalty("str"), ability_score("dex") - character.roll_penalty("dex"))}
+
+
+## Malus (en dés, à l'attaque et aux dégâts) de l'attaque de la main secondaire (rules.json › combat) ;
+## aucun avec le style À deux armes.
+func off_hand_penalty() -> int:
+	if has_modifier("two_weapon_fighting"):
+		return 0
+	return int(DB.rules.get("combat", {}).get("off_hand_penalty", 2))
+
+
+## L'action n'est-elle faite que d'attaques au corps à corps (permises pendant la Rage) ?
+
+func is_melee_attack_action(action: Dictionary) -> bool:
+	var effects: Array = action.get("effects", [])
+	var attacks := effects.filter(func(e): return e.get("type") == "attack")
+	return not attacks.is_empty() and attacks.all(func(e): return not is_ranged_attack(e)) \
+		and effects.all(func(e): return e.get("type") in ["attack", "status"])
+
+
 ## L'arme est tenue à deux mains (arme à deux mains, ou polyvalente sans rien en main secondaire).
+
 func two_handed_grip() -> bool:
 	if character == null:
 		return false

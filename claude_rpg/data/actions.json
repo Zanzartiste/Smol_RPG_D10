@@ -61,7 +61,7 @@
 		"target": "all_enemies",
 		"cost": "spell_slot",
 		"spell_level": 1,
-		"effects": [{"type": "damage", "damage": {"skill": "magic", "dice": 1, "threshold": "spell"}, "damage_type": "fire", "resist": {"ability": "dex"}, "upcast": 1, "school": "evocation"}, {"type": "status", "status": "burning", "stacks": 1}]
+		"effects": [{"type": "damage", "damage": {"skill": "spell", "dice": 1, "threshold": "spell"}, "damage_type": "fire", "resist": {"ability": "dex"}, "upcast": 1, "school": "evocation"}, {"type": "status", "status": "burning", "stacks": 1}]
 	},
 	{
 		"id": "sleep",
@@ -136,6 +136,14 @@
 		"effects": [{"type": "attack", "weapon": "unarmed", "ability": "str"}, {"type": "status", "status": "restrained", "stacks": 2}]
 	},
 	{
+		"id": "rage",
+		"name": "Rage",
+		"description": "Vous laissez éclater votre fureur jusqu'au début de votre prochain tour : vous ne pouvez plus qu'attaquer au corps à corps, et les succès des jets d'attaque que vous faites et que vous subissez sont doublés.",
+		"target": "self",
+		"free": true,
+		"effects": [{"type": "status", "status": "raging", "stacks": 1}]
+	},
+	{
 		"id": "action_surge",
 		"name": "Fougue",
 		"description": "Vous puisez dans vos réserves pour agir une deuxième fois.",
@@ -171,6 +179,6 @@
 		"target": "all_enemies",
 		"cost": "spell_slot",
 		"spell_level": 3,
-		"effects": [{"type": "damage", "damage": {"skill": "magic", "dice": 4, "threshold": "spell", "bonus": 1}, "damage_type": "fire", "resist": {"ability": "dex"}, "upcast": 1, "school": "evocation"}]
+		"effects": [{"type": "damage", "damage": {"skill": "spell", "dice": 4, "threshold": "spell", "bonus": 1}, "damage_type": "fire", "resist": {"ability": "dex"}, "upcast": 1, "school": "evocation"}]
 	}
 ]

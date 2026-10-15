@@ -21,7 +21,7 @@
 		"description": "Une échoppe embaumée de sauge, où fioles et bocaux s'entassent jusqu'au plafond.",
 		"price_rate": 1.0,
 		"restock_days": 3,
-		"stock": {"potion_heal": 4, "antidote": 3, "healing_herbs": 5},
+		"stock": {"potion_heal": 4, "antidote": 3, "healing_herbs": 5, "scroll_fire_bolt": 2, "scroll_magic_missile": 1, "scroll_sleep": 1, "scroll_mage_shield": 1},
 		"crafting": "alchemy"
 	},
 	{

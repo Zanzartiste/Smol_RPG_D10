@@ -5,15 +5,15 @@
 >
 > **Mise à jour du 2026-10-13** : avec le passage aux réserves de d10 ([systeme_de_jeu.md](systeme_de_jeu.md)),
 > l'**option B** est en place à titre provisoire : résister est un jet de compétence (Physique pour FOR, DEX et CON ;
-> Perspicacité pour SAG ; Érudition pour INT ; Persuasion pour CHA) contre l'attribut, +1 dé si la classe maîtrise
-> la sauvegarde. Contre des dégâts, chaque succès retire un point ; contre un autre effet, c'est une opposition avec
-> la Magie du lanceur. Le reste de ce document décrit l'ancien système (d20), pour mémoire.
+> Perspicacité pour SAG ; Érudition pour INT ; Persuasion pour CHA) contre l'attribut, sans maîtrise
+> de classe (décision du 2026-10-15). Contre des dégâts, chaque succès retire un point ; contre un autre effet, c'est une opposition avec
+> la compétence d'incantation du lanceur. Le reste de ce document décrit l'ancien système (d20), pour mémoire.
 
 ## Principe d'origine (d20)
 
 - Un jet de sauvegarde, c'est la **cible** qui lance le dé pour résister à un effet : d20 + modificateur de
   l'attribut + rang de sauvegarde (provisoire : 1, ou 2 si la classe le maîtrise), contre un DD fixé par la source
-  (pour un sort : 8 + rang de Magie + attribut d'incantation).
+  (pour un sort : 8 + rang de la compétence d'incantation + attribut d'incantation).
 - C'est l'inverse d'une attaque, où c'est l'**attaquant** qui lance le dé contre la CA de la cible.
 
 ---

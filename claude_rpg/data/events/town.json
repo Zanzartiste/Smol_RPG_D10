@@ -279,7 +279,7 @@
 				"check": {"skill": "sleight_of_hand", "difficulty": 2},
 				"success": {
 					"text": "La bourse change de propriétaire sans que personne ne remarque rien. Vous avez un don.",
-					"effects": [{"type": "gold", "amount": 20}, {"type": "unlock", "id": "class:rogue"}]
+					"effects": [{"type": "gold", "amount": 20}]
 				},
 				"failure": {
 					"text": "« Au voleur ! » La garde vous tombe dessus.",
