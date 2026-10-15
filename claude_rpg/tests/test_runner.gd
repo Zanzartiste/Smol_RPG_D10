@@ -995,6 +995,13 @@ func _test_actions() -> bool:
 	await combat.perform(mage, missile, combat.living("enemy")[0])
 	await combat.perform(mage, missile, combat.living("enemy")[0] if not combat.living("enemy").is_empty() else null)
 	_expect(Game.life.character.resources["spell_slot"] == 0, "projectile magique : 2 emplacements dépensés")
+	# Chercher les points faibles : un test d'Érudition ; réussi, les défenses de la cible sont connues.
+	var rat: Combatant = combat.living("enemy")[0] if not combat.living("enemy").is_empty() else null
+	if rat != null:
+		Game.life.character.skill_points["lore"] = 30
+		combat.actions_left = 2
+		await combat.perform(mage, Actions.def("find_weakness"), rat)
+		_expect(rat.weaknesses_known, "Chercher les points faibles : défenses révélées")
 	_expect(mage.unavailable_reason(missile) == "", "plus de mana : le sort reste possible, payé en PV")
 	var hp_before := mage.hp
 	_expect(mage.consume(missile) == 1 and mage.hp == hp_before - 1 and Game.life.character.resources["spell_slot"] == 0, "mana manquant : 1 PV par point")

@@ -698,6 +698,10 @@ func _apply(actor: Combatant, e: Dictionary, target: Combatant, fast: bool) -> D
 				_beat(beats, Loc.ui("%s n'est plus affecté par : %s.") % [target.name, ", ".join(removed)])
 		"check":
 			hit = _skill_check(actor, target, e, beats, fast)
+		"reveal_weaknesses":
+			target.weaknesses_known = true
+			var known := target.defenses().describe()
+			_beat(beats, Loc.ui("Points faibles de %s : %s.") % [target.name, known if known != "" else Loc.ui("ni résistance ni faiblesse particulière")])
 		"extra_action":
 			actions_left += 1
 			_beat(beats, Loc.ui("%s peut agir une fois de plus.") % actor.name)
@@ -1012,7 +1016,8 @@ func _status_from_damage(target: Combatant, type: String, dealt: int) -> String:
 ## Retourne true si l'acteur réussit.
 func _skill_check(actor: Combatant, target: Combatant, e: Dictionary, beats: Array[Dictionary], fast: bool) -> bool:
 	var skill: String = e["skill"]
-	var pool := actor.skill_pool(skill, e.get("ability", ""), -1 if actor.has_status_flag("check_disadvantage") else 0)
+	var bonus := (-1 if actor.has_status_flag("check_disadvantage") else 0) + actor.use_prepared()
+	var pool := actor.skill_pool(skill, e.get("ability", ""), bonus)
 	var roll := Dice.roll_pool(rng, int(pool["count"]), int(pool["threshold"]))
 	var label := Skills.name_of(skill)
 	if e.has("vs_resist") or e.has("vs_save"):

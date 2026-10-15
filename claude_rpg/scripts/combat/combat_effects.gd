@@ -37,6 +37,7 @@ const SCHEMA := {
 	"summon": ["creature"],
 	"extra_action": [],
 	"check": ["skill"],
+	"reveal_weaknesses": [],
 }
 ## Cibles possibles d'une action (actions.json, actions des créatures).
 const TARGETS := ["enemy", "all_enemies", "ally", "all_allies", "self", "none"]

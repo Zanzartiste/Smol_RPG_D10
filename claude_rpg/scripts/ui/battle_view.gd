@@ -139,6 +139,12 @@ func _make_token(c: Combatant) -> Control:
 func _refresh_statuses(c: Combatant, box: HFlowContainer) -> void:
 	for child in box.get_children():
 		child.queue_free()
+	if c.weaknesses_known:
+		var known := c.defenses().describe()
+		var tag := _label(tr("Points faibles"), 10, UITheme.GOLD)
+		tag.tooltip_text = known if known != "" else tr("Ni résistance ni faiblesse particulière")
+		tag.mouse_filter = Control.MOUSE_FILTER_PASS
+		box.add_child(tag)
 	for status_id: String in c.statuses:
 		var chip := _label("%s %d" % [StatusEffects.name_of(status_id).substr(0, 4), c.stacks(status_id)], 10, Color("#1e1712"))
 		var style := StyleBoxFlat.new()

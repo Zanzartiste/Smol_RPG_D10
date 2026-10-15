@@ -20,6 +20,7 @@ var statuses: Dictionary = {}  # id d'état -> charges
 var intent: Dictionary = {}  # action annoncée, exécutée au prochain tour (ennemis)
 var uses: Dictionary = {}  # id d'action -> utilisations restantes dans ce combat (per_combat)
 var reaction_used := false  # Esquive instinctive déjà utilisée ce round, rendue à son tour
+var weaknesses_known := false  # points faibles découverts (Chercher les points faibles)
 var savage_used := false  # Frappe brutale déjà utilisée ce tour
 var reactions := 0  # actions gardées à la fin de son tour : esquives, parades, contre-attaques
 var parries_used := 0  # parades pendant le tour en cours (une par main armée)

@@ -212,6 +212,9 @@ chance de réussite (calculée exactement).
   12, 15), +1 attribut tous les 5 niveaux, un don (pas d'origine) tous les 4 niveaux. Table d'XP de D&D. La montée de
   niveau se fait au hub, avec le bouton « ★ Monter de niveau » de la fiche ; l'onglet Personnage brille tant qu'elle
   attend.
+- **Chercher les points faibles** (action commune) : test d'Érudition, difficulté 2 (Se préparer avant : +2 dés,
+  donc deux actions). Réussi : les résistances, immunités et vulnérabilités de la cible s'affichent (étiquette
+  « Points faibles »).
 - **Mana** : réserve = niveau de lanceur × 2 (demi-lanceur : moitié de ses niveaux) ; un sort de niveau N coûte
   N mana, les tours de magie rien. Le mana manquant se paie en PV (1 pour 1), jusqu'à 0 PV (on tombe). L'IA ne
   puise jamais dans ses PV. Repos long : tout le mana revient.
