@@ -99,7 +99,7 @@ chance de réussite (calculée exactement).
 - **(Taille + 2) × CON + 7**, au moins 1 (décision du 2026-10-14 ; `rules.json › hit_points`). Humain moyen (taille
   0, CON 4) : 15 PV ; humain CON 6 : 19 PV ; nain (taille −1) CON 6 : 13 PV ; un grand colosse dépasse 40 PV.
 - Fourchette visée : de 1 à 55 PV selon la Constitution et la taille.
-- Certains dons modifieront les PV (Robuste). La progression des PV par niveau reste à décider.
+- Certains dons modifieront les PV (Robuste). Pas de progression des PV par niveau pour l'instant.
 - Les dégâts sont à la même échelle : un coup fait le plus souvent 2 à 5 points.
 
 ## Compétences à la création
