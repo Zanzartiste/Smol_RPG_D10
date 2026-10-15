@@ -383,7 +383,16 @@ suivent automatiquement.
 Les prérequis s'écrivent comme les conditions des événements. `category` vaut `origin` (dons d'origine) ou `general`.
 
 **Obtention d'un don :**
-- **Passé** : chaque passé accorde un don dès la création (`backgrounds.json › feat`, obligatoire).
+- **Passé** : chaque passé propose un don au choix dès la création : un choix `{"id": "feat", "type": "feat",
+  "options": [5 ids], "at_creation": true}` dans `backgrounds.json › choices` (clé « background/feat »). Sans
+  `options`, tous les dons de `category`. Le passé Sur mesure (`custom`) a aussi un choix de 4 compétences
+  (`type: skill`, modificateur `skill_rank` +1) et pas de `skills` fixes. `Feats.for_background(id)` renvoie les dons
+  proposés ; `Choices.raw_options(spec)` les valeurs d'un choix avant filtrage.
+- **Modificateurs des dons du tableur** : `daily_ability_die` (`id` attribut, `resource` : un test raté sous cet
+  attribut reçoit un dé de plus, une fois par jour, d'office après le jet), `lucky` (un échec critique devient un
+  échec, ressource `lucky`), `check_tag_die` (`tag` : un dé de plus aux tests dont `tags` contient ce tag : `swim`,
+  `orientation`, `forage`), `climate_adapted` (`id` : hot, cold), `feat_flag` (`id` : effet d'un système pas encore
+  en jeu : mini-jeux, pièges, déchiffrage, réactions, ville). `spellcasting_ability` accepte un `skill` (druide : Nature).
 - **Niveau** : `rules.json › advancement` vaut `{"ability_levels": [5, 10, 15, 20], "ability_points": 1, "feat_levels": [], "feats": 1}`.
   Aux niveaux d'`ability_levels`, le personnage, héros ou compagnon, place `ability_points` (1) dans un attribut au
   choix, sans plafond (`max_ability_score` n'existe plus : `Progression.max_ability_score()` renvoie 0 = aucun).

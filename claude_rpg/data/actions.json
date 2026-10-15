@@ -46,6 +46,34 @@
 		"effects": [{"type": "attack", "ability": "spell", "damage": {"threshold": "spell", "bonus": 1}, "damage_type": "cold", "scaling": {"table": "cantrip"}, "cantrip": true, "school": "evocation"}, {"type": "status", "status": "weakened", "stacks": 2}]
 	},
 	{
+		"id": "thorn_whip",
+		"name": "Fouet épineux",
+		"description": "Tour de magie de druide : une liane épineuse fouette la cible.",
+		"target": "enemy",
+		"effects": [{"type": "attack", "ability": "spell", "damage": {"threshold": "spell", "bonus": 1}, "damage_type": "piercing", "scaling": {"table": "cantrip"}, "cantrip": true, "school": "transmutation"}]
+	},
+	{
+		"id": "produce_flame",
+		"name": "Flammes",
+		"description": "Tour de magie de druide : une flamme naît dans votre paume et part vers la cible.",
+		"target": "enemy",
+		"effects": [{"type": "attack", "ability": "spell", "damage": {"threshold": "spell", "bonus": 2}, "damage_type": "fire", "scaling": {"table": "cantrip"}, "cantrip": true, "school": "conjuration"}]
+	},
+	{
+		"id": "sacred_flame",
+		"name": "Flamme sacrée",
+		"description": "Tour de magie de clerc : une flamme radieuse descend sur la cible.",
+		"target": "enemy",
+		"effects": [{"type": "attack", "ability": "spell", "damage": {"threshold": "spell", "bonus": 2}, "damage_type": "radiant", "scaling": {"table": "cantrip"}, "cantrip": true, "school": "evocation"}]
+	},
+	{
+		"id": "toll_the_dead",
+		"name": "Glas",
+		"description": "Tour de magie de clerc : le son d'une cloche funèbre blesse l'esprit de la cible.",
+		"target": "enemy",
+		"effects": [{"type": "attack", "ability": "spell", "damage": {"threshold": "spell", "bonus": 2}, "damage_type": "necrotic", "scaling": {"table": "cantrip"}, "cantrip": true, "school": "necromancy"}]
+	},
+	{
 		"id": "magic_missile",
 		"name": "Projectile magique",
 		"description": "Trois fléchettes de force qui touchent toujours leur cible.",

@@ -207,7 +207,9 @@ chance de réussite (calculée exactement).
   prioritaires et visent l'allié le plus mal en point (`ai_heal_below`, `ai_protect_below`, `ai_support_bonus`).
 - **Météo** : brouillard et orage plongent les combats en plein air dans la pénombre (Couvert +1).
 - **Compétence d'incantation** : arcanique → Érudition (Magicien), divine → Détermination, primale → Nature,
-  artistique → Arts ; Initié à la magie : selon l'attribut choisi (INT Érudition, SAG Détermination, CHA Arts).
+  artistique → Arts ; Initié à la magie : magicien → Érudition, clerc → Détermination, druide → Nature.
+- **Dons « 1/jour »** (Costaud, Malin, Agile…) : après un test raté sous l'attribut du don, un dé de plus est lancé
+  d'office (on a vu le résultat) ; Chanceux transforme un échec critique en échec. Recharge au repos long.
 - **Sorts** : attaque de sort contre le Couvert ; dégâts = rang de la compétence d'incantation (+ dés du sort) contre l'attribut
   d'incantation + bonus ; les sorts de zone se résistent (DEX : chaque succès retire un point).
 - **Paliers** : les tours de magie gagnent un dé de dégâts aux niveaux 5, 11 et 17 ; l'Attaque sournoise ajoute un

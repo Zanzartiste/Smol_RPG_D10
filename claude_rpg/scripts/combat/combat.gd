@@ -881,10 +881,13 @@ func _hit(actor: Combatant, target: Combatant, e: Dictionary, attack: Dictionary
 		actor.savage_used = true
 	var ignore_armor := surprise and not target.has_natural_armor()
 	var rerolls := critical + (1 if actor.great_weapon_fighting(e) else 0)
-	var options := {"armor": not ignore_armor, "from_attack": true, "savage": savage}
+	var options := {"armor": not ignore_armor, "from_attack": true}
 	if can_parry:
 		options["parry"] = {"attacker": actor, "effect": e, "fast": fast}
 	var pool := actor.damage_pool(e, attack)
+	if savage:
+		pool["count"] = int(pool["count"]) + 1
+		_beat(beats, Loc.ui("Frappe brutale : un dé de dégâts en plus."))
 	if critical > 0 and actor.critical_damage_dice() > 0:
 		pool["count"] = int(pool["count"]) + actor.critical_damage_dice()
 		_beat(beats, Loc.ui("Attaques précises : %d dés de dégâts en plus.") % actor.critical_damage_dice())
@@ -926,8 +929,7 @@ func _parry(attacker: Combatant, target: Combatant, e: Dictionary, beats: Array[
 ## Lance et inflige des dégâts : un succès = un point. `rerolls` : relances des dés ratés (critique).
 ## Options : "armor" (l'Armure de la cible baisse le seuil, sans passer sous 1), "resist" ({"ability"} :
 ## chaque succès de la cible retire un point ; Dérobade : deux), "multiplier" (0.5 : Tour de magie
-## puissant), "from_attack" (l'Esquive instinctive peut diviser par deux), "savage" (on lance deux fois et
-## on garde le meilleur : Frappe brutale), "parry" ({"attacker", "effect"} : la cible peut parer).
+## puissant), "from_attack" (l'Esquive instinctive peut diviser par deux), "parry" ({"attacker", "effect"} : la cible peut parer).
 ## Retourne les dégâts infligés.
 func _roll_damage(actor: Combatant, target: Combatant, pool: Dictionary, type: String, rerolls: int,
 		beats: Array[Dictionary], options: Dictionary = {}) -> int:
@@ -941,11 +943,6 @@ func _roll_damage(actor: Combatant, target: Combatant, pool: Dictionary, type: S
 		notes.append(Loc.ui("armure : seuil %d → %d") % [threshold, lowered])
 		threshold = lowered
 	var roll := Dice.roll_pool(rng, int(pool["count"]), threshold, rerolls)
-	if options.get("savage", false):
-		var second := Dice.roll_pool(rng, int(pool["count"]), threshold, rerolls)
-		if int(second["successes"]) > int(roll["successes"]):
-			roll = second
-		notes.append(Loc.ui("frappe brutale"))
 	if rerolls > 0:
 		notes.append(Loc.ui("%d relance(s)") % rerolls)
 	var amount := int(roll["successes"])

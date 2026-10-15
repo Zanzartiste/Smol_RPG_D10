@@ -71,6 +71,19 @@ static func value_description(spec: Dictionary, value: String) -> String:
 	return ""
 
 
+## Toutes les valeurs d'un choix, avant filtrage : "options", sinon toutes les compétences, ou tous les
+## dons de la catégorie.
+static func raw_options(spec: Dictionary) -> Array:
+	if spec.has("options"):
+		return spec["options"].map(func(o): return o if o is String else o["id"])
+	match spec.get("type"):
+		"skill":
+			return Skills.ids()
+		"feat":
+			return Feats.ids().filter(func(id): return Feats.category_of(id) == spec.get("category", Feats.category_of(id)))
+	return []
+
+
 ## Valeurs proposées pour un choix (sans celles déjà prises, sauf allow_repeat).
 static func options_for(spec: Dictionary, ch: Character, taken: Array) -> Array[String]:
 	var candidates: Array = []
@@ -82,8 +95,7 @@ static func options_for(spec: Dictionary, ch: Character, taken: Array) -> Array[
 		"damage_type":
 			candidates = spec.get("options", DamageTypes.ids())
 		"feat":
-			candidates = Feats.ids().filter(func(id): return Feats.category_of(id) == spec.get("category", Feats.category_of(id)) \
-				and not ch.has_feat(id) and Feats.meets_prerequisites(id, ch))
+			candidates = raw_options(spec).filter(func(id): return not ch.has_feat(id) and Feats.meets_prerequisites(id, ch))
 		"action":
 			var known: Array = ch._all_combat_actions()
 			candidates = spec.get("options", []).filter(func(id): return id not in known and (spec.has("cost")

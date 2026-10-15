@@ -59,9 +59,6 @@ static func create(species: String, cls: String, char_name: String, options: Dic
 		scores = PointBuy.from_class(cls).final_scores()
 	for ability in Abilities.ids():
 		c.abilities[ability] = int(scores.get(ability, 4))
-	var background_feat := Feats.for_background(c.background_id)
-	if background_feat != "":
-		c.feats.append(background_feat)
 	c.equipment = class_data.get("equipment", {}).duplicate()
 	var given: Dictionary = options.get("choices", {})
 	for key: String in given:
@@ -217,7 +214,7 @@ func spell_skill() -> String:
 			return DB.classes[cls].get("spell_skill", _skill_for_spell_ability(DB.classes[cls]["spellcasting"]))
 	for m: Dictionary in modifiers():
 		if m.get("type") == "spellcasting_ability":
-			return _skill_for_spell_ability(m["id"])
+			return m.get("skill", _skill_for_spell_ability(m["id"]))
 	return ""
 
 
@@ -440,6 +437,8 @@ func choice_specs() -> Array[Dictionary]:
 		result.append({"key": "species/" + spec["id"], "spec": spec, "source": DB.species[species_id]["name"]})
 	for spec: Dictionary in DB.classes[class_id].get("choices", []):
 		result.append({"key": "class/" + spec["id"], "spec": spec, "source": DB.classes[class_id]["name"]})
+	for spec: Dictionary in DB.backgrounds.get(background_id, {}).get("choices", []):
+		result.append({"key": "background/" + spec["id"], "spec": spec, "source": DB.backgrounds[background_id]["name"]})
 	# Classes prises en multiclassage : leurs choix marqués "multiclass" (sorts du magicien…).
 	for cls: String in class_levels:
 		if cls == class_id:

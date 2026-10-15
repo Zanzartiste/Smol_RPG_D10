@@ -53,6 +53,7 @@ var _class_buttons := {}
 var _creation_choices := {}  # clé de choix (« class/skills », « species/ancestry ») -> valeurs choisies
 var _class_choice_box := VBoxContainer.new()
 var _species_choice_box := VBoxContainer.new()
+var _background_choice_box := VBoxContainer.new()
 
 
 func _ready() -> void:
@@ -97,6 +98,8 @@ func _ready() -> void:
 	class_text.get_parent().add_child(_class_choice_box)
 	species_text.get_parent().add_child(_species_choice_box)
 	species_text.get_parent().move_child(_species_choice_box, species_text.get_index() + 1)
+	background_text.get_parent().add_child(_background_choice_box)
+	background_text.get_parent().move_child(_background_choice_box, background_text.get_index() + 1)
 
 	random_name_button.pressed.connect(_randomize_name)
 	appearance_button.pressed.connect(_on_appearance_pressed)
@@ -345,6 +348,7 @@ func _fill_skill_page(ch: Character) -> void:
 
 func _on_background_selected(background_id: String) -> void:
 	_background = background_id
+	_reset_creation_choices("background/", DB.backgrounds[background_id])
 	# Une compétence déjà donnée par le passé ne peut pas être choisie en plus.
 	var granted: Dictionary = DB.backgrounds[background_id].get("skills", {})
 	for key: String in _creation_choices:
@@ -375,12 +379,12 @@ func _reset_creation_choices(prefix: String, source: Dictionary) -> void:
 ## par défaut déjà donnée par le passé est remplacée par une autre).
 func _fill_missing_choices() -> void:
 	var granted: Dictionary = DB.backgrounds.get(_background, {}).get("skills", {})
-	for pair in [["species/", DB.species.get(_species, {})], ["class/", DB.classes.get(_class, {})]]:
+	for pair in [["species/", DB.species.get(_species, {})], ["class/", DB.classes.get(_class, {})],
+			["background/", DB.backgrounds.get(_background, {})]]:
 		for spec: Dictionary in _creation_specs(pair[1]):
 			var key: String = pair[0] + spec["id"]
 			var values: Array = _creation_choices.get(key, [])
-			for o in spec.get("options", []):
-				var value: String = o if o is String else o["id"]
+			for value: String in Choices.raw_options(spec):
 				if values.size() >= int(spec.get("count", 1)):
 					break
 				if value not in values and not (spec.get("type") == "skill" and value in granted):
@@ -416,8 +420,7 @@ func _fill_creation_choices(box: VBoxContainer, prefix: String, source: Dictiona
 		box.add_child(title)
 		var flow := HFlowContainer.new()
 		box.add_child(flow)
-		var options: Array = spec.get("options", []).map(func(o): return o if o is String else o["id"])
-		for value: String in options:
+		for value: String in Choices.raw_options(spec):
 			var button := Button.new()
 			button.text = Choices.value_name(spec, value)
 			button.tooltip_text = Choices.value_description(spec, value)
@@ -434,7 +437,7 @@ func _fill_creation_choices(box: VBoxContainer, prefix: String, source: Dictiona
 
 ## Tous les choix de création sont-ils complets ?
 func _creation_choices_complete() -> bool:
-	for pair in [["species/", DB.species[_species]], ["class/", DB.classes[_class]]]:
+	for pair in [["species/", DB.species[_species]], ["class/", DB.classes[_class]], ["background/", DB.backgrounds[_background]]]:
 		for spec: Dictionary in _creation_specs(pair[1]):
 			if _creation_choices.get(pair[0] + spec["id"], []).size() < int(spec.get("count", 1)):
 				return false
@@ -695,6 +698,7 @@ func _refresh() -> void:
 	class_text.text = _class_info(DB.classes[_class])
 	_fill_creation_choices(_class_choice_box, "class/", DB.classes[_class])
 	_fill_creation_choices(_species_choice_box, "species/", DB.species[_species])
+	_fill_creation_choices(_background_choice_box, "background/", DB.backgrounds[_background])
 	background_text.text = _background_info(DB.backgrounds[_background])
 	_refresh_abilities()
 	_refresh_creator_points()
@@ -756,9 +760,6 @@ func _class_info(cls: Dictionary) -> String:
 func _background_info(background: Dictionary) -> String:
 	var text := "[i]%s[/i]\n%s" % [
 		Loc.gendered(background.get("description", ""), _gender), _field(tr("Compétences :"), _ranks_text(background.get("skills", {})))]
-	var feat_id := Feats.for_background(background["id"])
-	if feat_id != "":
-		text += "\n" + _field(tr("Don :"), "%s — %s" % [Feats.name_of(feat_id), Feats.summary_of(feat_id)])
 	if background.has("gold"):
 		text += "   " + _field(tr("Or :"), "+%d po" % int(background["gold"]))
 	return text

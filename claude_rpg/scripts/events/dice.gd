@@ -211,6 +211,10 @@ static func check_pool(ch: Character, check: Dictionary) -> Dictionary:
 	var bonus := int(check.get("bonus", 0))
 	if ch != null and check.has("skill") and Modifiers.grants(ch.modifiers(), "skill_advantage", check["skill"]):
 		bonus += 1
+	if ch != null:
+		for m: Dictionary in ch.modifiers():
+			if m.get("type") == "check_tag_die" and m["tag"] in check.get("tags", []):
+				bonus += 1
 	if check.has("skill"):
 		return ch.skill_pool(check["skill"], check.get("ability", ""), bonus)
 	return ch.resist_pool(check.get("resist", check.get("save", "con")), bonus)
@@ -253,14 +257,43 @@ static func roll_check(ch: Character, check: Dictionary, rng: RandomNumberGenera
 		roll["successes"] = maxi(1, int(roll["successes"]))
 	var result := judge(int(roll["successes"]), difficulty_of(check), 0, roll["dice"])
 	result.merge(roll)
+	_apply_daily_feats(ch, pool, result, rng)
 	result["pool"] = true  # pour le plateau de dés
 	result["label"] = label(check)
 	result["stat"] = stat_name(check)
 	result["text"] = describe(result["stat"], result)
+	if result.has("feats"):
+		result["text"] += " (%s)" % ", ".join(PackedStringArray(result["feats"]))
 	return result
 
 
 ## Texte d'un jet jugé : « Physique : 3d10 ≤ 5, 2 succès pour une difficulté de 2 — réussite ».
+## Dons « une fois par jour », utilisés d'office après un échec (on a vu le résultat) : un dé de plus
+## sous l'attribut du test (Costaud, Malin…), puis Chanceux contre un échec critique. Les notes vont dans
+## result["feats"].
+static func _apply_daily_feats(ch: Character, pool: Dictionary, result: Dictionary, rng: RandomNumberGenerator) -> void:
+	if ch == null or result["success"]:
+		return
+	var notes: Array[String] = []
+	for m: Dictionary in ch.modifiers():
+		if m.get("type") != "daily_ability_die" or m["id"] != pool.get("ability", "") 				or int(ch.resources.get(m["resource"], 0)) <= 0:
+			continue
+		ch.resources[m["resource"]] = int(ch.resources[m["resource"]]) - 1
+		var extra := roll_pool(rng, 1, int(pool["threshold"]))
+		var dice: Array = result["dice"] + extra["dice"]
+		var successes := int(result["successes"]) + int(extra["successes"])
+		result.merge(judge(successes, int(result["difficulty"]), 0, dice), true)
+		result["dice"] = dice
+		notes.append(Loc.ui("%s : un dé de plus") % Feats.name_of(m["resource"]))
+		break
+	if result["fumble"] and int(ch.resources.get("lucky", 0)) > 0 and ch.has_modifier("lucky"):
+		ch.resources["lucky"] = int(ch.resources["lucky"]) - 1
+		result["fumble"] = false
+		notes.append(Loc.ui("Chanceux : l'échec critique devient un échec"))
+	if not notes.is_empty():
+		result["feats"] = notes
+
+
 static func describe(stat: String, result: Dictionary) -> String:
 	return Loc.ui("%s : %s, %d succès pour une difficulté de %d — %s") % [stat,
 		pool_text(int(result["count"]), int(result["threshold"])), int(result["successes"]), int(result["difficulty"]),

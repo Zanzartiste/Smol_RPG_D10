@@ -49,101 +49,14 @@
 
 ---
 
-## Dons d'origine (implémentés)
+## Dons d'origine (implémentés, source : feuille `Dons` de [Classes.ods](Classes.ods))
 
-### Initié à la magie (`magic_initiate`)
-
-- **Catégorie** : origine (SRD 5.2).
-- **Prérequis** : aucun.
-- **Effet** : Vous avez appris deux tours de magie et un sort du 1er niveau, que vous pouvez lancer une fois par repos long sans emplacement.
-- **Détail** : au choix : l'attribut d'incantation parmi Intelligence, Sagesse, Charisme (compétence d'incantation : Érudition, Détermination ou Arts) ; au choix : 2 parmi : Trait de feu, Rayon de givre ; au choix : 1 parmi : Projectile magique, Mains brûlantes, Sommeil, Bouclier, Appel du familier ; une utilisation par repos long.
-- **Obtenu par** : don de l'humain.
-
-### Frappe brutale (`savage_attacker`)
-
-- **Catégorie** : origine (SRD 5.2).
-- **Prérequis** : aucun.
-- **Effet** : Une fois par tour, quand vous touchez avec une arme, vous lancez ses dés de dégâts deux fois et gardez le meilleur résultat.
-- **Détail** : une fois par tour, dés de dégâts d'arme lancés deux fois (le meilleur est gardé).
-- **Obtenu par** : passé Soldat, don de l'humain.
-
-### Doué (`skilled`)
-
-- **Catégorie** : origine (SRD 5.2).
-- **Prérequis** : aucun.
-- **Effet** : +1 rang dans trois compétences de votre choix.
-- **Détail** : au choix : +1 rang dans 3 compétence(s) au choix.
-- **Obtenu par** : passé Noble, don de l'humain.
-
-### Robuste (`tough`)
-
-- **Catégorie** : origine.
-- **Prérequis** : aucun.
-- **Effet** : Votre endurance est hors du commun.
-- **Détail** : +3 PV (une fois ; les PV ne montent plus avec le niveau).
-- **Obtenu par** : passé Héros du peuple, don de l'humain.
-
-### Guérisseur (`healer`)
-
-- **Catégorie** : origine.
-- **Prérequis** : aucun.
-- **Effet** : Vous savez panser les plaies du corps comme celles de l'âme.
-- **Détail** : +1 rang en Médecine.
-- **Obtenu par** : passé Acolyte, don de l'humain.
-
-### Artisan accompli (`crafter`)
-
-- **Catégorie** : origine.
-- **Prérequis** : aucun.
-- **Effet** : Un œil exercé repère la moindre malfaçon… et le moindre détail suspect.
-- **Détail** : +1 rang en Artisanat ; +1 rang en Perception.
-- **Obtenu par** : passé Artisan, don de l'humain.
-
-### Langue d'argent (`silver_tongue`)
-
-- **Catégorie** : origine.
-- **Prérequis** : aucun.
-- **Effet** : Vous trouvez toujours les mots, surtout ceux qui ne sont pas vrais.
-- **Détail** : +1 rang en Persuasion.
-- **Obtenu par** : passé Charlatan, don de l'humain.
-
-### Musicien (`musician`)
-
-- **Catégorie** : origine.
-- **Prérequis** : aucun.
-- **Effet** : Votre talent apaise les foules et vous ouvre bien des portes.
-- **Détail** : +1 rang en Arts.
-- **Obtenu par** : passé Saltimbanque, don de l'humain.
-
-### Athlète (`athlete`)
-
-- **Catégorie** : origine.
-- **Prérequis** : aucun.
-- **Effet** : Un entraînement physique rigoureux a forgé votre corps.
-- **Détail** : +1 rang en Physique.
-- **Obtenu par** : passé Sauvageon, don de l'humain.
-
-### Érudit des arcanes (`scholar`)
-
-- **Catégorie** : origine.
-- **Prérequis** : aucun.
-- **Effet** : Des nuits entières passées sur les grimoires ont aiguisé votre esprit.
-- **Détail** : +1 rang en Érudition.
-- **Obtenu par** : passé Érudit, don de l'humain.
-
-### Agile (`nimble`)
-
-- **Catégorie** : origine.
-- **Prérequis** : aucun.
-- **Effet** : Les ruelles vous ont appris à esquiver, sauter et filer.
-- **Détail** : +1 rang en Physique.
-- **Obtenu par** : passés Gamin des rues et Criminel, don de l'humain.
-
----
-
-## Dons d'origine du tableur (à implémenter)
-
-Source : feuille `Dons` de [Classes.ods](Classes.ods). « 1/jour » = une fois par jour de jeu.
+« 1/jour » = une fois par jour (recharge au repos long), utilisé d'office après un test raté. Effet déjà en jeu :
+Vigilant, Costaud/Charmeur/Malin/Perspicace/Agile/Vigoureux, Chanceux, Robuste, Doué, Frappe brutale, Bagarreur de
+taverne, Guérisseur (Médecine), Artisan accompli (Artisanat), Musicien (Arts), Initié à la magie (clerc : Flamme sacrée
+ou Glas ; magicien : Trait de feu ou Rayon de givre ; druide : Fouet épineux ou Flammes). Aquatique, Orientation,
+Affinité naturelle : actifs sur les tests marqués `tags` (aucun événement ne les marque encore). Sans effet tant que
+leur système n'existe pas : Adapté au climat, Rusé, Joueur, Linguiste, Intuition mystique, Tacticien, Citadin.
 
 - **Vigilant** (`alert`) : à l'initiative, un dé de plus, on garde le meilleur.
 - **Aquatique** (`aquatic`) : un dé de plus aux jets d'aisance dans l'eau (apnée, nage).

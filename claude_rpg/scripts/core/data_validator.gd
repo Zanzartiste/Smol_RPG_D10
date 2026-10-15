@@ -246,11 +246,13 @@ static func _validate_backgrounds(db: Node, errors: Array[String]) -> void:
 	for background: Dictionary in db.backgrounds.values():
 		var ctx := "backgrounds.json › %s" % background["id"]
 		var ranks: Dictionary = background.get("skills", {})
-		_validate_creation_ranks(db, ranks, ctx + " › skills", errors)
-		if background.has("feat"):
-			_expect_ref(db.feats, background["feat"], "don", ctx, errors)
-		else:
-			errors.append(ctx + " : chaque passé doit accorder un don (feat)")
+		var specs: Array = background.get("choices", [])
+		# Passé Sur mesure : ses compétences se choisissent (choix "skill") au lieu d'être fixées.
+		if not specs.any(func(c): return c.get("type") == "skill"):
+			_validate_creation_ranks(db, ranks, ctx + " › skills", errors)
+		if not specs.any(func(c): return c.get("type") == "feat"):
+			errors.append(ctx + " : chaque passé doit proposer un don (choix de type feat)")
+		_validate_choices(db, specs, ctx, errors)
 		_validate_skills_and_items(db, background, ctx, errors)
 
 

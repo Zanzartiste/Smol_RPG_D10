@@ -8,8 +8,8 @@
 
 - On choisit un passé à la création.
 - Il donne **4 rangs de compétence** (1 rang dans 4 compétences, fixes) et **un don d'origine au choix parmi 5**
-  (source : feuilles `PastsCompAtRankOne` et `Dons` de [Classes.ods](Classes.ods)).
-- Certains donnent de l'or en plus (Noble : 25 po).
+  (source : feuilles `PastsCompAtRankOne` et `Dons` de [Classes.ods](Classes.ods)). Pas d'or ni d'objet de passé
+  pour l'instant. **Implémenté.**
 - La description peut s'accorder au genre (`{g:masculin|féminin|neutre}`).
 
 ## Questions à trancher
@@ -105,7 +105,7 @@ Toutes les compétences sont à +1. Statut : disponible, sauf mention contraire.
 ### Courtier (`courtier`)
 
 - **Compétences** : Persuasion, Perspicacité, Érudition, Arts.
-- **Dons au choix** : Malin, Artisan accompli, Musicien, Citadin (4 seulement : un 5e à choisir).
+- **Dons au choix** : Malin, Artisan accompli, Musicien, Citadin, Linguiste.
 
 ### Fermier (`farmer`)
 
@@ -149,5 +149,14 @@ Toutes les compétences sont à +1. Statut : disponible, sauf mention contraire.
 - **Exilé** (`exile`), à débloquer : Furtivité, Nature, Langues, Physique — Chanceux, Adapté au climat, Orientation, Robuste, Rusé.
 - **Ancien esclave** (`freed_slave`), à débloquer : Physique, Détermination, Escamotage, Perspicacité — Robuste, Vigoureux, Rusé, Perspicace, Bagarreur de taverne.
 
-Anciens passés de `backgrounds.json` absents du tableur, à garder ou supprimer : Charlatan, Saltimbanque, Héros du peuple
-(et les autres non repris).
+### Charlatan (`charlatan`)
+
+- **Compétences** : Persuasion, Escamotage, Perspicacité, Arts.
+- **Dons au choix** : Charmeur, Rusé, Joueur, Linguiste, Chanceux.
+
+### Héros du peuple (`folk_hero`)
+
+- **Compétences** : Armes de mêlée, Physique, Nature, Dressage.
+- **Dons au choix** : Costaud, Robuste, Vigoureux, Tacticien, Affinité naturelle.
+
+Ids conservés des anciens passés : Érudit `sage`, Vagabond `outlander`, Enfant des rues `urchin`, Artiste `entertainer`.

@@ -31,7 +31,12 @@ const SCHEMA := {
 	"initiative_advantage": [],  # deux d10 à l'initiative, on garde le meilleur (Champion)
 	"skill_advantage": ["id"],  # un dé de plus aux tests d'une compétence
 	"spellcasting_ability": ["id"],  # attribut d'incantation hors classe (Initié à la magie)
-	"savage_attacker": [],  # une fois par tour, dés de dégâts d'arme lancés deux fois (Frappe brutale)
+	"savage_attacker": [],  # une fois par tour, un dé de dégâts de plus sur une attaque d'arme réussie (Frappe brutale)
+	"daily_ability_die": ["id", "resource"],  # test raté sous cet attribut : un dé de plus, une fois par jour (ressource)
+	"lucky": [],  # un échec critique devient un simple échec, une fois par jour (ressource lucky)
+	"check_tag_die": ["tag"],  # un dé de plus aux tests marqués de ce tag ("tags" du test : swim, orientation, forage)
+	"climate_adapted": ["id"],  # pas de jet contre ce climat (hot, cold)
+	"feat_flag": ["id"],  # effet propre à un système pas encore en jeu (mini-jeux, pièges, déchiffrage…)
 	"ignore_resistance": ["damage_type"],  # ignore la résistance des cibles à ce type (Adepte élémentaire)
 	"ranged_attack": ["amount"],  # dés en plus aux attaques à distance (Archerie)
 	"armored": ["amount"],  # points d'Armure en plus avec une vraie armure (Défense)
@@ -134,6 +139,16 @@ static func describe(m: Dictionary) -> String:
 			return Loc.ui("Incantation : %s") % Abilities.name_of(m["id"])
 		"savage_attacker":
 			return Loc.ui("Frappe brutale")
+		"daily_ability_die":
+			return Loc.ui("1/jour : +1 dé à un test raté sous %s") % Abilities.name_of(m["id"])
+		"lucky":
+			return Loc.ui("1/jour : un échec critique devient un échec")
+		"check_tag_die":
+			return Loc.ui("+1 dé (%s)") % Loc.ui(m["tag"])
+		"climate_adapted":
+			return Loc.ui("Adapté au climat : %s") % Loc.ui({"hot": "chaud", "cold": "froid"}.get(m["id"], m["id"]))
+		"feat_flag":
+			return ""
 		"ignore_resistance":
 			return Loc.ui("Ignore la résistance : %s") % DamageTypes.name_of(m["damage_type"])
 		"ranged_attack":
