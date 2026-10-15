@@ -776,8 +776,9 @@ func _class_info(cls: Dictionary) -> String:
 
 
 func _background_info(background: Dictionary) -> String:
-	var text := "[i]%s[/i]\n%s" % [
-		Loc.gendered(background.get("description", ""), _gender), _field(tr("Compétences :"), _ranks_text(background.get("skills", {})))]
+	var text := "[i]%s[/i]" % Loc.gendered(background.get("description", ""), _gender)
+	if not background.get("skills", {}).is_empty():  # Sur mesure : ses compétences se choisissent plus bas
+		text += "\n" + _field(tr("Compétences :"), _ranks_text(background["skills"]))
 	if background.has("gold"):
 		text += "   " + _field(tr("Or :"), "+%d po" % int(background["gold"]))
 	return text

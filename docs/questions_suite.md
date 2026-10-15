@@ -103,3 +103,38 @@ Chanceux de même doit transformer un échec critique "2" en échec critique "1"
 1. Quels lieux de départ veux-tu ? Proposition : port (Marin, Pirate, Contrebandier), campagne (Fermier, Vagabond,
    Héros du peuple), temple (Acolyte), forêt (Ermite), ville (les autres). => Peu importe c'est pour tester plus qu'autre chose
 2. Ces lieux sont-ils de vrais nouveaux lieux (avec PNJ et boutiques), ou des quartiers de la ville de départ ? => des quartiers de la ville pour l'instant.
+
+## Fait (2026-10-15, suite)
+
+- Création : listes longues (passés, dons et compétences du passé Sur mesure) sur une ligne qui défile.
+- Mana = niveau de lanceur × 2 ; le manque se paie en PV ; l'IA ne le fait pas.
+- Options : dons 1/jour manuels ou automatiques, affichage des tests (compétence, probabilité), choix verrouillés,
+  rythme des combats au clic. Chanceux : un degré d'échec critique en moins (degré = dés à 9 ou 10).
+- Progression : don tous les 4 niveaux (pas d'origine), sous-classe tous les 3 niveaux, bouton « Monter de niveau ».
+- Six périodes de 4 h ; repos court (1 période) et long (2 périodes).
+- Quartier de départ selon le passé ; action « Chercher les points faibles » ; menu « Chercher… » (retour joueur).
+
+## Nouvelles questions (2026-10-15)
+
+### Temps et repos
+
+1. Repos court : la moitié des PV manquants, sans mana. Faut-il qu'il rende un peu de mana (1 point ?) ?
+2. Combien de repos courts par jour, au plus ?
+3. Une vie commence le matin : faut-il qu'elle commence à l'aube pour certains passés (Fermier, Marin) ?
+
+### Chercher…
+
+1. Difficulté des chasses : loups 2, camp des brigands 3, brigands en ville 2 (Perception). Ça te va ?
+2. En ville, chercher des brigands : vrai combat dans les ruelles, ou une bagarre non mortelle (on est assommé) ?
+3. Chercher un PNJ précis qu'on connaît mais qui n'est pas là (« Où est Ysolde ? ») : un test de Perspicacité qui
+   indique où il est à cette période ?
+
+### Points faibles
+
+1. Les points faibles découverts restent-ils connus pour toutes les créatures de la même espèce (carnet de bestiaire) ?
+2. Érudition pour tout, ou Nature pour les bêtes et Détermination pour les morts-vivants ?
+
+### Combat au clic
+
+1. Faut-il aussi attendre un clic entre les attaques d'un même ennemi (attaques multiples) ?
+2. Une touche (Espace) pour avancer plus vite que la souris ?

@@ -49,6 +49,8 @@ func run(spec: Dictionary, background_texture: Texture2D) -> Dictionary:
 	_log_shown = combat.log.size()
 	_stream_pos = combat.stream.size()
 	_refresh()
+	var paced: bool = Meta.settings.get("click_to_continue_combat", true)
+	dice_tray.hold = paced
 	await dice_tray.play(combat.initiative_roll, true)  # tous les dés d'initiative en même temps
 	while not combat.is_over():
 		var actor := combat.current()
@@ -69,14 +71,30 @@ func run(spec: Dictionary, background_texture: Texture2D) -> Dictionary:
 				_actor = null
 				_cancel_pending()
 			else:
-				await get_tree().create_timer(0.45).timeout
+				if paced:
+					await _wait_click(tr("Au tour de %s — cliquez pour continuer") % actor.name)
+				else:
+					await get_tree().create_timer(0.45).timeout
 				await combat.ai_turn(actor)
 				await _play_stream()
 		combat.end_turn()
 	_log_shown = combat.log.size()
 	_refresh()
+	dice_tray.hold = false
 	await get_tree().create_timer(0.8).timeout
 	return Game.finish_combat()
+
+
+## Attend un clic du joueur (bouton en bas de l'écran) : rythme du combat (option click_to_continue_combat).
+func _wait_click(text: String) -> void:
+	var button := Button.new()
+	button.text = text
+	button.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	button.position.y -= 140
+	add_child(button)
+	button.grab_focus()
+	await button.pressed
+	button.queue_free()
 
 
 # --- Affichage ---------------------------------------------------------------

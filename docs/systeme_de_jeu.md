@@ -219,6 +219,8 @@ chance de réussite (calculée exactement).
   `stranger_difficulty`, un échec attire un groupe de `encounters`) ; une créature précise (`locations.json › hunt` :
   réussite = combat contre elle, critique = un de plus ; échec = embuscade d'un groupe du lieu sauvage, échec critique =
   un de plus) ; des ressources (récolte ; un échec critique dans la nature finit aussi en combat).
+- **Rythme des combats** (option, activée par défaut) : les dés restent affichés jusqu'au clic, et le tour d'un
+  ennemi attend un clic (« Au tour de … »).
 - **Mana** : réserve = niveau de lanceur × 2 (demi-lanceur : moitié de ses niveaux) ; un sort de niveau N coûte
   N mana, les tours de magie rien. Le mana manquant se paie en PV (1 pour 1), jusqu'à 0 PV (on tombe). L'IA ne
   puise jamais dans ses PV. Repos long : tout le mana revient.
