@@ -91,7 +91,7 @@ func _ready() -> void:
 	var classes := _fill_buttons(class_buttons, DB.classes, Meta.is_class_available, _on_class_selected)
 	_species_buttons = species
 	_class_buttons = classes
-	var backgrounds := _fill_buttons(background_buttons, DB.backgrounds, func(_id): return true, _on_background_selected)
+	var backgrounds := _fill_buttons(_scroll_row(background_buttons), DB.backgrounds, func(_id): return true, _on_background_selected)
 	var genders := _fill_buttons(gender_buttons, _index(DB.rules["genders"]), func(_id): return true, _on_gender_selected)
 	_build_ability_grid()
 	_build_upgrade_grid()
@@ -171,6 +171,21 @@ func _fill_buttons(container: Container, table: Dictionary, is_available: Callab
 		container.add_child(button)
 		buttons[id] = button
 	return buttons
+
+
+## Remplace `container` (à sa place) par une ligne horizontale qui défile ; retourne la ligne à remplir.
+func _scroll_row(container: Control) -> HBoxContainer:
+	var scroll := ScrollContainer.new()
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var row := HBoxContainer.new()
+	scroll.add_child(row)
+	var parent := container.get_parent()
+	parent.add_child(scroll)
+	parent.move_child(scroll, container.get_index())
+	container.queue_free()
+	return row
 
 
 ## Grille de l'achat de points : Attribut | − | valeur | + | +2 | +1 | total (modificateur).
@@ -418,8 +433,11 @@ func _fill_creation_choices(box: VBoxContainer, prefix: String, source: Dictiona
 		title.text = tr("%s : %d / %d") % [spec.get("name", ""), values.size(), count]
 		title.theme_type_variation = &"SectionLabel"
 		box.add_child(title)
-		var flow := HFlowContainer.new()
+		# Liste longue (passé Sur mesure : tous les dons, toutes les compétences) : une seule ligne qui défile.
+		var flow: Container = HFlowContainer.new()
 		box.add_child(flow)
+		if Choices.raw_options(spec).size() > 6:
+			flow = _scroll_row(flow)
 		for value: String in Choices.raw_options(spec):
 			var button := Button.new()
 			button.text = Choices.value_name(spec, value)
@@ -746,7 +764,7 @@ func _class_info(cls: Dictionary) -> String:
 		_field(tr("Équipement :"), " · ".join(gear))] + "\n" + _field(tr("Actions :"),
 		", ".join(PackedStringArray(cls.get("actions", []).map(func(id): return Actions.name_of(id)))))
 	if cls.has("spell_slots"):
-		text += "\n" + _field(tr("Sorts :"), tr("emplacements de sort qui augmentent avec le niveau (au niveau 1 : %s)") %
+		text += "\n" + _field(tr("Sorts :"), tr("mana qui augmente avec le niveau (au niveau 1 : %s)") %
 			ClassFeatures.slots_text(int(Spellcasting.slots(cls["spell_slots"], 1).get(Spellcasting.SLOT_KEY, 0)),
 				Spellcasting.max_level(cls["spell_slots"], 1)))
 	var features := PackedStringArray()

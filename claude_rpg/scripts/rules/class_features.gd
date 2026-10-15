@@ -40,4 +40,4 @@ static func announce(ch: Character, class_level: int, cls := "") -> Array[String
 
 ## Ex. « 8 emplacements de sort (sorts jusqu'au niveau 2) ».
 static func slots_text(total: int, max_level: int) -> String:
-	return Loc.ui("%d emplacements de sort (sorts jusqu'au niveau %d)") % [total, max_level]
+	return Loc.ui("%d mana (sorts jusqu'au niveau %d)") % [total, max_level]

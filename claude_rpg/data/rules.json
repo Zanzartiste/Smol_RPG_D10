@@ -105,6 +105,7 @@
 		{"id": "orc", "name": "Orque"},
 		{"id": "infernal", "name": "Infernal"}
 	],
+	"mana": {"_doc": "Réserve de mana (ressource spell_slot) = niveau de lanceur × per_caster_level ; un sort de niveau N coûte N mana, le manque se paie en PV.", "per_caster_level": 2},
 	"spell_slots": {
 		"_doc": "Table SRD 5.1 par niveau de classe : ligne n = niveau n, colonne i = sorts de niveau i+1. Le jeu en fait une seule réserve d'emplacements (somme pondérée par le niveau ; un sort de niveau N coûte N emplacements) et le niveau de sort le plus haut lançable.",
 		"full": [

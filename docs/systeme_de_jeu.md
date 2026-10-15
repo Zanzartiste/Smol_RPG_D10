@@ -208,6 +208,9 @@ chance de réussite (calculée exactement).
 - **Météo** : brouillard et orage plongent les combats en plein air dans la pénombre (Couvert +1).
 - **Compétence d'incantation** : arcanique → Érudition (Magicien), divine → Détermination, primale → Nature,
   artistique → Arts ; Initié à la magie : magicien → Érudition, clerc → Détermination, druide → Nature.
+- **Mana** : réserve = niveau de lanceur × 2 (demi-lanceur : moitié de ses niveaux) ; un sort de niveau N coûte
+  N mana, les tours de magie rien. Le mana manquant se paie en PV (1 pour 1), jusqu'à 0 PV (on tombe). L'IA ne
+  puise jamais dans ses PV. Repos long : tout le mana revient.
 - **Dons « 1/jour »** (Costaud, Malin, Agile…) : après un test raté sous l'attribut du don, un dé de plus est lancé
   d'office (on a vu le résultat) ; Chanceux transforme un échec critique en échec. Recharge au repos long.
 - **Sorts** : attaque de sort contre le Couvert ; dégâts = rang de la compétence d'incantation (+ dés du sort) contre l'attribut

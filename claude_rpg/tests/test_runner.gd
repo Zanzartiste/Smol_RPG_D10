@@ -975,7 +975,9 @@ func _test_actions() -> bool:
 	await combat.perform(mage, missile, combat.living("enemy")[0])
 	await combat.perform(mage, missile, combat.living("enemy")[0] if not combat.living("enemy").is_empty() else null)
 	_expect(Game.life.character.resources["spell_slot"] == 0, "projectile magique : 2 emplacements dépensés")
-	_expect(combat.action_unavailable_reason(mage, missile) == "pas assez d'emplacements de sort", "plus d'emplacement")
+	_expect(mage.unavailable_reason(missile) == "", "plus de mana : le sort reste possible, payé en PV")
+	var hp_before := mage.hp
+	_expect(mage.consume(missile) == 1 and mage.hp == hp_before - 1 and Game.life.character.resources["spell_slot"] == 0, "mana manquant : 1 PV par point")
 	Game.finish_combat()
 	Effects.apply_all([{"type": "long_rest"}], Game.life, Meta)
 	_expect(Game.life.character.resources["spell_slot"] == 2, "repos long : emplacements restaurés")
@@ -1120,9 +1122,9 @@ func _at_level(species: String, cls: String, level: int) -> Character:
 
 
 func _test_spell_progression() -> bool:
-	_expect(Spellcasting.slots("full", 1) == {"spell_slot": 2} and Spellcasting.slots("full", 5) == {"spell_slot": 4 + 3 * 2 + 2 * 3},
-		"une seule réserve : la table SRD pondérée par le niveau des sorts")
-	_expect(Spellcasting.slots("half", 1).is_empty() and Spellcasting.slots("half", 5) == {"spell_slot": 4 + 2 * 2},
+	_expect(Spellcasting.slots("full", 1) == {"spell_slot": 2} and Spellcasting.slots("full", 5) == {"spell_slot": 10},
+		"mana : niveau de lanceur × 2")
+	_expect(Spellcasting.slots("half", 1).is_empty() and Spellcasting.slots("half", 5) == {"spell_slot": 4},
 		"demi-lanceur : rien au niveau 1")
 	_expect(Spellcasting.max_level("full", 5) == 3 and Spellcasting.max_level("full", 20) == 9 and Spellcasting.max_level("half", 1) == 0,
 		"niveau de sort le plus haut selon la table")
@@ -1133,9 +1135,9 @@ func _test_spell_progression() -> bool:
 	mage.resources["spell_slot"] = 0
 	mage.add_xp(Progression.xp_for(3) - mage.xp)
 	_level_up(mage)
-	_expect(mage.resources["spell_slot"] == 6, "montée de niveau : les emplacements gagnés sont disponibles, les dépensés le restent")
+	_expect(mage.resources["spell_slot"] == 4, "montée de niveau : les emplacements gagnés sont disponibles, les dépensés le restent")
 	mage.long_rest()
-	_expect(mage.resources == {"spell_slot": 8} and mage.max_spell_level() == 2, "repos long : tous les emplacements")
+	_expect(mage.resources == {"spell_slot": 6} and mage.max_spell_level() == 2, "repos long : tous les emplacements")
 	_expect(ClassFeatures.announce(mage, 3).size() == 2, "annonce : nouvelle aptitude (tradition) et emplacements")
 
 	var old := Character.from_dict({"species_id": "goblin", "class_id": "wizard", "level": 1,
@@ -1183,7 +1185,7 @@ func _test_spell_progression() -> bool:
 		"niveau 3 : deux dés de plus")
 	_expect(Actions.def("magic_missile")["effects"][0]["damage"]["dice"] == 3, "l'action de base n'est pas modifiée")
 	await combat.perform(combat.hero, high, combat.living("enemy")[0])
-	_expect(Game.life.character.resources["spell_slot"] == 16 - 3, "lancé au niveau 3 : 3 emplacements dépensés")
+	_expect(Game.life.character.resources["spell_slot"] == Game.life.character.max_resource("spell_slot") - 3, "lancé au niveau 3 : 3 emplacements dépensés")
 	Game.combat = null
 
 	# Parchemin : le sort part une fois, avec la compétence Langues, sans emplacement ; il débloque le Magicien.

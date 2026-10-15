@@ -108,7 +108,7 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 			"long_rest":
 				for member in life.party():
 					member.long_rest()
-				lines.append(Loc.ui("PV et emplacements de sort restaurés."))
+				lines.append(Loc.ui("PV et mana restaurés."))
 			"recruit":
 				if life.has_companion(e["companion"]):
 					pass

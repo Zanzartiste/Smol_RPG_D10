@@ -71,28 +71,35 @@ Implémenter ce qui a changé dans la doc récente et qui n'est pas encore sur l
 ### Dons
 
 1. Les dons 1/jour : les garder automatiques (le dé s'ajoute dès qu'un test rate), ou une fenêtre « Utiliser Costaud ? »
-   à chaque échec (plus de contrôle, plus de clics) ?
+   à chaque échec (plus de contrôle, plus de clics) ? => Pour les dons une fois par jour, fais en sorte qu'une option dans le menu permette de désactiver le choix automatique (peut être qu'on veut garder le dé supp pour un jet plus important)
+Chanceux de même doit transformer un échec critique "2" en échec critique "1".
 2. Les dons généraux encore D&D (Lutteur, Duelliste défensif, Résistant, Adepte élémentaire, Entraînement aux armures
    lourdes) et les styles de combat : on les garde pour les dons de niveau 4, 8…, ou tu en écris une liste à toi
-   (dans le tableur, feuille Dons) ?
-3. Un don de niveau peut-il être un don d'origine (prendre Chanceux au niveau 4) ?
+   (dans le tableur, feuille Dons) ? => j'en écrirais à terme une liste à moi, notes donc bien lesquels viennent de d&d pour savoir lesquels supprimer / modifier / changer à l'avenir.
+3. Un don de niveau peut-il être un don d'origine (prendre Chanceux au niveau 4) ? => Non.
 
 ### Mana
 
-1. Un sort de niveau N coûte-t-il N mana (tours de magie gratuits) ?
+1. Un sort de niveau N coûte-t-il N mana (tours de magie gratuits) ? => Oui.
 2. « Niveau de lanceur × 2 » : un Magicien 1 a donc 2 mana, soit deux sorts de niveau 1 par jour. Assez ? Faut-il un
-   bonus selon l'attribut d'incantation ?
-3. Le mana revient-il entièrement au repos long, et en partie au repos court ?
-4. Puiser dans les PV : possible jusqu'à tomber à 0 PV (donc mourir), ou s'arrêter à 1 PV ?
+   bonus selon l'attribut d'incantation ? => ça me va très bien 2 sorts au niveau 1, puis 4 au niveau 2 (soit 4 de niveau 1 ou deux de niveau 2 ou un de niveau 2 et deux de niveau 1)
+3. Le mana revient-il entièrement au repos long, et en partie au repos court ? => entièrement au repos long oui. Un repos long doit correspondre à 2 périodes de temps passées, un repos court à une seule période (un repos long peut être interrompu par un évènemetn dans la nature : une embuscade...), et on va décomposer la journée en périodes de 4h :
+0-4 = nuit
+4-8 = aube
+8-12 = matin
+12-16 = après midi
+16-20 = soirée
+20-4 = couché
+1. Puiser dans les PV : possible jusqu'à tomber à 0 PV (donc mourir), oui jusque 0 pv admettons.
 
 ### Progression
 
-1. Rang de compétence tous les 2 niveaux : niveaux pairs (2, 4, 6…) ? Le tableur l'indique aux niveaux 2 et 4.
-2. Sous-classe tous les 3 niveaux : niveaux 3, 6, 9, 12, 15, 18 ? (Le tableur dit 3, 6, 9, 12, 16.)
-3. Table d'XP « qui grimpe fort » pour la fin : on garde celle de D&D jusqu'au niveau 10 et on la double au-delà ?
+1. Rang de compétence tous les 2 niveaux : niveaux pairs (2, 4, 6…) ? Le tableur l'indique aux niveaux 2 et 4. => fais bien aux niveaux pairs.
+2. Sous-classe tous les 3 niveaux : niveaux 3, 6, 9, 12, 15, 18 ? (Le tableur dit 3, 6, 9, 12, 16.) => Fais bien tous les 3 niveaux.
+3. Table d'XP « qui grimpe fort » pour la fin : on garde celle de D&D jusqu'au niveau 10 et on la double au-delà ? => on garde celle de d&d pour l'instant par simplciité.
 
 ### Lieu de départ
 
 1. Quels lieux de départ veux-tu ? Proposition : port (Marin, Pirate, Contrebandier), campagne (Fermier, Vagabond,
-   Héros du peuple), temple (Acolyte), forêt (Ermite), ville (les autres).
-2. Ces lieux sont-ils de vrais nouveaux lieux (avec PNJ et boutiques), ou des quartiers de la ville de départ ?
+   Héros du peuple), temple (Acolyte), forêt (Ermite), ville (les autres). => Peu importe c'est pour tester plus qu'autre chose
+2. Ces lieux sont-ils de vrais nouveaux lieux (avec PNJ et boutiques), ou des quartiers de la ville de départ ? => des quartiers de la ville pour l'instant.

@@ -318,11 +318,17 @@ func perform(actor: Combatant, action: Dictionary, target: Combatant = null) -> 
 	var free := actor.is_free(action)
 	if free and action.get("id", "") == "hide" and not action.get("free", false):
 		actor.cunning_used = true
-	actor.consume(action)
+	var blood := actor.consume(action)
 	if not free:
 		actions_left -= 1
 	var beats: Array[Dictionary] = []
 	_beat(beats, Loc.ui("%s : %s.") % [actor.name, action["name"]])
+	if blood > 0:
+		_beat(beats, Loc.ui("Faute de mana, %s puise %d PV dans sa vie.") % [actor.name, blood])
+		if actor.hp <= 0:
+			_beat(beats, _on_down(actor, actor, "magic"))
+			_check_end()
+			return beats
 	if await _counterspell(actor, action, beats):
 		_check_end()
 		return beats

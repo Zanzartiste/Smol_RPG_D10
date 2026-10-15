@@ -380,8 +380,8 @@ func _build_spells() -> void:
 	_member_selector(func(c): return c.max_resource(Spellcasting.SLOT_KEY) > 0 or not c.known_spells().is_empty())
 	var ch := member
 	_add_label(tr("Sorts de %s") % ch.name, "", "SectionLabel")
-	_add_label(tr("Emplacements : %d / %d") % [int(ch.resources.get(Spellcasting.SLOT_KEY, 0)), ch.max_resource(Spellcasting.SLOT_KEY)],
-		tr("Un sort de niveau N coûte N emplacements. Un repos long les restaure.\nSorts jusqu'au niveau %d.") % ch.max_spell_level())
+	_add_label(tr("Mana : %d / %d") % [int(ch.resources.get(Spellcasting.SLOT_KEY, 0)), ch.max_resource(Spellcasting.SLOT_KEY)],
+		tr("Un sort de niveau N coûte N mana ; le mana manquant se paie en PV. Un repos long le restaure.\nSorts jusqu'au niveau %d.") % ch.max_spell_level())
 	_add_label(tr("Sorts équipés : %d / %d") % [ch.equipped_spells.size(), ch.max_equipped_spells()],
 		tr("Seuls les sorts équipés sont utilisables en combat : 2 + rang de %s (%d). Les tours de magie sont toujours prêts, en plus.") % [
 			Skills.name_of(ch.spell_skill()), ch.skill_rank(Skills.SPELL)])

@@ -334,19 +334,28 @@ func unavailable_reason(action: Dictionary) -> String:
 	var key := resource_key(action)
 	if key == Spellcasting.SLOT_KEY and character != null and Spellcasting.cost_of(action) > character.max_spell_level():
 		return Loc.ui("sort de niveau trop élevé")
-	if key != "" and character != null and int(character.resources.get(key, 0)) < resource_amount(action):
+	if key != "" and key != Spellcasting.SLOT_KEY and character != null and int(character.resources.get(key, 0)) < resource_amount(action):
 		return Loc.ui("pas assez d'%s") % Actions.resource_name(key) if key == Spellcasting.SLOT_KEY \
 			else Loc.ui("plus d'%s") % Actions.resource_name(key)
 	return ""
 
 
-## Décompte une utilisation (par combat) et la ressource éventuelle (emplacement de sort…).
-func consume(action: Dictionary) -> void:
+## Décompte une utilisation (par combat) et la ressource éventuelle (mana…). Le mana manquant se paie
+## en PV (jusqu'à 0) : retourne les PV dépensés.
+func consume(action: Dictionary) -> int:
 	if action.has("per_combat"):
 		uses[action["id"]] = int(uses.get(action["id"], 0)) - 1
 	var key := resource_key(action)
-	if key != "" and character != null:
-		character.resources[key] = int(character.resources.get(key, 0)) - resource_amount(action)
+	if key == "" or character == null:
+		return 0
+	var have := int(character.resources.get(key, 0))
+	var cost := resource_amount(action)
+	character.resources[key] = maxi(0, have - cost)
+	if key != Spellcasting.SLOT_KEY or cost <= have:
+		return 0
+	var blood := mini(cost - have, hp)
+	hp -= blood
+	return blood
 
 
 # --- États -------------------------------------------------------------------
