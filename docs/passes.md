@@ -7,7 +7,8 @@
 ## Règles actuelles
 
 - On choisit un passé à la création.
-- Il donne **4 rangs de compétence** (1 rang dans 4 compétences) et un **don d'origine**.
+- Il donne **4 rangs de compétence** (1 rang dans 4 compétences, fixes) et **un don d'origine au choix parmi 5**
+  (source : feuilles `PastsCompAtRankOne` et `Dons` de [Classes.ods](Classes.ods)).
 - Certains donnent de l'or en plus (Noble : 25 po).
 - La description peut s'accorder au genre (`{g:masculin|féminin|neutre}`).
 
@@ -44,81 +45,109 @@
 
 ## Catalogue
 
-### Acolyte (`acolyte`)
+Toutes les compétences sont à +1. Statut : disponible, sauf mention contraire.
 
-- **Compétences** : Érudition, Perspicacité, Médecine, Détermination.
-- **Don d'origine** : Guérisseur (`healer`).
-- **Description** : Vous avez grandi au service d'un temple, entre prières et rites.
+### Marin (`sailor`)
 
-### Artisan (`artisan`)
-
-- **Compétences** : Artisanat, Perspicacité, Persuasion, Perception.
-- **Don d'origine** : Artisan accompli (`crafter`).
-- **Description** : Membre d'une guilde, vous connaissez la valeur du travail bien fait et des contrats bien négociés.
-
-### Charlatan (`charlatan`)
-
-- **Compétences** : Persuasion, Escamotage, Perspicacité, Arts.
-- **Don d'origine** : Langue d'argent (`silver_tongue`).
-- **Description** : Faux remèdes, fausses identités, vrais profits. Vous savez vendre n'importe quoi.
-
-### Criminel (`criminal`)
-
-- **Compétences** : Furtivité, Persuasion, Escamotage, Perception.
-- **Don d'origine** : Agile (`nimble`).
-- **Description** : Vous avez vécu de l'autre côté de la loi, et vous en connaissez encore les ficelles.
-
-### Saltimbanque (`entertainer`)
-
-- **Compétences** : Arts, Physique, Persuasion, Langues.
-- **Don d'origine** : Musicien (`musician`).
-- **Description** : Acrobate, musicien ou conteur, vous avez fait rire et pleurer bien des tavernes.
-
-### Héros du peuple (`folk_hero`)
-
-- **Compétences** : Nature, Dressage, Physique, Armes de mêlée.
-- **Don d'origine** : Robuste (`tough`).
-- **Description** : Simple villageois, vous vous êtes un jour dressé contre l'injustice. On s'en souvient encore.
-
-### Noble (`noble`)
-
-- **Compétences** : Persuasion, Érudition, Langues, Perspicacité.
-- **Don d'origine** : Doué (`skilled`).
-- **Bonus** : 25 po.
-- **Description** : Né dans la soie, vous connaissez l'étiquette, les lignées et le pouvoir d'un nom.
-
-### Sauvageon (`outlander`)
-
-- **Compétences** : Nature, Physique, Perception, Dressage.
-- **Don d'origine** : Athlète (`athlete`).
-- **Description** : Vous avez grandi loin des villes, au rythme des saisons et des bêtes sauvages.
-
-### Érudit (`sage`)
-
-- **Compétences** : Érudition, Langues, Alchimie, Détermination.
-- **Don d'origine** : Érudit des arcanes (`scholar`).
-- **Description** : Des années passées dans les bibliothèques ont fait de vous un puits de savoir.
+- **Compétences** : Physique, Détermination, Perception, Nature.
+- **Dons au choix** : Aquatique, Orientation, Tacticien, Agile, Bagarreur de taverne.
 
 ### Soldat (`soldier`)
 
-- **Compétences** : Physique, Armes de mêlée, Persuasion, Détermination.
-- **Don d'origine** : Frappe brutale (`savage_attacker`).
-- **Description** : Vous avez servi dans une armée. La discipline et le fracas des armes vous sont familiers.
+- **Compétences** : Armes de mêlée, Armes de trait, Physique, Détermination.
+- **Dons au choix** : Vigilant, Costaud, Tacticien, Frappe brutale, Citadin.
 
-### Gamin des rues (`urchin`)
+### Érudit (`scholar`)
 
-- **Compétences** : Furtivité, Escamotage, Perception, Physique.
-- **Don d'origine** : Agile (`nimble`).
-- **Description** : Orphelin, vous avez survécu dans les ruelles grâce à vos doigts agiles et à votre discrétion.
+- **Compétences** : Langues, Érudition, Alchimie, Médecine.
+- **Dons au choix** : Intuition mystique, Malin, Linguiste, Initié à la magie (magicien), Artisan accompli.
 
-## Idées de nouveaux passés
+### Vagabond (`wanderer`)
 
-- Apprenti (d'un forgeron, d'un alchimiste, d'un mage) — lié aux métiers.
-- Marin, pêcheur.
-- Paysan, berger.
-- Ermite.
-- Marchand ambulant.
-- Chasseur.
-- Garde de la ville.
-- Esclave affranchi, prisonnier évadé.
-- Enfant d'un héros d'une vie précédente (plus tard).
+- **Compétences** : Physique, Détermination, Nature, Dressage.
+- **Dons au choix** : Affinité naturelle, Adapté au climat, Orientation, Initié à la magie (druide), Vigoureux.
+
+### Enfant des rues (`urchin`)
+
+- **Compétences** : Persuasion, Escamotage, Furtivité, Perception.
+- **Dons au choix** : Orientation, Perspicace, Chanceux, Robuste, Citadin.
+
+### Artiste (`artist`)
+
+- **Compétences** : Langues, Persuasion, Perspicacité, Arts.
+- **Dons au choix** : Charmeur, Rusé, Joueur, Musicien, Artisan accompli.
+
+### Artisan (`artisan`)
+
+- **Compétences** : Machines, Persuasion, Perception, Artisanat.
+- **Dons au choix** : Malin, Artisan accompli, Musicien, Agile, Citadin.
+
+### Criminel (`criminal`)
+
+- **Compétences** : Physique, Escamotage, Furtivité, Perception.
+- **Dons au choix** : Vigilant, Rusé, Joueur, Agile, Citadin.
+
+### Acolyte (`acolyte`)
+
+- **Compétences** : Détermination, Perspicacité, Érudition, Médecine.
+- **Dons au choix** : Doué, Guérisseur, Intuition mystique, Perspicace, Initié à la magie.
+
+### Noble (`noble`)
+
+- **Compétences** : Langues, Persuasion, Érudition, Arts.
+- **Dons au choix** : Tacticien, Charmeur, Linguiste, Musicien, Doué.
+
+### Marchand (`merchant`)
+
+- **Compétences** : Langues, Persuasion, Perspicacité, Dressage.
+- **Dons au choix** : Malin, Artisan accompli, Linguiste, Chanceux, Doué.
+
+### Courtier (`courtier`)
+
+- **Compétences** : Persuasion, Perspicacité, Érudition, Arts.
+- **Dons au choix** : Malin, Artisan accompli, Musicien, Citadin (4 seulement : un 5e à choisir).
+
+### Fermier (`farmer`)
+
+- **Compétences** : Physique, Détermination, Nature, Dressage.
+- **Dons au choix** : Artisan accompli, Adapté au climat, Bagarreur de taverne, Robuste, Vigoureux.
+
+### Ermite (`hermit`)
+
+- **Compétences** : Érudition, Médecine, Nature, Dressage.
+- **Dons au choix** : Artisan accompli, Guérisseur, Perspicace, Initié à la magie (druide), Affinité naturelle.
+
+### Pirate (`pirate`)
+
+- **Compétences** : Machines, Physique, Détermination, Escamotage.
+- **Dons au choix** : Aquatique, Bagarreur de taverne, Agile, Joueur, Rusé.
+
+### Gladiateur (`gladiator`)
+
+- **Compétences** : Armes de mêlée, Physique, Détermination, Arts.
+- **Dons au choix** : Costaud, Frappe brutale, Tacticien, Robuste, Bagarreur de taverne.
+
+### Contrebandier (`smuggler`)
+
+- **Compétences** : Persuasion, Furtivité, Nature, Dressage.
+- **Dons au choix** : Charmeur, Rusé, Joueur, Chanceux, Affinité naturelle.
+
+### Sur mesure (`custom`)
+
+- **Statut** : disponible pour l'instant, **à bloquer plus tard**.
+- **Compétences** : 4 compétences au choix parmi toutes (+1 chacune, 4 différentes).
+- **Don** : un don au choix parmi tous les dons d'origine.
+
+## Pistes de nouveaux passés (proposées par Claude, à valider)
+
+- **Chasseur** (`hunter`) : A. Trait, Furtivité, Nature, Perception — Vigilant, Affinité naturelle, Orientation, Frappe brutale, Adapté au climat.
+- **Mercenaire** (`mercenary`) : A. Mêlée, Physique, Persuasion, Perspicacité — Costaud, Tacticien, Robuste, Bagarreur de taverne, Vigilant.
+- **Apprenti alchimiste** (`apprentice_alchemist`) : Alchimie, Médecine, Nature, Érudition — Artisan accompli, Guérisseur, Malin, Affinité naturelle, Initié à la magie.
+- **Mineur** (`miner`) : Physique, Machines, Artisanat, Détermination — Costaud, Robuste, Vigoureux, Orientation, Artisan accompli.
+- **Espion** (`spy`) : Furtivité, Langues, Perspicacité, Persuasion — Rusé, Linguiste, Vigilant, Charmeur, Chanceux.
+- **Pèlerin** (`pilgrim`) : Détermination, Langues, Nature, Perspicacité — Orientation, Adapté au climat, Intuition mystique, Perspicace, Vigoureux.
+- **Exilé** (`exile`), à débloquer : Furtivité, Nature, Langues, Physique — Chanceux, Adapté au climat, Orientation, Robuste, Rusé.
+- **Ancien esclave** (`freed_slave`), à débloquer : Physique, Détermination, Escamotage, Perspicacité — Robuste, Vigoureux, Rusé, Perspicace, Bagarreur de taverne.
+
+Anciens passés de `backgrounds.json` absents du tableur, à garder ou supprimer : Charlatan, Saltimbanque, Héros du peuple
+(et les autres non repris).

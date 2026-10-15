@@ -141,6 +141,37 @@
 
 ---
 
+## Dons d'origine du tableur (à implémenter)
+
+Source : feuille `Dons` de [Classes.ods](Classes.ods). « 1/jour » = une fois par jour de jeu.
+
+- **Vigilant** (`alert`) : à l'initiative, un dé de plus, on garde le meilleur.
+- **Aquatique** (`aquatic`) : un dé de plus aux jets d'aisance dans l'eau (apnée, nage).
+- **Costaud** (`brawny`) : 1/jour, un dé de plus à un jet sous la Force.
+- **Charmeur** (`charming`) : 1/jour, un dé de plus à un jet sous le Charisme.
+- **Malin** (`clever`) : 1/jour, un dé de plus à un jet sous l'Intelligence.
+- **Perspicace** (`insightful`) : 1/jour, un dé de plus à un jet sous la Sagesse.
+- **Agile** (`nimble`, existe déjà, à redéfinir) : 1/jour, un dé de plus à un jet sous la Dextérité.
+- **Vigoureux** (`vigorous`) : 1/jour, un dé de plus à un jet sous la Constitution.
+- **Adapté au climat** (`climate_adapted`) : chaud ou froid au choix ; pas de jet contre ce climat (dégâts de feu/froid normaux).
+- **Artisan accompli** (`crafter`, existe déjà, à redéfinir) : un dé de plus pour fabriquer.
+- **Rusé** (`cunning`) : un piège ne se déclenche que sur un échec critique au désamorçage.
+- **Joueur** (`gambler`) : un dé de plus aux mini-jeux, on garde celui de son choix.
+- **Guérisseur** (`healer`, existe déjà, à redéfinir) : un dé de plus pour soigner.
+- **Orientation** (`orientation`) : un dé de plus aux jets d'orientation (ne pas se perdre).
+- **Linguiste** (`linguist`) : déchiffre 2 caractères par rang de Langues dans les textes inconnus.
+- **Chanceux** (`lucky`) : 1/jour, réduit de 1 le degré d'un échec critique.
+- **Initié à la magie** (`magic_initiate`, existe déjà, à redéfinir) : un tour de magie (niveau 0) de la classe indiquée (magicien, druide…).
+- **Musicien** (`musician`, existe déjà, à redéfinir) : un dé de plus pour une création ou une représentation (pas les sorts).
+- **Intuition mystique** (`mystic_insight`) : 1/jour, un dé de plus à une réaction.
+- **Affinité naturelle** (`nature_affinity`) : un dé de plus pour chercher plantes ou nourriture en milieu sauvage.
+- **Frappe brutale** (`savage_attacker`, existe déjà, à redéfinir) : 1/tour, un dé de dégâts de plus sur une attaque réussie.
+- **Doué** (`skilled`, existe déjà, à redéfinir) : +1 rang dans deux compétences au choix.
+- **Tacticien** (`tactical`) : 1/jour, un dé de plus à un jet fait sur un allié.
+- **Bagarreur de taverne** (`tavern_brawler`) : un dé de dégâts de plus à mains nues ou arme improvisée.
+- **Robuste** (`tough`, existe déjà, à redéfinir) : +2 PV max.
+- **Citadin** (`urban_affinity`) : en ville, toujours un moyen de dormir et manger sans payer.
+
 ## Dons généraux (implémentés)
 
 ### Lutteur (`grappler`)
