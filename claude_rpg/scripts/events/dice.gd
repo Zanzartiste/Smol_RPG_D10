@@ -121,8 +121,15 @@ static func critical_level(extra: int, bonus := 0) -> int:
 static func judge(successes: int, difficulty: int, crit_bonus := 0, dice: Array = []) -> Dictionary:
 	var success := successes >= difficulty
 	var extra := successes - difficulty
+	var fumble := is_fumble(successes, dice)
 	return {"successes": successes, "difficulty": difficulty, "success": success, "extra": extra,
-		"critical": critical_level(extra, crit_bonus) if success else 0, "fumble": is_fumble(successes, dice)}
+		"critical": critical_level(extra, crit_bonus) if success else 0, "fumble": fumble,
+		"fumble_level": fumble_level(dice) if fumble else 0}
+
+
+## Degré d'un échec critique : le nombre de dés à 9 ou 10.
+static func fumble_level(dice: Array) -> int:
+	return dice.filter(func(d): return int(d.get("value", 0)) >= 9 and not d.get("dropped", false)).size()
 
 
 ## Échec critique : aucun succès, et au moins un 10 si la règle l'exige.
@@ -268,30 +275,52 @@ static func roll_check(ch: Character, check: Dictionary, rng: RandomNumberGenera
 
 
 ## Texte d'un jet jugé : « Physique : 3d10 ≤ 5, 2 succès pour une difficulté de 2 — réussite ».
-## Dons « une fois par jour », utilisés d'office après un échec (on a vu le résultat) : un dé de plus
-## sous l'attribut du test (Costaud, Malin…), puis Chanceux contre un échec critique. Les notes vont dans
-## result["feats"].
+## Dons « une fois par jour » (Costaud, Malin… ; Chanceux) : après un échec, d'office si l'option
+## auto_daily_feats est active (par défaut), sinon proposés au joueur (daily_feat_options, use_daily_feat).
 static func _apply_daily_feats(ch: Character, pool: Dictionary, result: Dictionary, rng: RandomNumberGenerator) -> void:
-	if ch == null or result["success"]:
+	result["ability"] = pool.get("ability", "")
+	result["threshold"] = int(pool["threshold"])
+	if ch == null or not Meta.settings.get("auto_daily_feats", true):
 		return
-	var notes: Array[String] = []
+	for feat_id in daily_feat_options(ch, result):
+		use_daily_feat(ch, result, feat_id, rng)
+		if result["success"]:
+			break
+
+
+## Dons « une fois par jour » utilisables après ce jet raté (ids des dons, qui sont aussi leurs ressources).
+static func daily_feat_options(ch: Character, result: Dictionary) -> Array[String]:
+	var options: Array[String] = []
+	if ch == null or result.get("success", true) or not result.has("ability"):
+		return options
 	for m: Dictionary in ch.modifiers():
-		if m.get("type") != "daily_ability_die" or m["id"] != pool.get("ability", "") 				or int(ch.resources.get(m["resource"], 0)) <= 0:
-			continue
-		ch.resources[m["resource"]] = int(ch.resources[m["resource"]]) - 1
-		var extra := roll_pool(rng, 1, int(pool["threshold"]))
+		if m.get("type") == "daily_ability_die" and m["id"] == result["ability"] and int(ch.resources.get(m["resource"], 0)) > 0:
+			options.append(m["resource"])
+			break
+	if int(result.get("fumble_level", 0)) > 0 and ch.has_modifier("lucky") and int(ch.resources.get("lucky", 0)) > 0:
+		options.append("lucky")
+	return options
+
+
+## Utilise un don « une fois par jour » sur un jet raté : un dé de plus (Costaud…) ou un degré d'échec
+## critique en moins (Chanceux). Met à jour le jet et son texte.
+static func use_daily_feat(ch: Character, result: Dictionary, feat_id: String, rng: RandomNumberGenerator) -> void:
+	ch.resources[feat_id] = int(ch.resources.get(feat_id, 0)) - 1
+	var notes: Array = result.get("feats", [])
+	if feat_id == "lucky":
+		result["fumble_level"] = int(result["fumble_level"]) - 1
+		result["fumble"] = result["fumble_level"] > 0
+		notes.append(Loc.ui("Chanceux : un degré d'échec critique en moins"))
+	else:
+		var extra := roll_pool(rng, 1, int(result["threshold"]))
 		var dice: Array = result["dice"] + extra["dice"]
-		var successes := int(result["successes"]) + int(extra["successes"])
-		result.merge(judge(successes, int(result["difficulty"]), 0, dice), true)
+		var judged := judge(int(result["successes"]) + int(extra["successes"]), int(result["difficulty"]), 0, dice)
+		result.merge(judged, true)
 		result["dice"] = dice
-		notes.append(Loc.ui("%s : un dé de plus") % Feats.name_of(m["resource"]))
-		break
-	if result["fumble"] and int(ch.resources.get("lucky", 0)) > 0 and ch.has_modifier("lucky"):
-		ch.resources["lucky"] = int(ch.resources["lucky"]) - 1
-		result["fumble"] = false
-		notes.append(Loc.ui("Chanceux : l'échec critique devient un échec"))
-	if not notes.is_empty():
-		result["feats"] = notes
+		notes.append(Loc.ui("%s : un dé de plus") % Feats.name_of(feat_id))
+	result["feats"] = notes
+	if result.has("stat"):
+		result["text"] = describe(result["stat"], result) + " (%s)" % ", ".join(PackedStringArray(notes))
 
 
 static func describe(stat: String, result: Dictionary) -> String:

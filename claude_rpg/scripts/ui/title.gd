@@ -50,30 +50,20 @@ func open_options() -> void:
 	title.text = tr("Options")
 	title.theme_type_variation = &"TitleLabel"
 	box.add_child(title)
-	var manual := CheckBox.new()
-	manual.text = tr("Choisir soi-même l'attribut des tests de compétence")
-	manual.tooltip_text = tr("Sinon, le meilleur attribut est utilisé automatiquement.")
-	manual.button_pressed = Meta.settings.get("manual_skill_ability", false)
-	manual.toggled.connect(func(on: bool):
-		Meta.settings["manual_skill_ability"] = on
-		Saves.save_meta())
-	box.add_child(manual)
-	var many := CheckBox.new()
-	many.text = tr("Règle des dés nombreux")
-	many.tooltip_text = tr("À partir de 10 dés, chaque tranche de 10 dés est remplacée par seuil + 1 succès automatiques.")
-	many.button_pressed = Meta.settings.get("many_dice", false)
-	many.toggled.connect(func(on: bool):
-		Meta.settings["many_dice"] = on
-		Saves.save_meta())
-	box.add_child(many)
-	var reactions := CheckBox.new()
-	reactions.text = tr("Réactions automatiques pour tout le groupe")
-	reactions.tooltip_text = tr("En combat, le jeu choisit seul d'esquiver, de parer, de contre-attaquer ou de contrer un sort.")
-	reactions.button_pressed = Meta.settings.get("auto_reactions", false)
-	reactions.toggled.connect(func(on: bool):
-		Meta.settings["auto_reactions"] = on
-		Saves.save_meta())
-	box.add_child(reactions)
+	_add_setting(box, "manual_skill_ability", tr("Choisir soi-même l'attribut des tests de compétence"),
+		tr("Sinon, le meilleur attribut est utilisé automatiquement."))
+	_add_setting(box, "many_dice", tr("Règle des dés nombreux"),
+		tr("À partir de 10 dés, chaque tranche de 10 dés est remplacée par seuil + 1 succès automatiques."))
+	_add_setting(box, "auto_reactions", tr("Réactions automatiques pour tout le groupe"),
+		tr("En combat, le jeu choisit seul d'esquiver, de parer, de contre-attaquer ou de contrer un sort."))
+	_add_setting(box, "auto_daily_feats", tr("Dons « une fois par jour » automatiques"),
+		tr("Sinon, après un test raté, le jeu demande s'il faut utiliser le don (Costaud, Malin, Chanceux…)."), true)
+	_add_setting(box, "show_check_skill", tr("Afficher la compétence et la difficulté des tests"), "", true)
+	_add_setting(box, "show_check_chance", tr("Afficher la probabilité de réussite des tests"), "", true)
+	_add_setting(box, "show_locked_choices", tr("Montrer les choix verrouillés des événements"),
+		tr("Grisés, avec la condition qui manque."), false)
+	_add_setting(box, "click_to_continue_combat", tr("Combat : cliquer pour passer à l'étape suivante"),
+		tr("Les dés restent affichés jusqu'au clic, et l'action suivante attend aussi un clic."), true)
 	var close := Button.new()
 	close.text = tr("Fermer")
 	close.pressed.connect(overlay.queue_free)
@@ -151,3 +141,14 @@ func _chronicle() -> String:
 				int(life.get("days", 1)), int(life.get("creator_points", 0))],
 			UITheme.TEXT_DIM.to_html(false), life.get("cause", "")])
 	return "\n\n".join(lines)
+
+
+func _add_setting(box: Container, key: String, text: String, tooltip: String, default := false) -> void:
+	var check := CheckBox.new()
+	check.text = text
+	check.tooltip_text = tooltip
+	check.button_pressed = Meta.settings.get(key, default)
+	check.toggled.connect(func(on: bool):
+		Meta.settings[key] = on
+		Saves.save_meta())
+	box.add_child(check)

@@ -169,12 +169,18 @@ func _show_event_choices(ev: Dictionary) -> void:
 	var life := Game.life
 	_clear_choices()
 	_event_on_screen = ev
-	for entry in EventEngine.visible_choices(ev, life, Meta, Game.debug):
+	var show_locked: bool = Game.debug or Meta.settings.get("show_locked_choices", false)
+	for entry in EventEngine.visible_choices(ev, life, Meta, show_locked):
 		var choice: Dictionary = entry["choice"]
 		var label := Loc.fill(Loc.t("evt.%s.%s.text" % [ev["id"], choice["id"]], choice.get("text", "")), life)
 		if choice.has("check"):
-			var chance := Dice.success_chance(life.character, choice["check"])
-			label += "   [%s — %d %%]" % [Dice.label(choice["check"]), roundi(chance * 100)]
+			var parts := PackedStringArray()
+			if Meta.settings.get("show_check_skill", true):
+				parts.append(Dice.label(choice["check"]))
+			if Meta.settings.get("show_check_chance", true):
+				parts.append("%d %%" % roundi(Dice.success_chance(life.character, choice["check"]) * 100))
+			if not parts.is_empty():
+				label += "   [%s]" % " — ".join(parts)
 		if not entry["available"]:
 			label += "   (%s)" % entry["reason"]
 		var button := _add_choice(label, _on_choice.bind(choice), entry["available"])
@@ -473,6 +479,12 @@ func _on_choice(choice: Dictionary) -> void:
 		roll = Game.roll_check(choice)
 		_clear_choices()
 		await dice_tray.play(roll)
+		# Dons « une fois par jour » en mode manuel : proposés après un échec.
+		for feat_id: String in Dice.daily_feat_options(Game.life.character, roll):
+			if await _ask(tr("Test raté. Utiliser %s ?") % Feats.name_of(feat_id), Feats.description_of(feat_id)):
+				Dice.use_daily_feat(Game.life.character, roll, feat_id, Game.life.rng)
+				await dice_tray.play(roll)
+				break
 	_show_result(Game.resolve_choice(choice, roll))
 
 
@@ -623,3 +635,19 @@ func _on_debug_changed() -> void:
 	_debug_badge.visible = Game.debug
 	if not _event_on_screen.is_empty():
 		_show_event_choices(_event_on_screen)
+
+
+## Question oui / non dans une fenêtre ; retourne true pour « Oui ».
+func _ask(question: String, details: String) -> bool:
+	var dialog := ConfirmationDialog.new()
+	dialog.title = question
+	dialog.dialog_text = details
+	dialog.ok_button_text = tr("Oui")
+	dialog.cancel_button_text = tr("Non")
+	add_child(dialog)
+	dialog.popup_centered()
+	var answer := [false]
+	dialog.confirmed.connect(func(): answer[0] = true)
+	await dialog.visibility_changed
+	dialog.queue_free()
+	return answer[0]

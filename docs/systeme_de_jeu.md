@@ -212,7 +212,10 @@ chance de réussite (calculée exactement).
   N mana, les tours de magie rien. Le mana manquant se paie en PV (1 pour 1), jusqu'à 0 PV (on tombe). L'IA ne
   puise jamais dans ses PV. Repos long : tout le mana revient.
 - **Dons « 1/jour »** (Costaud, Malin, Agile…) : après un test raté sous l'attribut du don, un dé de plus est lancé
-  d'office (on a vu le résultat) ; Chanceux transforme un échec critique en échec. Recharge au repos long.
+  d'office (on a vu le résultat), ou proposés par une fenêtre si l'option « Dons une fois par jour automatiques » est
+  coupée. Degré d'un échec critique = nombre de dés à 9 ou 10 ; Chanceux le baisse de 1 (à 0, ce n'est plus qu'un
+  échec). Recharge au repos long.
+- **Options d'affichage** (menu Options) : compétence et difficulté des tests, probabilité, choix verrouillés.
 - **Sorts** : attaque de sort contre le Couvert ; dégâts = rang de la compétence d'incantation (+ dés du sort) contre l'attribut
   d'incantation + bonus ; les sorts de zone se résistent (DEX : chaque succès retire un point).
 - **Paliers** : les tours de magie gagnent un dé de dégâts aux niveaux 5, 11 et 17 ; l'Attaque sournoise ajoute un

@@ -16,7 +16,8 @@ var next_npc_id := 0
 ## Réglages du joueur (conservés même quand on efface le monde) :
 ##   manual_skill_ability : choisir soi-même l'attribut d'un test de compétence (sinon le meilleur) ;
 ##   many_dice : règle des dés nombreux (10 dés -> seuil + 1 succès automatiques, voir Dice).
-var settings := {"manual_skill_ability": false, "many_dice": false, "auto_reactions": false}  # Creator Points disponibles (gagnés à chaque mort, dépensés à la création)
+var settings := {"manual_skill_ability": false, "many_dice": false, "auto_reactions": false, "auto_daily_feats": true,
+	"show_check_skill": true, "show_check_chance": true, "show_locked_choices": false, "click_to_continue_combat": true}  # Creator Points disponibles (gagnés à chaque mort, dépensés à la création)
 
 
 func has_world_flag(id: String) -> bool:

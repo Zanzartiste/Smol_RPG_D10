@@ -250,9 +250,23 @@ func _test_feats() -> bool:
 		rng.seed = seed
 		var roll := Dice.roll_check(c, {"skill": "arts", "ability": "cha", "difficulty": 9}, rng)
 		if roll.get("feats", []).any(func(n): return "Chanceux" in n):
-			saved_fumble = not roll["fumble"]
+			saved_fumble = int(roll["fumble_level"]) == Dice.fumble_level(roll["dice"]) - 1 and roll["fumble"] == (roll["fumble_level"] > 0)
 			break
-	_expect(saved_fumble and c.resources["lucky"] == 0, "Chanceux : un échec critique évité")
+	_expect(saved_fumble and c.resources["lucky"] == 0, "Chanceux : un degré d'échec critique en moins")
+	# Mode manuel : rien d'office, le don est proposé après l'échec.
+	Meta.settings["auto_daily_feats"] = false
+	c.resources = c.max_resources()
+	var proposed := false
+	for seed in 40:
+		rng.seed = seed
+		var roll := Dice.roll_check(c, {"skill": "stealth", "ability": "dex", "difficulty": 6}, rng)
+		if not roll["success"]:
+			proposed = not roll.has("feats") and "nimble" in Dice.daily_feat_options(c, roll)
+			Dice.use_daily_feat(c, roll, "nimble", rng)
+			proposed = proposed and c.resources["nimble"] == 0 and roll.has("feats")
+			break
+	Meta.settings["auto_daily_feats"] = true
+	_expect(proposed, "dons 1/jour manuels : proposés puis utilisés à la demande")
 	# Doué : deux compétences au choix ; Aquatique : un dé de plus aux tests marqués « swim ».
 	c.add_feat("skilled")
 	_expect(int(DB.feats["skilled"]["choices"][0]["count"]) == 2, "Doué : deux compétences")
