@@ -168,7 +168,7 @@ func end_event() -> void:
 
 ## Repos du lieu actuel (rules : locations.json › rest) : camper (gratuit, une nuit agitée est possible),
 ## nuit à l'auberge (payante), dormir chez soi. Repos long : deux périodes, tout le groupe récupère tout ;
-## repos court (`short`, gratuit) : une période, la moitié des PV manquants. Retourne {"ok", "text",
+## repos court (`short`, gratuit, sans limite) : une période, la moitié des PV et du mana manquants. Retourne {"ok", "text",
 ## "event_location"} (lieu d'un événement qui interrompt le repos, ou "").
 func rest(short := false) -> Dictionary:
 	var loc_id := life.location if life.location != "" else DB.location_order[0]
@@ -183,7 +183,7 @@ func rest(short := false) -> Dictionary:
 	for member in life.party():
 		if member.hp > 0:
 			if short:
-				member.hp += (member.max_hp - member.hp) / 2
+				member.short_rest()
 			else:
 				member.long_rest()
 	var text: String = Loc.ui("Vous faites une pause de quelques heures.") if short else {"camp": Loc.ui("Vous montez le camp et dormez à la belle étoile."),

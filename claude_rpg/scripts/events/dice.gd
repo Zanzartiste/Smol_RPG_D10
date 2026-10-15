@@ -127,9 +127,9 @@ static func judge(successes: int, difficulty: int, crit_bonus := 0, dice: Array 
 		"fumble_level": fumble_level(dice) if fumble else 0}
 
 
-## Degré d'un échec critique : le nombre de dés à 9 ou 10.
+## Degré d'un échec critique : le nombre de dés à 10.
 static func fumble_level(dice: Array) -> int:
-	return dice.filter(func(d): return int(d.get("value", 0)) >= 9 and not d.get("dropped", false)).size()
+	return dice.filter(func(d): return int(d.get("value", 0)) == 10 and not d.get("dropped", false)).size()
 
 
 ## Échec critique : aucun succès, et au moins un 10 si la règle l'exige.

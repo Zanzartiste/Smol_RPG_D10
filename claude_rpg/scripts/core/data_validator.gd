@@ -274,6 +274,8 @@ static func _validate_combat_data(db: Node, errors: Array[String]) -> void:
 		for key in ["name", "abilities", "actions"]:
 			if not creature.has(key):
 				errors.append(ctx + " : champ « %s » manquant" % key)
+		if typeof(creature.get("natural", false)) != TYPE_BOOL:
+			errors.append(ctx + " : « natural » doit valoir true ou false")
 		if creature.has("hp") and int(creature["hp"]) < 1:
 			errors.append(ctx + " : PV invalides « %s » (un nombre ; sans « hp » : CON × 1,414^taille)" % creature.get("hp"))
 		for ability_id: String in creature.get("abilities", {}):
@@ -409,6 +411,8 @@ static func _validate_combat_effects(db: Node, effects: Variant, ctx: String, er
 				_expect_ref(db.creatures, e["creature"], "créature", ctx, errors)
 			"check":
 				_expect_ref(db.skills, e["skill"], "compétence", ctx, errors)
+				if e.has("natural_skill"):
+					_expect_ref(db.skills, e["natural_skill"], "compétence", ctx, errors)
 				if e.has("vs_resist"):
 					_expect_ref(db.abilities, e["vs_resist"], "attribut", ctx, errors)
 				elif not e.has("difficulty"):
@@ -609,6 +613,8 @@ static func _validate_effects(db: Node, effects: Variant, ctx: String, errors: A
 				_expect_ref(db.abilities, e["id"], "attribut", ctx, errors)
 			"goto":
 				_expect_ref(db.events, e["event"], "événement", ctx, errors)
+			"random_event":
+				_expect_ref(db.locations, e["location"], "lieu", ctx, errors)
 			"unlock":
 				_validate_unlock_id(db, e["id"], ctx, errors)
 			"quest":

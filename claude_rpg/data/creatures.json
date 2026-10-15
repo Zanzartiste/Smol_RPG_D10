@@ -1,6 +1,7 @@
 [
 	{
 		"id": "wolf",
+		"natural": true,
 		"ai": "hunter",
 		"morale": "pack",
 		"skills": {"perception": 3, "stealth": 2, "physique": 2},
@@ -31,6 +32,7 @@
 	},
 	{
 		"id": "dire_wolf",
+		"natural": true,
 		"ai": "hunter",
 		"leader": true,
 		"skills": {"perception": 3, "stealth": 2, "physique": 3},
@@ -168,6 +170,7 @@
 	},
 	{
 		"id": "giant_rat",
+		"natural": true,
 		"ai": "hunter",
 		"morale": "pack",
 		"name": "Rat géant",

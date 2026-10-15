@@ -247,6 +247,8 @@ func _test_feats() -> bool:
 				"Agile : un dé lancé en plus")
 			break
 	_expect(used and c.resources["nimble"] == 0, "Agile : dépensé après un échec")
+	_expect(Dice.fumble_level([{"value": 10}, {"value": 9}, {"value": 10}, {"value": 10, "dropped": true}]) == 2,
+		"degré d'échec critique : les dés à 10")
 	# Chanceux : un échec critique devient un échec.
 	c.add_feat("lucky")
 	c.resources = c.max_resources()
@@ -514,12 +516,21 @@ func _test_engine() -> bool:
 	var wolves: Dictionary = hunt["choices"][0]
 	_expect(wolves["success"]["effects"][0] == {"type": "combat", "enemies": ["wolf"]}
 		and wolves["critical_success"]["effects"][0]["enemies"].size() == 2 and not wolves["failure"]["effects"].is_empty(),
-		"chasse aux loups : trouvés, plus nombreux sur un critique, embuscade sur un échec")
+		"chasse aux loups : trouvés, plus nombreux sur un critique, autre chose sur un échec")
 	_expect(EventEngine.hunt_event("town", RandomNumberGenerator.new())["choices"][0]["failure"]["effects"].is_empty(),
 		"chasse en ville : un échec ne lance pas de combat")
 	_expect(EventEngine.stranger_check("town").is_empty() and EventEngine.stranger_check("forest")["difficulty"] == 3
 		and not EventEngine.ambush_event("forest", RandomNumberGenerator.new(), "").is_empty(),
 		"chercher quelqu'un : sans test en ville, Nature 3 en forêt, embuscade sinon")
+	_expect(wolves["failure"]["effects"] == [{"type": "random_event", "location": "forest"}], "chasse ratée : autre chose arrive")
+	var mishaps := {}
+	for i in 40:
+		var mishap_ev := EventEngine.mishap_event("forest", life, meta)
+		mishaps[mishap_ev.get("title") == "Embuscade"] = true
+	_expect(mishaps.size() == 2 and EventEngine.mishap_event("town", life, meta).is_empty(),
+		"recherche ratée dans la nature : un combat ou un autre événement, rien en ville")
+	_expect(Effects.apply_all([{"type": "random_event", "location": "forest"}], life, meta)["goto"] == "@forest",
+		"effet random_event : enchaîne sur un événement du lieu")
 	var gather := EventEngine.gather_event("forest")
 	_expect(EventEngine.gather_event("town").is_empty() and gather["choices"].size() == 3, "récolte : seulement dans les lieux sauvages")
 	var errors_gather: Array[String] = []
@@ -1013,10 +1024,21 @@ func _test_actions() -> bool:
 		combat.actions_left = 2
 		await combat.perform(mage, Actions.def("find_weakness"), rat)
 		_expect(rat.weaknesses_known, "Chercher les points faibles : défenses révélées")
+		_expect(Game.life.bestiary.has("giant_rat") and combat.living("enemy").all(func(c): return c.weaknesses_known),
+			"points faibles : connus pour toute l'espèce")
+		Game.life.character.skill_points["survival"] = 30
+		Game.life.character.skill_points["lore"] = 0
+		_expect(combat._best_skill(mage, ["lore", "survival"], 2) == "survival", "points faibles : la meilleure compétence")
 	_expect(mage.unavailable_reason(missile) == "", "plus de mana : le sort reste possible, payé en PV")
 	var hp_before := mage.hp
 	_expect(mage.consume(missile) == 1 and mage.hp == hp_before - 1 and Game.life.character.resources["spell_slot"] == 0, "mana manquant : 1 PV par point")
 	Game.finish_combat()
+	var again := Game.start_combat({"enemies": ["giant_rat", "bandit"]})
+	_expect(again.living("enemy").map(func(c): return c.weaknesses_known) == [true, false], "carnet de bestiaire : points faibles déjà connus")
+	Game.finish_combat()
+	Game.life.character.resources["spell_slot"] = 0
+	Game.life.character.short_rest()
+	_expect(Game.life.character.resources["spell_slot"] == 1, "repos court : moitié du mana manquant")
 	Effects.apply_all([{"type": "long_rest"}], Game.life, Meta)
 	_expect(Game.life.character.resources["spell_slot"] == 2, "repos long : emplacements restaurés")
 
@@ -1983,6 +2005,12 @@ func _test_social() -> bool:
 	_expect(herbalist_seen.call("forest", "morning") and not herbalist_seen.call("town", "morning")
 		and herbalist_seen.call("town", "afternoon") and not herbalist_seen.call("forest", "evening"),
 		"emploi du temps : l'herboriste cueille en forêt le matin, tient boutique ensuite")
+	var herbalist: Npc = Social.at_location("town", rng, "afternoon").filter(func(n): return n.role == "herbalist")[0]
+	herbalist.player["met"] = true
+	_expect(Social.absent_known("town", "morning").has(herbalist) and not Social.absent_known("town", "afternoon").has(herbalist)
+		and "Forêt des Murmures" in Social.whereabouts_text(herbalist, "morning")
+		and Social.whereabouts_check()["skill"] == "insight", "où est… ? : Perspicacité, le lieu selon l'emploi du temps")
+	herbalist.player["met"] = false
 	var guard := Social.generate("guard", rng)
 	_expect(guard.location == "town" and guard.traits.size() == 2 and guard.facts.is_empty() and guard.age(Meta.world_day) >= 18,
 		"garde généré : 2 traits, aucun fait avant de les apprendre")

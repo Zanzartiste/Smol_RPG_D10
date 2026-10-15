@@ -212,21 +212,25 @@ chance de réussite (calculée exactement).
   12, 15), +1 attribut tous les 5 niveaux, un don (pas d'origine) tous les 4 niveaux. Table d'XP de D&D. La montée de
   niveau se fait au hub, avec le bouton « ★ Monter de niveau » de la fiche ; l'onglet Personnage brille tant qu'elle
   attend.
-- **Chercher les points faibles** (action commune) : test d'Érudition, difficulté 2 (Se préparer avant : +2 dés,
-  donc deux actions). Réussi : les résistances, immunités et vulnérabilités de la cible s'affichent (étiquette
-  « Points faibles »).
+- **Chercher les points faibles** (action commune) : test d'Érudition, ou de Nature si elle vaut mieux contre une
+  créature naturelle (`"natural": true` : bêtes), difficulté 2 (Se préparer avant : +2 dés, donc deux actions).
+  Réussi : les résistances, immunités et vulnérabilités de la cible s'affichent (étiquette « Points faibles ») ;
+  elles restent connues pour toute son espèce (carnet de bestiaire de la vie, `LifeState.bestiary`).
 - **Chercher…** (menu d'un lieu) : quelqu'un à qui parler (en ville sans test ; dans la nature, Nature contre
   `stranger_difficulty`, un échec attire un groupe de `encounters`) ; une créature précise (`locations.json › hunt` :
   réussite = combat contre elle, critique = un de plus ; échec = embuscade d'un groupe du lieu sauvage, échec critique =
-  un de plus) ; des ressources (récolte ; un échec critique dans la nature finit aussi en combat).
+  un de plus) ; des ressources (récolte ; un échec critique dans la nature finit aussi en combat) ; quelqu'un qu'on
+  connaît et qui n'est pas là (« Où est… ? » : Perspicacité, `social › whereabouts_difficulty`, un essai par PNJ et
+  par période ; réussi, on apprend où il est à ce moment et on peut y aller). Dans la nature, toute recherche ratée
+  mène à autre chose : un événement du lieu une fois sur deux, sinon une embuscade (effet `random_event`).
 - **Rythme des combats** (option, activée par défaut) : les dés restent affichés jusqu'au clic, et le tour d'un
-  ennemi attend un clic (« Au tour de … »).
+  ennemi attend un clic n'importe où (ou Entrée / Espace), comme les dés (« Au tour de … »).
 - **Mana** : réserve = niveau de lanceur × 2 (demi-lanceur : moitié de ses niveaux) ; un sort de niveau N coûte
   N mana, les tours de magie rien. Le mana manquant se paie en PV (1 pour 1), jusqu'à 0 PV (on tombe). L'IA ne
-  puise jamais dans ses PV. Repos long : tout le mana revient.
+  puise jamais dans ses PV. Repos long : tout le mana revient ; repos court : la moitié du mana manquant.
 - **Dons « 1/jour »** (Costaud, Malin, Agile…) : après un test raté sous l'attribut du don, un dé de plus est lancé
   d'office (on a vu le résultat), ou proposés par une fenêtre si l'option « Dons une fois par jour automatiques » est
-  coupée. Degré d'un échec critique = nombre de dés à 9 ou 10 ; Chanceux le baisse de 1 (à 0, ce n'est plus qu'un
+  coupée. Degré d'un échec critique (aucun succès) = nombre de dés à 10 ; Chanceux le baisse de 1 (à 0, ce n'est plus qu'un
   échec). Recharge au repos long.
 - **Options d'affichage** (menu Options) : compétence et difficulté des tests, probabilité, choix verrouillés.
 - **Sorts** : attaque de sort contre le Couvert ; dégâts = rang de la compétence d'incantation (+ dés du sort) contre l'attribut

@@ -32,6 +32,7 @@ var _rest_button := Button.new()
 var _last_social_session: Dictionary = {}
 var _on_hub := false  # le hub est affiché (la montée de niveau ne se fait que là)
 var _leveling := false  # montée de niveau en cours (ses choix s'enchaînent avant le retour au hub)
+var _asked_whereabouts: Dictionary = {}  # id de PNJ -> période où l'on a demandé où il est (_period_key)
 var _overlay: Control  # fenêtre ouverte par-dessus l'écran : inventaire ou boutique (null sinon)
 var _event_on_screen: Dictionary = {}  # événement dont les choix sont affichés (pour les réafficher en debug)
 var drawer := SideDrawer.new()  # tiroir latéral : personnage, inventaire, quêtes, relations, sorts
@@ -438,6 +439,9 @@ func _show_search_menu(location_id: String) -> void:
 		if not check.is_empty():
 			label += "   [%s]" % Dice.label(check)
 		_add_choice(label, _on_search_stranger.bind(location_id))
+	if not Social.absent_known(location_id, Game.life.slot_id()).is_empty():
+		_add_choice(tr("Quelqu'un que vous connaissez   [%s]") % Dice.label(Social.whereabouts_check()),
+			_show_absent_known.bind(location_id))
 	if not DB.locations[location_id].get("hunt", []).is_empty():
 		_add_choice(tr("Une créature précise (chasse)"), func(): _show_event(EventEngine.hunt_event(location_id, Game.life.rng)))
 	if not EventEngine.gather_event(location_id).is_empty():
@@ -445,8 +449,8 @@ func _show_search_menu(location_id: String) -> void:
 	_add_choice(tr("Retour"), _show_location_menu.bind(location_id))
 
 
-## Un inconnu à qui parler : en ville, sans test ; dans la nature, un test de Nature, et un échec attire
-## des créatures.
+## Un inconnu à qui parler : en ville, sans test ; dans la nature, un test de Nature, et un échec mène
+## à autre chose (un combat ou un événement du lieu).
 func _on_search_stranger(location_id: String) -> void:
 	var check := EventEngine.stranger_check(location_id)
 	if not check.is_empty():
@@ -454,15 +458,53 @@ func _on_search_stranger(location_id: String) -> void:
 		_clear_choices()
 		await dice_tray.play(roll)
 		if not roll["success"]:
-			var ambush := EventEngine.ambush_event(location_id, Game.life.rng,
+			var mishap := EventEngine.mishap_event(location_id, Game.life, Meta,
 				tr("Vous ne croisez personne… sauf ce qui rôde entre les arbres."))
-			if not ambush.is_empty():
-				_show_event(ambush)
+			if not mishap.is_empty():
+				_show_event(mishap)
 				return
 			_show_search_menu(location_id)
 			return
 	var roles := Social.searchable_roles(location_id)
 	_on_search(roles[Game.life.rng.randi_range(0, roles.size() - 1)])
+
+
+## « Où est … ? » : les PNJ connus absents d'ici ; un test de Perspicacité (un essai par PNJ et par
+## période) dit où les trouver. Dans la nature, un échec mène à autre chose, comme toute recherche.
+func _show_absent_known(location_id: String) -> void:
+	title_label.text = tr("%s — Où est… ?") % DB.locations[location_id]["name"]
+	body_text.text = tr("Qui cherchez-vous ?")
+	_clear_choices()
+	for n in Social.absent_known(location_id, Game.life.slot_id()):
+		_add_choice("%s — %s" % [n.name, n.role_name()], _on_find_known.bind(n, location_id),
+			_asked_whereabouts.get(n.id, -1) != _period_key())
+	_add_choice(tr("Retour"), _show_search_menu.bind(location_id))
+
+
+func _on_find_known(n: Npc, location_id: String) -> void:
+	_asked_whereabouts[n.id] = _period_key()
+	var roll := Game.roll_check({"check": Social.whereabouts_check()})
+	_clear_choices()
+	await dice_tray.play(roll)
+	if not roll["success"]:
+		var mishap := EventEngine.mishap_event(location_id, Game.life, Meta,
+			tr("Pendant que vous cherchez une trace, quelque chose vous trouve."))
+		if not mishap.is_empty():
+			_show_event(mishap)
+			return
+	body_text.text = "%s
+
+%s" % [roll["text"], Social.whereabouts_text(n, Game.life.slot_id()) if roll["success"]
+		else tr("Impossible de deviner où %s se trouve en ce moment.") % n.name]
+	var target := n.location_at(Game.life.slot_id())
+	if roll["success"] and DB.locations.has(target) and target != location_id:
+		_add_choice(tr("Y aller"), _on_location_chosen.bind(target))
+	_add_choice(tr("Retour"), _show_absent_known.bind(location_id))
+
+
+## Jour et période : un essai de « Où est… ? » par PNJ et par période.
+func _period_key() -> int:
+	return Game.life.day * 100 + Game.life.slot
 
 
 func _on_search(role_id: String) -> void:
@@ -547,6 +589,8 @@ func _on_choice(choice: Dictionary) -> void:
 func _on_continue(goto: String) -> void:
 	if Game.life.dead:
 		_show_death()
+	elif goto.begins_with(Effects.RANDOM_EVENT_PREFIX):
+		_show_event(EventEngine.mishap_event(goto.substr(1), Game.life, Meta))
 	elif goto != "":
 		_show_event(DB.events[goto])
 	else:

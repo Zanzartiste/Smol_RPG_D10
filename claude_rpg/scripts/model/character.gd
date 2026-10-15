@@ -997,6 +997,15 @@ func long_rest() -> void:
 	resources = max_resources()
 
 
+## Repos court : la moitié des PV et du mana manquants (arrondi à l'inférieur).
+func short_rest() -> void:
+	hp += (max_hp - hp) / 2
+	var max_mana := int(max_resources().get(Spellcasting.SLOT_KEY, 0))
+	if max_mana > 0:
+		var mana := int(resources.get(Spellcasting.SLOT_KEY, 0))
+		resources[Spellcasting.SLOT_KEY] = mana + (max_mana - mana) / 2
+
+
 ## Ajuste les ressources après un changement de niveau : les nouvelles sont pleines, celles qui
 ## augmentent gagnent la différence, celles qui n'existent plus disparaissent.
 func _sync_resources(previous_max: Dictionary) -> void:

@@ -32,6 +32,7 @@ var last_initiative_day := -1  # dernier jour du monde où un PNJ est venu vous 
 ## Combat déclenché mais pas encore terminé : il reprend au chargement d'une sauvegarde
 ## (quitter le jeu ne permet pas d'esquiver un combat).
 var pending_combat: Dictionary = {}
+var bestiary: Array[String] = []  # créatures dont on connaît les points faibles (Chercher les points faibles)
 var shops: Dictionary = {}  # id de boutique -> {"stock": {id: quantité}, "restocked": jour du dernier réassort}
 
 
@@ -329,6 +330,7 @@ func to_dict() -> Dictionary:
 		"dead": dead, "death_cause": death_cause, "recorded": recorded, "notices": notices,
 		"pending_combat": pending_combat, "shops": shops, "reputation": reputation, "location": location,
 		"crafted": crafted, "last_initiative_day": last_initiative_day, "quests": quests, "journal": journal, "notes": notes, "quest_defs": quest_defs,
+		"bestiary": bestiary,
 	}
 
 
@@ -353,6 +355,7 @@ static func from_dict(data: Dictionary) -> LifeState:
 	life.crafted = Character._int_dict(data.get("crafted", {}))
 	life.notes = String(data.get("notes", ""))
 	life.quest_defs = data.get("quest_defs", {})
+	life.bestiary.assign(data.get("bestiary", []))
 	for entry: Dictionary in data.get("journal", []):
 		life.journal.append({"day": int(entry.get("day", 1)), "slot": int(entry.get("slot", 0)),
 			"kind": String(entry.get("kind", "event")), "text": String(entry.get("text", ""))})

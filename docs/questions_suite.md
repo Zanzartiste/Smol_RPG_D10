@@ -109,32 +109,49 @@ Chanceux de même doit transformer un échec critique "2" en échec critique "1"
 - Création : listes longues (passés, dons et compétences du passé Sur mesure) sur une ligne qui défile.
 - Mana = niveau de lanceur × 2 ; le manque se paie en PV ; l'IA ne le fait pas.
 - Options : dons 1/jour manuels ou automatiques, affichage des tests (compétence, probabilité), choix verrouillés,
-  rythme des combats au clic. Chanceux : un degré d'échec critique en moins (degré = dés à 9 ou 10).
+  rythme des combats au clic. Chanceux : un degré d'échec critique en moins (degré = dés à 9 ou 10) => le degré d'un échec critique c'est le nombre de dés ayant fait 10 si on n'a eu 0 succès.
 - Progression : don tous les 4 niveaux (pas d'origine), sous-classe tous les 3 niveaux, bouton « Monter de niveau ».
 - Six périodes de 4 h ; repos court (1 période) et long (2 périodes).
 - Quartier de départ selon le passé ; action « Chercher les points faibles » ; menu « Chercher… » (retour joueur).
+
+## Fait (2026-10-15, réponses ci-dessous)
+
+- Chanceux : degré d'un échec critique = nombre de dés à 10 (avec 0 succès).
+- Repos court : la moitié des PV et du mana manquants, sans limite ; dans la nature, risque d'être interrompu.
+- Points faibles : connus pour toute l'espèce (carnet de bestiaire de la vie) ; Nature ou Érudition (la meilleure)
+  contre les bêtes, sinon Érudition.
+- Chercher… : « Quelqu'un que vous connaissez » (Perspicacité 2, un essai par PNJ et par période, puis « Y aller ») ;
+  dans la nature, toute recherche ratée mène à un événement du lieu ou à une embuscade.
+- Combat au clic : le tour ennemi attend un clic n'importe où (ou Entrée / Espace), comme les dés.
 
 ## Nouvelles questions (2026-10-15)
 
 ### Temps et repos
 
-1. Repos court : la moitié des PV manquants, sans mana. Faut-il qu'il rende un peu de mana (1 point ?) ?
-2. Combien de repos courts par jour, au plus ?
-3. Une vie commence le matin : faut-il qu'elle commence à l'aube pour certains passés (Fermier, Marin) ?
+1. Repos court : la moitié des PV manquants, sans mana. Faut-il qu'il rende un peu de mana (1 point ?) ? => La motié du mana
+2. Combien de repos courts par jour, au plus ? => Pas vraiment de limite, mais ça ne "sert" à rien de spammer en soit. De plus le faire dans un lieu "dangereux" présente toujours le risque d'une embuscade.
+3. Une vie commence le matin : faut-il qu'elle commence à l'aube pour certains passés (Fermier, Marin) ? => Matin c'est bien
 
 ### Chercher…
 
-1. Difficulté des chasses : loups 2, camp des brigands 3, brigands en ville 2 (Perception). Ça te va ?
-2. En ville, chercher des brigands : vrai combat dans les ruelles, ou une bagarre non mortelle (on est assommé) ?
+1. Difficulté des chasses : loups 2, camp des brigands 3, brigands en ville 2 (Perception). Ça te va ? Okay pour l'instant.
+2. En ville, chercher des brigands : vrai combat dans les ruelles, ou une bagarre non mortelle (on est assommé) ? => Vrai combat
 3. Chercher un PNJ précis qu'on connaît mais qui n'est pas là (« Où est Ysolde ? ») : un test de Perspicacité qui
-   indique où il est à cette période ?
+   indique où il est à cette période ? => Pourquoi pas.
 
 ### Points faibles
 
-1. Les points faibles découverts restent-ils connus pour toutes les créatures de la même espèce (carnet de bestiaire) ?
-2. Érudition pour tout, ou Nature pour les bêtes et Détermination pour les morts-vivants ?
+1. Les points faibles découverts restent-ils connus pour toutes les créatures de la même espèce (carnet de bestiaire) ? => Oui
+2. Érudition pour tout, ou Nature pour les bêtes et Détermination pour les morts-vivants ? Nature ou Erudition (le meilleur) pour les créatures naturelles, sinon Erudition
+
 
 ### Combat au clic
 
 1. Faut-il aussi attendre un clic entre les attaques d'un même ennemi (attaques multiples) ?
+
+Pour le clic avant le tour ennemi, fait en sorte que ça requiert un clic n'importe où, comme les dés, pas un clic d'un choix spécifique.
+
 2. Une touche (Espace) pour avancer plus vite que la souris ?
+
+
+Dans la nature, chercher quelque chose et échouer doit faire tomber sur un combat ou un autre évènement (juste pas ce qu'on cherchait), histoire qu'il se passe quelque chose

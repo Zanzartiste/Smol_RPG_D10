@@ -86,7 +86,8 @@
 	"majority_age": 18,
 	"common_actions": ["prepare", "hide", "intimidate", "first_aid", "find_weakness"],
 	"social": {
-		"_doc": "Interactions sociales : humeurs du jour (difficulty : modificateur de la difficulté des tests contre le PNJ, gain : multiplicateur des gains de relation), saluts selon l'humeur, nombre de traits, chance qu'un partenaire jaloux apprenne une infidélité, durée d'une grossesse (jours), rencontres quotidiennes entre PNJ par lieu, seuil d'Amitié sous lequel un compagnon part.",
+		"_doc": "Interactions sociales : humeurs du jour (difficulty : modificateur de la difficulté des tests contre le PNJ, gain : multiplicateur des gains de relation), saluts selon l'humeur, nombre de traits, chance qu'un partenaire jaloux apprenne une infidélité, durée d'une grossesse (jours), rencontres quotidiennes entre PNJ par lieu, seuil d'Amitié sous lequel un compagnon part, difficulté du test de Perspicacité pour savoir où trouver un PNJ connu (whereabouts_difficulty).",
+		"whereabouts_difficulty": 2,
 		"moods": [
 			{"id": "radiant", "name": "radieux", "difficulty": -1, "gain": 1.25, "weight": 1},
 			{"id": "good", "name": "de bonne humeur", "difficulty": 0, "gain": 1.1, "weight": 2},

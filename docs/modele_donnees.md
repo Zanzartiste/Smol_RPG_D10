@@ -131,6 +131,7 @@ Chaque condition est un objet avec un champ `type`. Une liste de conditions est 
 | `ability` | `id`, `amount`, `cause`? | Modifie un attribut. Un attribut à 0 tue le personnage |
 | `add_item` / `remove_item` | `id`, `count`? (1) | Ajoute ou retire des objets du sac (id de `items.json` ou de `equipment.json`) |
 | `goto` | `event` | Enchaîne directement sur un autre événement, après le bouton « Continuer » |
+| `random_event` | `location` | Enchaîne sur un événement tiré au hasard dans ce lieu (sinon une embuscade) : recherche ratée dans la nature |
 | `pass_time` | `slots`?, `days`? | Fait passer du temps en plus |
 | `die` | `cause`? | Tue le personnage |
 | `long_rest` | — | Repos long : PV et emplacements de sort du groupe au maximum |
@@ -592,6 +593,9 @@ Calcul des dégâts subis :
   PV, une chance sur deux par tour de s'enfuir ; brigands), `pack` (fuit quand le chef, `"leader": true`, tombe ou
   que la moitié du camp est hors de combat ; loups). Une créature enfuie (`Combatant.fled`) ne rapporte ni XP ni
   butin.
+- `creatures.json › natural` : `true` pour une créature naturelle (bête) : Chercher les points faibles y prend la
+  meilleure compétence entre Érudition et Nature (`"natural_skill": "survival"` de l'effet `check`). Les espèces dont on
+  connaît les points faibles sont gardées dans `LifeState.bestiary` (sauvegardé).
 - **Soutien** (`Combat.support_role`) : une action qui soigne (`heal`) ou qui vise des alliés (protection) n'est
   tirée que si un allié est sous `combat › ai_heal_below` (0,5) ou `ai_protect_below` (0,75) de ses PV ; son poids
   est alors multiplié par `ai_support_bonus` (3) et elle vise l'allié le plus mal en point. Exemple : le Rebouteux

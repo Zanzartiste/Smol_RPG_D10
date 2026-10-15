@@ -19,6 +19,7 @@ const SCHEMA := {
 	"add_item": ["id"],
 	"remove_item": ["id"],
 	"goto": ["event"],
+	"random_event": ["location"],  # enchaîne sur un événement tiré au hasard dans ce lieu
 	"pass_time": [],
 	"die": [],
 	"long_rest": [],
@@ -32,6 +33,10 @@ const SCHEMA := {
 	"reputation": ["amount"],  # {"amount", "location"?} : réputation dans un lieu (le lieu actuel par défaut)
 	"quest": ["id", "action"],  # {"id", "action": start | advance | complete | fail, "step"?} (voir Quests)
 }
+
+
+## « goto » vers un événement tiré au hasard d'un lieu : ce préfixe suivi de l'id du lieu.
+const RANDOM_EVENT_PREFIX := "@"
 
 
 ## Retourne {"lines": Array[String], "goto": String, "combat": Dictionary}.
@@ -100,6 +105,8 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 					lines.append(Loc.ui("Perdu : %s ×%d") % [Items.name_of(e["id"]), removed])
 			"goto":
 				goto = e["event"]
+			"random_event":
+				goto = RANDOM_EVENT_PREFIX + String(e["location"])
 			"pass_time":
 				life.advance_time(int(e.get("slots", 0)) + int(e.get("days", 0)) * DB.slots_per_day())
 				lines.append(Loc.ui("Le temps passe…"))

@@ -85,16 +85,43 @@ func run(spec: Dictionary, background_texture: Texture2D) -> Dictionary:
 	return Game.finish_combat()
 
 
-## Attend un clic du joueur (bouton en bas de l'écran) : rythme du combat (option click_to_continue_combat).
+## Attend un clic n'importe où (ou Entrée / Espace), comme pour les dés : rythme du combat
+## (option click_to_continue_combat). Le texte s'affiche en bas de l'écran.
 func _wait_click(text: String) -> void:
-	var button := Button.new()
-	button.text = text
-	button.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	button.position.y -= 140
-	add_child(button)
-	button.grab_focus()
-	await button.pressed
-	button.queue_free()
+	var catcher := ClickCatcher.new()
+	catcher.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var label := Label.new()
+	label.text = text
+	label.add_theme_color_override("font_color", UITheme.GOLD)
+	label.add_theme_color_override("font_outline_color", Color.BLACK)
+	label.add_theme_constant_override("outline_size", 6)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	label.position.y -= 140
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	catcher.add_child(label)
+	add_child(catcher)
+	await catcher.clicked
+	catcher.queue_free()
+
+
+## Couche invisible plein écran qui attend un clic ou une touche de validation.
+class ClickCatcher extends Control:
+	signal clicked
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_STOP
+
+	func _gui_input(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.pressed:
+			accept_event()
+			clicked.emit()
+
+	func _unhandled_input(event: InputEvent) -> void:
+		if event.is_action_pressed("ui_accept"):
+			get_viewport().set_input_as_handled()
+			clicked.emit()
 
 
 # --- Affichage ---------------------------------------------------------------

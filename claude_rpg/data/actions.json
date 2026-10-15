@@ -196,9 +196,9 @@
 	{
 		"id": "find_weakness",
 		"name": "Chercher les points faibles",
-		"description": "Vous observez l'ennemi (Érudition) pour découvrir ses résistances et ses faiblesses. Préparez-vous d'abord pour +2 dés.",
+		"description": "Vous observez l'ennemi (Érudition, ou Nature si c'est mieux contre une bête) pour découvrir ses résistances et ses faiblesses, qui restent connues pour toutes les créatures de son espèce. Préparez-vous d'abord pour +2 dés.",
 		"target": "enemy",
-		"effects": [{"type": "check", "skill": "lore", "difficulty": 2}, {"type": "reveal_weaknesses"}]
+		"effects": [{"type": "check", "skill": "lore", "natural_skill": "survival", "difficulty": 2}, {"type": "reveal_weaknesses"}]
 	},
 	{
 		"id": "prepare",

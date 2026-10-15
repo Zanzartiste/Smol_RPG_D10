@@ -43,6 +43,27 @@ static func _ambush_effects(location_id: String, rng: RandomNumberGenerator, mor
 	return [{"type": "combat", "enemies": enemies}]
 
 
+## Dans la nature, une recherche ratée mène à autre chose : un événement du lieu (une fois sur deux, s'il y
+## en a d'éligibles), sinon une embuscade. Retourne {} hors d'un lieu sauvage.
+static func mishap_event(location_id: String, life: LifeState, meta: MetaState, ambush_text := "") -> Dictionary:
+	if not DB.locations.get(location_id, {}).get("wild", false):
+		return {}
+	if life.rng.randf() < 0.5 and not eligible_events(location_id, life, meta).is_empty():
+		return pick_event(location_id, life, meta)
+	var text := ambush_text if ambush_text != "" else Loc.ui("Quelque chose vous a repéré pendant vos recherches.")
+	var ambush := ambush_event(location_id, life.rng, text)
+	if ambush.is_empty() and not eligible_events(location_id, life, meta).is_empty():
+		return pick_event(location_id, life, meta)
+	return ambush
+
+
+## Effet d'une recherche ratée dans la nature : on enchaîne sur mishap_event ([] hors d'un lieu sauvage).
+static func _mishap_effects(location_id: String) -> Array:
+	if not DB.locations.get(location_id, {}).get("wild", false):
+		return []
+	return [{"type": "random_event", "location": location_id}]
+
+
 ## Chasse : chercher une créature précise du lieu (test, Nature dans la nature). Réussite : on la trouve
 ## (critique : un groupe plus nombreux) ; échec : autre chose vous trouve (lieu sauvage), sinon rien.
 static func hunt_event(location_id: String, rng: RandomNumberGenerator) -> Dictionary:
@@ -51,14 +72,14 @@ static func hunt_event(location_id: String, rng: RandomNumberGenerator) -> Dicti
 	for hunt: Dictionary in location.get("hunt", []):
 		var enemies: Array = hunt["enemies"].duplicate()
 		var more: Array = enemies + ([hunt["extra"]] if hunt.has("extra") else [])
-		var ambush := _ambush_effects(location_id, rng)
+		var ambush := _mishap_effects(location_id)
 		var ambush_more := _ambush_effects(location_id, rng, 1)
 		choices.append({"id": hunt["id"], "text": Loc.ui("Chercher %s") % hunt["name"],
 			"check": {"skill": hunt.get("skill", "survival"), "difficulty": int(hunt.get("difficulty", 2))},
 			"critical_success": {"text": Loc.ui("Vous les trouvez… et ils sont plus nombreux que prévu."),
 				"effects": [{"type": "combat", "enemies": more}]},
 			"success": {"text": Loc.ui("Vous trouvez ce que vous cherchiez."), "effects": [{"type": "combat", "enemies": enemies}]},
-			"failure": {"text": Loc.ui("Vous ne trouvez pas leur trace… mais autre chose vous a trouvé.") if not ambush.is_empty()
+			"failure": {"text": Loc.ui("Vous ne trouvez pas leur trace… mais vous tombez sur autre chose.") if not ambush.is_empty()
 				else Loc.ui("Vous ne trouvez aucune trace."), "effects": ambush},
 			"critical_failure": {"text": Loc.ui("Vous vous faites surprendre !") if not ambush_more.is_empty()
 				else Loc.ui("Vous perdez votre temps."), "effects": ambush_more},
@@ -162,7 +183,7 @@ static func gather_event(location_id: String, rng: RandomNumberGenerator = null)
 				"effects": [{"type": "add_item", "id": res["item"], "count": count * 2}]},
 			"success": {"text": got % [Items.name_of(res["item"]), count],
 				"effects": [{"type": "add_item", "id": res["item"], "count": count}]},
-			"failure": {"text": res.get("failure", Loc.ui("Vous rentrez bredouille.")), "effects": []},
+			"failure": {"text": res.get("failure", Loc.ui("Vous rentrez bredouille.")), "effects": _mishap_effects(location_id)},
 			"critical_failure": {"text": res.get("fumble", Loc.ui("Vous vous blessez.")),
 				"effects": [{"type": "hp", "amount": int(res.get("fumble_hp", -1)), "cause": Loc.ui("Mort en cherchant des ressources")}]
 					+ _ambush_effects(location_id, rng)},

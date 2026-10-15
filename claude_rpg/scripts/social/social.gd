@@ -81,6 +81,27 @@ static func known_npcs() -> Array[Npc]:
 	return result
 
 
+## PNJ connus qui ne sont pas dans ce lieu à ce moment de la journée (on peut demander où ils sont).
+static func absent_known(location_id: String, slot_id: String) -> Array[Npc]:
+	var result: Array[Npc] = []
+	for n in known_npcs():
+		if n.location != "party" and n.location_at(slot_id) != location_id:
+			result.append(n)
+	return result
+
+
+## Test pour savoir où se trouve un PNJ connu (Perspicacité).
+static func whereabouts_check() -> Dictionary:
+	return {"skill": "insight", "difficulty": int(setting("whereabouts_difficulty", 2))}
+
+
+## Où se trouve un PNJ à ce moment de la journée : « Ysolde est sans doute à Forêt des Murmures. »
+static func whereabouts_text(n: Npc, slot_id: String) -> String:
+	var loc_id := n.location_at(slot_id)
+	var place: String = DB.locations[loc_id]["name"] if DB.locations.has(loc_id) else Loc.ui("un endroit que vous ne connaissez pas")
+	return Loc.ui("D'après ce que vous devinez de ses habitudes, %s doit se trouver en ce moment à : %s.") % [n.name, place]
+
+
 ## Crée un PNJ d'un rôle. `overrides` : name, species, gender, age, location.
 static func generate(role_id: String, rng: RandomNumberGenerator, overrides := {}) -> Npc:
 	var role: Dictionary = DB.npc_roles.get(role_id, {})

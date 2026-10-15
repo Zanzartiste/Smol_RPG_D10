@@ -699,6 +699,11 @@ func _apply(actor: Combatant, e: Dictionary, target: Combatant, fast: bool) -> D
 		"check":
 			hit = _skill_check(actor, target, e, beats, fast)
 		"reveal_weaknesses":
+			for other in combatants:
+				if other.kind == "creature" and other.creature.get("id") == target.creature.get("id"):
+					other.weaknesses_known = true
+			if target.kind == "creature" and target.creature.get("id", "") not in life.bestiary:
+				life.bestiary.append(target.creature["id"])
 			target.weaknesses_known = true
 			var known := target.defenses().describe()
 			_beat(beats, Loc.ui("Points faibles de %s : %s.") % [target.name, known if known != "" else Loc.ui("ni résistance ni faiblesse particulière")])
@@ -1017,6 +1022,8 @@ func _status_from_damage(target: Combatant, type: String, dealt: int) -> String:
 func _skill_check(actor: Combatant, target: Combatant, e: Dictionary, beats: Array[Dictionary], fast: bool) -> bool:
 	var skill: String = e["skill"]
 	var bonus := (-1 if actor.has_status_flag("check_disadvantage") else 0) + actor.use_prepared()
+	if e.has("natural_skill") and target.creature.get("natural", false):
+		skill = _best_skill(actor, [skill, e["natural_skill"]], Dice.difficulty_of(e))
 	var pool := actor.skill_pool(skill, e.get("ability", ""), bonus)
 	var roll := Dice.roll_pool(rng, int(pool["count"]), int(pool["threshold"]))
 	var label := Skills.name_of(skill)
@@ -1035,6 +1042,19 @@ func _skill_check(actor: Combatant, target: Combatant, e: Dictionary, beats: Arr
 	_beat(beats, Loc.ui("%s : %s, %d succès / %d — %s") % [actor.name, label, int(roll["successes"]), int(judged["difficulty"]),
 		Dice.verdict(judged)], _roll_info("%s (%s)" % [label, actor.name], roll, judged), fast)
 	return judged["success"]
+
+
+## Compétence de l'acteur qui a le plus de chances de réussir un test de cette difficulté.
+func _best_skill(actor: Combatant, skills: Array, difficulty: int) -> String:
+	var best: String = skills[0]
+	var best_chance := -1.0
+	for skill: String in skills:
+		var pool := actor.skill_pool(skill)
+		var p := Dice.chance(int(pool["count"]), int(pool["threshold"]), difficulty)
+		if p > best_chance:
+			best = skill
+			best_chance = p
+	return best
 
 
 ## La cible résiste-t-elle à un effet ? Opposition : la réserve d'incantation de l'acteur (ou la
@@ -1187,6 +1207,8 @@ func _roll_info(stat: String, roll: Dictionary, judged: Dictionary = {}, against
 
 
 func _add(c: Combatant) -> void:
+	if c.kind == "creature" and c.creature.get("id", "") in life.bestiary:
+		c.weaknesses_known = true
 	if c.id == "":
 		c.id = "%s_%d" % [c.side, _next_id]
 		_next_id += 1

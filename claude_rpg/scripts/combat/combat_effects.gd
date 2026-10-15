@@ -17,6 +17,7 @@ extends RefCounted
 ##   {"type": "check", "skill": "stealth", "difficulty": 2}        test de compétence de l'acteur,
 ##   {"type": "check", "skill": "persuasion", "ability": "str", "vs_resist": "wis"}  ou en opposition
 ##        contre la résistance de la cible. Raté : les effets suivants sont ignorés.
+##        "natural_skill": "survival" : contre une créature naturelle ("natural"), la meilleure des deux compétences.
 ## Champs communs facultatifs :
 ##   "resist": {"ability": "dex"}  la cible résiste (voir Character.resist_pool) : contre des dégâts,
 ##        chaque succès retire un point ; contre un autre effet, opposition avec la réserve
