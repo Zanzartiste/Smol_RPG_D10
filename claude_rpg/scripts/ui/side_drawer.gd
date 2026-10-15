@@ -250,9 +250,6 @@ func _build_character() -> void:
 func _build_inventory() -> void:
 	var hero := life.character
 	_add_label(tr("Or : %d po") % hero.gold, "", "SectionLabel")
-	var capacity := life.carry_capacity()
-	_add_label((tr("Charge : %.1f / %.0f kg") % [life.carried_weight(), capacity]).replace(".", ","),
-		tr("Le groupe porte 18 kg par point de Force de chaque membre ; au-delà, des dés en moins aux jets de FOR et DEX."))
 	_add_separator()
 	_member_selector()
 	_add_label(tr("Équipement de %s") % member.name, "", "", UITheme.TEXT_DIM)

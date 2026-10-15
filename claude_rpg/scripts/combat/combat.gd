@@ -282,6 +282,9 @@ func start_turn() -> Array[Dictionary]:
 			_beat(beats, Loc.ui("%s est %s et passe son tour.") % [actor.name, StatusEffects.name_of(status_id).to_lower()])
 		if not StatusEffects.decays_at_end(status_id):
 			_decay(actor, status_id)
+	if actor.is_alive() and not skipped and actor.ability_score("dex") <= 0:
+		skipped = true
+		_beat(beats, Loc.ui("%s, trop encombré pour bouger (Dextérité 0), passe son tour.") % actor.name)
 	if not actor.is_alive():
 		skipped = true
 	_check_end()
@@ -335,6 +338,8 @@ func perform(actor: Combatant, action: Dictionary, target: Combatant = null) -> 
 	var attacks := 1 + (actor.extra_attacks() if action.get("attack_action", false) else 0)
 	for i in attacks:
 		if i > 0:
+			if actor.reload_left > 0:
+				break  # une arme à recharger ne tire qu'une fois
 			if target == null or not target.is_alive():
 				var others := living("enemy" if actor.is_ally() else "ally")
 				if others.is_empty():
@@ -480,6 +485,8 @@ func _breaks(actor: Combatant) -> bool:
 
 
 func _pick_action(actor: Combatant, allow_announced: bool) -> Dictionary:
+	if actor.reload_left > 0:
+		return Actions.def(Combatant.RELOAD_ACTION)
 	var actions := actor.combat_actions().filter(func(a): return (a.get("target") == "none" \
 		or not targets(actor, a.get("target", "enemy")).is_empty()) and actor.unavailable_reason(a) == "" \
 		and not actor.needs_blood(a) and (allow_announced or not a.get("announced", false)) and _support_weight(actor, a) != 0.0)
@@ -536,6 +543,8 @@ func auto_turn(actor: Combatant) -> Array[Dictionary]:
 ## Choix automatique pour un personnage : l'action disponible la plus utile (dégâts attendus, soins ou
 ## protection si les PV sont bas), contre l'ennemi le plus faible.
 func auto_choice(actor: Combatant) -> Dictionary:
+	if actor.reload_left > 0:
+		return {"action": Actions.def(Combatant.RELOAD_ACTION), "target": null}
 	var best: Dictionary = {}
 	var best_score := -1.0
 	for choice in action_choices(actor):
@@ -710,6 +719,10 @@ func _apply(actor: Combatant, e: Dictionary, target: Combatant, fast: bool) -> D
 		"extra_action":
 			actions_left += 1
 			_beat(beats, Loc.ui("%s peut agir une fois de plus.") % actor.name)
+		"reload":
+			actor.reload_left = maxi(0, actor.reload_left - 1)
+			_beat(beats, Loc.ui("%s recharge son arme%s.") % [actor.name,
+				Loc.ui(" (encore %d action(s))") % actor.reload_left if actor.reload_left > 0 else Loc.ui(" : prête à tirer")])
 		"summon":
 			var creature_id: String = e["creature"]
 			if can_add(actor.side, Creatures.size_of(creature_id)):
@@ -726,8 +739,18 @@ func _apply(actor: Combatant, e: Dictionary, target: Combatant, fast: bool) -> D
 ## contre-attaque (avant le jet), esquive (après un jet réussi), parade (contre les dégâts). Un attaquant
 ## caché se révèle. Retourne true si l'attaque touche.
 func _attack(actor: Combatant, target: Combatant, e: Dictionary, beats: Array[Dictionary], fast: bool) -> bool:
+	actor.last_attack_tens = 0
 	var hit: bool = await _attack_roll(actor, target, e, beats, fast)
 	_reveal(actor)
+	var weapon := actor.attack_weapon(e)
+	var reload := actor.reload_after_shot(weapon)
+	if reload > 0:
+		actor.reload_left = reload
+		_beat(beats, Loc.ui("%s doit recharger (%d action(s)).") % [actor.name, reload])
+	var fragile := Equipment.fragile_of(weapon)
+	if fragile > 0 and actor.last_attack_tens >= fragile:
+		actor.break_weapon(weapon)
+		_beat(beats, Loc.ui("%s se brise entre les mains de %s !") % [Equipment.name_of(weapon), actor.name])
 	return hit
 
 
@@ -744,6 +767,7 @@ func _attack_roll(actor: Combatant, target: Combatant, e: Dictionary, beats: Arr
 	var crit_bonus := actor.critical_bonus() + (int(setting("surprise_crit_bonus", 2)) if surprise else 0)
 	var bonus := actor.use_prepared()
 	var roll := Dice.roll_pool(rng, int(attack["count"]) + bonus, int(attack["threshold"]))
+	actor.last_attack_tens = Dice.count_value(roll, 10)
 	var multiplier := actor.attack_successes_multiplier(target)
 	roll["successes"] = int(roll["successes"]) * multiplier
 	var judged := Dice.judge(int(roll["successes"]), difficulty, crit_bonus, roll["dice"])
@@ -870,6 +894,7 @@ func _counter(actor: Combatant, target: Combatant, e: Dictionary, attack: Dictio
 	_beat(beats, Loc.ui("%s contre-attaque !") % target.name)
 	var a_roll := Dice.roll_pool(rng, int(attack["count"]) + actor.use_prepared(), int(attack["threshold"]))
 	var d_roll := Dice.roll_pool(rng, int(counter["count"]) + target.use_prepared(), int(counter["threshold"]))
+	actor.last_attack_tens = Dice.count_value(a_roll, 10)
 	_beat(beats, Loc.ui("%s : %d succès.") % [actor.name, int(a_roll["successes"])],
 		_roll_info(Loc.ui("Attaque (%s)") % actor.name, a_roll), fast)
 	_beat(beats, Loc.ui("%s : %d succès.") % [target.name, int(d_roll["successes"])],
@@ -894,9 +919,13 @@ func _hit(actor: Combatant, target: Combatant, e: Dictionary, attack: Dictionary
 		and not actor.savage_used
 	if savage:
 		actor.savage_used = true
-	var ignore_armor := surprise and not target.has_natural_armor()
+	# Attaque surprise avec une arme assassine (dague, couteau) : l'armure portée est ignorée.
+	var weapon := actor.attack_weapon(e)
+	var ignore_armor := surprise and Equipment.has_property(weapon, "assassin") and not target.has_natural_armor()
 	var rerolls := critical + (1 if actor.great_weapon_fighting(e) else 0)
 	var options := {"armor": not ignore_armor, "from_attack": true}
+	if critical > 0 and Equipment.crit_bonus_of(weapon) > 0:
+		options["extra"] = Equipment.crit_bonus_of(weapon)  # Perçante
 	if can_parry:
 		options["parry"] = {"attacker": actor, "effect": e, "fast": fast}
 	var pool := actor.damage_pool(e, attack)
@@ -912,14 +941,13 @@ func _hit(actor: Combatant, target: Combatant, e: Dictionary, attack: Dictionary
 			part["damage_type"], rerolls, beats, {"armor": not ignore_armor})
 
 
-## La cible peut-elle parer (une réaction, une par main armée et par tour) ? Une attaque à distance ne se
-## pare qu'avec un bouclier ; une attaque armée ne se pare pas à mains nues.
+## La cible peut-elle parer (une réaction, une par main armée et par tour) ? Il lui faut un objet qui pare
+## (une arme avec un seuil de parade, un bouclier, ses mains) ; une attaque à distance ne se pare qu'avec un
+## bouclier.
 func can_parry(attacker: Combatant, target: Combatant, e: Dictionary) -> bool:
 	if target.reactions <= 0 or target.parries_used >= target.parries_per_turn():
 		return false
-	if attacker.is_ranged_attack(e) and not target.has_shield():
-		return false
-	return not (attacker.is_armed_attack(e) and not target.is_armed())
+	return target.parry_threshold(target.parry_item(attacker.is_ranged_attack(e))) >= 0
 
 
 ## Dés en plus d'un combattant préparé (sans consommer l'état), pour l'affichage.
@@ -927,22 +955,29 @@ func target_prepared_bonus(c: Combatant) -> int:
 	return int(setting("prepared_dice", 2)) if c.is_prepared() else 0
 
 
-## Parade : Armes de mêlée (arme, bouclier) ou Physique (mains nues), DEX. Retourne ses succès (0 si elle
-## n'est pas possible).
+## Parade : Armes de mêlée (arme, bouclier) ou Physique (mains nues), contre le seuil de parade de l'objet
+## (−1 contre une arme à impact). Parade dangereuse (mains nues, poing américain…) contre une arme qui ne l'est
+## pas : 1 PV perdu par 10 au jet, même si la parade réussit. Retourne ses succès (0 si elle n'est pas possible).
 func _parry(attacker: Combatant, target: Combatant, e: Dictionary, beats: Array[Dictionary], fast: bool) -> int:
 	if not can_parry(attacker, target, e):
 		return 0
 	target.reactions -= 1
 	target.parries_used += 1
-	var pool := target.parry_pool(target.use_prepared())
+	var pool := target.parry_pool(target.use_prepared(), attacker.is_ranged_attack(e),
+		Equipment.has_property(attacker.attack_weapon(e), "impact"))
 	var roll := Dice.roll_pool(rng, int(pool["count"]), int(pool["threshold"]))
 	_beat(beats, Loc.ui("%s pare : %d succès.") % [target.name, int(roll["successes"])],
 		_roll_info(Loc.ui("Parade (%s)") % target.name, roll), fast)
+	var tens := Dice.count_value(roll, 10)
+	if tens > 0 and Equipment.has_property(pool["item"], "dangerous_parry") and not attacker.attack_is_dangerous_parry(e):
+		var dealt := _deal_damage(attacker, target, tens, "", true, "")
+		_beat(beats, Loc.ui("Parade dangereuse : %s se blesse (%d PV)%s") % [target.name, dealt["amount"], dealt["suffix"]])
 	return int(roll["successes"])
 
 
 ## Lance et inflige des dégâts : un succès = un point. `rerolls` : relances des dés ratés (critique).
-## Options : "armor" (l'Armure de la cible baisse le seuil, sans passer sous 1), "resist" ({"ability"} :
+## Options : "extra" (dégâts en plus : arme perçante sur un critique),
+## "armor" (l'Armure de la cible baisse le seuil, sans passer sous 1), "resist" ({"ability"} :
 ## chaque succès de la cible retire un point ; Dérobade : deux), "multiplier" (0.5 : Tour de magie
 ## puissant), "from_attack" (l'Esquive instinctive peut diviser par deux), "parry" ({"attacker", "effect"} : la cible peut parer).
 ## Retourne les dégâts infligés.
@@ -961,6 +996,9 @@ func _roll_damage(actor: Combatant, target: Combatant, pool: Dictionary, type: S
 	if rerolls > 0:
 		notes.append(Loc.ui("%d relance(s)") % rerolls)
 	var amount := int(roll["successes"])
+	if int(options.get("extra", 0)) > 0:
+		amount += int(options["extra"])
+		notes.append(Loc.ui("perçante : +%d") % int(options["extra"]))
 	var label := Loc.ui("Dégâts") + (" " + DamageTypes.name_of(type).to_lower() if type != "" else "")
 	_beat(beats, Loc.ui("%s : %d succès.") % [label, amount], _roll_info(label, roll), true)
 	var resist: Dictionary = options.get("resist", {})

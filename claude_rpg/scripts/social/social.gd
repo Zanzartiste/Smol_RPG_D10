@@ -621,7 +621,6 @@ static func buy(n: Npc, item_id: String, life: LifeState) -> bool:
 	_move(stock, life.character.inventory, item_id)
 	if not n.role_def().has("shop"):
 		n.gold += price
-	life.refresh_load()
 	return true
 
 
@@ -635,7 +634,6 @@ static func sell(n: Npc, item_id: String, life: LifeState) -> bool:
 	if not has_shop:
 		n.gold -= price
 	_move(life.character.inventory, goods(n, life), item_id)
-	life.refresh_load()
 	return true
 
 
@@ -644,7 +642,6 @@ static func gift(n: Npc, item_id: String, life: LifeState) -> String:
 	if life.character.item_count(item_id) <= 0 or Items.is_quest(item_id):
 		return ""
 	_move(life.character.inventory, goods(n, life), item_id)
-	life.refresh_load()
 	var amount := 2.0 + mini(10, Items.value_of(item_id) / 5)
 	var category := Items.category_of(item_id)
 	var liked: bool = category in n.likes or n.traits.any(func(t): return category in DB.traits.get(t, {}).get("likes", []))
@@ -676,7 +673,6 @@ static func ask_free(n: Npc, item_id: String, life: LifeState, session: Dictiona
 	if success:
 		_move(stock, life.character.inventory, item_id)
 		change(n, "friendship", -1)
-		life.refresh_load()
 		return outcome["text"] + "\n" + Loc.ui("%s vous donne : %s.") % [n.name, Items.name_of(item_id)]
 	change(n, "friendship", -3)
 	return outcome["text"] + "\n" + Loc.ui("%s refuse de vous le donner.") % n.name

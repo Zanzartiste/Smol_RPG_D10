@@ -257,9 +257,9 @@
 		"id": "heavy_armor_training",
 		"name": "Entraînement aux armures lourdes",
 		"category": "general",
-		"description": "Les armures vous pèsent moins : leur Force conseillée baisse de 2.",
+		"description": "Les armures vous pèsent moins : votre encombrement baisse de 2.",
 		"prerequisites": [{"type": "level", "min": 4}],
-		"modifiers": [{"type": "armor_strength_reduction", "amount": 1}]
+		"modifiers": [{"type": "encumbrance_reduction", "amount": 2}]
 	},
 	{
 		"id": "archery",

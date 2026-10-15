@@ -107,6 +107,11 @@ static func _roll_die(rng: RandomNumberGenerator, threshold: int, dice: Array[Di
 	return successes
 
 
+## Nombre de dés d'un jet (relances comprises, sauf les dés écartés) qui montrent cette valeur.
+static func count_value(roll: Dictionary, value: int) -> int:
+	return roll.get("dice", []).filter(func(d): return int(d["value"]) == value and not d.get("dropped", false)).size()
+
+
 ## Niveau de réussite critique : N pour N × critical_step succès supplémentaires (0 sinon).
 ## `bonus` : succès supplémentaires comptés en plus pour le critique (attaque surprise : 2).
 static func critical_level(extra: int, bonus := 0) -> int:

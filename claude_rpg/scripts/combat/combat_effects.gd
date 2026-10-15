@@ -14,6 +14,7 @@ extends RefCounted
 ##   {"type": "cleanse", "status": "poisoned" | "negative"}        retire un état, ou tous les négatifs
 ##   {"type": "summon", "creature": "familiar"}                    invoque une créature dans son camp
 ##   {"type": "extra_action"}                                     une action de plus ce tour (Fougue)
+##   {"type": "reload"}                                           une action de rechargement (fronde, arbalète)
 ##   {"type": "check", "skill": "stealth", "difficulty": 2}        test de compétence de l'acteur,
 ##   {"type": "check", "skill": "persuasion", "ability": "str", "vs_resist": "wis"}  ou en opposition
 ##        contre la résistance de la cible. Raté : les effets suivants sont ignorés.
@@ -39,6 +40,7 @@ const SCHEMA := {
 	"extra_action": [],
 	"check": ["skill"],
 	"reveal_weaknesses": [],
+	"reload": [],
 }
 ## Cibles possibles d'une action (actions.json, actions des créatures).
 const TARGETS := ["enemy", "all_enemies", "ally", "all_allies", "self", "none"]
@@ -46,7 +48,7 @@ const TARGETS := ["enemy", "all_enemies", "ally", "all_allies", "self", "none"]
 const CHOSEN_TARGETS := ["enemy", "ally"]
 
 ## Effets qui ne visent personne : ils s'appliquent une seule fois, quelle que soit la cible.
-const UNTARGETED := ["summon", "extra_action"]
+const UNTARGETED := ["summon", "extra_action", "reload"]
 
 const TARGET_PREFIX := {
 	"all_enemies": "Tous les ennemis : ",
@@ -103,6 +105,8 @@ static func describe(e: Dictionary) -> String:
 			return Loc.ui("Invoque : %s") % Creatures.name_of(e["creature"])
 		"extra_action":
 			return Loc.ui("Une action de plus ce tour")
+		"reload":
+			return Loc.ui("Recharge l'arme en main")
 		"check":
 			var skill := Skills.name_of(e["skill"]) + (" (%s)" % Abilities.short_of(e["ability"]) if e.has("ability") else "")
 			if e.has("vs_resist"):

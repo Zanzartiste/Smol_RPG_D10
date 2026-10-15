@@ -67,7 +67,7 @@ static func bbcode(ch: Character) -> String:
 		t += "[color=%s]%s[/color] %s\n" % [gold, Loc.ui("Métier"), ", ".join(PackedStringArray(Game.life.professions()))]
 	if ch.is_encumbered():
 		t += "[color=%s]%s[/color]\n" % [UITheme.BAD.to_html(false),
-			Loc.ui("Encombré : −%d dé(s) aux jets de FOR et DEX") % ch.encumbrance_penalty()]
+			Loc.ui("Encombrement %d : Dextérité −%d") % [ch.encumbrance(), ch.encumbrance()]]
 	t += "\n"
 
 	# Compétences par catégorie : réserve (rang d10 ≤ meilleur attribut) ; entraînées en clair, les autres grisées.

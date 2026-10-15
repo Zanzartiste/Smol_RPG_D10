@@ -92,11 +92,20 @@ static func _validate_rule_tables(db: Node, errors: Array[String]) -> void:
 					if prop not in Equipment.PROPERTY_NAMES:
 						errors.append(ctx + " : propriété inconnue « %s »" % prop)
 				_validate_bonus_damage(db, item.get("bonus_damage", []), ctx, errors)
+				if item.has("skill"):
+					_expect_ref(db.skills, item["skill"], "compétence", ctx, errors)
+				if not item.has("weight") and not item.has("weight_two_hands"):
+					errors.append(ctx + " : weight (une main) ou weight_two_hands (deux mains) manquant")
+				if not item.has("weight") and "two_handed" not in item.get("properties", []):
+					errors.append(ctx + " : sans weight (une main), l'arme doit avoir la propriété two_handed")
+				for key in ["parry", "parry_two_hands", "weight", "weight_two_hands", "crit_bonus", "reload", "fragile"]:
+					if item.has(key) and (typeof(item[key]) not in [TYPE_INT, TYPE_FLOAT] or float(item[key]) < 0):
+						errors.append(ctx + " : %s doit être un nombre positif" % key)
+				if item.has("parry_two_hands") and not item.has("parry"):
+					errors.append(ctx + " : parry_two_hands sans parry")
 			"armor":
 				if item.get("armor_type") not in Equipment.ARMOR_TYPE_NAMES:
 					errors.append(ctx + " : armor_type doit valoir clothing, light, medium ou heavy")
-				elif not item.has("strength") and not db.rules.get("armor_strength", {}).has(item.get("armor_type")):
-					errors.append(ctx + " : aucune Force requise définie pour « %s » (rules.json › armor_strength)" % item.get("armor_type"))
 				if not item.has("armor"):
 					errors.append(ctx + " : armor (points d'Armure) manquant")
 			"shield":
@@ -661,7 +670,7 @@ static func _validate_pool_spec(db: Node, spec: Variant, ctx: String, errors: Ar
 		errors.append(ctx + " : réserve invalide %s (attendu {\"dice\"?, \"skill\"?, \"threshold\"?, \"bonus\"?})" % str(spec))
 		return
 	for key: String in spec:
-		if key not in ["dice", "skill", "threshold", "bonus"]:
+		if key not in ["dice", "skill", "threshold", "bonus", "fixed"]:
 			errors.append(ctx + " : champ inconnu « %s »" % key)
 	if spec.has("skill") and spec["skill"] != Skills.SPELL:  # "spell" : compétence d'incantation
 		_expect_ref(db.skills, spec["skill"], "compétence", ctx, errors)

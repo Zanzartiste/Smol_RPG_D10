@@ -45,7 +45,7 @@ const SCHEMA := {
 	"unarmed_fighting": ["amount"],  # dés de dégâts en plus à mains nues (À mains nues)
 	"two_weapon_fighting": [],  # pas de malus pour l'attaque de la main secondaire (À deux armes)
 	"critical_damage_dice": ["amount"],  # dés de dégâts en plus sur un critique (Attaques précises du Roublard)
-	"armor_strength_reduction": ["amount"],  # Force conseillée des armures réduite
+	"encumbrance_reduction": ["amount"],  # encombrement réduit (Entraînement aux armures lourdes)
 	"potent_cantrip": [],  # tour de magie raté : moitié des dégâts (Évocateur)
 	"empowered_evocation": [],  # un dé de dégâts de plus aux sorts d'évocation
 	"fast_hands": [],  # utiliser un objet ne coûte pas l'action, une fois par tour (Voleur)
@@ -166,8 +166,8 @@ static func describe(m: Dictionary) -> String:
 		"critical_damage_dice":
 			return Loc.ui("%s dé(s) de dégâts sur un critique") % signed
 
-		"armor_strength_reduction":
-			return Loc.ui("Force des armures −%d") % amount
+		"encumbrance_reduction":
+			return Loc.ui("Encombrement −%d") % amount
 		"potent_cantrip":
 			return Loc.ui("Tour de magie puissant")
 		"empowered_evocation":

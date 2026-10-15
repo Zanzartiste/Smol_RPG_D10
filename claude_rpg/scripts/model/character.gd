@@ -35,7 +35,7 @@ var look := {}  # apparence choisie à la création (PixelArt.portrait) ; vide :
 var template_id := ""  # pour un compagnon : son id dans companions.json
 var npc_id := ""  # PNJ du monde lié à ce personnage (compagnon recruté, ou compagnon avec relation)
 var auto_combat := false  # en combat, l'IA joue ce personnage
-var load_penalty := 0  # malus de charge du groupe (calculé par LifeState.refresh_load, non sauvegardé)
+
 var resources: Dictionary = {}  # ressources restantes (spell_slot, indomitable…), rechargées par un repos long
 var equipped_spells: Array[String] = []  # sorts équipés (utilisables en combat), parmi les sorts connus
 var seen_spells: Array[String] = []  # sorts déjà proposés (un sort appris est équipé d'office s'il reste de la place)
@@ -186,9 +186,13 @@ func all_defenses() -> Defenses:
 
 # --- Attributs et compétences ------------------------------------------------
 
-## Valeur d'un attribut : base + modificateurs (dons…).
-func ability_score(ability_id: String) -> int:
-	return int(abilities.get(ability_id, 4)) + Modifiers.sum(modifiers(), "ability", ability_id)
+## Valeur d'un attribut : base + modificateurs (dons…) ; la DEX perd un point par point d'encombrement
+## (sans passer sous 0), sauf `encumbered` = false (prérequis, conditions : ce dont le personnage est capable).
+func ability_score(ability_id: String, encumbered := true) -> int:
+	var score := int(abilities.get(ability_id, 4)) + Modifiers.sum(modifiers(), "ability", ability_id)
+	if ability_id == "dex" and encumbered:
+		score = maxi(0, score - encumbrance())
+	return score
 
 
 # --- Compétences : rangs et réserves de dés ---------------------------------------------
@@ -309,16 +313,15 @@ func best_skill_ability(skill_id: String) -> String:
 	return best
 
 
-## Valeur d'un attribut pour départager deux attributs : le seuil, moins un point par dé de malus.
+## Valeur d'un attribut pour départager deux attributs : le seuil.
 func _pool_value(ability_id: String) -> int:
-	return ability_score(ability_id) - roll_penalty(ability_id)
+	return ability_score(ability_id)
 
 
-## Réserve d'un test de compétence : {"count": rang + bonus − encombrement, "threshold": attribut}.
+## Réserve d'un test de compétence : {"count": rang + bonus, "threshold": attribut}.
 func skill_pool(skill_id: String, ability := "", bonus := 0) -> Dictionary:
 	var used := ability if ability != "" else best_skill_ability(skill_id)
-	return {"count": skill_rank(skill_id) + bonus - roll_penalty(used), "threshold": ability_score(used),
-		"ability": used}
+	return {"count": skill_rank(skill_id) + bonus, "threshold": ability_score(used), "ability": used}
 
 
 ## Résistance maîtrisée (Résistant) : un dé de plus pour résister.
@@ -335,7 +338,7 @@ func resist_pool(ability_id: String, bonus := 0) -> Dictionary:
 	for m: Dictionary in modifiers():
 		if m.get("type") == "resist_proficiency" and m.get("id") == ability_id:
 			dice += 1
-	return {"count": dice - roll_penalty(ability_id), "threshold": ability_score(ability_id), "ability": ability_id}
+	return {"count": dice, "threshold": ability_score(ability_id), "ability": ability_id}
 
 
 ## Valeur passive (repérer sans lancer de dé) : nombre moyen de succès de la réserve, arrondi.
@@ -584,66 +587,65 @@ func choose_feat(feat_id: String) -> bool:
 # --- Équipement --------------------------------------------------------------
 
 # --- Encombrement ----------------------------------------------------------------
-# Deux sources, cumulées et plafonnées (rules.json › encumbrance) : une armure qui demande plus de
-# Force que le personnage n'en a, et la charge du groupe au-delà de sa capacité (load_penalty).
-# Le malus s'applique à tous les jets de FOR et de DEX.
+# Encombrement = poids porté (armure, bouclier, armes en main) − FOR − CON + taille × 2 + armure naturelle × 2
+# (rules.json › encumbrance), moins les modificateurs "encumbrance_reduction", au moins 0. Chaque point
+# retire 1 à la Dextérité ; à 0 de Dextérité, on ne peut plus agir.
 
 static func _encumbrance(key: String, default: Variant) -> Variant:
 	return DB.rules.get("encumbrance", {}).get(key, default)
 
 
-## Points de Force qui manquent pour porter un équipement sans malus (0 si aucun). Entraînement aux
-## armures lourdes réduit la Force conseillée.
-func strength_missing(item_id: String) -> int:
-	var required := Equipment.strength_required(item_id)
-	if required > 0:
-		required -= Modifiers.sum(modifiers(), "armor_strength_reduction")
-	return maxi(0, required - ability_score("str"))
+## Poids qui compte dans l'encombrement : armure, bouclier, et armes en main (à une ou à deux mains).
+func equipped_weight() -> float:
+	var total := Equipment.weight_of(equipment.get("armor", "")) + Equipment.weight_of(equipment.get("off_hand", ""))
+	return total + Equipment.weight_of(weapon_id(), two_handed_grip())
 
 
-## Malus dû aux armures trop lourdes.
-func armor_penalty() -> int:
-	var missing := 0
-	for slot: String in equipment:
-		missing = maxi(missing, strength_missing(equipment[slot]))
-	return ceili(missing / float(_encumbrance("armor_points_per_penalty", 2)))
+## Armure naturelle de l'espèce (species.json › natural_armor) : s'ajoute à l'Armure, et compte double
+## dans l'encombrement (une armure s'ajuste mal à une carapace).
+func natural_armor() -> int:
+	return int(DB.species.get(species_id, {}).get("natural_armor", 0))
 
 
-## Malus total aux jets de FOR et de DEX.
-func encumbrance_penalty() -> int:
-	return mini(armor_penalty() + load_penalty, int(_encumbrance("max_penalty", 5)))
+## Encombrement (points de DEX en moins).
+func encumbrance() -> int:
+	var value := equipped_weight() - int(abilities.get("str", 4)) - Modifiers.sum(modifiers(), "ability", "str") \
+		- int(abilities.get("con", 4)) - Modifiers.sum(modifiers(), "ability", "con") \
+		+ size() * int(_encumbrance("size_factor", 2)) + natural_armor() * int(_encumbrance("natural_armor_factor", 2)) \
+		- Modifiers.sum(modifiers(), "encumbrance_reduction")
+	return maxi(0, ceili(value))
 
 
 func is_encumbered() -> bool:
-	return encumbrance_penalty() > 0
+	return encumbrance() > 0
 
 
-## Malus d'un jet selon l'attribut utilisé (FOR et DEX seulement).
-func roll_penalty(ability_id: String) -> int:
-	return encumbrance_penalty() if ability_id in ["str", "dex"] else 0
+## Encombrement si l'on équipait cet objet (sans rien changer).
+func encumbrance_with(item_id: String) -> int:
+	var saved := equipment.duplicate()
+	equip(item_id)
+	var value := encumbrance()
+	equipment = saved
+	refresh_max_hp()
+	return value
 
 
-## Charge que ce personnage peut porter sans malus (kg).
-func carry_capacity() -> float:
-	return ability_score("str") * float(_encumbrance("carry_per_strength", 7.5))
-
-
-## Poids de ce que le personnage porte sur lui (kg).
-func equipped_weight() -> float:
-	var total := 0.0
-	for slot: String in equipment:
-		total += Equipment.weight_of(equipment[slot])
-	return total
-
-
-## Pourquoi un équipement encombrerait le personnage ("" s'il le porte sans malus de Force).
+## Ce qu'un équipement coûterait en Dextérité ("" s'il n'encombre pas plus que l'équipement actuel).
 func encumbrance_reason(item_id: String) -> String:
-	var missing := strength_missing(item_id)
-	if missing <= 0:
+	if not Equipment.is_weapon(item_id) and not Equipment.is_armor(item_id) and not Equipment.is_shield(item_id):
 		return ""
-	var penalty := ceili(missing / float(_encumbrance("armor_points_per_penalty", 2)))
-	return Loc.ui("Force %d conseillée (vous avez %d) : −%d dé(s) aux jets de FOR et DEX") % [
-		ability_score("str") + missing, ability_score("str"), penalty]
+	var value := encumbrance_with(item_id)
+	if value <= encumbrance() or value <= 0:
+		return ""
+	return Loc.ui("Encombrement %d : DEX −%d") % [value, value]
+
+
+## L'arme en main est tenue à deux mains : arme qui ne se tient qu'à deux mains, ou arme qui le permet, la
+## main secondaire libre.
+func two_handed_grip() -> bool:
+	var weapon := weapon_id()
+	return Equipment.has_property(weapon, "two_handed") \
+		or (Equipment.can_use_two_hands(weapon) and not equipment.has("off_hand"))
 
 
 func weapon_id() -> String:
@@ -677,14 +679,14 @@ func equip(item_id: String, slot_wanted := "") -> Array[String]:
 	return removed
 
 
-## Une arme peut-elle aller en main secondaire ? Une arme de corps à corps à une main, si la main principale
-## en tient déjà une (elle attaque alors après l'arme principale, voir Combatant.off_hand_attack).
+## Une arme peut-elle aller en main secondaire ? Une arme de corps à corps qui se tient à une main, si la main
+## principale en tient déjà une (elle attaque alors après l'arme principale, voir Combatant.off_hand_attack).
 func can_dual_wield(item_id: String) -> bool:
 	return _one_handed_melee(item_id) and _one_handed_melee(weapon_id())
 
 
 static func _one_handed_melee(item_id: String) -> bool:
-	return Equipment.is_weapon(item_id) and item_id != Equipment.UNARMED 		and not Equipment.has_property(item_id, "two_handed") and not Equipment.has_property(item_id, "ranged")
+	return Equipment.is_one_handed(item_id) and item_id != Equipment.UNARMED and not Equipment.has_property(item_id, "ranged")
 
 
 ## Retire l'objet d'un emplacement ; retourne son id ("" si l'emplacement était vide).
@@ -695,9 +697,9 @@ func unequip(slot: String) -> String:
 	return previous
 
 
-## Dégâts de l'arme en main (polyvalente à deux mains si la main secondaire est libre).
+## Dégâts de l'arme en main.
 func weapon_damage() -> Dictionary:
-	return Equipment.weapon_damage(weapon_id(), not equipment.has("off_hand"))
+	return Equipment.weapon_damage(weapon_id())
 
 
 func weapon_damage_type() -> String:
@@ -717,7 +719,7 @@ func natural_dodge() -> int:
 func armor() -> int:
 	var mods := modifiers()
 	var total := Equipment.armor_value(equipment.get("armor", "")) + Equipment.armor_value(equipment.get("off_hand", "")) \
-		+ Modifiers.sum(mods, "armor")
+		+ Modifiers.sum(mods, "armor") + natural_armor()
 	var worn := Equipment.def(equipment.get("armor", ""))
 	if not worn.is_empty() and worn.get("armor_type") != "clothing":
 		total += Modifiers.sum(mods, "armored")
@@ -741,18 +743,17 @@ func armor_parts() -> Array:
 	return parts
 
 
-## Initiative de base : Dextérité + Intelligence (+ modificateurs), moins l'encombrement. On y ajoute
+## Initiative de base : Dextérité (après l'encombrement) + Intelligence (+ modificateurs). On y ajoute
 ## 1d10 en début de combat.
 func initiative_base() -> int:
-	return ability_score("dex") + ability_score("int") + Modifiers.sum(modifiers(), "initiative") - roll_penalty("dex")
+	return ability_score("dex") + ability_score("int") + Modifiers.sum(modifiers(), "initiative")
 
 
 ## Attribut utilisé par une action : "weapon" (celui de l'arme), "spell" (celui de la classe) ou un id d'attribut.
 func action_ability(ability: String) -> String:
 	match ability:
 		"weapon":
-			return Equipment.attack_ability(weapon_id(), ability_score("str") - roll_penalty("str"),
-				ability_score("dex") - roll_penalty("dex"))
+			return Equipment.ATTACK_ABILITY
 		"spell":
 			if spell_override != "":
 				return best_skill_ability(spell_override)  # parchemin : l'attribut de la compétence utilisée
@@ -778,7 +779,7 @@ func attack_pool(ability: String, weapon := "", bonus := 0) -> Dictionary:
 		rank = skill_rank(Skills.SPELL)
 	else:
 		rank = weapon_rank(weapon if weapon != "" else weapon_id())
-	return {"count": rank + bonus - roll_penalty(used), "threshold": ability_score(used), "ability": used}
+	return {"count": rank + bonus, "threshold": ability_score(used), "ability": used}
 
 
 ## Rang d'attaque avec une arme : le meilleur rang parmi ses compétences (mains nues : mêlée ou Physique).
@@ -1153,6 +1154,14 @@ static func from_dict(data: Dictionary) -> Character:
 	c.max_hp = int(data.get("max_hp", 1))
 	c.gold = int(data.get("gold", 0))
 	c.inventory = _int_dict(data.get("inventory", {}))
+	# Anciennes sauvegardes : équipements retirés du catalogue (2026-10-15) -> leur remplaçant.
+	for old_id: String in RENAMED_ITEMS:
+		for slot: String in c.equipment.keys():
+			if c.equipment[slot] == old_id:
+				c.equipment[slot] = RENAMED_ITEMS[old_id]
+		if c.inventory.has(old_id):
+			c.inventory[RENAMED_ITEMS[old_id]] = int(c.inventory.get(RENAMED_ITEMS[old_id], 0)) + int(c.inventory[old_id])
+			c.inventory.erase(old_id)
 	c.start_age = int(data.get("start_age", 18))
 	c.age_days = int(data.get("age_days", 0))
 	c.art_seed = int(data.get("art_seed", 0))
@@ -1182,6 +1191,10 @@ static func from_dict(data: Dictionary) -> Character:
 			c.resources.erase(id)
 	c.sync_spells()
 	return c
+
+
+## Équipements retirés du catalogue -> leur remplaçant (anciennes sauvegardes).
+const RENAMED_ITEMS := {"scimitar": "shortsword", "hide": "leather", "chain_shirt": "chain_mail"}
 
 
 static func _int_dict(data: Variant) -> Dictionary:

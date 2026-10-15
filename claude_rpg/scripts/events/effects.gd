@@ -137,8 +137,8 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 					if removed != Equipment.UNARMED:
 						ch.add_item(removed)  # l'objet remplacé retourne dans le sac
 				lines.append(Loc.ui("Équipé : %s") % Equipment.name_of(e["id"]))
-				if ch.encumbrance_reason(e["id"]) != "":
-					lines.append(ch.encumbrance_reason(e["id"]))
+				if ch.is_encumbered():
+					lines.append(Loc.ui("Encombrement %d : Dextérité −%d") % [ch.encumbrance(), ch.encumbrance()])
 			"add_defense":
 				ch.defenses.add(e["kind"], e["id"])
 				lines.append(Modifiers.describe({"type": e["kind"], "damage_type": e["id"], "status": e["id"]}))

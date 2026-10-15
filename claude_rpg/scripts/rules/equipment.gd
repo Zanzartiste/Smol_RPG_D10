@@ -4,21 +4,24 @@ extends RefCounted
 ## Classes, personnages et ennemis ne font que référencer des ids d'équipement : modifier une arme ici
 ## (dégâts, type, propriétés) la modifie partout.
 ##
-## Arme  : {"category": "weapon", "damage": {"threshold"?: "weapon" | "str" | "dex" | N, "bonus"?: N, "dice"?: N},
-##          "damage_type": "slashing",
-##          "properties": ["finesse", "light", "thrown", "versatile", "heavy", "two_handed", "ranged"]}
-##   Dégâts : [rang de la compétence d'attaque + dice] d10 contre un seuil : l'attribut d'attaque
-##   ("weapon", par défaut), un attribut imposé, ou un seuil fixe (arcs), + "bonus". Plus l'arme est grosse,
-##   plus elle a de dés ; une arme polyvalente tenue à deux mains a un dé de plus.
-##   "parry"?: {"ability", "bonus"} : seuil de parade.
-## Armure : {"category": "armor", "armor_type": "clothing" | "light" | "medium" | "heavy", "armor": N,
-##           "strength"?: N}  N : points d'Armure (baissent le seuil des dégâts subis). Force nécessaire
-##           pour la porter sans malus ; par défaut celle de son type (rules.json › armor_strength :
-##           vêtements 0, légère 4, intermédiaire 5, lourde 6). En dessous, elle reste portable mais encombre.
-## Bouclier : {"category": "shield", "armor": 1} (permet aussi de parer les attaques à distance)
+## Arme  : {"category": "weapon", "skill"?: "physique", "damage": {"dice": N, "threshold": "str" | "dex" | N, "bonus"?: N},
+##          "damage_type": "slashing", "parry"?: N, "parry_two_hands"?: N, "weight"?: N, "weight_two_hands"?: N,
+##          "crit_bonus"?: N, "reload"?: N, "fragile"?: N, "properties": [...] (voir PROPERTY_NAMES)}
+##   Attaque : [rang de la compétence] d10 contre la DEX. Compétence : "skill", sinon Armes de trait (à distance)
+##   ou Armes de mêlée.
+##   Dégâts : "dice" d10 (les dés de l'arme, sans le rang) contre "threshold" (FOR par défaut, DEX, ou un seuil
+##   fixe pour les arcs et les arbalètes), + "bonus" (épée bâtarde : FOR +1).
+##   "parry" : seuil de parade à une main ("parry_two_hands" : à deux mains). Sans "parry", l'arme ne pare pas.
+##   "weight" / "weight_two_hands" : poids dans l'encombrement, tenue à une ou à deux mains. Sans "weight",
+##   elle ne se tient qu'à deux mains (propriété "two_handed" : arcs). On la tient à deux mains si l'autre est libre.
+##   "crit_bonus" : dégâts en plus sur un critique (Perçante). "reload" : actions pour recharger après un tir.
+##   "fragile" (Imprévisible) : l'arme se brise si le jet d'attaque fait au moins autant de 10.
+## Armure : {"category": "armor", "armor_type": "clothing" | "light" | "medium" | "heavy", "armor": N, "weight": N}
+##           N : points d'Armure (baissent le seuil des dégâts subis) ; "weight" : poids dans l'encombrement.
+## Bouclier : {"category": "shield", "armor": 1, "parry": 4, "weight": N} (pare aussi les attaques à distance)
 ## Accessoire : {"category": "accessory", "slot": "head" | "cloak" | "hands" | "legs" | "feet" | "neck" | "ring"}
-##           (un anneau va dans ring_1, ou ring_2 si le premier est pris)
-## Tous : "weight" (kg) ; le poids porté par le groupe peut l'encombrer (voir Character).
+##           (un anneau va dans ring_1, ou ring_2 si le premier est pris ; son poids ne compte pas)
+## Encombrement (voir Character.encumbrance) : poids de l'armure, du bouclier et des armes en main.
 ## Facultatif pour tous : "modifiers" (voir Modifiers), "rarity", "value", "description" (voir Items).
 ## Facultatif pour une arme : "bonus_damage": [{"dice": 2, "threshold": 5, "damage_type": "fire"}], dégâts
 ## d'autres types ajoutés à chaque coup (une épée enflammée : tranchant + feu).
@@ -35,11 +38,11 @@ const SLOT_NAMES := {
 ## Emplacements multiples : un type d'emplacement -> ses emplacements réels.
 const SLOT_GROUPS := {"ring": ["ring_1", "ring_2"]}
 const UNARMED := "unarmed"
-const VERSATILE_DICE := 1  # dés de dégâts en plus pour une arme polyvalente tenue à deux mains
+const ATTACK_ABILITY := "dex"  # attribut d'attaque de toutes les armes
 
 const PROPERTY_NAMES := {
-	"finesse": "finesse", "light": "légère", "thrown": "lancer", "versatile": "polyvalente",
-	"heavy": "lourde", "two_handed": "à deux mains", "ranged": "à distance",
+	"ranged": "à distance", "two_handed": "à deux mains", "thrown": "de lancer", "dangerous_parry": "parade dangereuse",
+	"impact": "à impact", "reach": "allonge", "assassin": "assassine", "crossbow": "arbalète",
 }
 const ARMOR_TYPE_NAMES := {"clothing": "vêtement", "light": "légère", "medium": "intermédiaire", "heavy": "lourde"}
 
@@ -111,36 +114,74 @@ static func slots_for(id: String) -> Array:
 
 
 ## Compétences d'attaque d'une arme ("skill" de l'arme, sinon : à distance -> Armes de trait,
-## mains nues -> Armes de mêlée ou Physique, le reste -> Armes de mêlée).
+## le reste -> Armes de mêlée).
 static func skills_for(id: String) -> Array:
 	var weapon := def(id)
 	if weapon.has("skill"):
 		return [weapon["skill"]]
-	if id == UNARMED:
-		return ["weapon_melee", "physique"]
 	if has_property(id, "ranged"):
 		return ["weapon_ranged"]
 	return ["weapon_melee"]
 
 
-## Poids en kg.
-static func weight_of(id: String) -> float:
-	return float(def(id).get("weight", 0.0))
+## Poids dans l'encombrement ; une arme : tenue à une main, ou à deux (two_hands) si elle le permet.
+static func weight_of(id: String, two_hands := false) -> float:
+	var item := def(id)
+	if is_weapon(id) and (two_hands or not item.has("weight")):
+		return float(item.get("weight_two_hands", item.get("weight", 0.0)))
+	return float(item.get("weight", 0.0))
 
 
-## Dégâts d'une arme : {"threshold": "weapon" | attribut | N, "bonus", "dice"} ; une arme polyvalente
-## tenue à deux mains a un dé de plus.
-static func weapon_damage(id: String, two_hands := false) -> Dictionary:
+## L'arme peut-elle se tenir à une main ?
+static func is_one_handed(id: String) -> bool:
+	return is_weapon(id) and def(id).has("weight") and not has_property(id, "two_handed")
+
+
+## L'arme peut-elle se tenir à deux mains ?
+static func can_use_two_hands(id: String) -> bool:
+	return is_weapon(id) and def(id).has("weight_two_hands")
+
+
+## Seuil de parade d'une arme ou d'un bouclier (à deux mains : "parry_two_hands") ; -1 s'il ne pare pas.
+static func parry_of(id: String, two_hands := false) -> int:
+	var item := def(id)
+	if not item.has("parry"):
+		return -1
+	return int(item.get("parry_two_hands", item["parry"])) if two_hands else int(item["parry"])
+
+
+## Dégâts en plus sur un critique (Perçante).
+static func crit_bonus_of(id: String) -> int:
+	return int(def(id).get("crit_bonus", 0))
+
+
+## Actions de rechargement après chaque tir (0 : aucune).
+static func reload_of(id: String) -> int:
+	return int(def(id).get("reload", 0))
+
+
+## Imprévisible : nombre de 10 au jet d'attaque qui brisent l'arme (0 : jamais).
+static func fragile_of(id: String) -> int:
+	return int(def(id).get("fragile", 0))
+
+
+## Dégâts d'une arme : {"dice", "threshold": attribut | N, "bonus", "fixed": true} (les dés de l'arme,
+## sans le rang de la compétence).
+static func weapon_damage(id: String) -> Dictionary:
 	var spec: Dictionary = def(id).get("damage", {})
-	var result := {"threshold": spec.get("threshold", "weapon"), "bonus": int(spec.get("bonus", 0)), "dice": int(spec.get("dice", 0))}
-	if two_hands and has_property(id, "versatile"):
-		result["dice"] = int(result["dice"]) + VERSATILE_DICE
-	return result
+	return {"threshold": spec.get("threshold", "str"), "bonus": int(spec.get("bonus", 0)), "dice": int(spec.get("dice", 0)),
+		"fixed": true}
 
 
-## Texte d'une réserve de dégâts : « seuil attaque, +1 dé », « seuil 6 ».
+## Texte d'une réserve de dégâts : « 7d10, seuil FOR +1 », « seuil attaque, +1 dé », « seuil 6 ».
 static func damage_text(spec: Dictionary) -> String:
 	var threshold: Variant = spec.get("threshold", "weapon")
+	if spec.get("fixed", false):
+		var source: String = Abilities.short_of(threshold) if threshold is String else str(int(threshold))
+		var extra := int(spec.get("bonus", 0))
+		if extra != 0:
+			source += " %s%d" % ["+" if extra > 0 else "−", absi(extra)]
+		return Loc.ui("%dd10, seuil %s") % [int(spec.get("dice", 0)), source]
 	var text := ""
 	if threshold is String:
 		text = Loc.ui("seuil %s") % (Loc.ui("attaque") if threshold in ["weapon", "spell"] else Abilities.short_of(threshold))
@@ -159,26 +200,6 @@ static func damage_type_of(id: String) -> String:
 	return def(id).get("damage_type", "bludgeoning")
 
 
-## Attribut d'attaque d'une arme : DEX pour une arme à distance, le meilleur de FOR/DEX pour une
-## arme de finesse, FOR sinon.
-static func attack_ability(id: String, str_value: int, dex_value: int) -> String:
-	if has_property(id, "ranged"):
-		return "dex"
-	if has_property(id, "finesse"):
-		return "dex" if dex_value > str_value else "str"
-	return "str"
-
-
-## Force nécessaire pour porter un équipement sans malus (0 si aucune) : "strength" de l'objet, sinon celle de son
-## type d'armure (rules.json › armor_strength).
-static func strength_required(id: String) -> int:
-	var item := def(id)
-	if item.has("strength"):
-		return int(item["strength"])
-	if is_armor(id):
-		return int(DB.rules.get("armor_strength", {}).get(item.get("armor_type", ""), 0))
-	return 0
-
 
 ## Points d'Armure d'une armure ou d'un bouclier (0 pour le reste).
 static func armor_value(id: String) -> int:
@@ -189,6 +210,11 @@ static func armor_value(id: String) -> int:
 
 static func modifiers_of(id: String) -> Array:
 	return def(id).get("modifiers", [])
+
+
+## Nombre sans décimale inutile : 4 -> « 4 », 0.5 -> « 0,5 ».
+static func _num(value: float) -> String:
+	return str(int(value)) if is_equal_approx(value, roundf(value)) else String.num(value, 1).replace(".", ",")
 
 
 ## Description courte, ex. « Épée longue — 1d8 tranchant (polyvalente 1d10) ».
@@ -202,20 +228,34 @@ static func describe(id: String) -> String:
 				text += " + %s %s" % [DamageTypes.name_of(part["damage_type"]).to_lower(),
 					Dice.pool_text(int(part.get("dice", 1)), int(part.get("threshold", 5)))]
 			var props := PackedStringArray()
+			if parry_of(id) >= 0:
+				var parry_text := Loc.ui("parade %d") % parry_of(id)
+				if parry_of(id, true) != parry_of(id):
+					parry_text += Loc.ui(" (%d à deux mains)") % parry_of(id, true)
+				props.append(parry_text)
+			if is_one_handed(id):
+				var weight_text := Loc.ui("poids %s") % _num(weight_of(id))
+				if can_use_two_hands(id) and weight_of(id, true) != weight_of(id):
+					weight_text += Loc.ui(" (%s à deux mains)") % _num(weight_of(id, true))
+				props.append(weight_text)
+			else:
+				props.append(Loc.ui("poids %s, à deux mains") % _num(weight_of(id, true)))
+			if crit_bonus_of(id) > 0:
+				props.append(Loc.ui("perçante : +%d dégâts sur un critique") % crit_bonus_of(id))
+			if reload_of(id) > 0:
+				props.append(Loc.ui("recharge %d") % reload_of(id))
+			if fragile_of(id) > 0:
+				props.append(Loc.ui("imprévisible (%d)") % fragile_of(id))
 			for prop: String in item.get("properties", []):
-				var label: String = PROPERTY_NAMES.get(prop, prop)
-				if prop == "versatile":
-					label += Loc.ui(" : +1 dé à deux mains")
-				props.append(label)
+				if prop != "two_handed":
+					props.append(Loc.ui(PROPERTY_NAMES.get(prop, prop)))
 			return text + (" (%s)" % ", ".join(props) if not props.is_empty() else "")
 		"armor":
-			var text := Loc.ui("%s — Armure %d (%s)") % [item["name"], armor_value(id),
-				ARMOR_TYPE_NAMES.get(item.get("armor_type", "light"), "")]
-			if strength_required(id) > 0:
-				text += Loc.ui(", FOR %d") % strength_required(id)
-			return text
+			return Loc.ui("%s — Armure %d (%s), poids %s") % [item["name"], armor_value(id),
+				ARMOR_TYPE_NAMES.get(item.get("armor_type", "light"), ""), _num(weight_of(id))]
 		"shield":
-			return Loc.ui("%s — Armure +%d") % [item["name"], armor_value(id)]
+			return Loc.ui("%s — Armure +%d, parade %d, poids %s") % [item["name"], armor_value(id), parry_of(id),
+				_num(weight_of(id))]
 		"accessory":
 			return "%s — %s" % [item["name"], slot_name(slot_for(id)).to_lower()]
 	return item.get("name", id)

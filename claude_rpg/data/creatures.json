@@ -13,14 +13,14 @@
 				"name": "Morsure",
 				"weight": 3,
 				"target": "enemy",
-				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str"}, "damage_type": "piercing"}]
+				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 5, "fixed": true}, "damage_type": "piercing"}]
 			},
 			{
 				"name": "Croc-en-jambe",
 				"weight": 1,
 				"target": "enemy",
 				"effects": [
-					{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": -1}, "damage_type": "piercing"},
+					{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 4, "fixed": true}, "damage_type": "piercing"},
 					{"type": "status", "status": "prone", "stacks": 1}
 				]
 			}
@@ -46,7 +46,7 @@
 				"name": "Morsure brutale",
 				"weight": 3,
 				"target": "enemy",
-				"effects": [{"type": "attack", "skill": "physique", "ability": "str", "damage": {"threshold": "str", "dice": 2}, "damage_type": "piercing"}]
+				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 7, "fixed": true}, "damage_type": "piercing"}]
 			},
 			{
 				"name": "Hurlement terrifiant",
@@ -71,10 +71,10 @@
 		"abilities": {"str": 4, "dex": 5, "con": 5, "int": 4, "wis": 4, "cha": 4},
 		"actions": [
 			{
-				"name": "Cimeterre",
+				"name": "Épée courte",
 				"weight": 3,
 				"target": "enemy",
-				"effects": [{"type": "attack", "weapon": "scimitar"}]
+				"effects": [{"type": "attack", "weapon": "shortsword"}]
 			},
 			{
 				"name": "Dague empoisonnée",
@@ -146,7 +146,7 @@
 				"name": "Coup de poing",
 				"weight": 3,
 				"target": "enemy",
-				"effects": [{"type": "attack", "skill": "physique", "ability": "str", "damage": {"threshold": "str"}, "damage_type": "bludgeoning"}]
+				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 4, "fixed": true}, "damage_type": "bludgeoning"}]
 			},
 			{
 				"name": "Coup de tête",
@@ -154,7 +154,7 @@
 				"announced": true,
 				"target": "enemy",
 				"effects": [
-					{"type": "attack", "skill": "physique", "ability": "str", "damage": {"threshold": "str", "dice": 1}, "damage_type": "bludgeoning"},
+					{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 5, "fixed": true}, "damage_type": "bludgeoning"},
 					{"type": "status", "status": "stunned", "stacks": 1}
 				]
 			}
@@ -181,14 +181,14 @@
 				"name": "Morsure",
 				"weight": 3,
 				"target": "enemy",
-				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 1}, "damage_type": "piercing"}]
+				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 5, "fixed": true}, "damage_type": "piercing"}]
 			},
 			{
 				"name": "Morsure infectée",
 				"weight": 1,
 				"target": "enemy",
 				"effects": [
-					{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": 2}, "damage_type": "piercing"},
+					{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": 2, "dice": 5, "fixed": true}, "damage_type": "piercing"},
 					{"type": "status", "status": "poisoned", "stacks": 2}
 				]
 			}
@@ -208,7 +208,7 @@
 				"name": "Coup de bec",
 				"weight": 2,
 				"target": "enemy",
-				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 1}, "damage_type": "piercing"}]
+				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 4, "fixed": true}, "damage_type": "piercing"}]
 			},
 			{
 				"name": "Distraction",
@@ -230,7 +230,7 @@
 				"name": "Morsure spectrale",
 				"weight": 1,
 				"target": "enemy",
-				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 1}, "damage_type": "force"}]
+				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 5, "fixed": true}, "damage_type": "force"}]
 			}
 		],
 		"art": {"type": "wolf", "fur": "#8fc3e8", "belly": "#d8ecf8", "eyes": "#ffffff"}

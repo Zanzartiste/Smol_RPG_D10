@@ -24,7 +24,8 @@ const TESTS := [
 	"_test_spell_progression",
 	"_test_class_features",
 	"_test_inventory",
-	"_test_armor_strength",
+	"_test_encumbrance",
+	"_test_weapon_properties",
 	"_test_new_species",
 	"_test_damage_types",
 	"_test_economy",
@@ -199,23 +200,32 @@ func _test_rule_apis() -> bool:
 func _test_equipment() -> bool:
 	_expect(Equipment.armor_value("robe") == 0 and Equipment.armor_value("leather") == 1 and Equipment.armor_value("chain_mail") == 3
 		and Equipment.armor_value("shield") == 1 and Equipment.armor_value("longsword") == 0, "points d'Armure")
-	_expect(Equipment.attack_ability("rapier", 6, 4) == "str" and Equipment.attack_ability("rapier", 4, 6) == "dex",
-		"finesse : meilleur de FOR et DEX")
-	_expect(Equipment.attack_ability("shortbow", 8, 3) == "dex", "arme à distance : DEX")
-	_expect(Equipment.weapon_damage("longsword") == {"threshold": "weapon", "bonus": 0, "dice": 1}
-		and Equipment.weapon_damage("longsword", true)["dice"] == 2 and Equipment.weapon_damage("longbow")["threshold"] == 6,
-		"dégâts : seuil de l'attaque, dés en plus (polyvalente : +1 dé à deux mains), ou seuil fixe (arc)")
-	_expect(Equipment.describe("longsword") == "Épée longue — tranchant, seuil attaque, +1 dé(s) (polyvalente : +1 dé à deux mains)",
+	_expect(Equipment.weapon_damage("longsword") == {"threshold": "str", "bonus": 0, "dice": 7, "fixed": true}
+		and Equipment.weapon_damage("bastard_sword")["bonus"] == 1 and Equipment.weapon_damage("rapier")["threshold"] == "dex"
+		and Equipment.weapon_damage("longbow")["threshold"] == 5, "dégâts : dés de l'arme, seuil FOR (+N), DEX ou fixe")
+	_expect(Equipment.parry_of("longsword") == 4 and Equipment.parry_of("quarterstaff") == 2 and Equipment.parry_of("quarterstaff", true) == 5
+		and Equipment.parry_of("longbow") == -1 and Equipment.parry_of("shield") == 4, "seuils de parade (bâton : 5 à deux mains)")
+	_expect(Equipment.weight_of("longsword") == 4.0 and Equipment.weight_of("longsword", true) == 3.0 and Equipment.weight_of("longbow") == 4.0
+		and not Equipment.is_one_handed("longbow") and Equipment.is_one_handed("greatsword"), "poids à une et à deux mains")
+	_expect(Equipment.skills_for("unarmed") == ["physique"] and Equipment.skills_for("javelin") == ["physique"]
+		and Equipment.skills_for("light_crossbow") == ["weapon_ranged"], "compétences : Physique, Armes de trait")
+	_expect(Equipment.describe("longsword") == "Épée longue — tranchant, 7d10, seuil FOR (parade 4, poids 4 (3 à deux mains))",
 		"description d'arme")
 
 	var c := Character.create("human", "fighter", "Testeur")
-	_expect(c.weapon_id() == "longsword" and c.armor() == 3, "équipement de départ de la classe")
+	_expect(c.weapon_id() == "longsword" and c.armor() == 3 and c.two_handed_grip(), "équipement de départ : épée tenue à deux mains")
 	c.equip("shield")
-	_expect(c.armor() == 4 and c.weapon_damage()["dice"] == 1, "bouclier : +1 Armure, épée à une main")
+	_expect(c.armor() == 4 and c.weapon_damage()["dice"] == 7 and not c.two_handed_grip(), "bouclier : +1 Armure, épée à une main")
 	c.equip("greataxe")
-	_expect(not c.equipment.has("off_hand") and c.weapon_damage()["dice"] == 2, "arme à deux mains : le bouclier est retiré")
+	_expect(c.equipment.has("off_hand") and not c.two_handed_grip(), "une hache à deux mains se tient aussi à une main (plus lourde)")
+	c.equip("longbow")
+	_expect(not c.equipment.has("off_hand"), "arc (deux mains seulement) : le bouclier est retiré")
 	c.equip("shield")
-	_expect(c.weapon_id() == Equipment.UNARMED, "bouclier : l'arme à deux mains est rangée")
+	_expect(c.weapon_id() == Equipment.UNARMED, "bouclier : l'arc est rangé")
+	var older := Character.from_dict({"species_id": "human", "class_id": "fighter", "equipment": {"main_hand": "scimitar",
+		"armor": "hide"}, "inventory": {"chain_shirt": 1}})
+	_expect(older.equipment == {"main_hand": "shortsword", "armor": "leather"} and older.inventory == {"chain_mail": 1},
+		"anciennes sauvegardes : équipements retirés remplacés")
 
 	var life := _new_life("human", "fighter")
 	Effects.apply_all([{"type": "equip", "id": "rapier"}], life, Meta)
@@ -935,8 +945,9 @@ func _test_combat() -> bool:
 	var fighter := Combatant.from_character(life.character, true)
 	var weapon := {"type": "attack", "weapon": true}
 	var attack := fighter.attack_pool(weapon)
-	_expect(attack["count"] == life.character.skill_rank("weapon_melee") and attack["threshold"] == 6
-		and fighter.damage_pool(weapon, attack) == {"count": attack["count"] + 2, "threshold": 6}, "guerrier : toucher [Armes de mêlée] d10 ≤ FOR 6, dégâts rang + 2 dés ≤ 6")
+	_expect(attack["count"] == life.character.skill_rank("weapon_melee") and attack["threshold"] == fighter.ability_score("dex")
+		and fighter.damage_pool(weapon, attack) == {"count": 7, "threshold": fighter.ability_score("str")},
+		"guerrier : toucher [Armes de mêlée] d10 ≤ DEX, dégâts 7d10 (épée longue) ≤ FOR")
 	_expect(fighter.damage_type(weapon) == "slashing" and fighter.armor() == 3 and fighter.natural_dodge() == 1,
 		"épée longue tranchante ; Armure 3, Esquive naturelle 1")
 	var mage := Combatant.from_character(Character.create("goblin", "wizard", "Mage"), true)
@@ -1065,8 +1076,8 @@ func _test_actions() -> bool:
 	_expect(hero.is_prepared() and combat.actions_left == 1, "action Se préparer")
 	hero.statuses.clear()
 
-	# Parade : une par main armée et par tour ; pas d'attaque à distance sans bouclier ; pas à mains nues
-	# contre une arme.
+	# Parade : une par main armée et par tour ; pas d'attaque à distance sans bouclier ; à mains nues contre
+	# une arme, la parade est dangereuse.
 	var wolf := combat.enemies()[0]
 	var bite: Dictionary = wolf.creature["actions"][0]["effects"][0]
 	beats.clear()
@@ -1081,7 +1092,10 @@ func _test_actions() -> bool:
 	_expect(hero.parries_per_turn() == 2, "arme et bouclier : deux parades par tour")
 	hero.character.unequip("main_hand")
 	hero.character.unequip("off_hand")
-	_expect(combat._parry(wolf, hero, {"type": "attack", "weapon": "dagger"}, beats, true) == 0, "pas de parade à mains nues contre une arme")
+	_expect(combat._parry(wolf, hero, {"type": "attack", "weapon": "dagger"}, beats, true) >= 0 and hero.reactions == 0,
+		"mains nues contre une arme : parade possible (dangereuse)")
+	hero.reactions = 1
+	hero.parries_used = 0
 	_expect(combat._parry(wolf, hero, bite, beats, true) >= 0 and hero.reactions == 0, "mains nues contre des crocs : parade possible")
 	hero.character.equip("longsword")
 	hero.reactions = 1
@@ -1385,8 +1399,9 @@ func _test_inventory() -> bool:
 
 	hero.add_item("shield")
 	hero.add_item("greataxe")
+	hero.add_item("longbow")
 	life.equip(hero, "shield")
-	life.equip(hero, "greataxe")
+	life.equip(hero, "longbow")
 	_expect(hero.item_count("shield") == 1 and hero.item_count("longsword_plus_1") == 1 and not hero.equipment.has("off_hand"),
 		"arme à deux mains : bouclier et ancienne arme retournent dans le sac")
 	_expect(not life.equip(hero, "plate"), "impossible d'équiper un objet absent du sac")
@@ -1426,7 +1441,7 @@ func _test_inventory() -> bool:
 	_expect(life.use_item("potion_heal", hero) != "" and hero.hp > 1 and hero.item_count("potion_heal") == potions - 1,
 		"potion bue hors combat")
 	_expect(life.use_item("antidote", hero) == "", "antidote : inutile hors combat")
-	_expect(life.drop_item("greataxe") == 0 and life.drop_item("shield") == 1 and hero.item_count("shield") == 0, "jeter")
+	_expect(life.drop_item("longbow") == 0 and life.drop_item("shield") == 1 and hero.item_count("shield") == 0, "jeter")
 
 	# Fenêtre d'inventaire.
 	var view := InventoryView.new(life)
@@ -1453,46 +1468,124 @@ func _test_inventory() -> bool:
 	return true
 
 
-func _test_armor_strength() -> bool:
-	_expect(Equipment.strength_required("robe") == 0 and Equipment.strength_required("leather") == 4
-		and Equipment.strength_required("chain_shirt") == 5 and Equipment.strength_required("plate") == 6
-		and Equipment.strength_required("longsword") == 0, "Force conseillée : vêtements 0, légère 4, intermédiaire 5, lourde 6")
-	_expect(Equipment.describe("chain_mail").ends_with("FOR 6"), "description : Force conseillée")
-
+func _test_encumbrance() -> bool:
 	var weak := {"str": 3, "dex": 6, "con": 5, "int": 4, "wis": 5, "cha": 5}
 	var fighter := Character.create("goblin", "fighter", "Fluet", {"abilities": weak})
-	_expect(fighter.equipment["armor"] == "chain_mail" and fighter.is_encumbered(),
-		"armure trop lourde : portée quand même, mais encombré")
-	_expect(fighter.encumbrance_reason("chain_mail") == "Force 6 conseillée (vous avez 3) : −3 dé(s) aux jets de FOR et DEX"
-		and fighter.encumbrance_reason("robe") == "", "raison de l'encombrement")
-	_expect(not Character.create("goblin", "fighter", "Costaud").is_encumbered(), "guerrier au modèle (FOR 6) : pas encombré")
+	# Mailles 10 + épée longue à deux mains 3 − FOR 3 − CON 5 + taille (−1) × 2 = 3.
+	_expect(fighter.equipment["armor"] == "chain_mail" and fighter.equipped_weight() == 13.0 and fighter.encumbrance() == 3,
+		"encombrement : poids porté − FOR − CON + taille × 2")
+	_expect(fighter.ability_score("dex") == 3 and fighter.initiative_base() == 3 + 4 and fighter.natural_dodge() == 1,
+		"encombré : DEX −3 (initiative, Esquive naturelle)")
+	_expect(fighter.attack_pool("weapon")["ability"] == "dex" and fighter.attack_pool("weapon")["threshold"] == 3,
+		"attaque contre la DEX, encombrement compris")
+	_expect(fighter.encumbrance_reason("plate") == "Encombrement 7 : DEX −7" and fighter.encumbrance_reason("robe") == ""
+		and fighter.equipment["armor"] == "chain_mail", "ce que coûterait une armure (sans l'équiper)")
+	fighter.equip("shield")  # bouclier 3, et l'épée passe à une main (4)
+	_expect(fighter.encumbrance() == 7, "bouclier : son poids, et l'épée tenue à une main pèse plus")
+	fighter.unequip("armor")
+	fighter.unequip("off_hand")
+	_expect(fighter.encumbrance() == 0 and fighter.ability_score("dex") == 6, "sans armure : plus encombré")
+	DB.species["goblin"]["natural_armor"] = 1
+	fighter.equip("chain_mail")
+	_expect(fighter.encumbrance() == 5 and fighter.armor() == 4, "armure naturelle : +1 Armure, +2 d'encombrement")
+	DB.species["goblin"].erase("natural_armor")
+	fighter.equip("plate")
+	_expect(fighter.encumbrance() == 7 and fighter.ability_score("dex") == 0, "trop encombré : DEX 0")
 
-	# Malus : un dé de moins par point de Force manquant, sur tous les jets de FOR et de DEX.
-	_expect(fighter.encumbrance_penalty() == 3 and fighter.roll_penalty("dex") == 3 and fighter.roll_penalty("int") == 0,
-		"malus proportionnel au manque de Force")
-	_expect(fighter.initiative_base() == 6 + 4 - 3 and fighter.resist_pool("dex")["count"] == fighter.skill_rank("physique") - 3
-		and fighter.skill_pool("stealth")["count"] == fighter.skill_rank("stealth") - 3
-		and fighter.attack_pool("weapon")["count"] == fighter.skill_rank("weapon_melee") - 3,
-		"initiative, résistance, compétence, attaque")
 	Game.start_life(fighter, 71)
-	Game.life.unequip(fighter, "armor")
-	_expect(not fighter.is_encumbered() and fighter.initiative_base() == 6 + 4, "sans armure : plus de malus")
+	var combat := Game.start_combat({"enemies": ["wolf"]})
+	combat.turn = combat.order.find(combat.hero)
+	var beats := combat.start_turn()
+	_expect(combat.skipped and beats.any(func(b): return b["text"].contains("Dextérité 0")), "DEX 0 : on ne peut plus agir")
+	Game.combat = null
+	fighter.add_feat("heavy_armor_training")
+	_expect(fighter.encumbrance() == 5, "Entraînement aux armures lourdes : encombrement −2")
+	return true
 
-	# Charge : capacité = 18 kg par point de Force ; 1 malus par tranche de 25 % au-delà.
-	var life := Game.life
-	_expect(is_equal_approx(life.carry_capacity(), 54.0), "capacité : FOR 3 × 18 kg")
-	life.refresh_load()
-	_expect(fighter.load_penalty == 0, "chargé sous sa capacité : pas de malus")
-	fighter.add_item("iron_ore", 60)  # 120 kg de plus
-	life.refresh_load()
-	var over := (life.carried_weight() - 54.0) / 54.0 * 100.0
-	_expect(fighter.load_penalty == ceili(over / 25.0) and fighter.encumbrance_penalty() == 3, "surcharge : malus plafonné à 3")
-	var mira := Character.create_companion("mira")
-	life.companions.append(mira)
-	life.refresh_load()
-	_expect(life.carry_capacity() > 54.0 and mira.load_penalty == fighter.load_penalty, "la capacité du groupe s'additionne")
-	life.drop_item("iron_ore", 60)
-	_expect(fighter.load_penalty == 0, "jeter : la charge baisse")
+
+func _test_weapon_properties() -> bool:
+	DB.creatures["_swordsman"] = {"id": "_swordsman", "name": "Bretteur", "hp": 500, "abilities": {"str": 5, "dex": 5},
+		"skills": {"weapon_melee": 4},
+		"actions": [{"name": "Taille", "weight": 1, "target": "enemy", "effects": [{"type": "attack", "weapon": "longsword"}]}]}
+	Game.start_life(Character.create("human", "fighter", "Garde"), 5)
+	var combat := Game.start_combat({"enemies": ["_swordsman", "wolf"]})
+	var hero := combat.hero
+	var sword := combat.enemies()[0]
+	var wolf := combat.enemies()[1]
+	var cut: Dictionary = sword.creature["actions"][0]["effects"][0]
+	var bite: Dictionary = wolf.creature["actions"][0]["effects"][0]
+	_expect(sword.damage_pool(cut, sword.attack_pool(cut))["count"] == 7 and wolf.damage_pool(bite, wolf.attack_pool(bite))["count"] == 5,
+		"dégâts : les dés de l'arme (ou des crocs), sans le rang")
+	_expect(sword.attack_pool(cut)["threshold"] == 5 and sword.attack_pool(cut)["ability"] == "dex", "attaque : contre la DEX")
+
+	# Parade : seuil de l'objet qui pare (bâton à deux mains 5, bouclier 4), −1 contre une arme à impact.
+	var ch := hero.character
+	ch.equip("quarterstaff")
+	_expect(hero.parry_pool()["threshold"] == 5 and hero.parry_pool(0, false, true)["threshold"] == 4, "bâton à deux mains : parade 5 (4 contre une hache)")
+	ch.equip("shield")
+	_expect(hero.parry_pool()["item"] == "shield" and hero.parry_pool()["threshold"] == 4 and hero.parry_pool(0, true)["item"] == "shield",
+		"bouclier : parade 4, même contre un tir")
+	ch.unequip("off_hand")
+	ch.equip("longbow")
+	hero.reactions = 1
+	_expect(not combat.can_parry(sword, hero, cut), "un arc ne pare pas")
+
+	# Parade dangereuse : à mains nues contre une épée, 1 PV perdu par 10 ; contre des crocs, aucun risque.
+	ch.unequip("main_hand")
+	ch.max_hp = 999
+	hero.hp = 999
+	var hurt := false
+	var beats: Array[Dictionary] = []
+	for i in 40:
+		hero.reactions = 1
+		hero.parries_used = 0
+		combat._parry(wolf, hero, bite, beats, true)
+	_expect(hero.hp == 999 and not beats.any(func(b): return b["text"].contains("Parade dangereuse")), "mains nues contre des crocs : sans risque")
+	for i in 40:
+		hero.reactions = 1
+		hero.parries_used = 0
+		combat._parry(sword, hero, cut, beats, true)
+	hurt = beats.any(func(b): return b["text"].contains("Parade dangereuse"))
+	_expect(hurt and hero.hp < 999, "mains nues contre une épée : parade dangereuse")
+
+	# Perçante : dégâts en plus sur un critique.
+	var before := wolf.hp
+	wolf.hp = 999
+	await combat._roll_damage(hero, wolf, {"count": 1, "threshold": 1}, "piercing", 0, beats, {"extra": 3})
+	_expect(999 - wolf.hp >= 3, "Perçante : +3 dégâts")
+	wolf.hp = before
+
+	# Imprévisible : l'arme improvisée se brise sur un 10 au jet d'attaque.
+	ch.equip("improvised_medium")
+	hero.hp = hero.max_hp()
+	var broken := false
+	for i in 60:
+		hero.reactions = 0
+		sword.reactions = 0
+		await combat._attack(hero, sword, {"type": "attack", "weapon": true}, beats, true)
+		if ch.weapon_id() == Equipment.UNARMED:
+			broken = true
+			break
+	_expect(broken and beats.any(func(b): return b["text"].contains("se brise")), "Imprévisible : l'arme se brise")
+
+	# Recharge : arbalète légère R2, −1 si l'on a la force de la tenir à une main.
+	ch.equip("light_crossbow")
+	var attack := Actions.def("weapon_attack")
+	var reload := Actions.def(Combatant.RELOAD_ACTION)
+	_expect(hero.combat_actions().any(func(a): return a.get("id") == "reload") and hero.unavailable_reason(reload) == "arme chargée",
+		"action Recharger, inutile tant que l'arme est chargée")
+	var expected := 1 if ch.ability_score("str") >= 5 else 2
+	hero.hp = hero.max_hp()
+	combat.turn = combat.order.find(hero)
+	combat.start_turn()
+	combat.actions_left = 5
+	await combat.perform(hero, attack, sword)
+	_expect(hero.reload_left == expected and hero.unavailable_reason(attack) == "arme à recharger", "après un tir : à recharger")
+	for i in expected:
+		await combat.perform(hero, reload)
+	_expect(hero.reload_left == 0 and hero.unavailable_reason(attack) == "", "rechargée : on peut tirer de nouveau")
+	DB.creatures.erase("_swordsman")
+	Game.combat = null
 	return true
 
 
@@ -1525,7 +1618,7 @@ func _test_new_species() -> bool:
 func _test_damage_types() -> bool:
 	DB.creatures["_target"] = {"id": "_target", "name": "Cible", "hp": 200,
 		"actions": [{"name": "Rien", "weight": 1, "target": "self", "effects": [{"type": "status", "status": "shielded", "stacks": 0}]}]}
-	_expect(Equipment.describe("flame_tongue").begins_with("Langue de feu — tranchant, seuil attaque, +1 dé(s) + feu 2d10 ≤ 5"),
+	_expect(Equipment.describe("flame_tongue").begins_with("Langue de feu — tranchant, 7d10, seuil FOR + feu 2d10 ≤ 5"),
 		"arme à deux types de dégâts")
 
 	# Une attaque peut infliger plusieurs types de dégâts, lancés séparément.
@@ -1570,7 +1663,13 @@ func _test_damage_types() -> bool:
 	_expect(combat.log.slice(before).any(func(l): return "armure : seuil 4 → 1" in l), "Armure 5 : seuil 4 → 1")
 	before = combat.log.size()
 	await combat._hit(combat.hero, target, weapon, combat.hero.attack_pool(weapon), 0, true, false, beats, true)
-	_expect(not combat.log.slice(before).any(func(l): return "armure" in l), "surprise : armure ignorée")
+	_expect(combat.log.slice(before).any(func(l): return "armure" in l), "surprise sans arme assassine : l'armure compte")
+	var held := combat.hero.character.weapon_id()
+	combat.hero.character.equipment["main_hand"] = "dagger"
+	before = combat.log.size()
+	await combat._hit(combat.hero, target, weapon, combat.hero.attack_pool(weapon), 0, true, false, beats, true)
+	_expect(not combat.log.slice(before).any(func(l): return "armure" in l), "surprise avec une dague (assassine) : armure ignorée")
+	combat.hero.character.equipment["main_hand"] = held
 	target.creature["natural_armor"] = true
 	before = combat.log.size()
 	await combat._hit(combat.hero, target, weapon, combat.hero.attack_pool(weapon), 0, true, false, beats, true)
@@ -1782,8 +1881,8 @@ func _test_choices() -> bool:
 	fighter.equipment["off_hand"] = "dagger"
 	var with_dagger: int = duelist.damage_pool(swing, duelist.attack_pool(swing))["count"]
 	fighter.equipment.erase("off_hand")
-	_expect(with_shield == two_hands and with_dagger == two_hands - 1,
-		"À une main : un dé de plus avec un bouclier, rien avec une arme dans l'autre main")
+	_expect(with_shield == two_hands + 1 and with_dagger == two_hands,
+		"À une main : un dé de plus avec un bouclier, rien à deux mains ni avec une arme dans l'autre main")
 	_expect("dueling" not in fighter.available_feats(), "les styles ne s'obtiennent pas en montant de niveau")
 	# Deux armes (pour tous) : une seconde arme en main secondaire attaque après l'arme principale, avec deux dés
 	# de moins à l'attaque et aux dégâts ; le style À deux armes retire ce malus.
@@ -1796,19 +1895,19 @@ func _test_choices() -> bool:
 	_expect(plain.weapon_id() == "dagger" and not plain.equipment.has("off_hand"), "équiper une arme remplace l'arme principale")
 	plain.unequip("main_hand")
 	plain.equip("shortsword")
-	_expect(plain.can_dual_wield("dagger") and not plain.can_dual_wield("greataxe") and not plain.can_dual_wield("shortbow"),
-		"seconde arme : de corps à corps, à une main")
+	_expect(plain.can_dual_wield("dagger") and plain.can_dual_wield("greataxe") and not plain.can_dual_wield("shortbow")
+		and not plain.can_dual_wield("javelin"), "seconde arme : de corps à corps, tenue à une main (même lourde)")
 	plain.equip("dagger", "off_hand")
 	twin.equip("dagger", "off_hand")
 	_expect(plain.weapon_id() == "shortsword" and plain.equipment.get("off_hand") == "dagger", "seconde arme en main secondaire")
 	var hand := Combatant.from_character(plain, true)
 	var off := hand.off_hand_attack(swing)
 	var full_damage: int = hand.damage_pool({"type": "attack", "weapon": "dagger"}, hand.attack_pool(off))["count"]
-	_expect(off.get("weapon") == "dagger" and hand.attack_pool(off)["count"] == plain.weapon_rank("dagger") - 2 - plain.roll_penalty(off["ability"])
+	_expect(off.get("weapon") == "dagger" and hand.attack_pool(off)["count"] == plain.weapon_rank("dagger") - 2
 		and hand.damage_pool(off, hand.attack_pool(off))["count"] == full_damage - 2, "main secondaire : −2 dés à l'attaque et aux dégâts")
 	var dual := Combatant.from_character(twin, true)
 	var twin_off := dual.off_hand_attack(swing)
-	_expect(dual.attack_pool(twin_off)["count"] == twin.weapon_rank("dagger") - twin.roll_penalty(twin_off["ability"]),
+	_expect(dual.attack_pool(twin_off)["count"] == twin.weapon_rank("dagger"),
 		"style À deux armes : pas de malus")
 	DB.creatures["_dummy"] = {"id": "_dummy", "name": "Mannequin", "hp": 300, "abilities": {"dex": 1},
 		"actions": [{"name": "Rien", "weight": 1, "target": "self", "effects": [{"type": "status", "status": "shielded", "stacks": 0}]}]}
@@ -1894,15 +1993,15 @@ func _test_choices() -> bool:
 func _test_skill_ranks() -> bool:
 	# Attaques : [rang de la compétence de l'arme] d10 contre l'attribut ; sorts : compétence d'incantation.
 	var fighter := Character.create("goblin", "fighter", "G", {"skill_ranks": {}})
-	_expect(fighter.skill_rank("weapon_melee") == 3 and fighter.attack_pool("weapon") == {"count": 3, "threshold": 6, "ability": "str"},
-		"Guerrier : Armes de mêlée 1 + 2 (classe), contre FOR 6")
+	_expect(fighter.skill_rank("weapon_melee") == 3
+		and fighter.attack_pool("weapon") == {"count": 3, "threshold": fighter.ability_score("dex"), "ability": "dex"},
+		"Guerrier : Armes de mêlée 1 + 2 (classe), contre la DEX")
 	var mage := Character.create("goblin", "wizard", "M", {"skill_ranks": {}})
 	_expect(mage.attack_pool("weapon")["count"] == 1 and mage.attack_pool("spell") == {"count": 3, "threshold": 6, "ability": "int"},
 		"Magicien : bâton au rang 1, sorts au rang d'Érudition 3 (1 + 2 de classe) contre INT")
-	_expect(Equipment.skills_for("longbow") == ["weapon_ranged"] and Equipment.skills_for("unarmed") == ["weapon_melee", "physique"],
-		"compétence de l'arme (mains nues : mêlée ou Physique)")
-	_expect(fighter.weapon_rank("unarmed") == maxi(fighter.skill_rank("weapon_melee"), fighter.skill_rank("physique")),
-		"mains nues : le meilleur rang")
+	_expect(Equipment.skills_for("longbow") == ["weapon_ranged"] and Equipment.skills_for("unarmed") == ["physique"],
+		"compétence de l'arme (mains nues : Physique)")
+	_expect(fighter.weapon_rank("unarmed") == fighter.skill_rank("physique"), "mains nues : rang de Physique")
 	_expect(fighter.resist_pool("con")["count"] == fighter.skill_rank("physique")
 		and fighter.resist_pool("dex")["count"] == fighter.skill_rank("physique"), "résister : pas de maîtrise de classe")
 

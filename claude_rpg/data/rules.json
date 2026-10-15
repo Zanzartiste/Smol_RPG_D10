@@ -211,18 +211,9 @@
 		"upgrade_rarities": ["uncommon", "rare", "very_rare"]
 	},
 	"encumbrance": {
-		"_doc": "Dés en moins aux jets de FOR et de DEX (attaques, résistances, tests, fuite ; l'initiative perd autant de points) : 1 par tranche de armor_points_per_penalty points de Force manquants pour l'armure portée, + 1 par tranche de overload_percent_per_penalty % de charge au-delà de la capacité du groupe (somme de carry_per_strength kg par point de Force de chaque membre), au plus max_penalty.",
-		"armor_points_per_penalty": 1,
-		"carry_per_strength": 18,
-		"overload_percent_per_penalty": 25,
-		"max_penalty": 3
-	},
-	"armor_strength": {
-		"_doc": "Force conseillée pour une armure, selon son type (un objet peut la redéfinir avec \"strength\"). En dessous, l'armure reste portable mais encombre (voir encumbrance).",
-		"clothing": 0,
-		"light": 4,
-		"medium": 5,
-		"heavy": 6
+		"_doc": "Encombrement = poids de l'armure, du bouclier et des armes en main (une ou deux mains) − FOR − CON + taille × size_factor + armure naturelle × natural_armor_factor, au moins 0. Chaque point retire 1 à la Dextérité (jusqu'à 0 : on ne peut plus agir).",
+		"size_factor": 2,
+		"natural_armor_factor": 2
 	},
 	"max_companions": 3,
 	"combat": {

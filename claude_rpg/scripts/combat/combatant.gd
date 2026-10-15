@@ -8,6 +8,8 @@ extends RefCounted
 ## Pour un personnage, les PV sont ceux du Character : les dégâts persistent après le combat.
 ## Les jets sont des réserves de d10 (voir Dice) : {"count": dés, "threshold": seuil}.
 
+const RELOAD_ACTION := "reload"  # action Recharger (actions.json)
+
 var id := ""  # unique dans le combat
 var name := ""
 var side := "ally"  # "ally" ou "enemy"
@@ -24,6 +26,8 @@ var weaknesses_known := false  # points faibles découverts (Chercher les points
 var savage_used := false  # Frappe brutale déjà utilisée ce tour
 var reactions := 0  # actions gardées à la fin de son tour : esquives, parades, contre-attaques
 var parries_used := 0  # parades pendant le tour en cours (une par main armée)
+var reload_left := 0  # actions de rechargement qu'il reste avant de pouvoir tirer de nouveau
+var last_attack_tens := 0  # 10 obtenus au dernier jet d'attaque (arme imprévisible)
 var fast_hands_used := false  # Mains lestes déjà utilisées ce tour
 var cunning_used := false  # Ruse (Se cacher sans dépenser d'action) déjà utilisée ce tour
 var fled := false  # a quitté le combat (créature lâche) : ni XP ni butin
@@ -248,15 +252,38 @@ func is_player_controlled() -> bool:
 	return character != null
 
 
-## Actions de combat : celles de la classe (actions.json) pour un personnage, celles de la créature sinon.
+## Actions de combat : celles de la classe (actions.json) pour un personnage, celles de la créature sinon ;
+## Recharger avec une arme qui se recharge (fronde, arbalète).
 func combat_actions() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	if character != null:
 		for action_id in character.combat_actions():
 			result.append(Actions.def(action_id))
+		if Equipment.reload_of(character.weapon_id()) > 0:
+			result.append(Actions.def(RELOAD_ACTION))
 	else:
 		result.assign(creature.get("actions", []))
 	return result
+
+
+## Actions de rechargement après un tir avec cette arme : sa recharge, −1 pour une arbalète que l'on a la
+## force de tenir à une main (FOR au moins égale à son poids à une main).
+func reload_after_shot(weapon: String) -> int:
+	var reload := Equipment.reload_of(weapon)
+	if reload > 0 and Equipment.has_property(weapon, "crossbow") and Equipment.is_one_handed(weapon) \
+			and ability_score("str") >= Equipment.weight_of(weapon):
+		reload -= 1
+	return reload
+
+
+## Une arme imprévisible se brise : elle quitte la main du personnage (et disparaît).
+func break_weapon(weapon: String) -> void:
+	if character == null:
+		return
+	for slot in ["main_hand", "off_hand"]:
+		if character.equipment.get(slot, "") == weapon:
+			character.equipment.erase(slot)
+			return
 
 
 ## Variantes d'une action proposées au joueur : un sort amélioré à niveau supérieur ("upcast") existe
@@ -312,15 +339,46 @@ func parries_per_turn() -> int:
 	return 1
 
 
-## Réserve de parade : Armes de mêlée (arme ou bouclier) ou Physique (mains nues), contre la DEX
-## (une arme peut imposer un autre seuil : "parry": {"ability", "bonus"}).
-func parry_pool(bonus := 0) -> Dictionary:
-	var weapon := character.weapon_id() if character != null else ""
-	var armed := is_armed()
-	var pool := skill_pool("weapon_melee" if armed else "physique", "dex", bonus)
-	var parry: Dictionary = Equipment.def(weapon).get("parry", {}) if weapon != "" else {}
-	if not parry.is_empty():
-		pool["threshold"] = ability_score(parry.get("ability", "dex")) + int(parry.get("bonus", 0))
+## Objet qui sert à parer : le bouclier (seul à parer un tir), sinon l'arme (ou la main secondaire) au meilleur
+## seuil de parade ; créature : l'arme de sa première attaque armée, sinon les mains nues (crocs, griffes).
+## "" si rien ne peut parer (arc, arme de jet).
+func parry_item(ranged := false) -> String:
+	if character == null:
+		for action: Dictionary in creature.get("actions", []):
+			for e: Dictionary in action.get("effects", []):
+				if e.get("weapon") is String and Equipment.parry_of(e["weapon"]) >= 0:
+					return "" if ranged else e["weapon"]
+		return "" if ranged else Equipment.UNARMED
+	var off: String = character.equipment.get("off_hand", "")
+	if Equipment.is_shield(off):
+		return off
+	if ranged:
+		return ""
+	var best := ""
+	for item: String in [character.weapon_id(), off]:
+		if parry_threshold(item) > parry_threshold(best):
+			best = item
+	return best
+
+
+## Seuil de parade de l'objet qui pare (-1 : il ne pare pas).
+func parry_threshold(item: String) -> int:
+	if item == "":
+		return -1
+	return Equipment.parry_of(item, character != null and item == character.weapon_id() and character.two_handed_grip())
+
+
+## Réserve de parade : Armes de mêlée (arme ou bouclier) ou Physique (mains nues, arme de la compétence
+## Physique), contre le seuil de parade de l'objet (épée 4, dague 2…). Une arme à impact de l'attaquant
+## (`impact`) baisse ce seuil de 1.
+func parry_pool(bonus := 0, ranged := false, impact := false) -> Dictionary:
+	var item := parry_item(ranged)
+	var skill := "physique" if item == "" or "physique" in Equipment.skills_for(item) else "weapon_melee"
+	if Equipment.is_shield(item):
+		skill = "weapon_melee"
+	var pool := skill_pool(skill, "dex", bonus)
+	pool["threshold"] = maxi(0, parry_threshold(item) - (1 if impact else 0))
+	pool["item"] = item
 	return pool
 
 
@@ -332,6 +390,10 @@ func unavailable_reason(action: Dictionary) -> String:
 		return Loc.ui("en rage : attaques au corps à corps seulement")
 	if action.has("per_combat") and int(uses.get(action.get("id", ""), 0)) <= 0:
 		return Loc.ui("déjà utilisée")
+	if action.get("id", "") == RELOAD_ACTION and reload_left <= 0:
+		return Loc.ui("arme chargée")
+	if reload_left > 0 and action.get("effects", []).any(func(e): return e.get("type") == "attack" and _uses_own_weapon(e)):
+		return Loc.ui("arme à recharger")
 	var key := resource_key(action)
 	if key == Spellcasting.SLOT_KEY and character != null and Spellcasting.cost_of(action) > character.max_spell_level():
 		return Loc.ui("sort de niveau trop élevé")
@@ -447,7 +509,7 @@ func attack_pool(effect: Dictionary) -> Dictionary:
 	elif effect.get("weapon") is String:
 		var weapon: String = effect["weapon"]
 		var skill := _best_weapon_skill(weapon)
-		var ability := Equipment.attack_ability(weapon, ability_score("str"), ability_score("dex"))
+		var ability := Equipment.ATTACK_ABILITY
 		pool = {"count": skill_rank(skill), "threshold": ability_score(ability), "ability": ability, "skill": skill}
 	elif effect.get("ability") == "spell":
 		pool = spell_pool()
@@ -473,20 +535,23 @@ func _best_weapon_skill(weapon: String) -> String:
 ## "dice", "skill"?} (celle de l'arme pour une attaque d'arme).
 func damage_spec(effect: Dictionary) -> Dictionary:
 	if _uses_own_weapon(effect):
-		return Equipment.weapon_damage(character.weapon_id(), not character.equipment.has("off_hand"))
+		return Equipment.weapon_damage(character.weapon_id())
 	if effect.get("weapon") is String:
 		return Equipment.weapon_damage(effect["weapon"])
 	var spec: Variant = effect.get("damage", {})
 	return spec if spec is Dictionary else {}
 
 
-## Réserve de dégâts d'un effet : {"count", "threshold"}. Nombre de dés : rang de la compétence
-## d'attaque (ou de "skill"), + "dice", + paliers (tours de magie, Attaque sournoise), + états ; seuil :
-## l'attribut d'attaque, un attribut, ou fixe, + "bonus". Arme magique et style Duel : des dés en plus.
+## Réserve de dégâts d'un effet : {"count", "threshold"}. Nombre de dés : ceux de l'arme ("fixed" : armes,
+## crocs et griffes), sinon le rang de la compétence d'attaque (ou de "skill") + "dice" (sorts) ; + paliers
+## (tours de magie, Attaque sournoise), + états ; seuil : l'attribut d'attaque, un attribut, ou fixe, + "bonus".
+## Arme magique et style Duel : des dés en plus.
 func damage_pool(effect: Dictionary, attack: Dictionary = {}) -> Dictionary:
 	var spec := damage_spec(effect)
 	var count := int(spec.get("dice", 0)) + damage_dice_modifier()
-	if spec.has("skill"):
+	if spec.get("fixed", false):
+		pass
+	elif spec.has("skill"):
 		count += skill_rank(spec["skill"])
 	elif not attack.is_empty():
 		count += int(attack["rank"])
@@ -574,9 +639,7 @@ func off_hand_weapon() -> String:
 func off_hand_attack(effect: Dictionary) -> Dictionary:
 	if not _uses_own_weapon(effect) or off_hand_weapon() == "":
 		return {}
-	var weapon := off_hand_weapon()
-	return {"type": "attack", "weapon": weapon, "off_hand": true, "ability": Equipment.attack_ability(weapon,
-		ability_score("str") - character.roll_penalty("str"), ability_score("dex") - character.roll_penalty("dex"))}
+	return {"type": "attack", "weapon": off_hand_weapon(), "off_hand": true, "ability": Equipment.ATTACK_ABILITY}
 
 
 ## Malus (en dés, à l'attaque et aux dégâts) de l'attaque de la main secondaire (rules.json › combat) ;
@@ -596,14 +659,27 @@ func is_melee_attack_action(action: Dictionary) -> bool:
 		and effects.all(func(e): return e.get("type") in ["attack", "status"])
 
 
-## L'arme est tenue à deux mains (arme à deux mains, ou polyvalente sans rien en main secondaire).
-
+## L'arme est tenue à deux mains (voir Character.two_handed_grip).
 func two_handed_grip() -> bool:
-	if character == null:
+	return character != null and character.two_handed_grip()
+
+
+## Arme utilisée par une attaque ("" : sort, ou attaque naturelle d'une créature).
+func attack_weapon(effect: Dictionary) -> String:
+	if _uses_own_weapon(effect):
+		return character.weapon_id()
+	if effect.get("weapon") is String:
+		return effect["weapon"]
+	return ""
+
+
+## Parade dangereuse : l'attaque (mains nues, crocs, griffes, poing américain…) se pare-t-elle sans risque
+## avec une arme qui a cette propriété ?
+func attack_is_dangerous_parry(effect: Dictionary) -> bool:
+	if effect.get("ability", "") == "spell":
 		return false
-	var weapon := character.weapon_id()
-	return Equipment.has_property(weapon, "two_handed") \
-		or (Equipment.has_property(weapon, "versatile") and not character.equipment.has("off_hand"))
+	var weapon := attack_weapon(effect)
+	return weapon == "" or Equipment.has_property(weapon, "dangerous_parry")
 
 
 ## L'attaque d'arme profite-t-elle du style Armes à deux mains (une relance des dés de dégâts ratés) ?

@@ -137,12 +137,12 @@ func _on_search_changed(text: String) -> void:
 
 
 func refresh() -> void:
-	life.refresh_load()
 	_gold_label.text = tr("Or : %d po") % life.character.gold
-	_load_label.text = tr("Charge : %.1f / %.0f kg") % [life.carried_weight(), life.carry_capacity()]
-	_load_label.add_theme_color_override("font_color",
-		UITheme.BAD if life.carried_weight() > life.carry_capacity() else UITheme.TEXT_DIM)
 	_fill_member_tabs()
+	var load := _member.encumbrance()
+	_load_label.text = tr("Encombrement de %s : %d (DEX −%d)") % [_member.name, load, load] if load > 0 \
+		else tr("Encombrement de %s : aucun") % _member.name
+	_load_label.add_theme_color_override("font_color", UITheme.BAD if load > 0 else UITheme.TEXT_DIM)
 	_fill_filters()
 	_fill_equipment()
 	_fill_bag()
@@ -224,10 +224,8 @@ func _fill_bag() -> void:
 		label.fit_content = true
 		label.scroll_active = false
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var weight := Items.weight_of(item_id) * int(inventory[item_id])
-		label.text = "%s ×%d\n[font_size=14][color=%s]%s%s[/color][/font_size]" % [Items.bbcode_name(item_id),
-			int(inventory[item_id]), UITheme.TEXT_DIM.to_html(false), Items.summary(item_id),
-			(" · %s kg" % String.num(weight, 2)) if weight > 0.0 else ""]
+		label.text = "%s ×%d\n[font_size=14][color=%s]%s[/color][/font_size]" % [Items.bbcode_name(item_id),
+			int(inventory[item_id]), UITheme.TEXT_DIM.to_html(false), Items.summary(item_id)]
 		label.tooltip_text = Items.description_of(item_id)
 		row.add_child(label)
 		if Items.is_equipment(item_id):

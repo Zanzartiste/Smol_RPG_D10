@@ -59,7 +59,6 @@ func begin_event(ev: Dictionary) -> void:
 
 ## Lance les dés d'un choix avec test, sans appliquer ses effets.
 func roll_check(choice: Dictionary) -> Dictionary:
-	life.refresh_load()
 	return Dice.roll_check(life.character, choice["check"], life.rng)
 
 
@@ -84,7 +83,6 @@ func start_combat(spec: Dictionary) -> Combat:
 			spec = spec.duplicate()
 			spec["light"] = light
 	life.pending_combat = spec
-	life.refresh_load()
 	combat = Combat.new(spec, life)
 	return combat
 

@@ -3,7 +3,7 @@
 	{"id": "craft_handaxe", "result": "handaxe", "station": "forge", "materials": {"iron_ore": 1}, "gold": 0},
 	{"id": "craft_shortsword", "result": "shortsword", "station": "forge", "materials": {"iron_ore": 1}, "gold": 1},
 	{"id": "craft_longsword", "result": "longsword", "station": "forge", "materials": {"iron_ore": 2}, "gold": 1},
-	{"id": "craft_chain_shirt", "result": "chain_shirt", "station": "forge", "materials": {"iron_ore": 5}, "gold": 3, "difficulty": 2},
+	{"id": "craft_chain_mail", "result": "chain_mail", "station": "forge", "materials": {"iron_ore": 5}, "gold": 3, "difficulty": 2},
 	{"id": "craft_studded_leather", "result": "studded_leather", "station": "forge", "materials": {"wolf_pelt": 2, "iron_ore": 1}, "gold": 1, "difficulty": 2},
 	{"id": "brew_potion_heal", "result": "potion_heal", "station": "alchemy", "materials": {"healing_herbs": 2}, "gold": 2}
 ]

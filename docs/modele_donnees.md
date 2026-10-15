@@ -436,7 +436,7 @@ Les dons, les espèces et les équipements peuvent porter des `modifiers`. Ils s
 | `two_weapon_fighting` | — | Style À deux armes : pas de malus pour l'attaque de la main secondaire. Règle pour tous : `Character.can_dual_wield(id)` (arme de corps à corps à une main, la main principale en tenant une) ; `Character.equip(id, "off_hand")` / `LifeState.equip(membre, id, "off_hand")` (bouton « Main secondaire ») ; chaque attaque de l'arme principale est suivie de `Combatant.off_hand_attack(effet)` (`{"type": "attack", "weapon": id, "off_hand": true, "ability"}`), avec `Combatant.off_hand_penalty()` dés de moins à l'attaque et aux dégâts (`rules.json › combat › off_hand_penalty`, 0 avec le style) |
 | `critical_damage_dice` | `amount` | Dés de dégâts en plus sur un critique (Attaques précises du Roublard) |
 | `great_weapon_fighting` | — | À deux mains, on relance une fois les dés de dégâts ratés |
-| `armor_strength_reduction` | `amount` | Force conseillée des armures réduite |
+| `encumbrance_reduction` | `amount` | Encombrement réduit (Entraînement aux armures lourdes : 2) |
 | `potent_cantrip`, `empowered_evocation` | — | Évocateur : tour de magie raté = moitié des dégâts ; un dé de dégâts en plus aux sorts d'évocation (`"school": "evocation"`) |
 | `fast_hands`, `survivor` | — | Voleur : un objet par tour sans coût d'action ; Champion : regain de PV à moitié de vie |
 
@@ -444,20 +444,23 @@ Les dons, les espèces et les équipements peuvent porter des `modifiers`. Ils s
 
 | Catégorie | Champs |
 |---|---|
-| `weapon` | `damage` (`{"threshold"?: "weapon" \| "str" \| "dex" \| N, "bonus"?, "dice"?}` : les armes plus grosses ont des dés en plus), `damage_type`, `properties` (`finesse`, `light`, `thrown`, `versatile` : +1 dé à deux mains, `heavy`, `two_handed`, `ranged`), `parry`? (`{"ability", "bonus"}`) |
-| `armor` | `armor_type` (`clothing`, `light`, `medium`, `heavy`), `armor` (points d'Armure), `strength`? (Force requise, voir ci-dessous) |
-| `shield` | `armor` (points d'Armure) ; permet de parer les attaques à distance |
-| `accessory` | `slot` : `head` (couvre-chef), `hands` (gants), `legs` (jambes), `feet` (chaussures), `neck` (collier) ou `ring` (anneau : `ring_1`, ou `ring_2` si le premier est pris) |
+| `weapon` | `damage` (`{"dice": N, "threshold": "str" \| "dex" \| N, "bonus"?}` : les dés de l'arme, sans le rang ; épée bâtarde FOR +1), `damage_type`, `skill`? (`physique` ; sinon Armes de trait à distance, Armes de mêlée), `parry`? (seuil de parade à une main ; absent : ne pare pas), `parry_two_hands`?, `weight`? (poids à une main ; absent : à deux mains seulement, propriété `two_handed`), `weight_two_hands`?, `crit_bonus`? (Perçante : dégâts en plus sur un critique), `reload`? (actions de rechargement après un tir), `fragile`? (Imprévisible : nombre de 10 au jet d'attaque qui brisent l'arme), `properties` (`ranged`, `two_handed`, `thrown`, `dangerous_parry`, `impact`, `reach`, `assassin`, `crossbow`) |
+| `armor` | `armor_type` (`clothing`, `light`, `medium`, `heavy`), `armor` (points d'Armure), `weight` (poids, toutes pièces comprises) |
+| `shield` | `armor` (points d'Armure), `parry` (4), `weight` ; pare aussi les attaques à distance |
+| `accessory` | `slot` : `head` (couvre-chef), `hands` (gants), `legs` (jambes), `feet` (chaussures), `neck` (collier) ou `ring` (anneau : `ring_1`, ou `ring_2` si le premier est pris) ; son `weight` ne compte pas |
 
-Champs communs : `weight` (kg) ; facultatifs : `modifiers`, `rarity` (`common`, `uncommon`, `rare`, `very_rare`,
-`legendary`, qui donne la couleur du nom), `value` (prix en po), `description`.
+Champs facultatifs communs : `modifiers`, `rarity` (`common`, `uncommon`, `rare`, `very_rare`, `legendary`, qui
+donne la couleur du nom), `value` (prix en po), `description`. API : `Equipment.weight_of(id, deux_mains)`,
+`parry_of(id, deux_mains)`, `is_one_handed`, `can_use_two_hands`, `crit_bonus_of`, `reload_of`, `fragile_of`.
 
 **Objets magiques** : ce sont des équipements avec des `modifiers`. Par exemple, une épée +1 porte
 `[{"type": "weapon_attack", "amount": 1}, {"type": "weapon_damage", "amount": 1}]`, et l'Anneau de protection
 `[{"type": "armor", "amount": 1}, {"type": "resist_dice", "amount": 1}]`.
 
 **Emplacements** (`Equipment.SLOTS`) : `main_hand`, `off_hand`, `head`, `armor` (torse), `hands`, `legs`, `feet`,
-`neck`, `ring_1`, `ring_2`. Les anciennes sauvegardes sont converties (`amulet` → `neck`, `ring` → `ring_1`).
+`neck`, `ring_1`, `ring_2`. Les anciennes sauvegardes sont converties (`amulet` → `neck`, `ring` → `ring_1` ;
+équipements retirés, `Character.RENAMED_ITEMS` : cimeterre → épée courte, armure de peau → armure de cuir, chemise
+de mailles → armure de mailles).
 
 ### Parchemins
 
@@ -477,26 +480,29 @@ Champs communs : `weight` (kg) ; facultatifs : `modifiers`, `rarity` (`common`, 
   `use_item`, `drop_item`). Il n'y a pas de restriction de maîtrise d'armure pour l'instant.
 - Hors combat, seuls les objets de soins sont utilisables. L'Antidote ne sert qu'en combat.
 - **Écran** : bouton « Inventaire (I) » sous la fiche (hors combat), avec l'équipement du membre choisi à gauche et le
-  sac à droite (Équiper, Retirer, Utiliser, Jeter), des filtres par catégorie, une recherche et la charge du groupe.
+  sac à droite (Équiper, Retirer, Utiliser, Jeter), des filtres par catégorie, une recherche et l'encombrement du
+  membre choisi.
 - **Objets de quête** (`"quest": true` dans `items.json`) : ni vendus ni jetés.
 - **Butin** : les créatures peuvent lâcher de l'équipement (`loot`), comme le brigand (dague, épée courte, cuir
   clouté) ou l'Alpha (Anneau de protection). L'effet `equip` range l'objet remplacé dans le sac.
 
 **Règles appliquées :**
-- Une arme de finesse utilise le meilleur de FOR et DEX, une arme à distance utilise la DEX.
-- Une arme polyvalente tenue sans bouclier a un dé de dégâts de plus.
-- Une arme à deux mains et un bouclier s'excluent.
+- Toute arme attaque contre la DEX (`Equipment.ATTACK_ABILITY`).
+- Une arme qui a un poids à une main se tient d'une main ; elle est tenue à deux mains si la main secondaire est
+  libre (`Character.two_handed_grip`). Une arme `two_handed` (arcs) et un bouclier s'excluent.
 - L'entrée `unarmed` (mains nues) est obligatoire.
-- **Force et encombrement** (`rules.json › encumbrance`) : toute armure peut être portée. Le malus d'encombrement
-  retire des **dés à tous les jets de FOR et de DEX** (attaques, résistances, tests de compétence et d'attribut,
-  fuite ; l'initiative perd autant de points). Il cumule, avec un maximum de `max_penalty` (3) :
-  - l'**armure** : chaque type a une Force conseillée (`armor_strength` : vêtements 0, légère 4, intermédiaire 5,
-    lourde 6 ; un objet peut la redéfinir avec `strength`) ; −1 dé par tranche de `armor_points_per_penalty` (1)
-    point de Force manquant ;
-  - la **charge** : le groupe porte le sac et tout son équipement ; sa capacité est la somme de
-    `carry_per_strength` (18 kg) × Force de chaque membre ; au-delà, −1 dé par tranche de
-    `overload_percent_per_penalty` (25) % de surcharge, pour tout le groupe (`LifeState.refresh_load`).
-  La fiche, l'inventaire (charge / capacité) et le combat en tiennent compte.
+- **Encombrement** (`Character.encumbrance`, `rules.json › encumbrance`) : poids de l'armure, du bouclier et des
+  armes en main (`Character.equipped_weight`) − FOR − CON + taille × `size_factor` (2) + armure naturelle ×
+  `natural_armor_factor` (2) − `encumbrance_reduction`, au moins 0. Chaque point retire 1 à la DEX
+  (`Character.ability_score("dex")` ; `ability_score(id, false)` : hors encombrement, pour les conditions et les
+  prérequis). À DEX 0, le combattant passe son tour. `Character.encumbrance_with(id)` /
+  `encumbrance_reason(id)` : l'encombrement si l'on équipait l'objet. Plus de charge du groupe.
+- **Armure naturelle** d'une espèce jouable : `species.json › natural_armor` (points), ajoutés à l'Armure.
+- **Combat** (`Combatant`) : `parry_item(à_distance)` / `parry_threshold` / `parry_pool(bonus, à_distance, impact)`
+  (seuil de l'objet, −1 contre une arme à impact) ; `attack_weapon(effet)`, `attack_is_dangerous_parry(effet)` ;
+  `reload_left` et l'action `reload` (Recharger, ajoutée aux actions quand l'arme se recharge ;
+  `reload_after_shot`) ; `last_attack_tens` et `break_weapon` (Imprévisible). Dégâts fixes : `"fixed": true` dans
+  une réserve de dégâts (armes, crocs et griffes des créatures) : on ne lui ajoute pas le rang.
 
 ### Défenses
 

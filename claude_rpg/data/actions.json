@@ -142,6 +142,13 @@
 		"effects": [{"type": "check", "skill": "stealth", "difficulty": 2}, {"type": "status", "status": "invisible", "stacks": 2}]
 	},
 	{
+		"id": "reload",
+		"name": "Recharger",
+		"description": "Vous rechargez votre fronde ou votre arbalète : après chaque tir, il faut autant d'actions que sa recharge.",
+		"target": "self",
+		"effects": [{"type": "reload"}]
+	},
+	{
 		"id": "intimidate",
 		"name": "Intimider",
 		"description": "Un rugissement, une menace : la cible prend peur.",

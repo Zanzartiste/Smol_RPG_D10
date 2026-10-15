@@ -124,7 +124,7 @@ chance de réussite (calculée exactement).
 
 ### Initiative
 
-- **Initiative de base** = Dextérité + Intelligence, moins l'encombrement.
+- **Initiative de base** = Dextérité (après l'encombrement) + Intelligence.
 - En début de combat : **1d10 + initiative de base**, tous les dés lancés ensemble.
 - Égalité : la plus haute Dextérité joue d'abord, puis la plus haute Intelligence, puis au hasard.
 
@@ -140,8 +140,8 @@ chance de réussite (calculée exactement).
 
 ### Attaque
 
-- **[Rang de la compétence de l'arme] d10** contre l'attribut d'attaque (FOR ; finesse : le meilleur de FOR et DEX ;
-  à distance : DEX ; sort : compétence d'incantation contre l'attribut d'incantation).
+- **[Rang de la compétence de l'arme] d10** contre la **DEX**, quelle que soit l'arme (décision du 2026-10-15 ;
+  sort : compétence d'incantation contre l'attribut d'incantation).
 - **Mêlée** : la difficulté est l'**Esquive naturelle** de la cible = **Dextérité ÷ 3**, arrondie à l'inférieur,
   au moins 1 (DEX 1 à 5 : 1 ; 6 à 8 : 2 ; 9 : 3).
 - **Distance** (arcs, sorts) : la difficulté est le **Couvert** de la cible : 1 par défaut, jamais moins ;
@@ -156,12 +156,16 @@ chance de réussite (calculée exactement).
 
 - **Esquive** : après une attaque réussie, avant les dégâts. Jet de Physique (DEX) ; chaque succès retire un succès
   à l'attaque (une attaque critique peut redevenir normale, une attaque réussie peut rater).
-- **Parade** : quand on va subir des dégâts d'une attaque. Jet d'Armes de mêlée (DEX) avec une arme ou un bouclier,
-  de Physique (DEX) à mains nues ; certaines armes peuvent imposer un autre seuil (`"parry"`). Chaque succès retire
-  un point de dégâts.
-  - Une attaque à distance ne se pare qu'avec un bouclier.
+- **Parade** : quand on va subir des dégâts d'une attaque. [Rang d'Armes de mêlée] d10 (Physique pour les mains
+  nues et les armes de cette compétence) contre le **seuil de parade** de l'objet qui pare (épée 4, dague 2, bâton
+  2 à une main et 5 à deux mains, bouclier 4 ; voir [equipements.md](equipements.md)). Chaque succès retire un
+  point de dégâts.
+  - Une attaque à distance ne se pare qu'avec un bouclier ; une arme sans seuil de parade (arc, arme de jet) ne
+    pare pas.
+  - Une arme à impact (haches) baisse de 1 le seuil de parade de l'adversaire.
+  - Parade dangereuse (mains nues, poing américain, crochet) contre une arme qui ne l'est pas : 1 PV perdu par dé
+    à 10, même si la parade réussit. Contre des crocs, des griffes ou des poings, aucun risque.
   - Une parade par tour, ou une par main avec une arme (ou un bouclier) dans chaque main.
-  - On ne pare pas à mains nues une attaque armée (les crocs et les griffes ne sont pas des armes).
   - On peut parer après une esquive qui n'a pas suffi.
 - **Contre-attaque** : avant le jet de l'attaquant. L'Esquive naturelle tombe à 0 pour les deux ; les deux font un
   jet d'attaque en opposition ; le plus de succès touche (égalité : l'attaquant initial), avec un critique selon
@@ -177,21 +181,29 @@ chance de réussite (calculée exactement).
 
 ### Dégâts et Armure
 
-- **[Rang de la compétence de l'arme] d10** contre le **seuil de l'arme** : chaque succès est un point de dégâts.
-  - Seuil : celui de l'attaque (FOR, ou DEX pour une arme de finesse) ; ou un seuil fixe (arc court 5, arc long 6).
-  - Les **armes plus grosses donnent des dés en plus** (décision du 2026-10-13) : dague, gourdin −1 ; épée courte,
-    masse, bâton +0 ; rapière, épée longue +1 ; hache à deux mains +2 ; mains nues −1 ; polyvalente à deux mains
-    +1. Une arme magique +1 donne un dé d'attaque et un dé de dégâts ; le style Duel, un dé de dégâts.
-  - Exemple : guerrier FOR 7, épée longue à deux mains (+2 dés), Armes de mêlée 2 → 4d10 contre 7.
-- L'**Armure** de la cible (armure portée + bouclier + objets) **baisse le seuil** des dégâts d'autant, sans passer
-  sous 1 (décision du 2026-10-13) : au seuil 1, seuls les 1 font des dégâts, si bien qu'une marée de rats finit
-  quand même par blesser un chevalier en harnois. Vêtements 0, armures légères 1, intermédiaires 1 ou 2, cotte de mailles 3, harnois 4, bouclier +1.
+- **Les dés de l'arme** contre le **seuil de l'arme** : chaque succès est un point de dégâts (décision du
+  2026-10-15 : le rang de la compétence ne compte plus dans les dégâts d'une arme).
+  - Dés : de 4 (mains nues, couteau, fleuret) à 7 (épée longue, hache de bataille, masse d'armes…) ; crocs et
+    griffes 5, crocs puissants 7.
+  - Seuil : FOR (FOR +1 pour l'épée bâtarde et la hallebarde, FOR +2 pour l'épée et le marteau à deux mains), DEX
+    (fleuret, rapière, fronde, shuriken), ou un seuil fixe (arc 5, arbalètes 4, 6 ou 7).
+  - Une arme magique +1 donne un dé d'attaque et un dé de dégâts ; le style À une main, un dé de dégâts.
+  - Exemple : guerrier FOR 7, épée longue → 7d10 contre 7.
+  - Perçante (fleuret, lances, faux, javelot, arcs, arbalètes) : sur un critique, 3 dégâts de plus.
+  - Les sorts gardent leurs dés selon le rang (voir les questions).
+- L'**Armure** de la cible (armure portée + bouclier + armure naturelle + objets) **baisse le seuil** des dégâts
+  d'autant, sans passer sous 1 (décision du 2026-10-13) : au seuil 1, seuls les 1 font des dégâts, si bien qu'une
+  marée de rats finit quand même par blesser un chevalier en armure de plates. Vêtements 0, cuir 1, cuir clouté 2,
+  mailles et brigandine 3, écailles et cuirasse 4, plates 5, bouclier +1.
+- **Encombrement** = poids de l'armure, du bouclier et des armes en main − FOR − CON + taille × 2 + armure
+  naturelle × 2 (au moins 0). Chaque point retire 1 à la Dextérité (attaque, Esquive naturelle, esquive, parade,
+  initiative…). À 0 de Dextérité, on passe son tour. Détails : [equipements.md](equipements.md).
 - **Critique N** : on peut relancer jusqu'à N fois les dés de dégâts en échec. Un dé relancé qui fait 1 se relance
   comme d'habitude ; un dé né d'un 1 ne se relance pas grâce au critique.
 - **Attaque surprise** (la cible ignore votre présence : vous êtes caché, ou elle dort, ou elle est paralysée) :
   - Esquive naturelle à 1 (le Couvert ne change pas) ;
   - pas de réaction possible ;
-  - l'armure est ignorée, sauf une armure naturelle ;
+  - avec une arme assassine (dague, couteau), l'armure est ignorée, sauf une armure naturelle ;
   - critique 1 dès 1 succès supplémentaire (2 dès 4, 3 dès 7).
 
 ### Autres règles de combat
@@ -292,8 +304,8 @@ chance de réussite (calculée exactement).
 5. **Créatures** : attributs convertis (÷ 2,5) ; PV calculés comme ceux des personnages (sauf l'Alpha : 12) ;
    l'Alpha a une armure naturelle de 1, le brigand une armure de cuir (1).
 6. **Échelles converties** : anciens DD → difficulté (11 et moins → 1, 12-14 → 2, 15-17 → 3, 18-20 → 4) ; dégâts
-   et soins des événements ÷ 2,5 ; Force des armures 4 / 5 / 6 ; capacité de charge 18 kg par point de Force ;
-   encombrement −1 dé par point de Force manquant (au plus −3).
+   et soins des événements ÷ 2,5. (L'ancien encombrement par la Force conseillée et la charge du groupe a été
+   remplacé le 2026-10-15 par l'encombrement au poids, voir [equipements.md](equipements.md).)
 7. **Dons** : Robuste +3 PV ; À distance +1 dé ; À une main +1 dé de dégâts ; Armes à deux mains : une
    relance des dés de dégâts ratés ; Critique amélioré : un succès supplémentaire compté en plus ; Évocation
    renforcée : un dé de dégâts ; Dérobade : chaque succès de résistance (DEX) en retire deux ; Inflexible : relance
