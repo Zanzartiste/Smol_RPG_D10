@@ -14,6 +14,9 @@ const SKY := {
 	"morning": [Color(0.50, 0.66, 0.82), Color(0.95, 0.84, 0.64)],
 	"afternoon": [Color(0.31, 0.56, 0.80), Color(0.75, 0.87, 0.94)],
 	"evening": [Color(0.14, 0.11, 0.28), Color(0.85, 0.46, 0.29)],
+	"late": [Color(0.08, 0.07, 0.18), Color(0.30, 0.20, 0.35)],
+	"night": [Color(0.03, 0.03, 0.10), Color(0.12, 0.12, 0.25)],
+	"dawn": [Color(0.40, 0.42, 0.62), Color(0.96, 0.70, 0.58)],
 }
 
 
@@ -351,7 +354,7 @@ static func scene(kind: String, slot_id: String, seed_value: int) -> Image:
 	rng.seed = seed_value
 	var img := Image.create(SCENE_W, SCENE_H, false, Image.FORMAT_RGBA8)
 	var sky: Array = SKY.get(slot_id, SKY["afternoon"])
-	var night := slot_id == "evening"
+	var night := slot_id in ["evening", "late", "night"]
 	match kind:
 		"forest":
 			_forest(img, sky, night, rng)

@@ -489,8 +489,8 @@ func _test_engine() -> bool:
 	life.advance_time(2)
 	_expect(life.slot_id() == "evening", "le temps avance jusqu'au soir")
 	_expect(EventEngine.is_eligible(DB.events["town_tavern_brawl"], life, meta), "taverne possible le soir")
-	life.advance_time(1)
-	_expect(life.day == 2 and life.slot == 0, "nouveau jour")
+	life.advance_time(2)
+	_expect(life.day == 2 and life.slot == 0, "nouveau jour (après la période « Coucher »)")
 
 	var market: Dictionary = DB.events["town_market"]
 	life.character.gold = 0
@@ -2126,8 +2126,11 @@ func _test_multiclass_and_rest() -> bool:
 	life.character.gold = 20
 	var day := life.day
 	var result := Game.rest()
-	_expect(result["ok"] and life.character.gold == 15 and life.character.hp == life.character.max_hp and life.day == day + 1
-		and life.slot == 0, "nuit à l'auberge : 5 po, PV au maximum, matin suivant")
+	_expect(result["ok"] and life.character.gold == 15 and life.character.hp == life.character.max_hp and life.day == day
+		and life.slot_id() == "evening", "auberge : 5 po, PV au maximum, deux périodes passées")
+	life.character.hp = 1
+	_expect(Game.rest(true)["ok"] and life.character.gold == 15 and life.character.hp == 1 + (life.character.max_hp - 1) / 2
+		and life.slot_id() == "late", "repos court : gratuit, une période, moitié des PV manquants")
 	life.location = "forest"
 	_expect(Game.rest_name() == "Camper" and Game.rest()["ok"] and life.character.gold == 15, "camper : gratuit")
 	return true

@@ -155,27 +155,31 @@ func end_event() -> void:
 
 
 ## Repos du lieu actuel (rules : locations.json › rest) : camper (gratuit, une nuit agitée est possible),
-## nuit à l'auberge (payante), dormir chez soi. Le temps passe jusqu'au matin, et tout le groupe fait un
-## repos long. Retourne {"ok", "text", "event_location"} (lieu d'un événement nocturne, ou "").
-func rest() -> Dictionary:
+## nuit à l'auberge (payante), dormir chez soi. Repos long : deux périodes, tout le groupe récupère tout ;
+## repos court (`short`, gratuit) : une période, la moitié des PV manquants. Retourne {"ok", "text",
+## "event_location"} (lieu d'un événement qui interrompt le repos, ou "").
+func rest(short := false) -> Dictionary:
 	var loc_id := life.location if life.location != "" else DB.location_order[0]
 	var spec: Dictionary = DB.locations.get(loc_id, {}).get("rest", {})
 	if spec.is_empty():
 		return {"ok": false, "text": Loc.ui("Impossible de se reposer ici."), "event_location": ""}
-	var cost := int(spec.get("cost", 0))
+	var cost := 0 if short else int(spec.get("cost", 0))
 	if life.character.gold < cost:
 		return {"ok": false, "text": Loc.ui("Pas assez d'or (%d po).") % cost, "event_location": ""}
 	life.character.gold -= cost
-	life.advance_time(DB.slots_per_day() - life.slot)  # jusqu'au matin suivant
+	life.advance_time(1 if short else 2)
 	for member in life.party():
 		if member.hp > 0:
-			member.long_rest()
-	var text: String = {"camp": Loc.ui("Vous montez le camp et dormez à la belle étoile."),
+			if short:
+				member.hp += (member.max_hp - member.hp) / 2
+			else:
+				member.long_rest()
+	var text: String = Loc.ui("Vous faites une pause de quelques heures.") if short else {"camp": Loc.ui("Vous montez le camp et dormez à la belle étoile."),
 		"inn": Loc.ui("Vous louez une chambre à l'auberge (%d po) et dormez d'un sommeil de plomb.") % cost,
 		"home": Loc.ui("Vous dormez chez vous, dans votre lit.")}.get(spec.get("type", ""), "")
-	text += "\n" + Loc.ui("Le groupe a récupéré ses forces.")
+	text += "\n" + (Loc.ui("Le groupe a repris un peu de forces.") if short else Loc.ui("Le groupe a récupéré ses forces."))
 	var event_location := ""
-	if life.rng.randf() < float(spec.get("event_chance", 0.0)):
+	if life.rng.randf() < float(spec.get("event_chance", 0.0)) * (0.5 if short else 1.0):
 		event_location = loc_id
 		text += "\n" + Loc.ui("Mais la nuit est agitée…")
 	_after_change()

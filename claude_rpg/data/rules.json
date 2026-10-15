@@ -67,7 +67,10 @@
 			{"id": "snow", "name": "Neige"}
 		]
 	},
-	"time_slots": [{"id": "morning", "name": "Matin"}, {"id": "afternoon", "name": "Après-midi"}, {"id": "evening", "name": "Soir"}],
+	"time_slots": [{"id": "night", "name": "Nuit"}, {"id": "dawn", "name": "Aube"}, {"id": "morning", "name": "Matin"},
+		{"id": "afternoon", "name": "Après-midi"}, {"id": "evening", "name": "Soirée"}, {"id": "late", "name": "Coucher"}],
+	"_time_doc": "Six périodes de 4 h (0-4 nuit, 4-8 aube…). Une vie commence à start_slot. Repos court : 1 période, la moitié des PV manquants ; repos long : 2 périodes, tout revient.",
+	"start_slot": 2,
 	"days_per_year": 365,
 	"majority_age": 18,
 	"common_actions": ["prepare", "hide", "intimidate", "first_aid"],

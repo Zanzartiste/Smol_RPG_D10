@@ -16,6 +16,10 @@
 
 ## Décisions déjà prises
 
+- **Six périodes de 4 h** (2026-10-15) : nuit (0-4), aube (4-8), matin (8-12), après-midi (12-16), soirée (16-20),
+  coucher (20-24). Une vie commence le matin. Repos court : une période, la moitié des PV manquants, gratuit. Repos
+  long : deux périodes, PV et mana au maximum ; il peut être interrompu (événement du lieu).
+
 - Un **voyage** est un événement : sa durée dépend de la destination et du moyen de transport ; selon la durée, il
   déclenche un ou plusieurs événements en route (embuscade, rencontre, se perdre…).
 - On peut quitter une ville pour toujours.

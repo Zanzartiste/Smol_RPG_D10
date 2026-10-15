@@ -7,7 +7,7 @@ var character: Character
 var companions: Array[Character] = []
 var rng := RandomNumberGenerator.new()
 var day := 1
-var slot := 0  # index dans DB.time_slots()
+var slot := int(DB.rules.get("start_slot", 0))  # index dans DB.time_slots() (périodes de 4 h)
 var flags: Dictionary = {}
 var seen: Dictionary = {}  # id d'événement -> nombre de fois vu
 var last_seen_day: Dictionary = {}  # id d'événement -> dernier jour où il a été vu

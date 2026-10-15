@@ -171,6 +171,7 @@ func _show_hub() -> void:
 		var loc: Dictionary = DB.locations[loc_id]
 		_add_choice("%s — %s" % [loc["name"], loc.get("description", "")], _on_location_chosen.bind(loc_id))
 	_add_choice("%s (R)" % Game.rest_name(), _on_rest)
+	_add_choice(tr("Repos court (une période)"), _on_rest.bind(true))
 	_on_hub = true
 
 func _show_event(ev: Dictionary) -> void:
@@ -462,10 +463,10 @@ func _on_social_closed(acted: bool, location_id: String) -> void:
 
 
 ## Repos (bouton de la fiche) : hors combat et hors fenêtre ; une nuit agitée tire un événement du lieu.
-func _on_rest() -> void:
+func _on_rest(short := false) -> void:
 	if not _can_open_overlay() or not Game.current_event.is_empty():
 		return
-	var result := Game.rest()
+	var result := Game.rest(short)
 	title_label.text = tr("Repos")
 	body_text.text = result["text"]
 	_refresh_sheet()
