@@ -783,6 +783,14 @@ static func _validate_social(db: Node, errors: Array[String]) -> void:
 		var rest: Dictionary = loc.get("rest", {})
 		if not rest.is_empty() and rest.get("type") not in ["camp", "inn", "home"]:
 			errors.append("locations.json › %s : rest.type doit valoir camp, inn ou home" % loc["id"])
+		var lctx := "locations.json › %s" % loc["id"]
+		var groups: Array = loc.get("encounters", []).duplicate()
+		for hunt: Dictionary in loc.get("hunt", []):
+			groups.append(hunt.get("enemies", []) + ([hunt["extra"]] if hunt.has("extra") else []))
+			_expect_ref(db.skills, hunt.get("skill", "survival"), "compétence", lctx + " › hunt", errors)
+		for group: Array in groups:
+			for creature_id: String in group:
+				_expect_ref(db.creatures, creature_id, "créature", lctx, errors)
 	for role: Dictionary in db.npc_roles.values():
 		var ctx := "npc_roles.json › %s" % role["id"]
 		_expect_ref(db.locations, role.get("location"), "lieu", ctx, errors)

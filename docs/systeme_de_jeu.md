@@ -215,6 +215,10 @@ chance de réussite (calculée exactement).
 - **Chercher les points faibles** (action commune) : test d'Érudition, difficulté 2 (Se préparer avant : +2 dés,
   donc deux actions). Réussi : les résistances, immunités et vulnérabilités de la cible s'affichent (étiquette
   « Points faibles »).
+- **Chercher…** (menu d'un lieu) : quelqu'un à qui parler (en ville sans test ; dans la nature, Nature contre
+  `stranger_difficulty`, un échec attire un groupe de `encounters`) ; une créature précise (`locations.json › hunt` :
+  réussite = combat contre elle, critique = un de plus ; échec = embuscade d'un groupe du lieu sauvage, échec critique =
+  un de plus) ; des ressources (récolte ; un échec critique dans la nature finit aussi en combat).
 - **Mana** : réserve = niveau de lanceur × 2 (demi-lanceur : moitié de ses niveaux) ; un sort de niveau N coûte
   N mana, les tours de magie rien. Le mana manquant se paie en PV (1 pour 1), jusqu'à 0 PV (on tombe). L'IA ne
   puise jamais dans ses PV. Repos long : tout le mana revient.

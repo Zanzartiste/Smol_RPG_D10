@@ -25,6 +25,68 @@ static func eligible_events(location_id: String, life: LifeState, meta: MetaStat
 	return DB.events_for(location_id).filter(func(ev): return is_eligible(ev, life, meta))
 
 
+# --- Chercher… (locations.json › hunt, encounters, stranger_difficulty) ---------------
+
+## Groupe de créatures au hasard d'un lieu sauvage (locations.json › encounters), [] s'il n'y en a pas.
+static func random_encounter(location_id: String, rng: RandomNumberGenerator) -> Array:
+	var groups: Array = DB.locations.get(location_id, {}).get("encounters", [])
+	return [] if groups.is_empty() else groups[rng.randi_range(0, groups.size() - 1)].duplicate()
+
+
+## Effets d'une rencontre imprévue : combat contre un groupe au hasard du lieu (`more` créatures en plus).
+static func _ambush_effects(location_id: String, rng: RandomNumberGenerator, more := 0) -> Array:
+	var enemies := random_encounter(location_id, rng)
+	if enemies.is_empty():
+		return []
+	for i in more:
+		enemies.append(enemies[0])
+	return [{"type": "combat", "enemies": enemies}]
+
+
+## Chasse : chercher une créature précise du lieu (test, Nature dans la nature). Réussite : on la trouve
+## (critique : un groupe plus nombreux) ; échec : autre chose vous trouve (lieu sauvage), sinon rien.
+static func hunt_event(location_id: String, rng: RandomNumberGenerator) -> Dictionary:
+	var location: Dictionary = DB.locations.get(location_id, {})
+	var choices: Array = []
+	for hunt: Dictionary in location.get("hunt", []):
+		var enemies: Array = hunt["enemies"].duplicate()
+		var more: Array = enemies + ([hunt["extra"]] if hunt.has("extra") else [])
+		var ambush := _ambush_effects(location_id, rng)
+		var ambush_more := _ambush_effects(location_id, rng, 1)
+		choices.append({"id": hunt["id"], "text": Loc.ui("Chercher %s") % hunt["name"],
+			"check": {"skill": hunt.get("skill", "survival"), "difficulty": int(hunt.get("difficulty", 2))},
+			"critical_success": {"text": Loc.ui("Vous les trouvez… et ils sont plus nombreux que prévu."),
+				"effects": [{"type": "combat", "enemies": more}]},
+			"success": {"text": Loc.ui("Vous trouvez ce que vous cherchiez."), "effects": [{"type": "combat", "enemies": enemies}]},
+			"failure": {"text": Loc.ui("Vous ne trouvez pas leur trace… mais autre chose vous a trouvé.") if not ambush.is_empty()
+				else Loc.ui("Vous ne trouvez aucune trace."), "effects": ambush},
+			"critical_failure": {"text": Loc.ui("Vous vous faites surprendre !") if not ambush_more.is_empty()
+				else Loc.ui("Vous perdez votre temps."), "effects": ambush_more},
+		})
+	if choices.is_empty():
+		return {}
+	choices.append({"id": "back", "text": Loc.ui("Renoncer"), "outcome": {"text": Loc.ui("Vous laissez tomber."), "effects": []}})
+	return {"id": "hunt_" + location_id, "location": null, "title": Loc.ui("Chasse — %s") % location["name"],
+		"text": Loc.ui("Que cherchez-vous ?"), "choices": choices}
+
+
+## Test pour trouver quelqu'un à qui parler : Nature (stranger_difficulty) dans un lieu sauvage, aucun en ville ({}).
+static func stranger_check(location_id: String) -> Dictionary:
+	var location: Dictionary = DB.locations.get(location_id, {})
+	if not location.get("wild", false):
+		return {}
+	return {"skill": "survival", "difficulty": int(location.get("stranger_difficulty", 3))}
+
+
+## Embuscade (un seul choix : se défendre) après une recherche ratée ; {} si le lieu n'a pas de rencontres.
+static func ambush_event(location_id: String, rng: RandomNumberGenerator, text: String) -> Dictionary:
+	var effects := _ambush_effects(location_id, rng)
+	if effects.is_empty():
+		return {}
+	return {"id": "ambush_" + location_id, "location": null, "title": Loc.ui("Embuscade"), "text": text,
+		"choices": [{"id": "fight", "text": Loc.ui("Se défendre"), "outcome": {"text": "", "effects": effects}}]}
+
+
 ## Tirage pondéré parmi les événements éligibles du lieu.
 static func pick_event(location_id: String, life: LifeState, meta: MetaState) -> Dictionary:
 	var pool := eligible_events(location_id, life, meta)
@@ -80,7 +142,9 @@ static func visible_choices(ev: Dictionary, life: LifeState, meta: MetaState,
 ## (réussite : la ressource ; réussite critique : le double ; échec critique : une blessure), puis Retour.
 ## Ressource : {"id", "name", "item", "count"? (1), "skill", "ability"?, "difficulty", "failure"?, "fumble"?,
 ## "fumble_hp"?}. Retourne {} si le lieu n'a rien à récolter.
-static func gather_event(location_id: String) -> Dictionary:
+static func gather_event(location_id: String, rng: RandomNumberGenerator = null) -> Dictionary:
+	if rng == null:
+		rng = RandomNumberGenerator.new()
 	var location: Dictionary = DB.locations.get(location_id, {})
 	var resources: Array = location.get("gather", [])
 	if resources.is_empty():
@@ -100,7 +164,8 @@ static func gather_event(location_id: String) -> Dictionary:
 				"effects": [{"type": "add_item", "id": res["item"], "count": count}]},
 			"failure": {"text": res.get("failure", Loc.ui("Vous rentrez bredouille.")), "effects": []},
 			"critical_failure": {"text": res.get("fumble", Loc.ui("Vous vous blessez.")),
-				"effects": [{"type": "hp", "amount": int(res.get("fumble_hp", -1)), "cause": Loc.ui("Mort en cherchant des ressources")}]},
+				"effects": [{"type": "hp", "amount": int(res.get("fumble_hp", -1)), "cause": Loc.ui("Mort en cherchant des ressources")}]
+					+ _ambush_effects(location_id, rng)},
 		})
 	choices.append({"id": "back", "text": Loc.ui("Renoncer"), "outcome": {"text": Loc.ui("Vous laissez tomber."), "effects": []}})
 	return {"id": "gather_" + location_id, "location": null, "title": Loc.ui("Récolte — %s") % location["name"],

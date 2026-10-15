@@ -509,6 +509,17 @@ func _test_engine() -> bool:
 	_expect(EventEngine.visible_choices(shrine, life, meta).size() == 2, "choix secrets cachés sans le flag ni le passé")
 
 	# Récolte dans un lieu sauvage : un test par ressource.
+	# Chercher… : chasse (combat si on trouve la créature, embuscade sinon), quelqu'un à qui parler.
+	var hunt := EventEngine.hunt_event("forest", RandomNumberGenerator.new())
+	var wolves: Dictionary = hunt["choices"][0]
+	_expect(wolves["success"]["effects"][0] == {"type": "combat", "enemies": ["wolf"]}
+		and wolves["critical_success"]["effects"][0]["enemies"].size() == 2 and not wolves["failure"]["effects"].is_empty(),
+		"chasse aux loups : trouvés, plus nombreux sur un critique, embuscade sur un échec")
+	_expect(EventEngine.hunt_event("town", RandomNumberGenerator.new())["choices"][0]["failure"]["effects"].is_empty(),
+		"chasse en ville : un échec ne lance pas de combat")
+	_expect(EventEngine.stranger_check("town").is_empty() and EventEngine.stranger_check("forest")["difficulty"] == 3
+		and not EventEngine.ambush_event("forest", RandomNumberGenerator.new(), "").is_empty(),
+		"chercher quelqu'un : sans test en ville, Nature 3 en forêt, embuscade sinon")
 	var gather := EventEngine.gather_event("forest")
 	_expect(EventEngine.gather_event("town").is_empty() and gather["choices"].size() == 3, "récolte : seulement dans les lieux sauvages")
 	var errors_gather: Array[String] = []

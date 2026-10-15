@@ -401,10 +401,9 @@ func _show_location_menu(location_id: String) -> void:
 	body_text.text = loc.get("description", "")
 	_clear_choices()
 	_add_choice(tr("Se promener (événement au hasard)"), _show_event_from.bind(location_id))
-	if not EventEngine.gather_event(location_id).is_empty():
-		_add_choice(tr("Chercher des ressources"), func(): _show_event(EventEngine.gather_event(location_id)))
 	if _has_people(location_id):
-		_add_choice(tr("Parler à quelqu'un"), _show_people.bind(location_id))
+		_add_choice(tr("Parler à quelqu'un que vous voyez"), _show_people.bind(location_id))
+	_add_choice(tr("Chercher…"), _show_search_menu.bind(location_id))
 	for shop_id in Shops.of_location(location_id):
 		_add_choice("%s — %s" % [Shops.name_of(shop_id), Shops.def(shop_id).get("description", "")],
 			open_shop.bind(shop_id))
@@ -425,6 +424,45 @@ func _show_people(location_id: String) -> void:
 	for role_id in Social.searchable_roles(location_id):
 		_add_choice(tr("Chercher : %s") % String(DB.npc_roles[role_id]["name"]).to_lower(), _on_search.bind(role_id))
 	_add_choice(tr("Retour"), _show_location_menu.bind(location_id))
+
+
+## Chercher… : quelqu'un à qui parler, une créature précise (chasse), des ressources. Dans la nature, un
+## échec peut finir en combat.
+func _show_search_menu(location_id: String) -> void:
+	title_label.text = tr("%s — Chercher…") % DB.locations[location_id]["name"]
+	body_text.text = tr("Que cherchez-vous ?")
+	_clear_choices()
+	if not Social.searchable_roles(location_id).is_empty():
+		var check := EventEngine.stranger_check(location_id)
+		var label := tr("Quelqu'un à qui parler")
+		if not check.is_empty():
+			label += "   [%s]" % Dice.label(check)
+		_add_choice(label, _on_search_stranger.bind(location_id))
+	if not DB.locations[location_id].get("hunt", []).is_empty():
+		_add_choice(tr("Une créature précise (chasse)"), func(): _show_event(EventEngine.hunt_event(location_id, Game.life.rng)))
+	if not EventEngine.gather_event(location_id).is_empty():
+		_add_choice(tr("Des ressources"), func(): _show_event(EventEngine.gather_event(location_id, Game.life.rng)))
+	_add_choice(tr("Retour"), _show_location_menu.bind(location_id))
+
+
+## Un inconnu à qui parler : en ville, sans test ; dans la nature, un test de Nature, et un échec attire
+## des créatures.
+func _on_search_stranger(location_id: String) -> void:
+	var check := EventEngine.stranger_check(location_id)
+	if not check.is_empty():
+		var roll := Game.roll_check({"check": check})
+		_clear_choices()
+		await dice_tray.play(roll)
+		if not roll["success"]:
+			var ambush := EventEngine.ambush_event(location_id, Game.life.rng,
+				tr("Vous ne croisez personne… sauf ce qui rôde entre les arbres."))
+			if not ambush.is_empty():
+				_show_event(ambush)
+				return
+			_show_search_menu(location_id)
+			return
+	var roles := Social.searchable_roles(location_id)
+	_on_search(roles[Game.life.rng.randi_range(0, roles.size() - 1)])
 
 
 func _on_search(role_id: String) -> void:
