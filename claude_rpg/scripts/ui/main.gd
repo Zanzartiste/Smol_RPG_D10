@@ -30,6 +30,8 @@ var _inventory_button := Button.new()
 var _carnet_button := Button.new()
 var _rest_button := Button.new()
 var _last_social_session: Dictionary = {}
+var _on_hub := false  # le hub est affiché (la montée de niveau ne se fait que là)
+var _leveling := false  # montée de niveau en cours (ses choix s'enchaînent avant le retour au hub)
 var _overlay: Control  # fenêtre ouverte par-dessus l'écran : inventaire ou boutique (null sinon)
 var _event_on_screen: Dictionary = {}  # événement dont les choix sont affichés (pour les réafficher en debug)
 var drawer := SideDrawer.new()  # tiroir latéral : personnage, inventaire, quêtes, relations, sorts
@@ -63,6 +65,7 @@ func _ready() -> void:
 	drawer.life = Game.life
 	drawer.inventory_requested.connect(open_inventory)
 	drawer.carnet_requested.connect(open_carnet)
+	drawer.level_up_requested.connect(_on_level_up_requested)
 	add_child(drawer)
 	_refresh_sheet()
 	_show_hub()
@@ -119,10 +122,21 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 # --- Écrans ------------------------------------------------------------------
 
+## Bouton « Monter de niveau » de la fiche : seulement depuis le hub (pas au milieu d'un événement).
+func _on_level_up_requested() -> void:
+	if not _on_hub:
+		Game.life.notices.append(tr("Vous monterez de niveau de retour en ville."))
+		return
+	drawer.close()
+	_leveling = true
+	_show_hub()
+
+
 func _show_hub() -> void:
-	# Un membre du groupe a gagné une amélioration en montant de niveau : on la lui fait choisir d'abord.
+	# Montée de niveau demandée : ses choix s'enchaînent, membre par membre, puis retour au hub.
 	Saves.save_all()
-	for member in Game.life.party():
+	_on_hub = false
+	for member in Game.life.party() if _leveling else []:
 		if member.pending_class_levels > 0:
 			_show_class_level_choice(member)
 			return
@@ -139,6 +153,8 @@ func _show_hub() -> void:
 		if member.can_spend_skill_point():
 			_show_skill_point_choice(member)
 			return
+	_leveling = false
+	drawer.refresh()
 	var life := Game.life
 	var visit := Social.initiative_event(life)  # un PNJ vient parfois vous voir
 	if not visit.is_empty():
@@ -155,6 +171,7 @@ func _show_hub() -> void:
 		var loc: Dictionary = DB.locations[loc_id]
 		_add_choice("%s — %s" % [loc["name"], loc.get("description", "")], _on_location_chosen.bind(loc_id))
 	_add_choice("%s (R)" % Game.rest_name(), _on_rest)
+	_on_hub = true
 
 func _show_event(ev: Dictionary) -> void:
 	var life := Game.life
@@ -590,6 +607,7 @@ func _refresh_sheet() -> void:
 
 func _clear_choices() -> void:
 	_event_on_screen = {}
+	_on_hub = false
 	for child in choices_box.get_children():
 		choices_box.remove_child(child)
 		child.queue_free()

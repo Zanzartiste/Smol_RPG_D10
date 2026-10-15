@@ -393,12 +393,12 @@ Les prérequis s'écrivent comme les conditions des événements. `category` vau
   échec, ressource `lucky`), `check_tag_die` (`tag` : un dé de plus aux tests dont `tags` contient ce tag : `swim`,
   `orientation`, `forage`), `climate_adapted` (`id` : hot, cold), `feat_flag` (`id` : effet d'un système pas encore
   en jeu : mini-jeux, pièges, déchiffrage, réactions, ville). `spellcasting_ability` accepte un `skill` (druide : Nature).
-- **Niveau** : `rules.json › advancement` vaut `{"ability_levels": [5, 10, 15, 20], "ability_points": 1, "feat_levels": [], "feats": 1}`.
+- **Niveau** : `rules.json › advancement` vaut `{"ability_levels": [5, 10, 15, 20], "ability_points": 1, "feat_levels": [4, 8, 12, 16, 20], "feats": 1}`.
   Aux niveaux d'`ability_levels`, le personnage, héros ou compagnon, place `ability_points` (1) dans un attribut au
   choix, sans plafond (`max_ability_score` n'existe plus : `Progression.max_ability_score()` renvoie 0 = aucun).
-  Les dons de niveau restent prévus (`feat_levels` est vide : niveaux à placer, `feats` dons chacun). L'API est
+  Aux niveaux de `feat_levels`, un don au choix (ni d'origine ni style de combat). L'API est
   `Progression.ability_points_at(niveau)`, `feats_at(niveau)`, `is_advancement_level(niveau)` et
-  `advancement_text(niveau)`. L'écran de choix s'ouvre avant le retour au hub.
+  `advancement_text(niveau)`. Les choix se font au hub, par le bouton « Monter de niveau » de la fiche (`Character.has_level_up()`).
 - **Événement** : l'effet `add_feat` existe, mais les dons ne s'obtiennent pas par événement en règle générale.
 - **Compagnon** : il peut en avoir d'office dans `companions.json` (`feats`).
 

@@ -17,11 +17,11 @@
 					{"id": "champion", "name": "Champion", "description": "La force brute et la précision font de vous une machine de guerre.", "features": [
 						{"level": 3, "id": "improved_critical", "name": "Critique amélioré", "description": "Un succès supplémentaire de plus compte pour atteindre un critique.", "modifiers": [{"type": "critical_range", "amount": 1}]},
 						{"level": 3, "id": "remarkable_athlete", "name": "Athlète remarquable", "description": "Deux d10 à l'initiative (le meilleur compte) et un dé de plus aux tests de Physique.", "modifiers": [{"type": "initiative_advantage"}, {"type": "skill_advantage", "id": "physique"}]},
-						{"level": 7, "id": "additional_fighting_style", "name": "Style de combat supplémentaire", "description": "Vous choisissez un second style de combat.",
+						{"level": 6, "id": "additional_fighting_style", "name": "Style de combat supplémentaire", "description": "Vous choisissez un second style de combat.",
 							"choices": [{"id": "style", "name": "Style de combat", "type": "feat", "category": "fighting_style", "count": 1, "default": ["archery"]}]},
-						{"level": 10, "id": "heroic_warrior", "name": "Guerrier héroïque", "description": "Vous puisez dans votre héroïsme (pas encore de mécanique : il faudra le système d'Inspiration héroïque)."},
-						{"level": 15, "id": "superior_critical", "name": "Critique supérieur", "description": "Encore un succès supplémentaire de plus compte pour atteindre un critique.", "modifiers": [{"type": "critical_range", "amount": 1}]},
-						{"level": 18, "id": "survivor", "name": "Survivant", "description": "Au début de votre tour, si vous avez la moitié de vos PV ou moins, vous récupérez la moitié de votre CON en PV (au moins 1).", "modifiers": [{"type": "survivor"}]}
+						{"level": 9, "id": "heroic_warrior", "name": "Guerrier héroïque", "description": "Vous puisez dans votre héroïsme (pas encore de mécanique : il faudra le système d'Inspiration héroïque)."},
+						{"level": 12, "id": "superior_critical", "name": "Critique supérieur", "description": "Encore un succès supplémentaire de plus compte pour atteindre un critique.", "modifiers": [{"type": "critical_range", "amount": 1}]},
+						{"level": 15, "id": "survivor", "name": "Survivant", "description": "Au début de votre tour, si vous avez la moitié de vos PV ou moins, vous récupérez la moitié de votre CON en PV (au moins 1).", "modifiers": [{"type": "survivor"}]}
 					]}
 				]}]}
 		],
@@ -57,8 +57,8 @@
 						{"level": 3, "id": "potent_cantrip", "name": "Tour de magie puissant", "description": "Quand un de vos tours de magie rate sa cible, elle subit quand même la moitié des dégâts.", "modifiers": [{"type": "potent_cantrip"}]},
 						{"level": 3, "id": "evocation_savant", "name": "Savant de l'évocation", "description": "Vous maîtrisez les sorts d'évocation (pas encore de mécanique : le choix des sorts appris viendra plus tard)."},
 						{"level": 6, "id": "sculpt_spells", "name": "Sculpture des sorts", "description": "Vos sorts de zone épargnent vos alliés (c'est déjà le cas dans le jeu)."},
-						{"level": 10, "id": "empowered_evocation", "name": "Évocation renforcée", "description": "Vos sorts d'évocation lancent un dé de dégâts de plus.", "modifiers": [{"type": "empowered_evocation"}]},
-						{"level": 14, "id": "overchannel", "name": "Surcharge", "description": "Vous pouvez pousser un sort à son maximum (pas encore de mécanique)."}
+						{"level": 9, "id": "empowered_evocation", "name": "Évocation renforcée", "description": "Vos sorts d'évocation lancent un dé de dégâts de plus.", "modifiers": [{"type": "empowered_evocation"}]},
+						{"level": 12, "id": "overchannel", "name": "Surcharge", "description": "Vous pouvez pousser un sort à son maximum (pas encore de mécanique)."}
 					]}
 				]}]},
 			{"level": 5, "id": "cantrip_2", "name": "Tours de magie renforcés", "description": "Vos tours de magie gagnent un dé de dégâts (puis un autre aux niveaux 11 et 17)."}
@@ -83,9 +83,9 @@
 					{"id": "thief", "name": "Voleur", "description": "Cambrioleur, pickpocket et chasseur de trésors.", "features": [
 						{"level": 3, "id": "fast_hands", "name": "Mains lestes", "description": "Une fois par tour, utiliser un objet ne vous coûte pas votre action.", "modifiers": [{"type": "fast_hands"}]},
 						{"level": 3, "id": "second_story_work", "name": "Monte-en-l'air", "description": "Vous grimpez et sautez avec aisance (+1 rang en Physique).", "modifiers": [{"type": "skill_rank", "id": "physique", "amount": 1}]},
-						{"level": 9, "id": "supreme_sneak", "name": "Furtivité suprême", "description": "Un dé de plus aux tests de Furtivité.", "modifiers": [{"type": "skill_advantage", "id": "stealth"}]},
-						{"level": 13, "id": "use_magic_device", "name": "Utilisation d'objets magiques", "description": "Vous savez vous servir de n'importe quel objet magique (pas encore de mécanique)."},
-						{"level": 17, "id": "thiefs_reflexes", "name": "Réflexes de voleur", "description": "Vous agissez deux fois au premier round (pas encore de mécanique)."}
+						{"level": 6, "id": "supreme_sneak", "name": "Furtivité suprême", "description": "Un dé de plus aux tests de Furtivité.", "modifiers": [{"type": "skill_advantage", "id": "stealth"}]},
+						{"level": 9, "id": "use_magic_device", "name": "Utilisation d'objets magiques", "description": "Vous savez vous servir de n'importe quel objet magique (pas encore de mécanique)."},
+						{"level": 12, "id": "thiefs_reflexes", "name": "Réflexes de voleur", "description": "Vous agissez deux fois au premier round (pas encore de mécanique)."}
 					]}
 				]}]}
 		],

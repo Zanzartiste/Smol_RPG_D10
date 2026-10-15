@@ -299,21 +299,22 @@ func _test_feats() -> bool:
 	_expect(hero.level == 2 and hero.pending_ability_points == 0 and hero.pending_feats == 0 and hero.pending_skill_points == 1, "niveau 2 : pas d'amélioration, un point de compétence")
 	hero.add_xp(2700 - 300)
 	_level_up(hero)
-	_expect(hero.level == 4 and hero.pending_feats == 0 and hero.pending_ability_points == 0, "niveau 4 : pas d'amélioration")
+	_expect(hero.level == 4 and hero.pending_feats == 1 and hero.pending_ability_points == 0, "niveau 4 : un don")
+	_expect("lucky" not in hero.available_feats() and hero.choose_feat("heavy_armor_training"), "niveau 4 : pas de don d'origine")
 	hero.add_xp(6500 - 2700)
 	_level_up(hero)
 	_expect(hero.level == 5 and hero.pending_feats == 0 and hero.pending_ability_points == 1, "niveau 5 : +1 attribut, pas de don")
 	_expect(hero.increase_ability("str") and hero.abilities["str"] == 7, "+1 FOR (6 -> 7)")
 	_expect(hero.pending_ability_points == 0 and not hero.increase_ability("dex"), "un seul point à placer")
 	hero.pending_feats = 1  # don en plus (humain, événement)
-	_expect("nimble" in hero.available_feats() and "elemental_adept" not in hero.available_feats(),
+	_expect("grappler" in hero.available_feats() and "elemental_adept" not in hero.available_feats(),
 		"dons disponibles selon les prérequis")
 	_expect(not hero.choose_feat("elemental_adept"), "impossible de choisir un don sans les prérequis")
-	_expect(hero.choose_feat("nimble") and hero.pending_feats == 0 and hero.has_feat("nimble"), "choix d'un don")
+	_expect(hero.choose_feat("grappler") and hero.pending_feats == 0 and hero.has_feat("grappler"), "choix d'un don")
 	hero.add_xp(355000)
 	_level_up(hero)
 	_expect(hero.level == Progression.max_level() and Progression.max_level() == 20, "niveau maximum 20")
-	_expect(hero.pending_feats == 0 and hero.pending_ability_points == 3, "attributs aux niveaux 10, 15 et 20")
+	_expect(hero.pending_feats == 4 and hero.pending_ability_points == 3, "attributs aux niveaux 10, 15 et 20, dons aux niveaux 8, 12, 16 et 20")
 	hero.abilities["str"] = 12
 	_expect(hero.can_raise("str"), "pas de maximum d'attribut")
 
@@ -2110,8 +2111,8 @@ func _test_multiclass_and_rest() -> bool:
 	hero.assign_class_level("fighter")
 	hero.assign_class_level("fighter")
 	hero.assign_class_level("fighter")
-	_expect(hero.class_level("fighter") == 5 and hero.pending_ability_points == 1 and hero.pending_feats == 0,
-		"amélioration au niveau 5 de Guerrier")
+	_expect(hero.class_level("fighter") == 5 and hero.pending_ability_points == 1 and hero.pending_feats == 1,
+		"amélioration au niveau 5 de Guerrier (et le don du niveau 4)")
 	var old := Character.from_dict({"species_id": "human", "class_id": "rogue", "level": 3})
 	_expect(old.class_levels == {"rogue": 3}, "anciennes sauvegardes : tous les niveaux dans la classe principale")
 

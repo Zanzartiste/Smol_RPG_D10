@@ -369,12 +369,19 @@ func add_feat(feat_id: String) -> bool:
 	return true
 
 
-## Dons que le personnage peut choisir en montant de niveau : prérequis remplis, pas encore possédés,
+## Une montée de niveau attend-elle (classe, choix, attribut, don, point de compétence) ? Le joueur la fait
+## depuis la fiche (bouton « Monter de niveau »).
+func has_level_up() -> bool:
+	return pending_class_levels > 0 or not pending_choice().is_empty() or can_increase_ability() 		or can_choose_feat() or can_spend_skill_point()
+
+
+## Dons que le personnage peut choisir en montant de niveau : prérequis remplis, pas encore possédés, pas un
+## don d'origine (ceux-là viennent du passé),
 ## et pas un style de combat (ceux-là s'obtiennent par l'aptitude Style de combat).
 func available_feats() -> Array[String]:
 	var result: Array[String] = []
 	for feat_id in Feats.ids():
-		if Feats.category_of(feat_id) != "fighting_style" and not has_feat(feat_id) and Feats.meets_prerequisites(feat_id, self):
+		if Feats.category_of(feat_id) not in ["fighting_style", "origin"] and not has_feat(feat_id) and Feats.meets_prerequisites(feat_id, self):
 			result.append(feat_id)
 	return result
 

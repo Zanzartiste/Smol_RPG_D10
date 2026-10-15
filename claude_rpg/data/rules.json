@@ -232,7 +232,7 @@
 		"_doc": "Niveaux de classe qui donnent des points d'attribut (ability_levels) et des dons (feat_levels : à placer dans la courbe de progression).",
 		"ability_levels": [5, 10, 15, 20],
 		"ability_points": 1,
-		"feat_levels": [],
+		"feat_levels": [4, 8, 12, 16, 20],
 		"feats": 1
 	},
 	"skill_points": {

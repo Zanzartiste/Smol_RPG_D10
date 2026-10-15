@@ -208,6 +208,10 @@ chance de réussite (calculée exactement).
 - **Météo** : brouillard et orage plongent les combats en plein air dans la pénombre (Couvert +1).
 - **Compétence d'incantation** : arcanique → Érudition (Magicien), divine → Détermination, primale → Nature,
   artistique → Arts ; Initié à la magie : magicien → Érudition, clerc → Détermination, druide → Nature.
+- **Progression** : un rang de compétence aux niveaux pairs, une aptitude de sous-classe tous les 3 niveaux (3, 6, 9,
+  12, 15), +1 attribut tous les 5 niveaux, un don (pas d'origine) tous les 4 niveaux. Table d'XP de D&D. La montée de
+  niveau se fait au hub, avec le bouton « ★ Monter de niveau » de la fiche ; l'onglet Personnage brille tant qu'elle
+  attend.
 - **Mana** : réserve = niveau de lanceur × 2 (demi-lanceur : moitié de ses niveaux) ; un sort de niveau N coûte
   N mana, les tours de magie rien. Le mana manquant se paie en PV (1 pour 1), jusqu'à 0 PV (on tombe). L'IA ne
   puise jamais dans ses PV. Repos long : tout le mana revient.
