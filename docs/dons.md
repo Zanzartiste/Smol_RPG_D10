@@ -85,6 +85,15 @@ leur système n'existe pas : Adapté au climat, Rusé, Joueur, Linguiste, Intuit
 - **Robuste** (`tough`, existe déjà, à redéfinir) : +2 PV max.
 - **Citadin** (`urban_affinity`) : en ville, toujours un moyen de dormir et manger sans payer.
 
+## Dons venus de D&D (à remplacer par ta liste)
+
+- **Dons généraux** : Lutteur, Duelliste défensif, Résistant, Adepte élémentaire, Entraînement aux armures lourdes.
+- **Styles de combat** : Archerie, Armes à deux mains, À une main, À mains nues, À deux armes.
+- **Dons de classe** : ceux du Guerrier, du Roublard, du Barbare et du Magicien suivent le tableur ; leurs aptitudes de
+  sous-classe (Champion, Voleur, Évocateur) viennent encore de D&D.
+- Les dons d'origine ne viennent plus de D&D (ils suivent le tableur), et un don de niveau ne peut jamais être un don
+  d'origine.
+
 ## Dons généraux (implémentés)
 
 ### Lutteur (`grappler`)
