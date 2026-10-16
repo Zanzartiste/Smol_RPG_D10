@@ -138,6 +138,10 @@ func _check_old_age() -> void:
 	change_ability(id, -1, Loc.ui("Mort de vieillesse"))
 
 
+func died_of_old_age() -> bool:
+	return dead and death_cause == Loc.ui("Mort de vieillesse")
+
+
 # --- Sac du groupe -------------------------------------------------------------
 # Le sac est celui du héros (character.inventory) : les compagnons s'équipent et se soignent en y
 # puisant, et ce qu'ils retirent y retourne.

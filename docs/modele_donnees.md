@@ -289,6 +289,13 @@ Champs facultatifs, valables pour tout effet :
 - `scaling` : `{"table": "cantrip" | "sneak_attack", "class"?}`. Dés de dégâts en plus selon le niveau (de classe)
   (`rules.json › dice_scaling` : tours de magie +1 dé aux niveaux 5, 11 et 17 ; Attaque sournoise +1 dé par palier).
 - `upcast` : dés de dégâts en plus par niveau d'emplacement au-delà du niveau du sort.
+- Dégâts d'un sort : `"damage": {"dice": 6, "threshold": "spell", "fixed": true}` (`fixed` : les dés du sort, sans
+  le rang, comme une arme).
+- **Contrecoups** (`rules.json › backlash`) : un échec critique du jet d'un sort (attaque, ou opposition dans
+  `Combat._resists`) fait tirer `Combat.backlash(lanceur, niveau, beats, face)` une fois par dé à 10 (au plus
+  `max_rolls`). `table` : 10 lignes `{"text", "effects"}` ; effets `weather`, `heal`, `damage` (`damage_type` : id ou
+  `random`), `mana`, `status` (`status` : id ou `random` parmi `random_statuses`) ; `who` : `caster`, `random` ou
+  `all` ; dés = niveau du sort + `extra_dice`, seuil `threshold` (4).
 - `bonus_damage` : `[{"dice": 2, "threshold": 5, "damage_type": "fire"}]`, dégâts d'autres types ajoutés à une
   attaque ou à des dégâts. Chaque partie est lancée séparément avec les défenses de son type. Une arme peut aussi en
   porter (`equipment.json`, ex. la Langue de feu).
@@ -491,6 +498,15 @@ de mailles → armure de mailles).
 - Une arme qui a un poids à une main se tient d'une main ; elle est tenue à deux mains si la main secondaire est
   libre (`Character.two_handed_grip`). Une arme `two_handed` (arcs) et un bouclier s'excluent.
 - L'entrée `unarmed` (mains nues) est obligatoire.
+- **Lancer** (`Combat.throwables(acteur)`, `Combat.throw_item(acteur, choix, cible)`) : arme tenue ou objet du sac ;
+  une arme `thrown` garde ses dégâts, le reste devient `improvised_medium` ou `improvised_large` (poids ≥
+  `rules.json › combat › throw_large_weight`). Effet `{"type": "attack", "weapon", "ranged": true, "thrown": id}`.
+  Rendu après une victoire (`Combat.recover_thrown`, appelé par `Game.finish_combat`).
+- **Coup de bouclier** : un bouclier avec `damage` / `damage_type` ajoute la variante « Attaque et coup de bouclier »
+  (`Combatant.action_variants`, effet `"shield_bash": true`) ; `Combatant.shield_bashed` : le bouclier ne pare plus
+  jusqu'au prochain tour.
+- Passé verrouillé : `"locked": true`, `"unlock_hint"` (`Meta.is_background_available`, `background:custom`
+  débloqué par une mort de vieillesse ; tout est disponible en mode debug).
 - **Encombrement** (`Character.encumbrance`, `rules.json › encumbrance`) : poids de l'armure, du bouclier et des
   armes en main (`Character.equipped_weight`) − FOR − CON + taille × `size_factor` (2) + armure naturelle ×
   `natural_armor_factor` (2) − `encumbrance_reduction`, au moins 0. Chaque point retire 1 à la DEX

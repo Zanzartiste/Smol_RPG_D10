@@ -110,6 +110,10 @@ Pour l'instant j'aurais ça, je réfléchis encore à si je créé une catégori
 - Chercher les points faibles : une action (deux avec Se préparer, pour +2 dés) ; Nature ou Érudition (la meilleure)
   contre une créature naturelle, sinon Érudition ; ce qu'on découvre vaut pour toute l'espèce (carnet de bestiaire
   de la vie) (fait).
-- Fuite : les humanoïdes, mais aussi les bêtes sauvages, peuvent fuir ; revenir plus tard reste à faire.
+- Fuite : les humanoïdes, mais aussi les bêtes sauvages, peuvent fuir. Les fuyards pourront revenir plus tard avec
+  des renforts, ou prévenir leurs alliés, qui seront alors préparés à affronter le groupe (à faire).
+- Budget de rencontre, pour commencer : zones ville 1, forêt proche 2, camp des brigands 3 ; une rencontre vaut au
+  plus « zone × 2 » créatures de taille 0 (à faire).
+- Créatures armées : elles portent armes et armures, comme les personnages (à faire).
 - Chasses (menu Chercher…) : loups 2, camp des brigands 3, brigands en ville 2 (Perception) ; en ville, c'est un vrai
   combat (fait).

@@ -119,6 +119,9 @@ func finish_combat() -> Dictionary:
 					life.log_journal("level", Loc.ui("%s atteint le niveau %d.") % [member.name, new_level])
 		if xp > 0:
 			lines.push_front(Loc.ui("+%d XP") % xp)
+		var picked := c.recover_thrown()
+		if not picked.is_empty():
+			lines.append(Loc.ui("Vous ramassez : %s.") % ", ".join(PackedStringArray(picked)))
 
 	# Les membres du groupe à 0 PV étaient inconscients : après une victoire ou une fuite (ou une bagarre),
 	# les autres les ramènent à eux (1 PV). Si tout le groupe est tombé dans un combat mortel, ils meurent.

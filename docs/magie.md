@@ -119,3 +119,28 @@ Plusieurs sources peuvent coexister ; lesquelles garder ?
 - Contrecoups d'échec critique : une table commune pour commencer, des tables propres plus tard (à faire).
 - Concentration : un seul sort durable à la fois (à faire).
 - Tours de magie : seuls ceux que l'on connaît sont automatiquement équipés.
+- Multiclassage : le mana suit le niveau de lanceur total (Magicien 2 / Clerc 1 = 3 niveaux, 6 mana) (fait).
+- Concentration : laissée de côté pour l'instant.
+
+## Décisions (2026-10-16, deuxième série)
+
+- **Dégâts des sorts** : un nombre de dés propre à chaque sort, comme les armes, seuil = attribut d'incantation
+  (fait). Tours de magie : Trait de feu, Flammes, Glas 6 dés ; Rayon de givre, Fouet épineux, Flamme sacrée 5 dés
+  (+1 dé aux niveaux 5, 11 et 17). Projectile magique 7 dés seuil 6, touche toujours. Mains brûlantes 8 dés.
+  Rayons ardents 3 × 6 dés. Boule de feu 12 dés. Un sort lancé à un niveau supérieur : +2 dés par niveau.
+- **Contrecoups** (fait) : quand le jet d'un sort (attaque, ou opposition contre la résistance de la cible) est un
+  échec critique, on tire 1d10 sur la table commune, une fois par dé à 10 (au plus 3). N = niveau du sort (1 pour
+  un tour de magie). Les dés « N d10 ≤ 4 ». Effets en général néfastes, pour un futur archétype « chaos » (beaucoup
+  de dés, seuil faible).
+  1. Le temps change (pluie, brouillard, beau temps…) pour le reste du combat.
+  2. Un combattant au hasard est soigné de N d10 ≤ 4.
+  3. Un combattant au hasard subit N d10 ≤ 4 dégâts d'un type au hasard.
+  4. Tout le monde subit N d10 ≤ 4 dégâts d'un type au hasard.
+  5. Tout le monde récupère N d10 ≤ 4 PV.
+  6. (proposition) Le sort explose : le lanceur subit N + 1 d10 ≤ 4 dégâts de force.
+  7. (proposition) Le lanceur perd N mana.
+  8. (proposition) Le lanceur reçoit un état au hasard (empoisonné, en feu, affaibli, aveuglé, effrayé, à terre), 2 charges.
+  9. (proposition) Tous les combattants deviennent préparés (+2 dés au prochain jet).
+  10. (proposition) Le lanceur est étourdi (perd son prochain tour).
+- Les sorts sans jet du lanceur (Projectile magique, Mains brûlantes, Boule de feu, Bouclier, Appel du familier)
+  ne peuvent pas faire d'échec critique pour l'instant.

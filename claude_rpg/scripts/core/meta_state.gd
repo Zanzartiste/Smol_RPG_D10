@@ -51,6 +51,8 @@ func unlock_name(id: String) -> String:
 				return DB.species.get(parts[1], {}).get("name", id)
 			"class":
 				return DB.classes.get(parts[1], {}).get("name", id)
+			"background":
+				return DB.backgrounds.get(parts[1], {}).get("name", id)
 	return id
 
 
@@ -79,6 +81,11 @@ func is_class_available(class_id: String) -> bool:
 	return not DB.classes[class_id].get("locked", false) or is_unlocked("class:" + class_id)
 
 
+## Passé verrouillé (Sur mesure) : débloqué en mourant de vieillesse (voir record_life).
+func is_background_available(background_id: String) -> bool:
+	return not DB.backgrounds[background_id].get("locked", false) or is_unlocked("background:" + background_id)
+
+
 func mark_event_seen(event_id: String) -> void:
 	seen_events[event_id] = int(seen_events.get(event_id, 0)) + 1
 
@@ -88,6 +95,8 @@ func record_life(life: LifeState) -> void:
 	var ch := life.character
 	var earned := CreatorPoints.earned_for(ch.xp)
 	creator_points += earned
+	if life.died_of_old_age():
+		unlock("background:custom")
 	chronicle.append({
 		"xp": ch.xp,
 		"creator_points": earned,

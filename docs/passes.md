@@ -171,5 +171,5 @@ Ids conservés des anciens passés : Érudit `sage`, Vagabond `outlander`, Enfan
 - Courtier : 5e don au choix = Linguiste (fait). Gladiateur : « Tactical Mind » = Tacticien.
 - Les pistes de passés (Chasseur, Mercenaire, Espion…) restent de simples pistes.
 - Pas d'or ni d'objet de départ propre à chaque passé pour l'instant.
-- Sur mesure sera débloqué par un succès, à choisir plus tard (pas prioritaire).
+- Sur mesure se débloque en mourant de vieillesse, ou en mode debug (fait).
 - Lieu de départ : un quartier de la ville selon le passé (fait, surtout pour tester) ; une vie commence le matin.

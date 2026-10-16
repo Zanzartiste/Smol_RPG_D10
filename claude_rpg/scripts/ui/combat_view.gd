@@ -175,6 +175,20 @@ func _fill_action_bar() -> void:
 		item_menu.get_popup().add_item("%s ×%d" % [items[i]["item"]["name"], items[i]["count"]], i)
 	item_menu.get_popup().id_pressed.connect(_on_item_chosen, CONNECT_DEFERRED)
 	action_bar.add_child(item_menu)
+	var throwables := combat.throwables(_actor)
+	var throw_menu := MenuButton.new()
+	throw_menu.text = tr("Lancer")
+	throw_menu.flat = false
+	throw_menu.tooltip_text = tr("Lancer un objet ou l'arme tenue (une action). Ce qui n'est pas fait pour être lancé compte comme une arme improvisée ; l'objet est perdu jusqu'à la fin du combat, et ramassé après une victoire.")
+	throw_menu.disabled = not enabled or throwables.is_empty() or combat.actions_left <= 0 or combat.living("enemy").is_empty()
+	for i in throwables.size():
+		var entry: Dictionary = throwables[i]
+		var weapon := Combat.throw_weapon(entry["id"])
+		var label: String = entry["name"] + (tr(" (en main)") if entry["slot"] != "" else " ×%d" % entry["count"])
+		label += " — " + Equipment.damage_text(Equipment.weapon_damage(weapon)) + (tr(", improvisée") if weapon != entry["id"] else "")
+		throw_menu.get_popup().add_item(label, i)
+	throw_menu.get_popup().id_pressed.connect(_on_throw_chosen, CONNECT_DEFERRED)
+	action_bar.add_child(throw_menu)
 	if combat.can_flee_now(_actor):
 		_button(tr("Fuir (%d %%)") % roundi(combat.flee_chance(_actor) * 100), _on_flee_pressed, enabled)
 	var auto := _button(tr("IA : %s") % (tr("oui") if _actor.is_auto() else tr("non")), _on_auto_toggled, enabled)
@@ -336,6 +350,12 @@ func _on_item_chosen(menu_index: int) -> void:
 		_ask_target({"kind": "item", "item": item["id"]}, combat.targets(_actor, item["use"].get("target", "ally")))
 
 
+func _on_throw_chosen(menu_index: int) -> void:
+	var throwables := combat.throwables(_actor) if _actor != null else []
+	if _actor != null and not _busy and menu_index < throwables.size():
+		_ask_target({"kind": "throw", "choice": throwables[menu_index]}, combat.targets(_actor, "enemy"))
+
+
 ## Demande une cible ; s'il n'y en a qu'une, l'action est jouée directement.
 func _ask_target(pending: Dictionary, candidates: Array[Combatant]) -> void:
 	if candidates.is_empty():
@@ -362,6 +382,8 @@ func _execute(pending: Dictionary, target: Combatant) -> void:
 			_act(combat.perform.bind(_actor, pending["action"], target))
 		"item":
 			_act(combat.use_item.bind(_actor, pending["item"], target))
+		"throw":
+			_act(combat.throw_item.bind(_actor, pending["choice"], target))
 
 
 func _cancel_pending() -> void:

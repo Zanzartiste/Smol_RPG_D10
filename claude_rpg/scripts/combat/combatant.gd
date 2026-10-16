@@ -31,6 +31,7 @@ var last_attack_tens := 0  # 10 obtenus au dernier jet d'attaque (arme imprévis
 var fast_hands_used := false  # Mains lestes déjà utilisées ce tour
 var cunning_used := false  # Ruse (Se cacher sans dépenser d'action) déjà utilisée ce tour
 var fled := false  # a quitté le combat (créature lâche) : ni XP ni butin
+var shield_bashed := false  # a frappé avec son bouclier : il ne pare plus jusqu'à son prochain tour
 var _hp := 0
 var _max_hp := 0
 
@@ -296,6 +297,12 @@ func action_variants(action: Dictionary) -> Array[Dictionary]:
 			result.append(Spellcasting.at_level(action, level))
 	if result.is_empty():
 		result.append(action)
+	if action.get("id") == "weapon_attack" and has_shield() and Equipment.def(character.equipment["off_hand"]).has("damage"):
+		var bash := action.duplicate(true)
+		bash["name"] = Loc.ui("Attaque et coup de bouclier")
+		bash["description"] = Loc.ui("Une attaque avec votre arme, puis un coup de bouclier (main secondaire) ; le bouclier ne pare plus jusqu'à votre prochain tour.")
+		bash["effects"] = [{"type": "attack", "weapon": true, "shield_bash": true}]
+		result.append(bash)
 	return result
 
 
@@ -351,7 +358,9 @@ func parry_item(ranged := false) -> String:
 		return "" if ranged else Equipment.UNARMED
 	var off: String = character.equipment.get("off_hand", "")
 	if Equipment.is_shield(off):
-		return off
+		if not shield_bashed:
+			return off
+		off = ""
 	if ranged:
 		return ""
 	var best := ""
@@ -637,6 +646,8 @@ func off_hand_weapon() -> String:
 ## Attaque de la main secondaire qui suit une attaque avec l'arme principale (une arme dans chaque main) :
 ## l'effet d'attaque, ou {} s'il n'y en a pas.
 func off_hand_attack(effect: Dictionary) -> Dictionary:
+	if _uses_own_weapon(effect) and effect.get("shield_bash", false) and has_shield():
+		return {"type": "attack", "weapon": character.equipment["off_hand"], "off_hand": true, "ability": Equipment.ATTACK_ABILITY}
 	if not _uses_own_weapon(effect) or off_hand_weapon() == "":
 		return {}
 	return {"type": "attack", "weapon": off_hand_weapon(), "off_hand": true, "ability": Equipment.ATTACK_ABILITY}

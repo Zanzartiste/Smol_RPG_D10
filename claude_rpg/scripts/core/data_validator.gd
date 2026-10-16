@@ -111,6 +111,9 @@ static func _validate_rule_tables(db: Node, errors: Array[String]) -> void:
 			"shield":
 				if not item.has("armor"):
 					errors.append(ctx + " : armor (points d'Armure) manquant")
+				if item.has("damage"):  # coup de bouclier
+					_validate_pool_spec(db, item["damage"], ctx + " › damage", errors)
+					_expect_ref(db.damage_types, item.get("damage_type"), "type de dégâts", ctx, errors)
 			"accessory":
 				pass
 			_:
@@ -118,6 +121,35 @@ static func _validate_rule_tables(db: Node, errors: Array[String]) -> void:
 		_validate_modifiers(db, item.get("modifiers", []), ctx, errors, true)
 	if not db.equipment.has(Equipment.UNARMED):
 		errors.append("equipment.json : l'entrée « %s » (mains nues) est obligatoire" % Equipment.UNARMED)
+	_validate_backlash(db, errors)
+
+
+## Table des contrecoups des sorts (rules.json › backlash).
+static func _validate_backlash(db: Node, errors: Array[String]) -> void:
+	var rules: Dictionary = db.rules.get("backlash", {})
+	for status_id in rules.get("random_statuses", []):
+		_expect_ref(db.status_effects, status_id, "état", "rules.json › backlash › random_statuses", errors)
+	var table: Array = rules.get("table", [])
+	if table.size() != 10:
+		errors.append("rules.json › backlash › table : 10 lignes attendues (1d10), %d trouvée(s)" % table.size())
+	for i in table.size():
+		var ctx := "rules.json › backlash › table[%d]" % i
+		if not table[i].has("text"):
+			errors.append(ctx + " : text manquant")
+		for e: Dictionary in table[i].get("effects", []):
+			if e.get("who", "caster") not in ["caster", "random", "all"]:
+				errors.append(ctx + " : who inconnu « %s » (caster, random, all)" % e.get("who"))
+			match e.get("type"):
+				"weather", "heal", "mana":
+					pass
+				"damage":
+					if e.get("damage_type", "force") != "random":
+						_expect_ref(db.damage_types, e.get("damage_type", "force"), "type de dégâts", ctx, errors)
+				"status":
+					if e.get("status") != "random":
+						_expect_ref(db.status_effects, e.get("status"), "état", ctx, errors)
+				_:
+					errors.append(ctx + " : type inconnu « %s » (weather, heal, damage, mana, status)" % e.get("type"))
 
 
 ## Modificateurs (dons, espèces, équipement). `abilities_allowed` = false pour les espèces.

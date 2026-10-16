@@ -316,7 +316,10 @@ chance de réussite (calculée exactement).
 ## Décisions (2026-10-16, reprises de questions_suite.md)
 
 - Combat au rythme du clic (option) : le tour ennemi attend un clic n'importe où (ou Entrée / Espace), comme les
-  dés, pas un clic sur un choix précis (fait).
+  dés, pas un clic sur un choix précis (fait). Il n'attend qu'au début du tour de chaque ennemi.
+- Lancer un objet, coup de bouclier : voir [equipements.md](equipements.md), « Décisions (2026-10-16) ».
+- Dégâts des sorts et contrecoups des échecs critiques : voir [magie.md](magie.md), « Décisions (2026-10-16,
+  deuxième série) ».
 
 ## Questions
 

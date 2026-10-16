@@ -757,6 +757,24 @@ Tout bouclier donne +1 Armure et pare à 4, en mêlée comme contre un tir.
   9. Valeurs (prix) des nouvelles armes et armures : estimées, à corriger si besoin.
   10. Le bouclier ne sert pas encore d'arme improvisée (5 dés, seuil FOR).
 
+## Décisions (2026-10-16)
+
+- Les PV et les dégâts des armes restent tels quels, même si les combats deviennent plus courts.
+- Le rang de compétence détermine si l'on touche ; l'attribut et l'arme déterminent les dégâts (pas de dé de plus
+  avec le rang).
+- Encombrement : à DEX 0, on ne peut plus agir ; il faut porter une armure plus légère.
+- **Lancer** (fait) : en combat, le menu « Lancer » permet de lancer n'importe quel objet du sac ou l'arme tenue
+  (une action, attaque à distance contre le Couvert). Une arme de lancer (pierres, shuriken, javelot, et désormais
+  couteau, dague, hachette, lance de fantassin) garde ses dégâts ; le reste compte comme une arme improvisée
+  (moyenne, ou grande à partir de 5 de poids). L'objet est perdu pour le reste du combat et ramassé après une
+  victoire (l'arme revient dans sa main si elle est libre).
+- **Munitions** : arcs et arbalètes tirent sans limite, sauf munitions spéciales (à venir).
+- **Coup de bouclier** (fait) : avec un bouclier, l'action « Attaque et coup de bouclier » ajoute après l'attaque
+  un coup de bouclier en main secondaire (5 dés, seuil FOR, contondant, −2 dés comme toute main secondaire). Choix
+  fait (à valider) : le bouclier qui a frappé ne pare plus jusqu'au prochain tour.
+- Armes improvisées : où les trouver reste à décider.
+- Créatures armées : elles porteront armes et armures, avec l'encombrement (à faire).
+
 ## Questions ouvertes
 
 1. **Colliers et anneaux** : on garde 1 collier et 2 anneaux, ou on autorise davantage ?
