@@ -208,6 +208,12 @@
 - **Magie** : retirée ; remplacée par la compétence d'incantation de chaque famille de magie. Nouvelle compétence
   Détermination. Potions et cuisine devient Alchimie, Survie devient Nature.
 
+
+## Décisions (2026-10-16, reprises de questions_suite.md)
+
+- « Magie » du tableur = Détermination : la foi du personnage, sa résistance à la peur et à certains effets
+  mentaux ; c'est la compétence d'incantation des Clercs. « Potions » = Alchimie, « Survie » = Nature.
+
 ## Questions ouvertes
 
 1. **Attaques et niveau** : sans bonus de maîtrise, une attaque ne progresse plus avec le niveau tant que les rangs ne

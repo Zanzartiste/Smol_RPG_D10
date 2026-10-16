@@ -71,3 +71,12 @@ Pour proposer un événement sans écrire de JSON :
 ## Catalogue des idées
 
 À remplir au fil de l'eau (des événements de test peuvent être générés au besoin).
+
+## Décisions (2026-10-16, reprises de questions_suite.md)
+
+- Narration : le narrateur seul, sauf quand un personnage (joué ou non) parle à la première personne.
+- Options d'affichage des tests (compétence, difficulté, probabilité, choix verrouillés) : plusieurs réglages dans le
+  menu des options (fait).
+- Chercher… dans la nature : une recherche ratée mène à un combat ou à un autre événement du lieu, pour qu'il se
+  passe toujours quelque chose (fait). « Où est … ? » : un test de Perspicacité indique où se trouve un PNJ connu
+  à cette période (fait).

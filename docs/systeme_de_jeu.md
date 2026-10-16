@@ -312,6 +312,12 @@ chance de réussite (calculée exactement).
    une résistance ratée ; Esquive instinctive : dégâts divisés par deux.
 8. **Croc-en-jambe du loup** : il met À terre au lieu d'étourdir.
 
+
+## Décisions (2026-10-16, reprises de questions_suite.md)
+
+- Combat au rythme du clic (option) : le tour ennemi attend un clic n'importe où (ou Entrée / Espace), comme les
+  dés, pas un clic sur un choix précis (fait).
+
 ## Questions
 
 1. **Puissance des sorts** (reformulation de la question 13) : les grosses armes lancent plus de dés (une hache à

@@ -269,6 +269,19 @@ ressources), prêtes à devenir des dons.
 - Vigilant est supprimé (le passé Criminel donne Agile) ; le style Défense aussi (absent de la liste du tableur).
 - Les dons de classe sont les aptitudes de niveau 1 des classes.
 
+
+## Décisions (2026-10-16, reprises de questions_suite.md)
+
+- Dons d'origine : ceux du tableur remplacent les versions D&D (fait). De manière générale, on s'éloigne de D&D.
+- Dons généraux encore venus de D&D (Lutteur, Duelliste défensif, Résistant, Adepte élémentaire, Entraînement aux
+  armures lourdes) et styles de combat : gardés en attendant ta propre liste ; ils sont repérés comme venus de D&D
+  pour être supprimés, modifiés ou remplacés plus tard.
+- Dons 1/jour : on les utilise après avoir vu le résultat du jet ; une option du menu choisit entre utilisation
+  automatique et manuelle (pour garder le dé pour un jet plus important) (fait).
+- Chanceux : le degré d'un échec critique est le nombre de dés à 10 sur un jet sans succès ; Chanceux le baisse de 1
+  (un échec critique « 2 » devient « 1 ») (fait).
+- Un don de niveau ne peut pas être un don d'origine.
+
 ## Questions ouvertes
 
 1. **Dons de métier** : pas certain, à voir avec les métiers.

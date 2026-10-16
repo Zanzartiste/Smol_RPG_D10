@@ -102,3 +102,14 @@ Pour l'instant j'aurais ça, je réfléchis encore à si je créé une catégori
 - Squelette, goule, revenant (lié aux vies précédentes ?).
 - Feu follet, dryade, gobelin.
 - Une bête légendaire par région.
+
+## Décisions (2026-10-16, reprises de questions_suite.md)
+
+- Créatures célestes et démoniaques : aucune catégorie pour l'instant.
+- Budget de rencontre par difficulté de zone : à tester.
+- Chercher les points faibles : une action (deux avec Se préparer, pour +2 dés) ; Nature ou Érudition (la meilleure)
+  contre une créature naturelle, sinon Érudition ; ce qu'on découvre vaut pour toute l'espèce (carnet de bestiaire
+  de la vie) (fait).
+- Fuite : les humanoïdes, mais aussi les bêtes sauvages, peuvent fuir ; revenir plus tard reste à faire.
+- Chasses (menu Chercher…) : loups 2, camp des brigands 3, brigands en ville 2 (Perception) ; en ville, c'est un vrai
+  combat (fait).

@@ -108,3 +108,14 @@ Plusieurs sources peuvent coexister ; lesquelles garder ?
 ## Catalogue des sorts
 
 À compléter à partir des sorts existants (voir « Ce qui existe ») et des nouveaux.
+
+## Décisions (2026-10-16, reprises de questions_suite.md)
+
+- Mana = niveau de lanceur × 2 (Magicien 1 : 2 mana ; niveau 2 : 4, soit quatre sorts de niveau 1, deux de
+  niveau 2, ou un de niveau 2 et deux de niveau 1) (fait).
+- Un sort de niveau N coûte N mana ; les tours de magie sont gratuits.
+- Faute de mana, on puise dans ses PV, 1 PV par mana manquant, jusqu'à 0 PV (donc la mort) ; l'IA ne le fait pas (fait).
+- Le mana revient entièrement au repos long, et pour moitié du mana manquant au repos court (fait).
+- Contrecoups d'échec critique : une table commune pour commencer, des tables propres plus tard (à faire).
+- Concentration : un seul sort durable à la fois (à faire).
+- Tours de magie : seuls ceux que l'on connaît sont automatiquement équipés.

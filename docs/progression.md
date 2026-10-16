@@ -66,3 +66,11 @@ L'XP de combat pousse à se battre ; dans un jeu de vies, d'autres chemins devra
 - **Entraînement** : une activité (seul ou avec un PNJ) qui donne un peu d'XP ou de rangs, contre du temps et de l'or. => Pas fan.
 - **Maîtres** : certains rangs élevés (5+) ou aptitudes ne s'apprennent qu'auprès d'un maître. => Non pas nécesssaire.
 - **Exploits** : des succès en jeu (vaincre l'Alpha, forger une arme +3) donnent un titre et un petit bonus. => Le titre / achievments je suis plutôt pour, pas forcément l'idée du bonus, à définir.
+
+## Décisions (2026-10-16, reprises de questions_suite.md)
+
+- Gains distincts, qui s'ajoutent : un rang de compétence aux niveaux pairs, un palier de sous-classe tous les
+  3 niveaux (3, 6, 9… 18), +1 attribut tous les 5 niveaux (5, 10, 15, 20), un don tous les 4 niveaux (4, 8… 20)
+  (fait, avec le bouton « Monter de niveau »).
+- Table d'XP : celle de D&D pour l'instant ; le niveau 20 doit rester très difficile (par l'XP).
+- Titres et succès : pas prioritaire.

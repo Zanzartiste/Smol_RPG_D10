@@ -67,3 +67,9 @@
 - **Saisons de voyage** : l'hiver rend les cols impraticables, les routes boueuses au printemps.
 - **Rumeurs** : en ville, on entend parler de lieux lointains qui s'ajoutent aux destinations.
 - **Relais et auberges** en route : événements sociaux de voyage.
+
+## Décisions (2026-10-16, reprises de questions_suite.md)
+
+- Repos court : la moitié des PV et du mana manquants ; pas de limite par jour (le répéter ne sert à rien),
+  mais dans un lieu dangereux il risque toujours d'être interrompu par une embuscade (fait).
+- Une vie commence le matin, quel que soit le passé.
