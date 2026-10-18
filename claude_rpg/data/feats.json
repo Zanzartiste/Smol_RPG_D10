@@ -295,7 +295,7 @@
 		"id": "two_weapon_fighting",
 		"name": "Style : À deux armes",
 		"category": "fighting_style",
-		"description": "Avec une arme dans chaque main, l'attaque de votre seconde arme (qui suit chaque attaque de l'arme principale) n'a pas de malus.",
+		"description": "Avec une arme (ou un bouclier) dans chaque main, une Attaque peut frapper des deux mains : l'arme principale, puis la seconde.",
 		"modifiers": [{"type": "two_weapon_fighting"}]
 	}
 ]

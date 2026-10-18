@@ -193,9 +193,10 @@ Obtenus par le don de classe Style de combat (Guerrier niveau 1, Champion niveau
 
 ### Style : À deux armes (`two_weapon_fighting`)
 
-- **Effet** : l'attaque de la main secondaire n'a pas de malus. (Règle pour tous : avec une arme de corps à corps à
-  une main dans chaque main, chaque attaque de l'arme principale est suivie d'une attaque de la seconde arme, avec
-  ses propres jets, à deux dés de moins à l'attaque et aux dégâts : `rules.json › combat › off_hand_penalty`.)
+- **Effet** : ajoute la variante « Attaque des deux mains » à l'action d'Attaque : l'arme principale puis la main
+  secondaire frappent, sans malus (effet `both_hands`, `Combatant.off_hand_attack`). (Règle pour tous : avec une arme
+  ou un bouclier en main secondaire, chaque action d'Attaque se fait au choix avec l'arme principale ou avec la main
+  secondaire ; il n'y a ni seconde attaque automatique ni malus de main secondaire.)
 
 ### Style : À deux mains (`great_weapon_fighting`)
 

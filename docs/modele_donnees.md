@@ -301,8 +301,9 @@ Champs facultatifs, valables pour tout effet :
   `all` ; dés = niveau du sort + `extra_dice`, seuil `threshold` (4).
 - **Jet d'incantation** (`rules.json › casting`, `Combat._cast_check`, `Combat.has_caster_roll`,
   `Combat.cast_chance`) : un sort sans autre jet du lanceur (ni attaque de sort, ni effet à opposition contre la
-  réserve d'incantation ; les dégâts de zone à résistance DEX ne comptent pas) fait lancer la réserve d'incantation
-  contre le niveau du sort (1 pour un tour de magie). Raté : le sort ne part pas, le mana est dépensé. Échec
+  réserve d'incantation) fait lancer la réserve d'incantation contre `difficulty` (1, quel que soit le niveau du sort). Les sorts
+  de dégâts (Projectile magique, Mains brûlantes, Boule de feu : `"type": "attack", "ability": "spell"`) sont des
+  attaques de sort contre le Couvert ou l'Esquive naturelle de chaque cible, sans ce jet. Raté : le sort ne part pas, le mana est dépensé. Échec
   critique : contrecoups. L'IA pondère ses sorts par cette chance.
 - Contrecoups, lignes 6 à 10 : gerbe de flammes (N+1 d10 ≤ 4 de feu), souffle glacé (N+2 de froid + affaibli 1),
   foudre (N+3), miasmes (N+3 de poison + empoisonné 2), coup de tonnerre (N+4 + à terre 1) ; tout le monde est touché.
@@ -517,14 +518,19 @@ de mailles → armure de mailles).
   une arme `thrown` garde ses dégâts, le reste devient `improvised_medium` ou `improvised_large` (poids ≥
   `rules.json › combat › throw_large_weight`). Effet `{"type": "attack", "weapon", "ranged": true, "thrown": id}`.
   Rendu après une victoire (`Combat.recover_thrown`, appelé par `Game.finish_combat`).
-- **Coup de bouclier** : un bouclier avec `damage` / `damage_type` ajoute la variante « Attaque et coup de bouclier »
-  (`Combatant.action_variants`, effet `"shield_bash": true`) ; `Combatant.shield_bashed` : le bouclier ne pare plus
-  jusqu'au prochain tour.
+- **Main secondaire** : avec une arme ou un bouclier en main secondaire, `Combatant.action_variants` ajoute à
+  l'Attaque la variante « Attaque (<objet>) » (coup de bouclier si c'est un bouclier avec `damage` / `damage_type`) ;
+  pas de seconde attaque automatique ni de malus (`combat › off_hand_penalty` et `shield_bashed` supprimés). Le style
+  À deux armes (`two_weapon_fighting`) ajoute « Attaque des deux mains » (effet `both_hands`,
+  `Combatant.off_hand_attack`) : arme principale puis main secondaire. Parade au choix : `Combatant.parry_options`,
+  `parry_choice` (un tir ne se pare qu'au bouclier).
 - **Fioles et potions** (`Items.splash_effects`) : un objet avec `"splash"` (`items.json`) ou une potion (soins,
-  antidote) se brise quand on le lance et applique son effet si l'attaque touche ; il n'est pas rendu. Objets :
+  antidote) se brise quand on le lance et applique son effet si l'attaque touche ; il n'est pas rendu. L'effet
+  d'attaque porte `"no_damage": true` : le jet sert à toucher, sans dégâts de lancer. Objets :
   `flask_oil` (brûlure 2, 2 po), `holy_water` (4 dés ≤ 6 radiants, 10 po), vendus à l'herboristerie.
 - **Munitions spéciales** : un objet de `items.json` avec `"ammo": {"bonus_damage": [...], "effects"?: [...]}`
-  (`fire_arrow`, `frost_arrow`, `lightning_arrow`, vendus à l'armurerie). Avec une arme `ammunition` en main, une
+  (`fire_arrow`, `frost_arrow`, `lightning_arrow`, vendus à l'armurerie ; recettes `brew_fire_arrow`,
+  `brew_frost_arrow` à l'alchimie, `craft_lightning_arrow` à la forge : 3 flèches par fabrication). Avec une arme `ammunition` en main, une
   variante d'Attaque par munition du sac ; une munition est consommée par tir. Sans munition : flèche ordinaire.
 - Passé verrouillé : `"locked": true`, `"unlock_hint"` (`Meta.is_background_available`, `background:custom`
   débloqué par une mort de vieillesse ; tout est disponible en mode debug).

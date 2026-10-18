@@ -317,6 +317,18 @@ func _fill_reaction_bar() -> void:
 			yes = tr("Esquiver (%d %% de l'éviter)") % roundi(Dice.chance(info["dodge"]["count"], info["dodge"]["threshold"], need) * 100)
 			no = tr("Ne pas esquiver")
 		"parry":
+			# Bouclier ou arme : le joueur choisit avec quoi parer.
+			var options: Array = info.get("options", [])
+			if options.size() > 1:
+				var target: Combatant = _reaction["target"]
+				for i in options.size():
+					target.parry_choice = options[i]
+					var pool := target.parry_pool(combat.target_prepared_bonus(target))
+					target.parry_choice = ""
+					_action_buttons.append(_button("%d. %s" % [i + 1, tr("Parer avec %s (%s)") % [Items.name_of(options[i]).to_lower(),
+						Dice.pool_text(pool["count"], pool["threshold"])]], _on_parry_with.bind(options[i]), true))
+				_action_buttons.append(_button("%d. %s" % [options.size() + 1, tr("Encaisser")], _on_reaction.bind(false), true))
+				return
 			yes = tr("Parer")
 			no = tr("Encaisser")
 		"counterspell":
@@ -324,6 +336,12 @@ func _fill_reaction_bar() -> void:
 			no = tr("Laisser faire")
 	_action_buttons.append(_button("1. " + yes, _on_reaction.bind(true), true))
 	_action_buttons.append(_button("2. " + no, _on_reaction.bind(false), true))
+
+
+func _on_parry_with(item: String) -> void:
+	if not _reaction.is_empty():
+		_reaction["target"].parry_choice = item
+		_reaction_chosen.emit(true)
 
 
 func _on_reaction(react: bool) -> void:

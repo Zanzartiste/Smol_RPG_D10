@@ -76,11 +76,11 @@
 	{
 		"id": "magic_missile",
 		"name": "Projectile magique",
-		"description": "Trois fléchettes de force qui touchent toujours leur cible.",
+		"description": "Trois fléchettes de force qui filent vers la cible.",
 		"target": "enemy",
 		"cost": "spell_slot",
 		"spell_level": 1,
-		"effects": [{"type": "damage", "damage": {"dice": 7, "threshold": 6, "fixed": true}, "damage_type": "force", "upcast": 2, "school": "evocation"}]
+		"effects": [{"type": "attack", "ability": "spell", "damage": {"dice": 7, "threshold": 6, "fixed": true}, "damage_type": "force", "upcast": 2, "school": "evocation"}]
 	},
 	{
 		"id": "burning_hands",
@@ -89,7 +89,7 @@
 		"target": "all_enemies",
 		"cost": "spell_slot",
 		"spell_level": 1,
-		"effects": [{"type": "damage", "damage": {"dice": 8, "threshold": "spell", "fixed": true}, "damage_type": "fire", "resist": {"ability": "dex"}, "upcast": 2, "school": "evocation"}, {"type": "status", "status": "burning", "stacks": 1}]
+		"effects": [{"type": "attack", "ability": "spell", "damage": {"dice": 8, "threshold": "spell", "fixed": true}, "damage_type": "fire", "upcast": 2, "school": "evocation"}, {"type": "status", "status": "burning", "stacks": 1}]
 	},
 	{
 		"id": "sleep",
@@ -221,6 +221,6 @@
 		"target": "all_enemies",
 		"cost": "spell_slot",
 		"spell_level": 3,
-		"effects": [{"type": "damage", "damage": {"dice": 12, "threshold": "spell", "fixed": true}, "damage_type": "fire", "resist": {"ability": "dex"}, "upcast": 2, "school": "evocation"}]
+		"effects": [{"type": "attack", "ability": "spell", "damage": {"dice": 12, "threshold": "spell", "fixed": true}, "damage_type": "fire", "upcast": 2, "school": "evocation"}]
 	}
 ]

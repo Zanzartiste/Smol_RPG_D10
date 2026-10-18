@@ -126,7 +126,7 @@ Plusieurs sources peuvent coexister ; lesquelles garder ?
 
 - **Dégâts des sorts** : un nombre de dés propre à chaque sort, comme les armes, seuil = attribut d'incantation
   (fait). Tours de magie : Trait de feu, Flammes, Glas 6 dés ; Rayon de givre, Fouet épineux, Flamme sacrée 5 dés
-  (+1 dé aux niveaux 5, 11 et 17). Projectile magique 7 dés seuil 6, touche toujours. Mains brûlantes 8 dés.
+  (+1 dé aux niveaux 5, 11 et 17). Projectile magique 7 dés seuil 6 (attaque de sort, ne touche plus toujours). Mains brûlantes 8 dés.
   Rayons ardents 3 × 6 dés. Boule de feu 12 dés. Un sort lancé à un niveau supérieur : +2 dés par niveau.
 - **Contrecoups** (fait) : quand le jet d'un sort (attaque, ou opposition contre la résistance de la cible) est un
   échec critique, on tire 1d10 sur la table commune, une fois par dé à 10 (au plus 3). N = niveau du sort (1 pour
@@ -144,17 +144,22 @@ Plusieurs sources peuvent coexister ; lesquelles garder ?
   10. Coup de tonnerre : tout le monde subit N + 4 d10 de tonnerre et tombe à terre (1 charge).
   Les lignes 6 à 10 frappent tout le monde, y compris le lanceur : on peut s'en protéger par des résistances ou des
   immunités. Toujours un tirage par dé à 10 (au plus 3).
-- **Jet d'incantation** (fait) : un sort sans autre jet du lanceur (ni attaque de sort, ni effet à opposition
-  contre la réserve d'incantation ; les dégâts de zone à résistance DEX ne comptent pas comme opposition) demande
-  un jet de la réserve d'incantation contre le niveau du sort (1 pour un tour de magie). Raté : le sort ne part pas,
-  mais le mana est dépensé. Échec critique : contrecoups. L'IA pondère ses sorts par cette chance. Concerne
-  Projectile magique, Mains brûlantes, Boule de feu, Bouclier, Appel du familier (et les parchemins). Pour une
-  difficulté variable selon la cible : jet en opposition (le plus de succès l'emporte), déjà en place (Sommeil).
+- **Jet d'incantation** (fait, révisé le 2026-10-18) : seul un sort sans cible à toucher (Bouclier, Appel du
+  familier, et les parchemins du même genre) demande un jet de la réserve d'incantation contre la difficulté
+  `rules.json › casting › difficulty` (1, quel que soit le niveau du sort). Raté : le sort ne part pas, mais le mana est
+  dépensé. Échec critique : contrecoups. L'IA pondère ses sorts par cette chance. Les sorts de dégâts n'ont pas ce
+  jet : ce sont des attaques de sort (voir les décisions du 2026-10-18).
 
 ## Décisions (2026-10-18)
 
 - Les contrecoups touchent tout le monde (lignes 6 à 10 de la table), pour pouvoir s'en protéger.
 - La météo changée par un contrecoup ne dure que le temps du combat.
 - Dégâts des sorts : validés pour l'instant, l'équilibrage viendra plus tard.
+- **Sorts de dégâts = attaques de sort** (fait) : un sort de dégâts est une attaque de sort contre le Couvert (ou
+  l'Esquive naturelle) de chaque cible, comme une attaque à l'arme. Projectile magique, Mains brûlantes et Boule de
+  feu sont passés en attaques de sort : Projectile magique ne touche plus toujours (7 dés, seuil 6) ; Mains
+  brûlantes et Boule de feu ne se résistent plus en DEX, chaque ennemi est attaqué. Les sorts qui imposent un
+  état restent une opposition contre la résistance de la cible (Détermination, Physique… selon l'attribut).
+  Les sorts sans cible à toucher (Bouclier, Appel du familier) gardent un jet d'incantation.
 - Archétype « chaos » : une façon de construire son personnage (beaucoup de dés, seuil faible) ; ni don ni
   sous-classe pour l'instant.

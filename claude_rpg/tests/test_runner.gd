@@ -1189,8 +1189,8 @@ func _test_actions() -> bool:
 	Game.combat = null
 	_expect(Actions.text_of("pommel_strike") == "Attaque avec votre arme. Si elle touche : 1 Étourdi.",
 		"texte généré d'une action")
-	_expect(Actions.text_of("burning_hands").begins_with("Tous les ennemis : Inflige feu (8 dé(s), seuil sort) (la cible résiste : DEX)"),
-		"texte : cible multiple et résistance")
+	_expect(Actions.text_of("sleep").begins_with("Tous les ennemis :") and "résiste : SAG" in Actions.text_of("sleep"),
+		"texte : cible multiple et résistance %s" % Actions.text_of("sleep"))
 	return true
 
 
@@ -1233,20 +1233,21 @@ func _test_backlash() -> bool:
 		"contrecoup 9 : le lanceur aussi est empoisonné")
 	combat.hero.hp = combat.hero.max_hp()
 	# Jet d'incantation : seulement pour un sort sans autre jet du lanceur.
-	_expect(Combat.has_caster_roll(Actions.def("fire_bolt")) and Combat.has_caster_roll(Actions.def("sleep"))
-		and not Combat.has_caster_roll(Actions.def("magic_missile")) and not Combat.has_caster_roll(Actions.def("fireball")),
-		"jet d'incantation : attaques de sort et oppositions ont déjà leur jet")
-	_expect(combat.cast_chance(hero, Actions.def("magic_missile")) < 1.0 and combat.cast_chance(hero, Actions.def("prepare")) == 1.0,
-		"jet d'incantation : Projectile magique peut échouer, pas une action ordinaire")
+	# Sorts de dégâts : attaques de sort contre le Couvert ; états : opposition ; les autres : jet d'incantation.
+	_expect(["fire_bolt", "sleep", "magic_missile", "fireball", "burning_hands"].all(func(id): return Combat.has_caster_roll(Actions.def(id)))
+		and not Combat.has_caster_roll(Actions.def("mage_shield")) and not Combat.has_caster_roll(Actions.def("find_familiar")),
+		"jet d'incantation : seulement les sorts sans cible à toucher")
+	_expect(combat.cast_chance(hero, Actions.def("mage_shield")) < 1.0 and combat.cast_chance(hero, Actions.def("prepare")) == 1.0,
+		"jet d'incantation : Bouclier peut échouer, pas une action ordinaire")
 	var failed := 0
 	for i in 40:
 		beats.clear()
-		combat._begin_cast(Actions.def("magic_missile"))
-		if not combat._cast_check(hero, Actions.def("magic_missile"), beats):
+		combat._begin_cast(Actions.def("mage_shield"))
+		if not combat._cast_check(hero, Actions.def("mage_shield"), beats):
 			failed += 1
 		combat._casting_level = 0
 		combat._cast_fumble = 0
-	_expect(failed > 0 and failed < 40, "jet d'incantation : Projectile magique réussit ou échoue")
+	_expect(failed > 0 and failed < 40, "jet d'incantation : Bouclier réussit ou échoue")
 	Game.combat = null
 	return true
 
@@ -1275,19 +1276,20 @@ func _test_throw_and_shield() -> bool:
 	_expect(thrower.weapon_id() == "dagger" and thrower.item_count("javelin") == 2
 		and result["lines"].any(func(l): return l.begins_with("Vous ramassez")), "victoire : les objets lancés sont ramassés")
 
-	# Coup de bouclier : une variante de l'Attaque, en main secondaire ; le bouclier ne pare plus ensuite.
+	# Deux mains : chaque Attaque se fait au choix avec l'arme ou le bouclier ; on choisit aussi avec quoi parer.
 	var knight := Character.create("human", "fighter", "Bouclier")
 	knight.equipment["main_hand"] = "longsword"
 	knight.equipment["off_hand"] = "shield"
 	Game.start_life(knight, 21)
 	combat = Game.start_combat({"enemies": ["dire_wolf"]})
 	var variants := combat.hero.action_variants(Actions.def("weapon_attack"))
-	_expect(variants.size() == 2 and variants[1]["effects"][0].get("shield_bash", false), "coup de bouclier proposé avec un bouclier")
-	_expect(combat.hero.off_hand_attack(variants[1]["effects"][0])["weapon"] == "shield"
-		and combat.hero.off_hand_attack(variants[0]["effects"][0]).is_empty(), "coup de bouclier : attaque de main secondaire, au choix")
-	combat.actions_left = 2
-	await combat.perform(combat.hero, variants[1], combat.living("enemy")[0])
-	_expect(combat.hero.shield_bashed and combat.hero.parry_item(true) == "", "après un coup de bouclier, le bouclier ne pare plus")
+	_expect(variants.size() == 2 and variants[1]["effects"][0]["weapon"] == "shield"
+		and combat.hero.off_hand_attack(variants[0]["effects"][0]).is_empty(), "coup de bouclier : une Attaque au choix, sans seconde attaque")
+	_expect(combat.hero.parry_options() == ["longsword", "shield"] and combat.hero.parry_options(true) == ["shield"],
+		"parade : l'épée ou le bouclier ; un tir, le bouclier seul")
+	combat.hero.parry_choice = "longsword"
+	_expect(combat.hero.parry_item() == "longsword" and combat.hero.parry_item(true) == "shield", "parade au choix du joueur")
+	combat.hero.parry_choice = ""
 	Game.combat = null
 	return true
 
@@ -1304,9 +1306,11 @@ func _test_lost_items_and_stock() -> bool:
 	var combat := Game.start_combat({"enemies": ["wolf"]})
 	combat.actions_left = 2
 	var oil: Dictionary = combat.throwables(combat.hero).filter(func(c): return c["id"] == "flask_oil")[0]
+	var wolf_hp := combat.living("enemy")[0].hp
 	var beats: Array[Dictionary] = await combat.throw_item(combat.hero, oil, combat.living("enemy")[0])
 	_expect(combat.thrown.is_empty() and beats.any(func(b): return String(b["text"]).ends_with("se brise.")),
 		"fiole lancée : elle se brise")
+	_expect(combat.enemies()[0].hp == wolf_hp, "fiole lancée : pas de dégâts, seulement son effet")
 	await combat.throw_item(combat.hero, combat.throwables(combat.hero).filter(func(c): return c["id"] == "javelin")[0],
 		combat.enemies()[0])
 	combat.outcome = "fled"
@@ -2093,8 +2097,7 @@ func _test_choices() -> bool:
 	_expect(with_shield == two_hands + 1 and with_dagger == two_hands,
 		"À une main : un dé de plus avec un bouclier, rien à deux mains ni avec une arme dans l'autre main")
 	_expect("dueling" not in fighter.available_feats(), "les styles ne s'obtiennent pas en montant de niveau")
-	# Deux armes (pour tous) : une seconde arme en main secondaire attaque après l'arme principale, avec deux dés
-	# de moins à l'attaque et aux dégâts ; le style À deux armes retire ce malus.
+	# Deux armes (pour tous) : chaque Attaque se fait avec l'une ou l'autre ; le style À deux armes frappe des deux.
 	var twin := Character.create("goblin", "fighter", "T", {"choices": {"feature:fighting_style/style": ["two_weapon_fighting"]}})
 	var plain := Character.create("goblin", "fighter", "P")
 	for wielder: Character in [twin, plain]:
@@ -2110,21 +2113,21 @@ func _test_choices() -> bool:
 	twin.equip("dagger", "off_hand")
 	_expect(plain.weapon_id() == "shortsword" and plain.equipment.get("off_hand") == "dagger", "seconde arme en main secondaire")
 	var hand := Combatant.from_character(plain, true)
-	var off := hand.off_hand_attack(swing)
-	var full_damage: int = hand.damage_pool({"type": "attack", "weapon": "dagger"}, hand.attack_pool(off))["count"]
-	_expect(off.get("weapon") == "dagger" and hand.attack_pool(off)["count"] == plain.weapon_rank("dagger") - 2
-		and hand.damage_pool(off, hand.attack_pool(off))["count"] == full_damage - 2, "main secondaire : −2 dés à l'attaque et aux dégâts")
+	var hand_variants := hand.action_variants(Actions.def("weapon_attack"))
+	_expect(hand_variants.size() == 2 and hand_variants[1]["effects"][0]["weapon"] == "dagger"
+		and hand.attack_pool(hand_variants[1]["effects"][0])["count"] == plain.weapon_rank("dagger")
+		and hand.off_hand_attack(swing).is_empty(), "deux armes : une Attaque avec l'une ou l'autre, sans malus ni seconde attaque")
 	var dual := Combatant.from_character(twin, true)
-	var twin_off := dual.off_hand_attack(swing)
-	_expect(dual.attack_pool(twin_off)["count"] == twin.weapon_rank("dagger"),
-		"style À deux armes : pas de malus")
+	var dual_variants := dual.action_variants(Actions.def("weapon_attack"))
+	_expect(dual_variants.size() == 3 and dual.off_hand_attack(dual_variants[2]["effects"][0]).get("weapon") == "dagger",
+		"style À deux armes : Attaque des deux mains")
 	DB.creatures["_dummy"] = {"id": "_dummy", "name": "Mannequin", "hp": 300, "abilities": {"dex": 1},
 		"actions": [{"name": "Rien", "weight": 1, "target": "self", "effects": [{"type": "status", "status": "shielded", "stacks": 0}]}]}
 	Game.start_life(twin, 131)
 	var duel := Game.start_combat({"enemies": ["_dummy"]})
 	duel.turn = duel.order.find(duel.hero)
 	duel.start_turn()
-	await duel.perform(duel.hero, Actions.def("weapon_attack"), duel.enemies()[0])
+	await duel.perform(duel.hero, duel.hero.action_variants(Actions.def("weapon_attack"))[2], duel.enemies()[0])
 	_expect(duel.log.any(func(l): return "main secondaire" in l), "À deux armes : l'attaque de la main secondaire suit")
 	Game.combat = null
 	DB.creatures.erase("_dummy")

@@ -263,7 +263,6 @@ func start_turn() -> Array[Dictionary]:
 		c.parries_used = 0
 	actor.reaction_used = false
 	actor.savage_used = false
-	actor.shield_bashed = false
 	actor.fast_hands_used = false
 	actor.cunning_used = false
 	if actor.reactions > 0 and actor.is_alive() and not actor.is_prepared():
@@ -452,7 +451,8 @@ static func throw_weapon(item_id: String) -> String:
 
 ## Lance un objet (une action) : une attaque à distance avec l'arme de lancer. L'objet est perdu pour le reste
 ## du combat, et rendu après une victoire (voir recover_thrown) ; après une fuite ou une défaite, il reste sur
-## place (LifeState.lost_items). Une fiole (Items.splash_effects) se brise et applique son effet si elle touche.
+## place (LifeState.lost_items). Une fiole (Items.splash_effects) ne blesse pas : elle se brise et applique son
+## effet si elle touche.
 ## `choice` : une entrée de throwables().
 func throw_item(actor: Combatant, choice: Dictionary, target: Combatant) -> Array[Dictionary]:
 	actions_left -= 1
@@ -470,6 +470,8 @@ func throw_item(actor: Combatant, choice: Dictionary, target: Combatant) -> Arra
 	_beat(beats, Loc.ui("%s lance : %s%s.") % [actor.name, Items.name_of(item_id),
 		Loc.ui(" (arme improvisée)") if weapon != item_id else ""])
 	var effect := {"type": "attack", "weapon": weapon, "ranged": true, "ability": Equipment.ATTACK_ABILITY, "thrown": item_id}
+	if not splash.is_empty():
+		effect["no_damage"] = true
 	beats.append_array(await _resolve(actor, [effect] + splash, "enemy", target, not actor.is_player_controlled()))
 	if not splash.is_empty():
 		_beat(beats, Loc.ui("%s se brise.") % Items.name_of(item_id))
@@ -763,12 +765,8 @@ func _apply(actor: Combatant, e: Dictionary, target: Combatant, fast: bool) -> D
 		"attack":
 			hit = await _attack(actor, target, e, beats, fast)
 			var off_hand := actor.off_hand_attack(e)
-			if not off_hand.is_empty() and e.get("shield_bash", false):
-				actor.shield_bashed = true  # le bouclier ne pare plus jusqu'à son prochain tour
 			if not off_hand.is_empty() and target.is_alive() and actor.is_alive():
-				var penalty := actor.off_hand_penalty()
-				var line := Loc.ui("%s donne aussi un coup de bouclier%s.") if e.get("shield_bash", false) 					else Loc.ui("%s frappe aussi de sa main secondaire%s.")
-				_beat(beats, line % [actor.name, Loc.ui(" (−%d dés)") % penalty if penalty > 0 else ""])
+				_beat(beats, Loc.ui("%s frappe aussi de sa main secondaire.") % actor.name)
 				await _attack(actor, target, off_hand, beats, fast)
 		"damage":
 			var pool := actor.damage_pool(e)
@@ -1017,6 +1015,8 @@ func _counter(actor: Combatant, target: Combatant, e: Dictionary, attack: Dictio
 ## Une attaque touche : dégâts (Armure de la cible, critiques), parade éventuelle, dégâts d'autres types.
 func _hit(actor: Combatant, target: Combatant, e: Dictionary, attack: Dictionary, critical: int, surprise: bool,
 		can_parry: bool, beats: Array[Dictionary], fast: bool) -> void:
+	if e.get("no_damage", false):
+		return  # une fiole lancée ne blesse pas : elle se brise et fait son effet
 	var savage: bool = e.get("weapon") is bool and e.get("weapon") and actor.has_modifier("savage_attacker") \
 		and not actor.savage_used
 	if savage:
@@ -1067,8 +1067,9 @@ func _parry(attacker: Combatant, target: Combatant, e: Dictionary, beats: Array[
 	target.parries_used += 1
 	var pool := target.parry_pool(target.use_prepared(), attacker.is_ranged_attack(e),
 		Equipment.has_property(attacker.attack_weapon(e), "impact"))
+	target.parry_choice = ""
 	var roll := Dice.roll_pool(rng, int(pool["count"]), int(pool["threshold"]))
-	_beat(beats, Loc.ui("%s pare : %d succès.") % [target.name, int(roll["successes"])],
+	_beat(beats, Loc.ui("%s pare (%s) : %d succès.") % [target.name, Items.name_of(pool["item"]).to_lower(), int(roll["successes"])],
 		_roll_info(Loc.ui("Parade (%s)") % target.name, roll), fast)
 	var tens := Dice.count_value(roll, 10)
 	if tens > 0 and Equipment.has_property(pool["item"], "dangerous_parry") and not attacker.attack_is_dangerous_parry(e):
@@ -1119,7 +1120,8 @@ func _roll_damage(actor: Combatant, target: Combatant, pool: Dictionary, type: S
 	var parry: Dictionary = options.get("parry", {})
 	if not parry.is_empty() and amount > 0 and can_parry(parry["attacker"], target, parry["effect"]) \
 			and await _decide(target, "parry", {"attacker": parry["attacker"], "damage": amount, "beats": beats,
-				"parry": target.parry_pool(target_prepared_bonus(target))}, true):
+				"parry": target.parry_pool(target_prepared_bonus(target)),
+				"options": target.parry_options(parry["attacker"].is_ranged_attack(parry["effect"]))}, true):
 		var parried := _parry(parry["attacker"], target, parry["effect"], beats, parry.get("fast", false))
 		if parried > 0:
 			notes.append(Loc.ui("parade : −%d") % mini(parried, amount))
@@ -1245,20 +1247,21 @@ static func has_caster_roll(action: Dictionary) -> bool:
 	return false
 
 
-## Jet d'incantation d'un sort sans autre jet du lanceur (rules.json › casting) : la réserve d'incantation
-## contre le niveau du sort (1 pour un tour de magie). Raté, le sort ne part pas (le mana est dépensé) ; un
+## Jet d'incantation d'un sort sans autre jet du lanceur (rules.json › casting : Bouclier, Appel du familier) :
+## la réserve d'incantation contre casting › difficulty. Raté, le sort ne part pas (le mana est dépensé) ; un
 ## échec critique déclenche ses contrecoups. Retourne true si le sort part.
 func _cast_check(actor: Combatant, action: Dictionary, beats: Array[Dictionary]) -> bool:
 	if _casting_level == 0 or has_caster_roll(action) or not DB.rules.get("casting", {}).get("enabled", true):
 		return true
 	var pool := actor.spell_pool()
 	var roll := Dice.roll_pool(rng, int(pool["count"]), int(pool["threshold"]))
-	var judged := Dice.judge(int(roll["successes"]), _casting_level, 0, roll["dice"])
+	var difficulty := int(DB.rules.get("casting", {}).get("difficulty", 1))
+	var judged := Dice.judge(int(roll["successes"]), difficulty, 0, roll["dice"])
 	if not judged["success"] and judged["fumble"]:
 		_note_fumble(int(judged["fumble_level"]))
 	_beat(beats, Loc.ui("%s lance le sort : %d succès contre %d — %s") % [actor.name, int(roll["successes"]),
-		_casting_level, Loc.ui("réussi") if judged["success"] else Loc.ui("le sort échoue")],
-		_roll_info(Loc.ui("Incantation (%s)") % actor.name, roll, judged, Loc.ui("Niveau du sort")),
+		difficulty, Loc.ui("réussi") if judged["success"] else Loc.ui("le sort échoue")],
+		_roll_info(Loc.ui("Incantation (%s)") % actor.name, roll, judged, Loc.ui("Difficulté")),
 		not actor.is_player_controlled())
 	return judged["success"]
 
@@ -1268,7 +1271,7 @@ func cast_chance(actor: Combatant, action: Dictionary) -> float:
 	if not Spellcasting.is_spell(action) or has_caster_roll(action) or not DB.rules.get("casting", {}).get("enabled", true):
 		return 1.0
 	var pool := actor.spell_pool()
-	return Dice.chance(int(pool["count"]), int(pool["threshold"]), maxi(1, Spellcasting.cost_of(action)))
+	return Dice.chance(int(pool["count"]), int(pool["threshold"]), int(DB.rules.get("casting", {}).get("difficulty", 1)))
 
 
 ## Un jet du sort en cours est un échec critique de degré `level` (0 : rien).

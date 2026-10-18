@@ -200,8 +200,9 @@
 		"difficulty": 1
 	},
 	"casting": {
-		"_doc": "Jet d'incantation : un sort sans autre jet du lanceur (ni attaque de sort, ni opposition à la résistance de la cible) demande un jet de la réserve d'incantation contre le niveau du sort (1 pour un tour de magie). Raté, le sort ne part pas ; un échec critique déclenche ses contrecoups.",
-		"enabled": true
+		"_doc": "Jet d'incantation : un sort de dégâts est une attaque de sort contre le Couvert (ou l'Esquive naturelle) de chaque cible, un sort qui impose un état une opposition contre la résistance de la cible. Un sort sans cible à toucher (Bouclier, Appel du familier) demande un jet de la réserve d'incantation contre difficulty. Raté, le sort ne part pas ; un échec critique déclenche ses contrecoups.",
+		"enabled": true,
+		"difficulty": 1
 	},
 	"scrolls": {
 		"_doc": "Parchemins (items.json › use.spell) : compétence utilisée pour lancer leur sort, avec son meilleur attribut.",
@@ -252,11 +253,10 @@
 	},
 	"max_companions": 3,
 	"combat": {
-		"_doc": "actions_per_turn : actions par tour (les actions gardées deviennent des réactions jusqu'au tour suivant ; s'il en reste au début de son tour, on devient Préparé). dodge_divisor : Esquive naturelle = DEX ÷ dodge_divisor (au moins 1). prepared_dice : dés en plus quand on est Préparé. off_hand_penalty : dés en moins à l'attaque et aux dégâts de la main secondaire (aucun avec le style À deux armes). surprise_crit_bonus : succès comptés en plus pour le critique d'une attaque surprise. cover : Couvert des attaques à distance (base, minimum). throw_large_weight : poids à partir duquel un objet lancé (qui n'est pas une arme de lancer) compte comme une arme improvisée grande, sinon moyenne. gear_drop_chance : chance que chaque pièce d'équipement d'une créature équipée (creatures.json › equipment) tombe en butin.",
+		"_doc": "actions_per_turn : actions par tour (les actions gardées deviennent des réactions jusqu'au tour suivant ; s'il en reste au début de son tour, on devient Préparé). dodge_divisor : Esquive naturelle = DEX ÷ dodge_divisor (au moins 1). prepared_dice : dés en plus quand on est Préparé. surprise_crit_bonus : succès comptés en plus pour le critique d'une attaque surprise. cover : Couvert des attaques à distance (base, minimum). throw_large_weight : poids à partir duquel un objet lancé (qui n'est pas une arme de lancer) compte comme une arme improvisée grande, sinon moyenne. gear_drop_chance : chance que chaque pièce d'équipement d'une créature équipée (creatures.json › equipment) tombe en butin.",
 		"actions_per_turn": 2,
 		"dodge_divisor": 3,
 		"prepared_dice": 2,
-		"off_hand_penalty": 2,
 		"throw_large_weight": 5,
 		"gear_drop_chance": 0.5,
 		"surprise_crit_bonus": 2,

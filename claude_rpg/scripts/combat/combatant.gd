@@ -31,7 +31,7 @@ var last_attack_tens := 0  # 10 obtenus au dernier jet d'attaque (arme imprévis
 var fast_hands_used := false  # Mains lestes déjà utilisées ce tour
 var cunning_used := false  # Ruse (Se cacher sans dépenser d'action) déjà utilisée ce tour
 var fled := false  # a quitté le combat (créature lâche) : ni XP ni butin
-var shield_bashed := false  # a frappé avec son bouclier : il ne pare plus jusqu'à son prochain tour
+var parry_choice := ""  # objet choisi par le joueur pour la parade en cours ("" : le meilleur)
 var _hp := 0
 var _max_hp := 0
 
@@ -321,12 +321,22 @@ func action_variants(action: Dictionary) -> Array[Dictionary]:
 			result.append(Spellcasting.at_level(action, level))
 	if result.is_empty():
 		result.append(action)
-	if action.get("id") == "weapon_attack" and has_shield() and Equipment.def(character.equipment["off_hand"]).has("damage"):
-		var bash := action.duplicate(true)
-		bash["name"] = Loc.ui("Attaque et coup de bouclier")
-		bash["description"] = Loc.ui("Une attaque avec votre arme, puis un coup de bouclier (main secondaire) ; le bouclier ne pare plus jusqu'à votre prochain tour.")
-		bash["effects"] = [{"type": "attack", "weapon": true, "shield_bash": true}]
-		result.append(bash)
+	# Une arme (ou un bouclier) dans l'autre main : chaque Attaque se fait au choix avec l'une ou l'autre.
+	var off: String = character.equipment.get("off_hand", "") if character != null else ""
+	if action.get("id") == "weapon_attack" and off != "" and Equipment.def(off).has("damage"):
+		var second := action.duplicate(true)
+		second["name"] = Loc.ui("Attaque (%s)") % Items.name_of(off)
+		second["description"] = (Loc.ui("Un coup de bouclier.") if Equipment.is_shield(off)
+			else Loc.ui("Une attaque avec l'arme de votre main secondaire."))
+		second["effects"] = [{"type": "attack", "weapon": off, "off_hand": true, "ability": Equipment.ATTACK_ABILITY}]
+		result.append(second)
+		# Style À deux armes : frapper des deux mains dans la même action.
+		if has_modifier("two_weapon_fighting"):
+			var both := action.duplicate(true)
+			both["name"] = Loc.ui("Attaque des deux mains")
+			both["description"] = Loc.ui("Une attaque avec votre arme, puis une avec votre main secondaire (%s).") % Items.name_of(off)
+			both["effects"] = [{"type": "attack", "weapon": true, "both_hands": true}]
+			result.append(both)
 	# Munitions spéciales du sac (arc ou arbalète en main) : une variante par sorte de flèche.
 	if action.get("id") == "weapon_attack" and character != null and Equipment.has_property(character.weapon_id(), "ammunition"):
 		for item_id: String in character.inventory:
@@ -397,18 +407,28 @@ func parry_item(ranged := false) -> String:
 				if e.get("weapon") is String and Equipment.parry_of(e["weapon"]) >= 0:
 					return "" if ranged else e["weapon"]
 		return "" if ranged else Equipment.UNARMED
+	var options := parry_options(ranged)
+	if parry_choice in options:
+		return parry_choice
 	var off: String = character.equipment.get("off_hand", "")
-	if Equipment.is_shield(off):
-		if not shield_bashed:
-			return off
-		off = ""
-	if ranged:
-		return ""
+	if Equipment.is_shield(off) or options.is_empty():
+		return off if off in options else ""
 	var best := ""
-	for item: String in [character.weapon_id(), off]:
+	for item: String in options:
 		if parry_threshold(item) > parry_threshold(best):
 			best = item
 	return best
+
+
+## Objets d'un personnage qui peuvent parer (le joueur choisit : bouclier ou arme) ; un tir : le bouclier seul.
+func parry_options(ranged := false) -> Array[String]:
+	var result: Array[String] = []
+	if character == null:
+		return result
+	for item: String in [character.weapon_id(), character.equipment.get("off_hand", "")]:
+		if item != "" and item not in result and parry_threshold(item) >= 0 and (not ranged or Equipment.is_shield(item)):
+			result.append(item)
+	return result
 
 
 ## Seuil de parade de l'objet qui pare (-1 : il ne pare pas).
@@ -547,8 +567,7 @@ func attack_pool(effect: Dictionary) -> Dictionary:
 			pool = character.attack_pool("weapon", "", bonus)
 			pool["skill"] = _best_weapon_skill(character.weapon_id())
 		elif effect.get("weapon") is String:
-			pool = character.attack_pool(String(effect.get("ability", "weapon")), effect["weapon"],
-				-off_hand_penalty() if effect.get("off_hand", false) else 0)
+			pool = character.attack_pool(String(effect.get("ability", "weapon")), effect["weapon"])
 			pool["skill"] = _best_weapon_skill(effect["weapon"])
 		elif effect.get("ability") == "spell":
 			pool = character.attack_pool("spell")
@@ -634,8 +653,6 @@ func damage_pool(effect: Dictionary, attack: Dictionary = {}) -> Dictionary:
 				count += Modifiers.sum(mods, "improvised_damage")  # Bagarreur de taverne
 			elif off_hand_weapon() == "" and not two_handed_grip() and not Equipment.has_property(weapon, "ranged"):
 				count += Modifiers.sum(mods, "dueling")  # style À une main
-		if effect.get("off_hand", false):
-			count -= off_hand_penalty()
 		if effect.get("school") == "evocation" and has_modifier("empowered_evocation"):
 			count += 1
 	return {"count": count, "threshold": threshold}
@@ -688,22 +705,13 @@ func off_hand_weapon() -> String:
 	return item if item != "" and Equipment.is_weapon(item) and not Equipment.is_shield(item) else ""
 
 
-## Attaque de la main secondaire qui suit une attaque avec l'arme principale (une arme dans chaque main) :
-## l'effet d'attaque, ou {} s'il n'y en a pas.
+## Attaque de la main secondaire qui suit l'attaque de l'arme principale (« Attaque des deux mains », style
+## À deux armes) : l'effet d'attaque, ou {} s'il n'y en a pas.
 func off_hand_attack(effect: Dictionary) -> Dictionary:
-	if _uses_own_weapon(effect) and effect.get("shield_bash", false) and has_shield():
-		return {"type": "attack", "weapon": character.equipment["off_hand"], "off_hand": true, "ability": Equipment.ATTACK_ABILITY}
-	if not _uses_own_weapon(effect) or off_hand_weapon() == "":
+	var off: String = character.equipment.get("off_hand", "") if character != null else ""
+	if not _uses_own_weapon(effect) or not effect.get("both_hands", false) or off == "" or not Equipment.def(off).has("damage"):
 		return {}
-	return {"type": "attack", "weapon": off_hand_weapon(), "off_hand": true, "ability": Equipment.ATTACK_ABILITY}
-
-
-## Malus (en dés, à l'attaque et aux dégâts) de l'attaque de la main secondaire (rules.json › combat) ;
-## aucun avec le style À deux armes.
-func off_hand_penalty() -> int:
-	if has_modifier("two_weapon_fighting"):
-		return 0
-	return int(DB.rules.get("combat", {}).get("off_hand_penalty", 2))
+	return {"type": "attack", "weapon": off, "off_hand": true, "ability": Equipment.ATTACK_ABILITY}
 
 
 ## L'action n'est-elle faite que d'attaques au corps à corps (permises pendant la Rage) ?

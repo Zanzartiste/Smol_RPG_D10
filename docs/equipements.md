@@ -525,7 +525,7 @@ d'attaque). Une munition est consommée par tir. Les dégâts s'ajoutent à ceux
 - **Dégâts en plus** : 2d10 de feu, seuil 5.
 - **Effets** : brûlure (1 charge).
 - **Valeur** : 2 po.
-- **Où le trouver** : vendue par Armurerie de Gorvald.
+- **Où le trouver** : vendue par Armurerie de Gorvald ; fabriquée à l'alchimie (1 fiole d'huile + 1 po → 3 flèches).
 - **Description** : une flèche (ou un carreau) à la pointe enduite de poix : elle s'enflamme en touchant.
 
 ### Flèche de glace (`frost_arrow`)
@@ -534,7 +534,7 @@ d'attaque). Une munition est consommée par tir. Les dégâts s'ajoutent à ceux
 - **Dégâts en plus** : 2d10 de froid.
 - **Effets** : affaibli (1 charge).
 - **Valeur** : 2 po.
-- **Où le trouver** : vendue par Armurerie de Gorvald.
+- **Où le trouver** : vendue par Armurerie de Gorvald ; fabriquée à l'alchimie (1 herbe médicinale + 3 po, difficulté 2 → 3 flèches).
 - **Description** : une pointe de cristal glacé qui engourdit la cible.
 
 ### Flèche de foudre (`lightning_arrow`)
@@ -542,7 +542,7 @@ d'attaque). Une munition est consommée par tir. Les dégâts s'ajoutent à ceux
 - **Catégorie** : munition.
 - **Dégâts en plus** : 3d10 de foudre.
 - **Valeur** : 3 po.
-- **Où le trouver** : vendue par Armurerie de Gorvald.
+- **Où le trouver** : vendue par Armurerie de Gorvald ; fabriquée à la forge (1 minerai de fer + 3 po, difficulté 2 → 3 flèches).
 - **Description** : une pointe de cuivre gravée de runes qui libère un éclair à l'impact.
 
 ---
@@ -836,22 +836,30 @@ Tout bouclier donne +1 Armure et pare à 4, en mêlée comme contre un tir.
   couteau, dague, hachette, lance de fantassin) garde ses dégâts ; le reste compte comme une arme improvisée
   (moyenne, ou grande à partir de 5 de poids). L'objet est perdu pour le reste du combat et ramassé après une
   victoire (l'arme revient dans sa main si elle est libre).
-- **Munitions** : arcs et arbalètes tirent sans limite, sauf munitions spéciales (à venir).
-- **Coup de bouclier** (fait) : avec un bouclier, l'action « Attaque et coup de bouclier » ajoute après l'attaque
-  un coup de bouclier en main secondaire (5 dés, seuil FOR, contondant, −2 dés comme toute main secondaire). Choix
-  fait (à valider) : le bouclier qui a frappé ne pare plus jusqu'au prochain tour.
+- **Munitions** : arcs et arbalètes tirent sans limite, sauf munitions spéciales (faites, voir 2026-10-18).
+- **Coup de bouclier** (fait, remplacé le 2026-10-18) : voir « Combat à deux mains » dans les décisions du
+  2026-10-18.
 - Armes improvisées : où les trouver reste à décider.
 - Créatures armées : elles porteront armes et armures, avec l'encombrement (à faire).
 ## Décisions (2026-10-18)
 
-- **Coup de bouclier** : en attente d'une refonte du combat à deux armes, voir [questions_suite.md](questions_suite.md).
+- **Combat à deux mains** (fait) : avec une arme ou un bouclier en main secondaire, chaque action d'Attaque se fait
+  au choix avec l'arme principale ou avec la main secondaire (variante « Attaque (<objet>) » ; avec un bouclier,
+  c'est un coup de bouclier). Plus de seconde attaque automatique, plus de malus de main secondaire, plus de
+  bouclier qui ne pare plus après un coup. Le style À deux armes donne la variante « Attaque des deux mains »
+  (arme principale puis main secondaire, sans malus). Parade au choix : quand deux objets peuvent parer, le joueur
+  choisit lequel (un tir ne se pare qu'au bouclier). Intérêt tactique : deux armes de types de dégâts différents,
+  ou une arme et un bouclier.
 - **Fioles lancées** (fait) : un objet à `splash` (fiole d'huile, eau bénite) ou une potion (soins, antidote) se
-  brise quand on le lance et applique son effet si l'attaque touche. Il n'est pas rendu. Les autres objets lancés
+  brise quand on le lance : le jet de lancer sert à toucher, la fiole ne fait pas de dégâts par elle-même, puis
+  elle applique son effet si l'attaque touche. Il n'est pas rendu. Les autres objets lancés
   qui ne se brisent pas, après une fuite ou une défaite, restent sur place (fouiller les lieux d'un combat).
 - **Armes improvisées** (fait) : on peut les équiper (os de monstre, branche solide, grand saucisson : stats de
   l'arme improvisée moyenne). Le don Bagarreur de taverne ajoute des dés de dégâts avec elles.
 - **Munitions spéciales** (fait) : arcs et arbalètes tirent toujours sans limite avec des flèches ordinaires ; une
   munition spéciale du sac s'ajoute et se consomme à chaque tir. Pas de différence entre flèches et carreaux.
+  Elles se fabriquent : flèche de feu (alchimie, 1 fiole d'huile + 1 po → 3), flèche de glace (alchimie, 1 herbe
+  médicinale + 3 po, difficulté 2 → 3), flèche de foudre (forge, 1 minerai de fer + 3 po, difficulté 2 → 3).
 - **Créatures équipées** (fait) : voir [bestiaire.md](bestiaire.md).
 
 

@@ -91,7 +91,8 @@ chance de réussite (calculée exactement).
   INT → Érudition ; CHA → Persuasion) ; le seuil est cet attribut.
 - +1 dé par don Résistant, +1 par objet de protection.
 - Contre un **sort qui impose un état** (Sommeil) : opposition entre la compétence d'incantation du lanceur et la résistance de la
-  cible ; contre des **dégâts** (Mains brûlantes, Boule de feu) : chaque succès de résistance retire un point.
+  cible ; les sorts de dégâts (Mains brûlantes, Boule de feu) sont des attaques de sort, sans résistance
+  (la résistance qui retire un point par succès reste pour les autres dégâts, pièges et souffles).
 - C'est l'option B de [jets_de_sauvegarde.md](jets_de_sauvegarde.md), mise en place à titre provisoire.
 
 ## Points de vie
@@ -165,7 +166,8 @@ chance de réussite (calculée exactement).
   - Une arme à impact (haches) baisse de 1 le seuil de parade de l'adversaire.
   - Parade dangereuse (mains nues, poing américain, crochet) contre une arme qui ne l'est pas : 1 PV perdu par dé
     à 10, même si la parade réussit. Contre des crocs, des griffes ou des poings, aucun risque.
-  - Une parade par tour, ou une par main avec une arme (ou un bouclier) dans chaque main.
+  - Une parade par tour, ou une par main avec une arme (ou un bouclier) dans chaque main. Quand deux objets peuvent
+    parer, le joueur choisit lequel (un tir ne se pare qu'au bouclier).
   - On peut parer après une esquive qui n'a pas suffi.
 - **Contre-attaque** : avant le jet de l'attaquant. L'Esquive naturelle tombe à 0 pour les deux ; les deux font un
   jet d'attaque en opposition ; le plus de succès touche (égalité : l'attaquant initial), avec un critique selon
@@ -215,12 +217,13 @@ chance de réussite (calculée exactement).
   - sans peur : se bat jusqu'au bout.
   Une créature enfuie ne rapporte ni XP ni butin.
 - **Jet d'incantation** : un sort sans autre jet du lanceur (ni attaque de sort, ni effet à opposition contre la
-  réserve d'incantation ; les dégâts de zone à résistance DEX ne comptent pas) demande un jet de la réserve
-  d'incantation contre le niveau du sort (1 pour un tour de magie). Raté : le sort ne part pas, le mana est
+  réserve d'incantation) demande un jet de la réserve
+  d'incantation contre la difficulté `rules.json › casting › difficulty` (1, quel que soit le niveau du sort). Raté : le sort ne part pas, le mana est
   dépensé. Échec critique : contrecoups. L'IA pondère ses sorts par cette chance. Une difficulté variable selon la
   cible passe par une opposition (Sommeil). Détails : [magie.md](magie.md).
 - **Lancer une fiole** : un objet à effet de projection (`splash` : fiole d'huile, eau bénite) ou une potion
-  (soins, antidote) se brise quand on le lance et applique son effet si l'attaque touche. Il n'est pas rendu.
+  (soins, antidote) se brise quand on le lance : le jet de lancer sert à toucher, la fiole ne fait pas de dégâts
+  par elle-même (`no_damage`) et applique son effet si l'attaque touche. Il n'est pas rendu.
 - **Munitions spéciales** : avec un arc ou une arbalète en main, l'attaque peut consommer une munition du sac
   (flèche de feu, de glace, de foudre) qui ajoute ses dégâts et ses effets. Sans munition, c'est une flèche
   ordinaire, sans limite. Il n'y a pas de différence entre flèches et carreaux.
@@ -263,8 +266,10 @@ chance de réussite (calculée exactement).
   coupée. Degré d'un échec critique (aucun succès) = nombre de dés à 10 ; Chanceux le baisse de 1 (à 0, ce n'est plus qu'un
   échec). Recharge au repos long.
 - **Options d'affichage** (menu Options) : compétence et difficulté des tests, probabilité, choix verrouillés.
-- **Sorts** : attaque de sort contre le Couvert ; dégâts = rang de la compétence d'incantation (+ dés du sort) contre l'attribut
-  d'incantation + bonus ; les sorts de zone se résistent (DEX : chaque succès retire un point).
+- **Sorts** : un sort de dégâts est une attaque de sort contre le Couvert (ou l'Esquive naturelle) de chaque cible,
+  comme une attaque à l'arme (les sorts de zone attaquent chaque ennemi, sans résistance DEX) ; dégâts = rang de la
+  compétence d'incantation (+ dés du sort) contre l'attribut d'incantation + bonus. Un sort qui impose un état est
+  une opposition contre la résistance de la cible.
 - **Paliers** : les tours de magie gagnent un dé de dégâts aux niveaux 5, 11 et 17 ; l'Attaque sournoise ajoute un
   dé de dégâts par palier (1 au niveau 1, 6 au niveau 11).
 - **Emplacements de sort** (décision du 2026-10-14) : une seule réserve d'emplacements « de niveau 1 » ; lancer un
@@ -279,10 +284,12 @@ chance de réussite (calculée exactement).
   attaques sont des surprises, Couvert +1), Préparé (+2 dés), Enragé (Rage du Barbare : corps à corps seulement,
   succès des attaques doublés dans les deux sens).
 - **Critiques** : Attaques précises (Roublard) ajoute 3 dés de dégâts à une attaque critique.
-- **Deux armes** (pour tous) : une arme de corps à corps à une main peut se tenir en main secondaire (bouton « Main
-  secondaire » de l'inventaire). Chaque attaque de l'arme principale est alors suivie d'une attaque de la main
-  secondaire, avec ses propres jets, à deux dés de moins à l'attaque et aux dégâts (`combat › off_hand_penalty`) ;
-  le style À deux armes retire ce malus.
+- **Deux mains** (pour tous) : une arme de corps à corps à une main ou un bouclier peut se tenir en main secondaire
+  (bouton « Main secondaire » de l'inventaire). Chaque action d'Attaque se fait alors au choix avec l'arme principale
+  ou avec la main secondaire (variante « Attaque (<objet>) » ; avec un bouclier, c'est un coup de bouclier). Pas de
+  seconde attaque automatique ni de malus. Le style À deux armes ajoute la variante « Attaque des deux mains » :
+  l'arme principale puis la main secondaire, sans malus. L'intérêt est tactique : deux armes de types de dégâts
+  différents, ou une arme et un bouclier.
 - **Parchemins** : objets à usage unique qui lancent un sort, sans emplacement, avec la compétence Langues (et son
   meilleur attribut) à la place de la compétence d'incantation (`rules.json › scrolls`). Lire un parchemin coûte
   une action et débloque le Magicien pour les vies suivantes.
@@ -341,7 +348,7 @@ chance de réussite (calculée exactement).
 
 - Combat au rythme du clic (option) : le tour ennemi attend un clic n'importe où (ou Entrée / Espace), comme les
   dés, pas un clic sur un choix précis (fait). Il n'attend qu'au début du tour de chaque ennemi.
-- Lancer un objet, coup de bouclier : voir [equipements.md](equipements.md), « Décisions (2026-10-16) ».
+- Lancer un objet, coup de bouclier (devenu l'attaque de la main secondaire) : voir [equipements.md](equipements.md), « Décisions (2026-10-16) ».
 - Dégâts des sorts et contrecoups des échecs critiques : voir [magie.md](magie.md), « Décisions (2026-10-16,
   deuxième série) ».
 

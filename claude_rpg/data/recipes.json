@@ -5,5 +5,8 @@
 	{"id": "craft_longsword", "result": "longsword", "station": "forge", "materials": {"iron_ore": 2}, "gold": 1},
 	{"id": "craft_chain_mail", "result": "chain_mail", "station": "forge", "materials": {"iron_ore": 5}, "gold": 3, "difficulty": 2},
 	{"id": "craft_studded_leather", "result": "studded_leather", "station": "forge", "materials": {"wolf_pelt": 2, "iron_ore": 1}, "gold": 1, "difficulty": 2},
-	{"id": "brew_potion_heal", "result": "potion_heal", "station": "alchemy", "materials": {"healing_herbs": 2}, "gold": 2}
+	{"id": "brew_potion_heal", "result": "potion_heal", "station": "alchemy", "materials": {"healing_herbs": 2}, "gold": 2},
+	{"id": "brew_fire_arrow", "result": "fire_arrow", "count": 3, "station": "alchemy", "materials": {"flask_oil": 1}, "gold": 1},
+	{"id": "brew_frost_arrow", "result": "frost_arrow", "count": 3, "station": "alchemy", "materials": {"healing_herbs": 1}, "gold": 3, "difficulty": 2},
+	{"id": "craft_lightning_arrow", "result": "lightning_arrow", "count": 3, "station": "forge", "materials": {"iron_ore": 1}, "gold": 3, "difficulty": 2}
 ]

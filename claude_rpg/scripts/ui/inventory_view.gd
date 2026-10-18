@@ -232,7 +232,7 @@ func _fill_bag() -> void:
 			row.add_child(_small_button(tr("Équiper"), _on_equip.bind(item_id)))
 			if _member.can_dual_wield(item_id):
 				var second := _small_button(tr("Main secondaire"), _on_equip.bind(item_id, "off_hand"))
-				second.tooltip_text = tr("Tenir cette arme dans l'autre main : elle attaque après l'arme principale (−%d dés sans le style À deux armes).") % int(DB.rules.get("combat", {}).get("off_hand_penalty", 2))
+				second.tooltip_text = tr("Tenir cette arme dans l'autre main : chaque attaque se fait au choix avec l'une ou l'autre, et chacune peut parer (avec le style À deux armes, on frappe des deux mains).")
 				row.add_child(second)
 			var problem := _member.encumbrance_reason(item_id)
 			if problem != "":
