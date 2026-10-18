@@ -61,6 +61,10 @@
   baisse de 1.
 - **Torche** : dégâts de feu.
 - **De lancer** (pierres, shuriken, javelot) : armes à distance de la compétence Physique, sans munitions.
+- **Improvisée** (os de monstre, branche solide, grand saucisson) : arme improvisée qu'on peut équiper. Le don
+  Bagarreur de taverne ajoute des dés de dégâts avec elle.
+- **À flèches ou carreaux** (arcs et arbalètes) : peut tirer une munition spéciale du sac ; sans munition, tire des
+  flèches ordinaires, sans limite. Pas de différence entre flèches et carreaux.
 
 ---
 
@@ -158,6 +162,37 @@ Source : `docs/Classes.ods`, feuille « Feuille5 » (armes). Fiches générées 
 - **Poids** : 6 à une main, 4 à deux mains.
 - **Propriétés** : imprévisible (2).
 - **Où le trouver** : aucune pour l'instant (à placer).
+
+### Os de monstre (`monster_bone`)
+
+- **Compétence** : Armes de mêlée.
+- **Dégâts** : contondant, 5d10, seuil FOR.
+- **Parade** : 1.
+- **Poids** : 3 à une main, 2 à deux mains.
+- **Propriétés** : improvisée, imprévisible (1).
+- **Où le trouver** : butin de l'alpha des loups (une chance sur deux).
+- **Description** : un fémur épais arraché à une grosse bête : une massue de fortune.
+
+### Branche solide (`sturdy_branch`)
+
+- **Compétence** : Armes de mêlée.
+- **Dégâts** : contondant, 5d10, seuil FOR.
+- **Parade** : 1.
+- **Poids** : 3 à une main, 2 à deux mains.
+- **Propriétés** : improvisée, imprévisible (1).
+- **Où le trouver** : forêt des Murmures, « Chercher une branche solide » (Survie, 2 par semaine).
+- **Description** : une branche noueuse ramassée en forêt, assez lourde pour assommer.
+
+### Grand saucisson (`big_sausage`)
+
+- **Compétence** : Armes de mêlée.
+- **Dégâts** : contondant, 5d10, seuil FOR.
+- **Parade** : 1.
+- **Poids** : 3 à une main, 2 à deux mains.
+- **Propriétés** : improvisée, imprévisible (1).
+- **Valeur** : 1 po.
+- **Où le trouver** : butin des brigands (15 %).
+- **Description** : un saucisson sec long comme le bras, dur comme du bois. Il se mange aussi.
 
 ### Dague (`dagger`)
 
@@ -479,6 +514,39 @@ Source : `docs/Classes.ods`, feuille « Feuille5 » (armes). Fiches générées 
 
 ---
 
+## Munitions spéciales
+
+Elles se rangent dans le sac et se tirent avec un arc ou une arbalète (variante « Attaque par munition » de l'action
+d'attaque). Une munition est consommée par tir. Les dégâts s'ajoutent à ceux de l'arme.
+
+### Flèche de feu (`fire_arrow`)
+
+- **Catégorie** : munition.
+- **Dégâts en plus** : 2d10 de feu, seuil 5.
+- **Effets** : brûlure (1 charge).
+- **Valeur** : 2 po.
+- **Où le trouver** : vendue par Armurerie de Gorvald.
+- **Description** : une flèche (ou un carreau) à la pointe enduite de poix : elle s'enflamme en touchant.
+
+### Flèche de glace (`frost_arrow`)
+
+- **Catégorie** : munition.
+- **Dégâts en plus** : 2d10 de froid.
+- **Effets** : affaibli (1 charge).
+- **Valeur** : 2 po.
+- **Où le trouver** : vendue par Armurerie de Gorvald.
+- **Description** : une pointe de cristal glacé qui engourdit la cible.
+
+### Flèche de foudre (`lightning_arrow`)
+
+- **Catégorie** : munition.
+- **Dégâts en plus** : 3d10 de foudre.
+- **Valeur** : 3 po.
+- **Où le trouver** : vendue par Armurerie de Gorvald.
+- **Description** : une pointe de cuivre gravée de runes qui libère un éclair à l'impact.
+
+---
+
 ## Armures et vêtements
 
 Source : `equipements.md` (liste du 2026-10-15). Le poids compte dans l'encombrement.
@@ -774,6 +842,18 @@ Tout bouclier donne +1 Armure et pare à 4, en mêlée comme contre un tir.
   fait (à valider) : le bouclier qui a frappé ne pare plus jusqu'au prochain tour.
 - Armes improvisées : où les trouver reste à décider.
 - Créatures armées : elles porteront armes et armures, avec l'encombrement (à faire).
+## Décisions (2026-10-18)
+
+- **Coup de bouclier** : en attente d'une refonte du combat à deux armes, voir [questions_suite.md](questions_suite.md).
+- **Fioles lancées** (fait) : un objet à `splash` (fiole d'huile, eau bénite) ou une potion (soins, antidote) se
+  brise quand on le lance et applique son effet si l'attaque touche. Il n'est pas rendu. Les autres objets lancés
+  qui ne se brisent pas, après une fuite ou une défaite, restent sur place (fouiller les lieux d'un combat).
+- **Armes improvisées** (fait) : on peut les équiper (os de monstre, branche solide, grand saucisson : stats de
+  l'arme improvisée moyenne). Le don Bagarreur de taverne ajoute des dés de dégâts avec elles.
+- **Munitions spéciales** (fait) : arcs et arbalètes tirent toujours sans limite avec des flèches ordinaires ; une
+  munition spéciale du sac s'ajoute et se consomme à chaque tir. Pas de différence entre flèches et carreaux.
+- **Créatures équipées** (fait) : voir [bestiaire.md](bestiaire.md).
+
 
 ## Questions ouvertes
 

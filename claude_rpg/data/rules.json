@@ -122,7 +122,7 @@
 	],
 	"mana": {"_doc": "Réserve de mana (ressource spell_slot) = niveau de lanceur × per_caster_level ; un sort de niveau N coûte N mana, le manque se paie en PV.", "per_caster_level": 2},
 	"backlash": {
-		"_doc": "Contrecoups : quand le jet d'un sort (attaque, ou opposition contre une résistance) est un échec critique, on tire 1d10 sur cette table, une fois par dé à 10 (au plus max_rolls). N = niveau du sort lancé (1 pour un tour de magie). Effets : weather (change la météo du combat), heal / damage ({who: caster | random | all, dice: N + extra_dice, threshold, damage_type : id ou random}), mana (perd N mana), status ({who, status : id ou random parmi random_statuses, stacks}).",
+		"_doc": "Contrecoups : quand le jet d'un sort (attaque, ou opposition contre une résistance) est un échec critique, on tire 1d10 sur cette table, une fois par dé à 10 (au plus max_rolls) ; les lignes 6 à 10, de plus en plus fortes, frappent tout le monde avec un type de dégâts ou un état, auxquels on peut se préparer (résistances, immunités). N = niveau du sort lancé (1 pour un tour de magie). Effets : weather (change la météo du combat), heal / damage ({who: caster | random | all, dice: N + extra_dice, threshold, damage_type : id ou random}), mana (le lanceur perd N mana), status ({who, status : id ou random parmi random_statuses, stacks}).",
 		"max_rolls": 3,
 		"threshold": 4,
 		"random_statuses": ["poisoned", "burning", "weakened", "blinded", "frightened", "prone"],
@@ -132,11 +132,11 @@
 			{"text": "L'énergie du sort frappe un combattant au hasard.", "effects": [{"type": "damage", "who": "random", "damage_type": "random"}]},
 			{"text": "Le sort explose et frappe tout le monde.", "effects": [{"type": "damage", "who": "all", "damage_type": "random"}]},
 			{"text": "Une onde de vie parcourt le champ de bataille.", "effects": [{"type": "heal", "who": "all"}]},
-			{"text": "Le sort vous explose entre les mains.", "effects": [{"type": "damage", "who": "caster", "damage_type": "force", "extra_dice": 1}]},
-			{"text": "Votre mana fuit hors de vous.", "effects": [{"type": "mana"}]},
-			{"text": "Le sort se retourne contre vous.", "effects": [{"type": "status", "who": "caster", "status": "random", "stacks": 2}]},
-			{"text": "Une décharge d'adrénaline traverse tous les combattants.", "effects": [{"type": "status", "who": "all", "status": "prepared", "stacks": 1}]},
-			{"text": "La magie vous assomme.", "effects": [{"type": "status", "who": "caster", "status": "stunned", "stacks": 1}]}
+			{"text": "Une gerbe de flammes jaillit du sort raté et frappe tout le monde.", "effects": [{"type": "damage", "who": "all", "damage_type": "fire", "extra_dice": 1}]},
+			{"text": "Un souffle glacé balaie le champ de bataille.", "effects": [{"type": "damage", "who": "all", "damage_type": "cold", "extra_dice": 2}, {"type": "status", "who": "all", "status": "weakened", "stacks": 1}]},
+			{"text": "La foudre jaillit en arcs vers tous les combattants.", "effects": [{"type": "damage", "who": "all", "damage_type": "lightning", "extra_dice": 3}]},
+			{"text": "Un nuage de miasmes empoisonne tout le monde.", "effects": [{"type": "damage", "who": "all", "damage_type": "poison", "extra_dice": 3}, {"type": "status", "who": "all", "status": "poisoned", "stacks": 2}]},
+			{"text": "Le sort éclate dans un coup de tonnerre qui renverse tout le monde.", "effects": [{"type": "damage", "who": "all", "damage_type": "thunder", "extra_dice": 4}, {"type": "status", "who": "all", "status": "prone", "stacks": 1}]}
 		]
 	},
 	"spell_slots": {
@@ -185,6 +185,23 @@
 				[4, 3, 3, 3, 2],
 				[4, 3, 3, 3, 2]
 		]
+	},
+	"fled_enemies": {
+		"_doc": "Créatures qui fuient un combat : dans un lieu sauvage, elles peuvent revenir du lendemain jusqu'à days jours plus tard (chaque événement tiré dans le lieu a chance d'être leur retour), avec reinforcements créatures de plus (au plus max_enemies). Leur groupe (creatures.json › group) est prévenu pendant warn_days jours : un combat contre ce groupe (« group » sur le combat) compte un ennemi de plus, tous préparés au premier tour.",
+		"days": 7,
+		"chance": 0.35,
+		"reinforcements": 1,
+		"max_enemies": 4,
+		"warn_days": 7
+	},
+	"lost_items": {
+		"_doc": "Objets laissés sur place après une fuite ou une défaite (objets lancés) : on les retrouve en fouillant le lieu (Chercher… › Des ressources), test de skill contre difficulty ; une réussite en rend un, une réussite critique tous.",
+		"skill": "perception",
+		"difficulty": 1
+	},
+	"casting": {
+		"_doc": "Jet d'incantation : un sort sans autre jet du lanceur (ni attaque de sort, ni opposition à la résistance de la cible) demande un jet de la réserve d'incantation contre le niveau du sort (1 pour un tour de magie). Raté, le sort ne part pas ; un échec critique déclenche ses contrecoups.",
+		"enabled": true
 	},
 	"scrolls": {
 		"_doc": "Parchemins (items.json › use.spell) : compétence utilisée pour lancer leur sort, avec son meilleur attribut.",
@@ -235,12 +252,13 @@
 	},
 	"max_companions": 3,
 	"combat": {
-		"_doc": "actions_per_turn : actions par tour (les actions gardées deviennent des réactions jusqu'au tour suivant ; s'il en reste au début de son tour, on devient Préparé). dodge_divisor : Esquive naturelle = DEX ÷ dodge_divisor (au moins 1). prepared_dice : dés en plus quand on est Préparé. off_hand_penalty : dés en moins à l'attaque et aux dégâts de la main secondaire (aucun avec le style À deux armes). surprise_crit_bonus : succès comptés en plus pour le critique d'une attaque surprise. cover : Couvert des attaques à distance (base, minimum). throw_large_weight : poids à partir duquel un objet lancé (qui n'est pas une arme de lancer) compte comme une arme improvisée grande, sinon moyenne.",
+		"_doc": "actions_per_turn : actions par tour (les actions gardées deviennent des réactions jusqu'au tour suivant ; s'il en reste au début de son tour, on devient Préparé). dodge_divisor : Esquive naturelle = DEX ÷ dodge_divisor (au moins 1). prepared_dice : dés en plus quand on est Préparé. off_hand_penalty : dés en moins à l'attaque et aux dégâts de la main secondaire (aucun avec le style À deux armes). surprise_crit_bonus : succès comptés en plus pour le critique d'une attaque surprise. cover : Couvert des attaques à distance (base, minimum). throw_large_weight : poids à partir duquel un objet lancé (qui n'est pas une arme de lancer) compte comme une arme improvisée grande, sinon moyenne. gear_drop_chance : chance que chaque pièce d'équipement d'une créature équipée (creatures.json › equipment) tombe en butin.",
 		"actions_per_turn": 2,
 		"dodge_divisor": 3,
 		"prepared_dice": 2,
 		"off_hand_penalty": 2,
 		"throw_large_weight": 5,
+		"gear_drop_chance": 0.5,
 		"surprise_crit_bonus": 2,
 		"flee_difficulty": 2,
 		"ai_heal_below": 0.5,

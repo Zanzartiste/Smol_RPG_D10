@@ -17,6 +17,8 @@ const SCHEMA := {
 	"xp": ["amount"],
 	"ability": ["id", "amount"],
 	"add_item": ["id"],
+	"gather": ["location", "resource", "id"],  # {"location", "resource", "id", "count"?} : récolte limitée (gather › stock)
+	"find_lost": ["location"],  # {"location", "all"?} : retrouve un objet perdu du lieu (tous avec "all")
 	"remove_item": ["id"],
 	"goto": ["event"],
 	"random_event": ["location"],  # enchaîne sur un événement tiré au hasard dans ce lieu
@@ -99,6 +101,31 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 				var count := int(e.get("count", 1))
 				ch.add_item(e["id"], count)
 				lines.append(Loc.ui("Obtenu : %s ×%d") % [Items.name_of(e["id"]), count])
+			"gather":
+				var res := {"id": e["resource"]}
+				for r: Dictionary in DB.locations.get(e["location"], {}).get("gather", []):
+					if r["id"] == e["resource"]:
+						res = r
+				var left := life.gather_left(e["location"], res)
+				var count := int(e.get("count", 1)) if left < 0 else mini(int(e.get("count", 1)), left)
+				life.note_gathered(e["location"], e["resource"], count)
+				if count > 0:
+					ch.add_item(e["id"], count)
+					lines.append(Loc.ui("Obtenu : %s ×%d") % [Items.name_of(e["id"]), count])
+				else:
+					lines.append(Loc.ui("Il n'en reste plus cette semaine."))
+			"find_lost":
+				var here: Dictionary = life.lost_items.get(e["location"], {})
+				var found: Array[String] = []
+				for item_id: String in here.keys():
+					for i in int(here[item_id]):
+						found.append(item_id)
+				if not e.get("all", false) and not found.is_empty():
+					found = [found[life.rng.randi_range(0, found.size() - 1)]]
+				for item_id in found:
+					life.take_lost_item(e["location"], item_id)
+					ch.add_item(item_id)
+					lines.append(Loc.ui("Retrouvé : %s") % Items.name_of(item_id))
 			"remove_item":
 				var removed := ch.remove_item(e["id"], int(e.get("count", 1)))
 				if removed > 0:

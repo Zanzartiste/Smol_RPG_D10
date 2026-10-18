@@ -28,6 +28,7 @@ const TESTS := [
 	"_test_encumbrance",
 	"_test_weapon_properties",
 	"_test_throw_and_shield",
+	"_test_lost_items_and_stock",
 	"_test_new_species",
 	"_test_damage_types",
 	"_test_economy",
@@ -548,7 +549,7 @@ func _test_engine() -> bool:
 	_expect(Effects.apply_all([{"type": "random_event", "location": "forest"}], life, meta)["goto"] == "@forest",
 		"effet random_event : enchaîne sur un événement du lieu")
 	var gather := EventEngine.gather_event("forest")
-	_expect(EventEngine.gather_event("town").is_empty() and gather["choices"].size() == 3, "récolte : seulement dans les lieux sauvages")
+	_expect(EventEngine.gather_event("town").is_empty() and gather["choices"].size() == 4, "récolte : seulement dans les lieux sauvages")
 	var errors_gather: Array[String] = []
 	DataValidator._validate_event(DB, gather, errors_gather)
 	_expect(errors_gather.is_empty(), "récolte : un événement valide %s" % str(errors_gather))
@@ -1220,16 +1221,32 @@ func _test_backlash() -> bool:
 	_expect(beats.is_empty(), "pas de contrecoup hors d'un sort")
 	await combat.backlash(hero, 1, beats, 1)
 	_expect(combat.spec.has("weather"), "contrecoup 1 : la météo du combat change")
-	var mana := int(hero.character.resources["spell_slot"])
-	await combat.backlash(hero, 2, beats, 7)
-	_expect(int(hero.character.resources["spell_slot"]) == maxi(0, mana - 2), "contrecoup 7 : perte de [niveau] mana")
+	# Lignes 6 à 10 : tout le monde, de plus en plus fort, avec un type de dégâts auquel on peut résister.
+	var table: Array = DB.rules["backlash"]["table"]
+	for face in range(6, 11):
+		var effects: Array = table[face - 1]["effects"]
+		_expect(effects.all(func(e): return e.get("who") == "all"), "contrecoup %d : frappe tout le monde" % face)
+		_expect(face == 6 or int(effects[0].get("extra_dice", 0)) >= int(table[face - 2]["effects"][0].get("extra_dice", 0)),
+			"contrecoup %d : au moins aussi fort que le précédent" % face)
 	await combat.backlash(hero, 1, beats, 9)
-	_expect(combat.living("enemy").all(func(c): return c.is_prepared()) and hero.is_prepared(), "contrecoup 9 : tout le monde est préparé")
-	await combat.backlash(hero, 1, beats, 10)
-	_expect(hero.stacks("stunned") > 0, "contrecoup 10 : le lanceur est étourdi")
-	var before := hero.hp
-	await combat.backlash(hero, 3, beats, 6)
-	_expect(hero.hp <= before, "contrecoup 6 : le sort blesse le lanceur")
+	_expect(hero.stacks("poisoned") > 0 or not hero.is_alive(),
+		"contrecoup 9 : le lanceur aussi est empoisonné")
+	combat.hero.hp = combat.hero.max_hp()
+	# Jet d'incantation : seulement pour un sort sans autre jet du lanceur.
+	_expect(Combat.has_caster_roll(Actions.def("fire_bolt")) and Combat.has_caster_roll(Actions.def("sleep"))
+		and not Combat.has_caster_roll(Actions.def("magic_missile")) and not Combat.has_caster_roll(Actions.def("fireball")),
+		"jet d'incantation : attaques de sort et oppositions ont déjà leur jet")
+	_expect(combat.cast_chance(hero, Actions.def("magic_missile")) < 1.0 and combat.cast_chance(hero, Actions.def("prepare")) == 1.0,
+		"jet d'incantation : Projectile magique peut échouer, pas une action ordinaire")
+	var failed := 0
+	for i in 40:
+		beats.clear()
+		combat._begin_cast(Actions.def("magic_missile"))
+		if not combat._cast_check(hero, Actions.def("magic_missile"), beats):
+			failed += 1
+		combat._casting_level = 0
+		combat._cast_fumble = 0
+	_expect(failed > 0 and failed < 40, "jet d'incantation : Projectile magique réussit ou échoue")
 	Game.combat = null
 	return true
 
@@ -1271,6 +1288,119 @@ func _test_throw_and_shield() -> bool:
 	combat.actions_left = 2
 	await combat.perform(combat.hero, variants[1], combat.living("enemy")[0])
 	_expect(combat.hero.shield_bashed and combat.hero.parry_item(true) == "", "après un coup de bouclier, le bouclier ne pare plus")
+	Game.combat = null
+	return true
+
+
+func _test_lost_items_and_stock() -> bool:
+	# Fiole lancée : elle se brise (pas rendue), son effet s'applique si elle touche.
+	_expect(Items.splash_effects("flask_oil")[0]["status"] == "burning" and Items.splash_effects("potion_heal")[0]["type"] == "heal"
+		and Items.splash_effects("dagger").is_empty(), "fioles : huile, potion ; une dague ne se brise pas")
+	var hero_char := Character.create("human", "fighter", "Fioles")
+	hero_char.add_item("flask_oil", 1)
+	hero_char.add_item("javelin", 1)
+	Game.start_life(hero_char, 21)
+	Game.life.location = "forest"
+	var combat := Game.start_combat({"enemies": ["wolf"]})
+	combat.actions_left = 2
+	var oil: Dictionary = combat.throwables(combat.hero).filter(func(c): return c["id"] == "flask_oil")[0]
+	var beats: Array[Dictionary] = await combat.throw_item(combat.hero, oil, combat.living("enemy")[0])
+	_expect(combat.thrown.is_empty() and beats.any(func(b): return String(b["text"]).ends_with("se brise.")),
+		"fiole lancée : elle se brise")
+	await combat.throw_item(combat.hero, combat.throwables(combat.hero).filter(func(c): return c["id"] == "javelin")[0],
+		combat.enemies()[0])
+	combat.outcome = "fled"
+	Game.finish_combat()
+	_expect(Game.life.lost_items.get("forest", {}).get("javelin", 0) == 1 and hero_char.item_count("javelin") == 0,
+		"fuite : le javelot reste dans la forêt")
+	var ev := EventEngine.gather_event("forest", null, Game.life)
+	var search: Dictionary = ev["choices"][0]
+	_expect(search["id"] == "lost", "récolte : fouiller les lieux d'un combat")
+	EventEngine.resolve_choice(ev, search, Game.life, Meta, {"success": true, "critical": 0, "fumble": false})
+	_expect(hero_char.item_count("javelin") == 1 and not Game.life.lost_items.has("forest"), "objet perdu retrouvé et retiré de la liste")
+	_expect(EventEngine.gather_event("town", null, Game.life).is_empty(), "rien à fouiller en ville")
+	# Stock de la semaine : 6 herbes, puis épuisé ; il repousse au début de la semaine suivante.
+	ev = EventEngine.gather_event("forest", null, Game.life)
+	var herbs: Dictionary = ev["choices"].filter(func(c): return c["id"] == "herbs")[0]
+	for i in 4:
+		EventEngine.resolve_choice(ev, herbs, Game.life, Meta, {"success": true, "critical": 1, "fumble": false})
+	_expect(hero_char.item_count("healing_herbs") == 6 and Game.life.gather_left("forest", DB.locations["forest"]["gather"][0]) == 0,
+		"récolte : pas plus que le stock de la semaine")
+	herbs = EventEngine.gather_event("forest", null, Game.life)["choices"].filter(func(c): return c["id"] == "herbs")[0]
+	_expect(not herbs.has("check"), "récolte épuisée : plus de test")
+	var copy := LifeState.from_dict(JSON.parse_string(JSON.stringify(Game.life.to_dict())))
+	_expect(copy.gather_left("forest", DB.locations["forest"]["gather"][0]) == 0, "sauvegarde : récoltes de la semaine")
+	while Game.life.day < 8:
+		Game.life.advance_time(DB.slots_per_day())
+	_expect(Game.life.gather_left("forest", DB.locations["forest"]["gather"][0]) == 6, "nouvelle semaine : les herbes ont repoussé")
+	# Armes improvisées équipables : Bagarreur de taverne ajoute un dé.
+	var brawler := Character.create("human", "fighter", "Bagarreur")
+	brawler.equipment["main_hand"] = "big_sausage"
+	Game.start_life(brawler, 21)
+	combat = Game.start_combat({"enemies": ["wolf"]})
+	var attack: Dictionary = Actions.def("weapon_attack")["effects"][0]
+	var before := int(combat.hero.damage_pool(attack, combat.hero.attack_pool(attack))["count"])
+	brawler.feats.append("tavern_brawler")
+	_expect(Equipment.has_property("big_sausage", "improvised")
+		and int(combat.hero.damage_pool(attack, combat.hero.attack_pool(attack))["count"]) == before + 1,
+		"arme improvisée : +1 dé avec Bagarreur de taverne")
+	# Créatures équipées : Armure de l'armure portée, parade avec l'arme, encombrement, butin.
+	combat = Game.start_combat({"enemies": ["bandit"]})
+	var bandit := combat.enemies()[0]
+	_expect(bandit.armor() == Equipment.armor_value("leather") and bandit.parry_item() == "shortsword"
+		and bandit.creature_encumbrance() == 0, "brigand : armure de cuir, épée courte (à deux mains), pas encombré")
+	bandit.creature = bandit.creature.duplicate(true)
+	bandit.creature["equipment"]["armor"] = "chain_mail"
+	var heavy := ceili(Equipment.weight_of("chain_mail") + Equipment.weight_of("shortsword", true) - 4 - 5)
+	_expect(bandit.creature_encumbrance() == heavy and bandit.ability_score("dex") == maxi(0, 5 - heavy),
+		"brigand en cotte de mailles : encombré, DEX réduite")
+	var drops := 0
+	for i in 20:
+		combat = Game.start_combat({"enemies": ["bandit"]})
+		combat.outcome = "victory"
+		var lines: Array = Game.finish_combat()["lines"]
+		drops += lines.filter(func(l): return l == "Butin : Épée courte ×1" or l == "Butin : Armure de cuir ×1").size()
+	_expect(drops > 0 and drops < 40, "brigand : son équipement tombe parfois en butin")
+	Game.combat = null
+	# Ennemis enfuis : ils reviendront peut-être, avec du renfort ; leur camp est sur ses gardes.
+	Game.life.location = "forest"
+	combat = Game.start_combat({"enemies": ["bandit", "wolf"]})
+	combat.enemies()[0].fled = true
+	combat.outcome = "victory"
+	Game.finish_combat()
+	_expect(Game.life.revenge.size() == 1 and Game.life.revenge[0]["enemies"] == ["bandit", "bandit"]
+		and Game.life.is_warned("bandits"), "brigand enfui : retour possible avec un renfort, camp prévenu")
+	_expect(EventEngine.revenge_event("forest", Game.life).is_empty(), "pas de retour le jour même")
+	Game.life.day += 1
+	var back := {}
+	for i in 30:
+		back = EventEngine.revenge_event("forest", Game.life)
+		if not back.is_empty():
+			break
+	_expect(not back.is_empty() and back["choices"][0]["outcome"]["effects"][0]["enemies"] == ["bandit", "bandit"]
+		and Game.life.revenge.is_empty(), "les fuyards reviennent une fois")
+	combat = Game.start_combat({"enemies": ["bandit", "bandit", "bandit_mender"], "group": "bandits"})
+	_expect(combat.enemies().size() == 4 and combat.enemies().all(func(e): return e.is_prepared()),
+		"camp prévenu : un brigand de plus, tous préparés")
+	Game.life.day += 8
+	combat = Game.start_combat({"enemies": ["bandit", "bandit", "bandit_mender"], "group": "bandits"})
+	_expect(combat.enemies().size() == 3, "le camp oublie au bout d'une semaine")
+	var copy2 := LifeState.from_dict(JSON.parse_string(JSON.stringify(Game.life.to_dict())))
+	_expect(copy2.warned.has("bandits"), "sauvegarde : groupes prévenus")
+	Game.combat = null
+	# Munitions spéciales : une variante d'Attaque par sorte de flèche, avec ses dégâts en plus.
+	var archer := Character.create("human", "fighter", "Archère")
+	archer.equipment["main_hand"] = "longbow"
+	archer.equipment.erase("off_hand")
+	archer.add_item("fire_arrow", 1)
+	Game.start_life(archer, 21)
+	combat = Game.start_combat({"enemies": ["dire_wolf"]})
+	var shots := combat.hero.action_variants(Actions.def("weapon_attack")).filter(func(v): return v["effects"][0].has("ammo"))
+	_expect(shots.size() == 1 and combat.hero.bonus_damage(shots[0]["effects"][0]).any(func(p): return p["damage_type"] == "fire"),
+		"flèche de feu : variante d'attaque avec dégâts de feu")
+	combat.actions_left = 2
+	await combat.perform(combat.hero, shots[0], combat.living("enemy")[0])
+	_expect(archer.item_count("fire_arrow") == 0, "flèche de feu : consommée au tir")
 	Game.combat = null
 	return true
 

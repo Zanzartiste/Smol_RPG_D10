@@ -43,6 +43,7 @@ const ATTACK_ABILITY := "dex"  # attribut d'attaque de toutes les armes
 const PROPERTY_NAMES := {
 	"ranged": "à distance", "two_handed": "à deux mains", "thrown": "de lancer", "dangerous_parry": "parade dangereuse",
 	"impact": "à impact", "reach": "allonge", "assassin": "assassine", "crossbow": "arbalète",
+	"improvised": "improvisée", "ammunition": "à flèches ou carreaux",
 }
 const ARMOR_TYPE_NAMES := {"clothing": "vêtement", "light": "légère", "medium": "intermédiaire", "heavy": "lourde"}
 

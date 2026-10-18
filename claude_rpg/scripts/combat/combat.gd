@@ -81,6 +81,9 @@ func _init(combat_spec: Dictionary, life_state: LifeState) -> void:
 		if enemy_ids.count(id) > 1:
 			label += " " + "ABCDEFGH"[enemy_ids.slice(0, i).count(id)]
 		_add(Combatant.from_creature(id, label, "enemy"))
+	if spec.get("prepared_enemies", false):
+		for e in enemies():
+			e.add_status("prepared", 1)
 	_roll_initiative()
 
 
@@ -341,6 +344,8 @@ func perform(actor: Combatant, action: Dictionary, target: Combatant = null) -> 
 		return beats
 	_begin_cast(action)
 	var attacks := 1 + (actor.extra_attacks() if action.get("attack_action", false) else 0)
+	if not _cast_check(actor, action, beats):
+		attacks = 0
 	for i in attacks:
 		if i > 0:
 			if actor.reload_left > 0:
@@ -352,13 +357,27 @@ func perform(actor: Combatant, action: Dictionary, target: Combatant = null) -> 
 				others.sort_custom(func(a, b): return a.hp < b.hp)
 				target = others[0]
 			_beat(beats, Loc.ui("%s : attaque supplémentaire.") % actor.name)
-		beats.append_array(await _resolve(actor, action.get("effects", []), action.get("target", "enemy"), target,
-			not actor.is_player_controlled()))
+		beats.append_array(await _resolve(actor, _with_ammo(actor, action.get("effects", []), beats),
+			action.get("target", "enemy"), target, not actor.is_player_controlled()))
 		if is_over():
 			break
 	await _end_cast(actor, beats)
 	_check_end()
 	return beats
+
+
+## Munition spéciale ("ammo" sur l'attaque) : en tire une du sac et ajoute ses effets (s'il en manque, une
+## flèche ordinaire).
+func _with_ammo(actor: Combatant, effects: Array, beats: Array[Dictionary]) -> Array:
+	if effects.is_empty() or not effects[0].has("ammo") or actor.character == null:
+		return effects
+	var ammo: String = effects[0]["ammo"]
+	if actor.character.remove_item(ammo) <= 0:
+		var plain: Dictionary = effects[0].duplicate()
+		plain.erase("ammo")
+		_beat(beats, Loc.ui("Plus de munition spéciale : flèche ordinaire."))
+		return [plain] + effects.slice(1)
+	return effects + Items.ammo_of(ammo).get("effects", [])
 
 
 ## Utilise un objet de l'inventaire du héros (soins, antidote…).
@@ -395,8 +414,9 @@ func _read_scroll(actor: Combatant, item: Dictionary, target: Combatant) -> Arra
 		actor.character.spell_override = String(DB.rules.get("scrolls", {}).get("skill", "languages"))
 	if not await _counterspell(actor, spell, beats):
 		_begin_cast(spell)
-		beats.append_array(await _resolve(actor, spell.get("effects", []), spell.get("target", "enemy"), target,
-			not actor.is_player_controlled()))
+		if _cast_check(actor, spell, beats):
+			beats.append_array(await _resolve(actor, spell.get("effects", []), spell.get("target", "enemy"), target,
+				not actor.is_player_controlled()))
 		await _end_cast(actor, beats)
 	if actor.character != null:
 		actor.character.spell_override = ""
@@ -431,7 +451,9 @@ static func throw_weapon(item_id: String) -> String:
 
 
 ## Lance un objet (une action) : une attaque à distance avec l'arme de lancer. L'objet est perdu pour le reste
-## du combat, et rendu après une victoire (voir recover_thrown). `choice` : une entrée de throwables().
+## du combat, et rendu après une victoire (voir recover_thrown) ; après une fuite ou une défaite, il reste sur
+## place (LifeState.lost_items). Une fiole (Items.splash_effects) se brise et applique son effet si elle touche.
+## `choice` : une entrée de throwables().
 func throw_item(actor: Combatant, choice: Dictionary, target: Combatant) -> Array[Dictionary]:
 	actions_left -= 1
 	var item_id: String = choice["id"]
@@ -440,13 +462,17 @@ func throw_item(actor: Combatant, choice: Dictionary, target: Combatant) -> Arra
 		actor.character.unequip(slot)
 	else:
 		life.character.remove_item(item_id)
-	thrown.append({"owner": actor.character if slot != "" else life.character, "id": item_id, "slot": slot})
+	var splash := Items.splash_effects(item_id)
+	if splash.is_empty():
+		thrown.append({"owner": actor.character if slot != "" else life.character, "id": item_id, "slot": slot})
 	var weapon := throw_weapon(item_id)
 	var beats: Array[Dictionary] = []
 	_beat(beats, Loc.ui("%s lance : %s%s.") % [actor.name, Items.name_of(item_id),
 		Loc.ui(" (arme improvisée)") if weapon != item_id else ""])
 	var effect := {"type": "attack", "weapon": weapon, "ranged": true, "ability": Equipment.ATTACK_ABILITY, "thrown": item_id}
-	beats.append_array(await _resolve(actor, [effect], "enemy", target, not actor.is_player_controlled()))
+	beats.append_array(await _resolve(actor, [effect] + splash, "enemy", target, not actor.is_player_controlled()))
+	if not splash.is_empty():
+		_beat(beats, Loc.ui("%s se brise.") % Items.name_of(item_id))
 	_check_end()
 	return beats
 
@@ -534,7 +560,8 @@ func ai_turn(actor: Combatant) -> Array[Dictionary]:
 		_beat(beats, Loc.ui("%s : %s.") % [actor.name, action["name"]])
 		if not await _counterspell(actor, action, beats):
 			_begin_cast(action)
-			beats.append_array(await _resolve(actor, action.get("effects", []), target_mode, chosen, not actor.is_ally()))
+			if _cast_check(actor, action, beats):
+				beats.append_array(await _resolve(actor, action.get("effects", []), target_mode, chosen, not actor.is_ally()))
 			await _end_cast(actor, beats)
 		_check_end()
 	return beats
@@ -686,7 +713,7 @@ func _action_score(actor: Combatant, action: Dictionary) -> float:
 		score *= 0.9
 	if action.has("slot_level"):
 		score *= 1.0 - 0.08 * (int(action["slot_level"]) - int(action.get("spell_level", 1)))
-	return score
+	return score * cast_chance(actor, action)
 
 
 # --- Résolution des effets ---------------------------------------------------
@@ -1205,6 +1232,43 @@ func _resists(actor: Combatant, target: Combatant, resist: Dictionary, beats: Ar
 func _begin_cast(action: Dictionary) -> void:
 	_casting_level = maxi(1, Spellcasting.cost_of(action)) if Spellcasting.is_spell(action) else 0
 	_cast_fumble = 0
+
+
+## Le sort contient-il déjà un jet du lanceur : une attaque de sort, ou un effet auquel la cible résiste par
+## opposition à la réserve d'incantation (pas des dégâts de zone, que la cible réduit sans opposition) ?
+static func has_caster_roll(action: Dictionary) -> bool:
+	for e: Dictionary in action.get("effects", []):
+		if e.get("type") == "attack" and e.get("ability") == "spell":
+			return true
+		if e.has("resist") and e.get("type") != "damage" and not e["resist"].has("skill"):
+			return true
+	return false
+
+
+## Jet d'incantation d'un sort sans autre jet du lanceur (rules.json › casting) : la réserve d'incantation
+## contre le niveau du sort (1 pour un tour de magie). Raté, le sort ne part pas (le mana est dépensé) ; un
+## échec critique déclenche ses contrecoups. Retourne true si le sort part.
+func _cast_check(actor: Combatant, action: Dictionary, beats: Array[Dictionary]) -> bool:
+	if _casting_level == 0 or has_caster_roll(action) or not DB.rules.get("casting", {}).get("enabled", true):
+		return true
+	var pool := actor.spell_pool()
+	var roll := Dice.roll_pool(rng, int(pool["count"]), int(pool["threshold"]))
+	var judged := Dice.judge(int(roll["successes"]), _casting_level, 0, roll["dice"])
+	if not judged["success"] and judged["fumble"]:
+		_note_fumble(int(judged["fumble_level"]))
+	_beat(beats, Loc.ui("%s lance le sort : %d succès contre %d — %s") % [actor.name, int(roll["successes"]),
+		_casting_level, Loc.ui("réussi") if judged["success"] else Loc.ui("le sort échoue")],
+		_roll_info(Loc.ui("Incantation (%s)") % actor.name, roll, judged, Loc.ui("Niveau du sort")),
+		not actor.is_player_controlled())
+	return judged["success"]
+
+
+## Chance qu'un sort parte (1 s'il a un autre jet du lanceur, ou si ce n'est pas un sort).
+func cast_chance(actor: Combatant, action: Dictionary) -> float:
+	if not Spellcasting.is_spell(action) or has_caster_roll(action) or not DB.rules.get("casting", {}).get("enabled", true):
+		return 1.0
+	var pool := actor.spell_pool()
+	return Dice.chance(int(pool["count"]), int(pool["threshold"]), maxi(1, Spellcasting.cost_of(action)))
 
 
 ## Un jet du sort en cours est un échec critique de degré `level` (0 : rien).

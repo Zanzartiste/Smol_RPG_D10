@@ -74,11 +74,16 @@ static func hunt_event(location_id: String, rng: RandomNumberGenerator) -> Dicti
 		var more: Array = enemies + ([hunt["extra"]] if hunt.has("extra") else [])
 		var ambush := _mishap_effects(location_id)
 		var ambush_more := _ambush_effects(location_id, rng, 1)
+		var fight := func(group: Array) -> Dictionary:
+			var spec := {"type": "combat", "enemies": group}
+			if hunt.has("group"):
+				spec["group"] = hunt["group"]
+			return spec
 		choices.append({"id": hunt["id"], "text": Loc.ui("Chercher %s") % hunt["name"],
 			"check": {"skill": hunt.get("skill", "survival"), "difficulty": int(hunt.get("difficulty", 2))},
 			"critical_success": {"text": Loc.ui("Vous les trouvez… et ils sont plus nombreux que prévu."),
-				"effects": [{"type": "combat", "enemies": more}]},
-			"success": {"text": Loc.ui("Vous trouvez ce que vous cherchiez."), "effects": [{"type": "combat", "enemies": enemies}]},
+				"effects": [fight.call(more)]},
+			"success": {"text": Loc.ui("Vous trouvez ce que vous cherchiez."), "effects": [fight.call(enemies)]},
 			"failure": {"text": Loc.ui("Vous ne trouvez pas leur trace… mais vous tombez sur autre chose.") if not ambush.is_empty()
 				else Loc.ui("Vous ne trouvez aucune trace."), "effects": ambush},
 			"critical_failure": {"text": Loc.ui("Vous vous faites surprendre !") if not ambush_more.is_empty()
@@ -108,8 +113,32 @@ static func ambush_event(location_id: String, rng: RandomNumberGenerator, text: 
 		"choices": [{"id": "fight", "text": Loc.ui("Se défendre"), "outcome": {"text": "", "effects": effects}}]}
 
 
+## Retour d'ennemis enfuis (LifeState.revenge) : dans les jours qui suivent la fuite, chaque événement du lieu a
+## une chance (rules.json › fled_enemies › chance) d'être leur retour, avec des renforts. {} sinon.
+static func revenge_event(location_id: String, life: LifeState) -> Dictionary:
+	life.revenge = life.revenge.filter(func(r): return int(r["until"]) >= life.day)
+	for r: Dictionary in life.revenge:
+		if r["location"] != location_id or int(r["from"]) > life.day:
+			continue
+		if life.rng.randf() >= float(DB.rules.get("fled_enemies", {}).get("chance", 0.35)):
+			return {}
+		life.revenge.erase(r)
+		var names := PackedStringArray()
+		for id: String in r["enemies"]:
+			if Creatures.name_of(id) not in names:
+				names.append(Creatures.name_of(id))
+		return {"id": "revenge_" + location_id, "location": null, "title": Loc.ui("Ils sont revenus"),
+			"text": Loc.ui("Ceux qui vous avaient échappé ne vous ont pas oublié(e) : %s, et ils ont amené du renfort.") % ", ".join(names).to_lower(),
+			"choices": [{"id": "fight", "text": Loc.ui("Se défendre"), "outcome": {"text": "",
+				"effects": [{"type": "combat", "enemies": r["enemies"]}]}}]}
+	return {}
+
+
 ## Tirage pondéré parmi les événements éligibles du lieu.
 static func pick_event(location_id: String, life: LifeState, meta: MetaState) -> Dictionary:
+	var back := revenge_event(location_id, life)
+	if not back.is_empty():
+		return back
 	var pool := eligible_events(location_id, life, meta)
 	if pool.is_empty():
 		return fallback_event(location_id)
@@ -163,26 +192,43 @@ static func visible_choices(ev: Dictionary, life: LifeState, meta: MetaState,
 ## (réussite : la ressource ; réussite critique : le double ; échec critique : une blessure), puis Retour.
 ## Ressource : {"id", "name", "item", "count"? (1), "skill", "ability"?, "difficulty", "failure"?, "fumble"?,
 ## "fumble_hp"?}. Retourne {} si le lieu n'a rien à récolter.
-static func gather_event(location_id: String, rng: RandomNumberGenerator = null) -> Dictionary:
+static func gather_event(location_id: String, rng: RandomNumberGenerator = null, life: LifeState = null) -> Dictionary:
 	if rng == null:
 		rng = RandomNumberGenerator.new()
 	var location: Dictionary = DB.locations.get(location_id, {})
 	var resources: Array = location.get("gather", [])
-	if resources.is_empty():
+	var lost: Dictionary = life.lost_items.get(location_id, {}) if life != null else {}
+	if resources.is_empty() and lost.is_empty():
 		return {}
 	var choices: Array = []
+	if not lost.is_empty():
+		var search: Dictionary = DB.rules.get("lost_items", {})
+		choices.append({"id": "lost", "text": Loc.ui("Fouiller les lieux d'un combat (objets laissés sur place)"),
+			"check": {"skill": search.get("skill", "perception"), "difficulty": int(search.get("difficulty", 1))},
+			"critical_success": {"text": Loc.ui("Vous retrouvez tout ce que vous aviez laissé."),
+				"effects": [{"type": "find_lost", "location": location_id, "all": true}]},
+			"success": {"text": Loc.ui("Vous retrouvez quelque chose."), "effects": [{"type": "find_lost", "location": location_id}]},
+			"failure": {"text": Loc.ui("Vous ne retrouvez rien."), "effects": []}})
 	for res: Dictionary in resources:
 		var count := int(res.get("count", 1))
+		var left := life.gather_left(location_id, res) if life != null else -1
+		if left == 0:
+			choices.append({"id": res["id"], "text": Loc.ui("%s (épuisé cette semaine)") % res["name"],
+				"outcome": {"text": Loc.ui("Il n'en reste plus ici : il faudra attendre la semaine prochaine."), "effects": []}})
+			continue
 		var check := {"skill": res["skill"], "difficulty": int(res.get("difficulty", 1))}
 		if res.has("ability"):
 			check["ability"] = res["ability"]
-		var got := Loc.ui("Vous récoltez : %s ×%d.")
+		var take := func(n: int) -> Dictionary:
+			if res.has("stock"):
+				return {"type": "gather", "location": location_id, "resource": res["id"], "id": res["item"], "count": n}
+			return {"type": "add_item", "id": res["item"], "count": n}
 		choices.append({
-			"id": res["id"], "text": res["name"], "check": check,
-			"critical_success": {"text": got % [Items.name_of(res["item"]), count * 2],
-				"effects": [{"type": "add_item", "id": res["item"], "count": count * 2}]},
-			"success": {"text": got % [Items.name_of(res["item"]), count],
-				"effects": [{"type": "add_item", "id": res["item"], "count": count}]},
+			"id": res["id"], "text": res["name"] + (Loc.ui(" (reste %d cette semaine)") % left if left > 0 else ""), "check": check,
+			"critical_success": {"text": Loc.ui("Vous trouvez de quoi faire une belle récolte."),
+				"effects": [take.call(count * 2)]},
+			"success": {"text": Loc.ui("Vous trouvez ce que vous cherchiez."),
+				"effects": [take.call(count)]},
 			"failure": {"text": res.get("failure", Loc.ui("Vous rentrez bredouille.")), "effects": _mishap_effects(location_id)},
 			"critical_failure": {"text": res.get("fumble", Loc.ui("Vous vous blessez.")),
 				"effects": [{"type": "hp", "amount": int(res.get("fumble_hp", -1)), "cause": Loc.ui("Mort en cherchant des ressources")}]

@@ -9,15 +9,18 @@
 		"encounters": [["wolf"], ["wolf", "wolf"], ["bandit", "bandit"], ["giant_rat", "giant_rat"]],
 		"hunt": [
 			{"id": "wolves", "name": "des loups", "skill": "survival", "difficulty": 2, "enemies": ["wolf"], "extra": "wolf"},
-			{"id": "bandits", "name": "le camp des brigands", "skill": "survival", "difficulty": 3, "enemies": ["bandit", "bandit", "bandit_mender"], "extra": "bandit"}
+			{"id": "bandits", "name": "le camp des brigands", "skill": "survival", "difficulty": 3, "enemies": ["bandit", "bandit", "bandit_mender"], "extra": "bandit", "group": "bandits"}
 		],
 		"stranger_difficulty": 3,
 		"gather": [
-			{"id": "herbs", "name": "Cueillir des plantes médicinales", "item": "healing_herbs", "count": 1,
+			{"id": "herbs", "name": "Cueillir des plantes médicinales", "item": "healing_herbs", "count": 1, "stock": 6,
 				"skill": "potions_cooking", "ability": "wis", "difficulty": 1,
 				"failure": "Vous ne trouvez que des orties et du chiendent.", "fumble": "Vous vous écorchez dans un roncier.", "fumble_hp": -2},
 			{"id": "snares", "name": "Poser des collets", "item": "wolf_pelt", "count": 1, "skill": "survival", "difficulty": 2,
-				"failure": "Les collets restent vides.", "fumble": "Un collet se referme sur votre main.", "fumble_hp": -2}
+				"failure": "Les collets restent vides.", "fumble": "Un collet se referme sur votre main.", "fumble_hp": -2},
+			{"id": "branch", "name": "Chercher une branche solide (arme improvisée)", "item": "sturdy_branch", "count": 1, "stock": 2,
+				"skill": "survival", "difficulty": 1,
+				"failure": "Tout ce que vous trouvez casse sous la main.", "fumble": "Une branche morte vous tombe dessus.", "fumble_hp": -1}
 		]},
 	{"id": "home", "name": "Chez soi", "description": "Se reposer et panser ses plaies.", "art": "home",
 		"rest": {"type": "home", "name": "Dormir chez soi"}}

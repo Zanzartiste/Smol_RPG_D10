@@ -444,8 +444,8 @@ func _show_search_menu(location_id: String) -> void:
 			_show_absent_known.bind(location_id))
 	if not DB.locations[location_id].get("hunt", []).is_empty():
 		_add_choice(tr("Une créature précise (chasse)"), func(): _show_event(EventEngine.hunt_event(location_id, Game.life.rng)))
-	if not EventEngine.gather_event(location_id).is_empty():
-		_add_choice(tr("Des ressources"), func(): _show_event(EventEngine.gather_event(location_id, Game.life.rng)))
+	if not EventEngine.gather_event(location_id, null, Game.life).is_empty():
+		_add_choice(tr("Des ressources"), func(): _show_event(EventEngine.gather_event(location_id, Game.life.rng, Game.life)))
 	_add_choice(tr("Retour"), _show_location_menu.bind(location_id))
 
 

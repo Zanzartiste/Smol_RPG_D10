@@ -214,6 +214,24 @@ chance de réussite (calculée exactement).
   - meute : elle peut fuir quand son chef (`leader`) tombe, ou quand la moitié des siens est hors de combat ;
   - sans peur : se bat jusqu'au bout.
   Une créature enfuie ne rapporte ni XP ni butin.
+- **Jet d'incantation** : un sort sans autre jet du lanceur (ni attaque de sort, ni effet à opposition contre la
+  réserve d'incantation ; les dégâts de zone à résistance DEX ne comptent pas) demande un jet de la réserve
+  d'incantation contre le niveau du sort (1 pour un tour de magie). Raté : le sort ne part pas, le mana est
+  dépensé. Échec critique : contrecoups. L'IA pondère ses sorts par cette chance. Une difficulté variable selon la
+  cible passe par une opposition (Sommeil). Détails : [magie.md](magie.md).
+- **Lancer une fiole** : un objet à effet de projection (`splash` : fiole d'huile, eau bénite) ou une potion
+  (soins, antidote) se brise quand on le lance et applique son effet si l'attaque touche. Il n'est pas rendu.
+- **Munitions spéciales** : avec un arc ou une arbalète en main, l'attaque peut consommer une munition du sac
+  (flèche de feu, de glace, de foudre) qui ajoute ses dégâts et ses effets. Sans munition, c'est une flèche
+  ordinaire, sans limite. Il n'y a pas de différence entre flèches et carreaux.
+- **Créatures équipées** : certaines créatures portent armes, armure et bouclier (brigand, rebouteux). Leur Armure
+  vaut leur armure propre plus celle qu'elles portent ; elles parent avec leur arme ou leur bouclier ; l'encombrement
+  s'applique comme pour un personnage (DEX en moins). Chaque pièce a une chance sur deux de tomber en butin, en bon
+  état (`gear_drop_chance`).
+- **Ennemis enfuis** : dans un lieu sauvage, ils peuvent revenir du lendemain jusqu'à 7 jours plus tard (chaque
+  événement tiré dans le lieu a 35 % de chances d'être leur retour), avec 1 renfort (4 ennemis au plus). Rien n'est
+  certain. Leur groupe (ex. les bandits) est prévenu pendant 7 jours : un combat contre ce groupe compte un ennemi
+  de plus, et tous les ennemis sont préparés au premier tour (camp des brigands, chasse au camp).
 - **IA des ennemis** : les chasseurs (`"ai": "hunter"`) visent le plus faible, les brutes frappent au hasard.
   Soigner ne sert que si un allié est sous 50 % de ses PV, protéger que sous 75 % ; ces actions deviennent alors
   prioritaires et visent l'allié le plus mal en point (`ai_heal_below`, `ai_protect_below`, `ai_support_bonus`).
@@ -285,6 +303,12 @@ chance de réussite (calculée exactement).
 - **Talent fiable** (Roublard) : un test d'une compétence entraînée a toujours au moins un succès.
 - **Récolte** (« Chercher des ressources », lieux sauvages, `locations.json › gather`) : un test par ressource ;
   réussite : la ressource ; critique : le double ; échec critique : une petite blessure.
+- **Ressources limitées** : chaque ressource peut avoir un `stock` (maximum par semaine). Le compte est remis à
+  zéro au début de chaque semaine (jours 1, 8, 15…). Un choix épuisé s'affiche « (épuisé cette semaine) ».
+  Forêt : herbes 6 par semaine, branche solide 2.
+- **Objets perdus** : après une fuite ou une défaite, les objets lancés qui ne se sont pas brisés restent sur les
+  lieux du combat. « Chercher… › Des ressources › Fouiller les lieux d'un combat » : Perception contre une
+  difficulté de 1 ; réussite : un objet au hasard, critique : tous. Ce qu'on retrouve sort de la liste.
 - **Demandes des PNJ** (« Proposer ses services ») : le PNJ confie une demande de son métier (`npc_roles.json ›
   requests`) qui devient une quête ; « Remettre la commande » rapporte l'or promis et de l'amitié. Une demande à la
   fois par PNJ, trois jours entre deux.

@@ -137,10 +137,24 @@ Plusieurs sources peuvent coexister ; lesquelles garder ?
   3. Un combattant au hasard subit N d10 ≤ 4 dégâts d'un type au hasard.
   4. Tout le monde subit N d10 ≤ 4 dégâts d'un type au hasard.
   5. Tout le monde récupère N d10 ≤ 4 PV.
-  6. (proposition) Le sort explose : le lanceur subit N + 1 d10 ≤ 4 dégâts de force.
-  7. (proposition) Le lanceur perd N mana.
-  8. (proposition) Le lanceur reçoit un état au hasard (empoisonné, en feu, affaibli, aveuglé, effrayé, à terre), 2 charges.
-  9. (proposition) Tous les combattants deviennent préparés (+2 dés au prochain jet).
-  10. (proposition) Le lanceur est étourdi (perd son prochain tour).
-- Les sorts sans jet du lanceur (Projectile magique, Mains brûlantes, Boule de feu, Bouclier, Appel du familier)
-  ne peuvent pas faire d'échec critique pour l'instant.
+  6. Gerbe de flammes : tout le monde subit N + 1 d10 ≤ 4 dégâts de feu.
+  7. Souffle glacé : tout le monde subit N + 2 d10 de froid et devient affaibli (1 charge).
+  8. Foudre : tout le monde subit N + 3 d10 de foudre.
+  9. Miasmes : tout le monde subit N + 3 d10 de poison et devient empoisonné (2 charges).
+  10. Coup de tonnerre : tout le monde subit N + 4 d10 de tonnerre et tombe à terre (1 charge).
+  Les lignes 6 à 10 frappent tout le monde, y compris le lanceur : on peut s'en protéger par des résistances ou des
+  immunités. Toujours un tirage par dé à 10 (au plus 3).
+- **Jet d'incantation** (fait) : un sort sans autre jet du lanceur (ni attaque de sort, ni effet à opposition
+  contre la réserve d'incantation ; les dégâts de zone à résistance DEX ne comptent pas comme opposition) demande
+  un jet de la réserve d'incantation contre le niveau du sort (1 pour un tour de magie). Raté : le sort ne part pas,
+  mais le mana est dépensé. Échec critique : contrecoups. L'IA pondère ses sorts par cette chance. Concerne
+  Projectile magique, Mains brûlantes, Boule de feu, Bouclier, Appel du familier (et les parchemins). Pour une
+  difficulté variable selon la cible : jet en opposition (le plus de succès l'emporte), déjà en place (Sommeil).
+
+## Décisions (2026-10-18)
+
+- Les contrecoups touchent tout le monde (lignes 6 à 10 de la table), pour pouvoir s'en protéger.
+- La météo changée par un contrecoup ne dure que le temps du combat.
+- Dégâts des sorts : validés pour l'instant, l'équilibrage viendra plus tard.
+- Archétype « chaos » : une façon de construire son personnage (beaucoup de dés, seuil faible) ; ni don ni
+  sous-classe pour l'instant.

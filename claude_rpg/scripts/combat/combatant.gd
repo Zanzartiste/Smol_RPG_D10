@@ -111,7 +111,28 @@ func max_hp() -> int:
 func ability_score(ability_id: String) -> int:
 	if character != null:
 		return character.ability_score(ability_id)
-	return int(creature.get("abilities", {}).get(ability_id, 4))
+	var score := int(creature.get("abilities", {}).get(ability_id, 4))
+	return maxi(0, score - creature_encumbrance()) if ability_id == "dex" else score
+
+
+## Équipement d'une créature armée (creatures.json › equipment : {"main_hand", "off_hand"?, "armor"?}), comme
+## celui d'un personnage : Armure, bouclier, parade et encombrement ; il peut tomber en butin
+## (rules.json › combat › gear_drop_chance). {} pour un personnage ou une créature sans équipement.
+func gear() -> Dictionary:
+	return creature.get("equipment", {}) if character == null else {}
+
+
+## Encombrement d'une créature équipée (même calcul que Character.encumbrance) : points de DEX en moins.
+func creature_encumbrance() -> int:
+	var g := gear()
+	if g.is_empty():
+		return 0
+	var main: String = g.get("main_hand", "")
+	var two_hands: bool = main != "" and not g.has("off_hand") and Equipment.can_use_two_hands(main)
+	var abilities: Dictionary = creature.get("abilities", {})
+	var weight := Equipment.weight_of(g.get("armor", "")) + Equipment.weight_of(g.get("off_hand", "")) 		+ Equipment.weight_of(main, two_hands)
+	var value := weight - int(abilities.get("str", 4)) - int(abilities.get("con", 4)) 		+ int(creature.get("size", 0)) * int(DB.rules.get("encumbrance", {}).get("size_factor", 2))
+	return maxi(0, ceili(value))
 
 
 ## Rang d'une compétence. Créature : "skills", sinon le rang de départ (1, 2 si instinctive).
@@ -157,7 +178,10 @@ func natural_dodge() -> int:
 
 ## Armure : baisse d'autant le seuil des dégâts subis (sans passer sous 1).
 func armor() -> int:
-	return character.armor() if character != null else int(creature.get("armor", 0))
+	if character != null:
+		return character.armor()
+	var g := gear()
+	return int(creature.get("armor", 0)) + Equipment.armor_value(g.get("armor", "")) + Equipment.armor_value(g.get("off_hand", ""))
 
 
 ## Armure naturelle (peau épaisse, carapace) : une attaque surprise ne l'ignore pas.
@@ -303,6 +327,16 @@ func action_variants(action: Dictionary) -> Array[Dictionary]:
 		bash["description"] = Loc.ui("Une attaque avec votre arme, puis un coup de bouclier (main secondaire) ; le bouclier ne pare plus jusqu'à votre prochain tour.")
 		bash["effects"] = [{"type": "attack", "weapon": true, "shield_bash": true}]
 		result.append(bash)
+	# Munitions spéciales du sac (arc ou arbalète en main) : une variante par sorte de flèche.
+	if action.get("id") == "weapon_attack" and character != null and Equipment.has_property(character.weapon_id(), "ammunition"):
+		for item_id: String in character.inventory:
+			if not Items.ammo_of(item_id).is_empty():
+				var shot := action.duplicate(true)
+				shot["name"] = Loc.ui("Attaque (%s)") % Items.name_of(item_id)
+				shot["description"] = Loc.ui("Une attaque qui utilise une munition spéciale (%d dans le sac) : %s") % [
+					character.item_count(item_id), Items.def(item_id).get("description", "")]
+				shot["effects"] = [{"type": "attack", "weapon": true, "ammo": item_id}]
+				result.append(shot)
 	return result
 
 
@@ -328,7 +362,9 @@ func is_auto() -> bool:
 
 ## Le combattant a-t-il un bouclier (pour parer une attaque à distance) ?
 func has_shield() -> bool:
-	return character != null and Equipment.is_shield(character.equipment.get("off_hand", ""))
+	if character == null:
+		return Equipment.is_shield(gear().get("off_hand", ""))
+	return Equipment.is_shield(character.equipment.get("off_hand", ""))
 
 
 ## Tient-il une arme (ou un bouclier) en main ? Une créature est armée si une de ses attaques utilise
@@ -351,6 +387,11 @@ func parries_per_turn() -> int:
 ## "" si rien ne peut parer (arc, arme de jet).
 func parry_item(ranged := false) -> String:
 	if character == null:
+		var g := gear()
+		if Equipment.is_shield(g.get("off_hand", "")):
+			return g["off_hand"]
+		if g.has("main_hand") and Equipment.parry_of(g["main_hand"]) >= 0:
+			return "" if ranged else g["main_hand"]
 		for action: Dictionary in creature.get("actions", []):
 			for e: Dictionary in action.get("effects", []):
 				if e.get("weapon") is String and Equipment.parry_of(e["weapon"]) >= 0:
@@ -589,6 +630,8 @@ func damage_pool(effect: Dictionary, attack: Dictionary = {}) -> Dictionary:
 			var weapon := character.weapon_id()
 			if weapon == Equipment.UNARMED:
 				count += Modifiers.sum(mods, "unarmed_fighting")  # style À mains nues
+			elif Equipment.has_property(weapon, "improvised"):
+				count += Modifiers.sum(mods, "improvised_damage")  # Bagarreur de taverne
 			elif off_hand_weapon() == "" and not two_handed_grip() and not Equipment.has_property(weapon, "ranged"):
 				count += Modifiers.sum(mods, "dueling")  # style À une main
 		if effect.get("off_hand", false):
@@ -602,6 +645,8 @@ func damage_pool(effect: Dictionary, attack: Dictionary = {}) -> Dictionary:
 ## Chaque partie : {"dice", "threshold", "damage_type"}, lancée à part.
 func bonus_damage(effect: Dictionary) -> Array:
 	var result: Array = effect.get("bonus_damage", []).duplicate()
+	if effect.has("ammo"):
+		result.append_array(Items.ammo_of(effect["ammo"]).get("bonus_damage", []))
 	if _uses_own_weapon(effect):
 		result.append_array(Equipment.def(character.weapon_id()).get("bonus_damage", []))
 	elif effect.get("weapon") is String:

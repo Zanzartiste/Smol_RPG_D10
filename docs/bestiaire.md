@@ -117,3 +117,14 @@ Pour l'instant j'aurais ça, je réfléchis encore à si je créé une catégori
 - Créatures armées : elles portent armes et armures, comme les personnages (à faire).
 - Chasses (menu Chercher…) : loups 2, camp des brigands 3, brigands en ville 2 (Perception) ; en ville, c'est un vrai
   combat (fait).
+
+## Décisions (2026-10-18)
+
+- **Créatures équipées** (fait) : une créature peut porter une arme, un bouclier et une armure. Son Armure vaut son
+  armure propre plus l'armure portée plus le bouclier ; elle pare avec son arme ou son bouclier ; l'encombrement
+  s'applique comme pour un personnage. Chaque pièce a une chance sur deux de tomber en butin, en bon état. Le brigand
+  porte une épée courte et une armure de cuir ; le rebouteux, un bâton et une armure rembourrée.
+- **Ennemis enfuis** (fait) : dans un lieu sauvage, ils peuvent revenir du lendemain jusqu'à 7 jours plus tard, avec
+  1 renfort (4 ennemis au plus). Rien n'est certain : chaque événement tiré dans le lieu a 35 % de chances d'être leur
+  retour. Leur groupe (champ `group` : les bandits, par exemple) est prévenu pendant 7 jours : un combat contre ce
+  groupe (camp des brigands, chasse au camp) compte un ennemi de plus, et tous sont préparés au premier tour.

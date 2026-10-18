@@ -96,6 +96,25 @@ static func is_equipment(id: String) -> bool:
 	return Equipment.has(id) and id != Equipment.UNARMED
 
 
+## Effets d'une fiole lancée qui se brise sur la cible : "splash" (huile, eau bénite), sinon ceux d'une potion
+## (soins, antidote). [] : l'objet ne se brise pas.
+static func splash_effects(id: String) -> Array:
+	var item := def(id)
+	if item.has("splash"):
+		return item["splash"]
+	var use: Dictionary = item.get("use", {})
+	if use.has("heal"):
+		return [{"type": "heal", "amount": use["heal"]}]
+	if use.has("cleanse"):
+		return [{"type": "cleanse", "status": use["cleanse"]}]
+	return []
+
+
+## Munition spéciale (flèche ou carreau : "ammo") : {"bonus_damage": [...], "effects": [effets si elle touche]}.
+static func ammo_of(id: String) -> Dictionary:
+	return def(id).get("ammo", {})
+
+
 static func is_usable(id: String) -> bool:
 	return def(id).has("use")
 

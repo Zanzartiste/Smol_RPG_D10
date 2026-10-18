@@ -49,6 +49,12 @@
 - **Description** : se reposer et panser ses plaies.
 - **Repos** : dormir chez soi (gratuit).
 
+### Villes sûres
+
+Les règles viennent de [Towns.md](Towns.md). Dans un lieu non sauvage, tout événement garde au moins un choix sans
+combat (le validateur le vérifie), sauf si le lieu ou l'événement porte `"unsafe"`. Les ennemis enfuis ne reviennent
+que dans les lieux sauvages.
+
 ---
 
 ## Lieux candidats (à compléter)

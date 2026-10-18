@@ -43,6 +43,7 @@ const SCHEMA := {
 	"great_weapon_fighting": [],  # arme à deux mains : on relance une fois les dés de dégâts ratés
 	"dueling": ["amount"],  # dés de dégâts en plus avec une arme de mêlée à une main, l'autre sans arme (À une main)
 	"unarmed_fighting": ["amount"],  # dés de dégâts en plus à mains nues (À mains nues)
+	"improvised_damage": ["amount"],  # dés de dégâts en plus avec une arme improvisée (Bagarreur de taverne)
 	"two_weapon_fighting": [],  # pas de malus pour l'attaque de la main secondaire (À deux armes)
 	"critical_damage_dice": ["amount"],  # dés de dégâts en plus sur un critique (Attaques précises du Roublard)
 	"encumbrance_reduction": ["amount"],  # encombrement réduit (Entraînement aux armures lourdes)
@@ -161,6 +162,8 @@ static func describe(m: Dictionary) -> String:
 			return Loc.ui("%s dé(s) de dégâts à une main") % signed
 		"unarmed_fighting":
 			return Loc.ui("%s dé(s) de dégâts à mains nues") % signed
+		"improvised_damage":
+			return Loc.ui("%s dé(s) de dégâts avec une arme improvisée") % signed
 		"two_weapon_fighting":
 			return Loc.ui("Deux armes : main secondaire sans malus")
 		"critical_damage_dice":

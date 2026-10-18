@@ -16,7 +16,7 @@ dans la console Godot. Les tests automatisés le signalent aussi.
 | `species.json` | Espèces : taille, âges, vieillissement, noms, apparence des portraits |
 | `classes.json` | Classes : dé de vie, modèle d'attributs, compétences maîtrisées, objets de départ |
 | `backgrounds.json` | Passés : compétences maîtrisées, or et objets de départ éventuels |
-| `items.json` | Objets hors équipement, avec une `category` : `consumable` (`use`, ex. `{"heal": {"dice": 3, "threshold": 7}}` ; parchemin : `{"spell": "<id d'action>", "target": <cible du sort>, "unlock"?: "class:wizard"}`, voir Parchemins), `material`, `treasure`. Les ids sont uniques entre `items.json` et `equipment.json` |
+| `items.json` | Objets hors équipement, avec une `category` : `consumable` (`use`, ex. `{"heal": {"dice": 3, "threshold": 7}}` ; parchemin : `{"spell": "<id d'action>", "target": <cible du sort>, "unlock"?: "class:wizard"}`, voir Parchemins), `material`, `treasure`. Champ `splash` (objet qui se brise quand on le lance : effets appliqués si l’attaque touche) ; champ `ammo` (munition spéciale : `{"bonus_damage": [...], "effects"?: [...]}`). Les ids sont uniques entre `items.json` et `equipment.json` |
 | `shops.json`, `recipes.json` | Boutiques et recettes (voir Économie) |
 | `creatures.json` | Bestiaire : ennemis et invocations (API `Creatures`) |
 | `actions.json` | Actions de combat des classes : attaques, sorts, capacités (API `Actions`) |
@@ -140,6 +140,8 @@ Chaque condition est un objet avec un champ `type`. Une liste de conditions est 
 | `add_feat` | `id` | Le personnage obtient un don |
 | `equip` | `id` | Équipe une arme, une armure ou un bouclier à son emplacement |
 | `add_defense` / `remove_defense` | `kind`, `id` | Ajoute ou retire une défense propre au personnage (`resistance`, `immunity`, `vulnerability` + type de dégâts, ou `status_immunity` + état) |
+| `gather` | `location`, `resource`, `id`, `count` | Récolte directe d'une ressource d'un lieu (compte dans son `stock` hebdomadaire) |
+| `find_lost` | `location`, `all`? | Retrouve un objet perdu (ou tous) des combats de ce lieu (`LifeState.lost_items`) |
 
 ## Combat
 
@@ -165,6 +167,7 @@ Un combat se lance avec l'effet `combat` :
 | `light`? | `dim` (pénombre : Couvert +1) ou `dark` (noir : Couvert +2) |
 | `on_defeat` | `death` (par défaut) : le héros à 0 PV meurt, les compagnons à 0 PV aussi. `knockout` : tout le monde se relève à 1 PV, comme pour une bagarre de taverne |
 | `victory` / `fled` / `defeat` | Texte et effets de chaque issue. `defeat` ne sert qu'en `knockout` |
+| `group`?, `prepared_enemies`? | Combat contre un groupe de créatures prévenu (`LifeState.warned`) : un ennemi de plus, tous préparés au premier tour (`prepared_enemies`) |
 
 ### Déroulement
 
@@ -296,6 +299,13 @@ Champs facultatifs, valables pour tout effet :
   `max_rolls`). `table` : 10 lignes `{"text", "effects"}` ; effets `weather`, `heal`, `damage` (`damage_type` : id ou
   `random`), `mana`, `status` (`status` : id ou `random` parmi `random_statuses`) ; `who` : `caster`, `random` ou
   `all` ; dés = niveau du sort + `extra_dice`, seuil `threshold` (4).
+- **Jet d'incantation** (`rules.json › casting`, `Combat._cast_check`, `Combat.has_caster_roll`,
+  `Combat.cast_chance`) : un sort sans autre jet du lanceur (ni attaque de sort, ni effet à opposition contre la
+  réserve d'incantation ; les dégâts de zone à résistance DEX ne comptent pas) fait lancer la réserve d'incantation
+  contre le niveau du sort (1 pour un tour de magie). Raté : le sort ne part pas, le mana est dépensé. Échec
+  critique : contrecoups. L'IA pondère ses sorts par cette chance.
+- Contrecoups, lignes 6 à 10 : gerbe de flammes (N+1 d10 ≤ 4 de feu), souffle glacé (N+2 de froid + affaibli 1),
+  foudre (N+3), miasmes (N+3 de poison + empoisonné 2), coup de tonnerre (N+4 + à terre 1) ; tout le monde est touché.
 - `bonus_damage` : `[{"dice": 2, "threshold": 5, "damage_type": "fire"}]`, dégâts d'autres types ajoutés à une
   attaque ou à des dégâts. Chaque partie est lancée séparément avec les défenses de son type. Une arme peut aussi en
   porter (`equipment.json`, ex. la Langue de feu).
@@ -345,6 +355,8 @@ Ce fichier regroupe les ennemis et les invocations.
 | `death_cause` | Texte de l'écran de mort si la créature tue le héros |
 | `summon` | `true` pour une invocation |
 | `art` | Placeholder : `{"type": "wolf" \| "rat" \| "humanoid", …}` |
+| `equipment`? | `{"main_hand", "off_hand"?, "armor"?}` : ids de `equipment.json`. Armure = `armor` + armure portée + bouclier ; parade avec l'arme ou le bouclier ; encombrement comme un personnage (DEX en moins, `Combatant.creature_encumbrance`) ; chaque pièce tombe en butin avec `rules.json › combat › gear_drop_chance` (0,5), en bon état |
+| `group`? | Groupe (ex. `"bandits"`) prévenu par un retour de fuyards, voir Ennemis enfuis |
 
 Les compagnons sont des personnages : ils utilisent les actions de leur classe, choisies par le joueur.
 
@@ -440,6 +452,7 @@ Les dons, les espèces et les équipements peuvent porter des `modifiers`. Ils s
 | `ignore_resistance` | `damage_type` | Les cibles ne résistent plus à ce type |
 | `ranged_attack`, `armored`, `dueling` | `amount` | Style À distance (dés à distance) ; `armored` (modificateur générique d'armure) ; style À une main (dés de dégâts, sans arme dans l'autre main ni à mains nues ; ne compte plus si l'autre main tient une arme) |
 | `unarmed_fighting` | `amount` | Style À mains nues : dés de dégâts à mains nues |
+| `improvised_damage` | `amount` | Dés de dégâts en plus avec une arme improvisée (Bagarreur de taverne, en plus de `unarmed_fighting`) |
 | `two_weapon_fighting` | — | Style À deux armes : pas de malus pour l'attaque de la main secondaire. Règle pour tous : `Character.can_dual_wield(id)` (arme de corps à corps à une main, la main principale en tenant une) ; `Character.equip(id, "off_hand")` / `LifeState.equip(membre, id, "off_hand")` (bouton « Main secondaire ») ; chaque attaque de l'arme principale est suivie de `Combatant.off_hand_attack(effet)` (`{"type": "attack", "weapon": id, "off_hand": true, "ability"}`), avec `Combatant.off_hand_penalty()` dés de moins à l'attaque et aux dégâts (`rules.json › combat › off_hand_penalty`, 0 avec le style) |
 | `critical_damage_dice` | `amount` | Dés de dégâts en plus sur un critique (Attaques précises du Roublard) |
 | `great_weapon_fighting` | — | À deux mains, on relance une fois les dés de dégâts ratés |
@@ -451,7 +464,7 @@ Les dons, les espèces et les équipements peuvent porter des `modifiers`. Ils s
 
 | Catégorie | Champs |
 |---|---|
-| `weapon` | `damage` (`{"dice": N, "threshold": "str" \| "dex" \| N, "bonus"?}` : les dés de l'arme, sans le rang ; épée bâtarde FOR +1), `damage_type`, `skill`? (`physique` ; sinon Armes de trait à distance, Armes de mêlée), `parry`? (seuil de parade à une main ; absent : ne pare pas), `parry_two_hands`?, `weight`? (poids à une main ; absent : à deux mains seulement, propriété `two_handed`), `weight_two_hands`?, `crit_bonus`? (Perçante : dégâts en plus sur un critique), `reload`? (actions de rechargement après un tir), `fragile`? (Imprévisible : nombre de 10 au jet d'attaque qui brisent l'arme), `properties` (`ranged`, `two_handed`, `thrown`, `dangerous_parry`, `impact`, `reach`, `assassin`, `crossbow`) |
+| `weapon` | `damage` (`{"dice": N, "threshold": "str" \| "dex" \| N, "bonus"?}` : les dés de l'arme, sans le rang ; épée bâtarde FOR +1), `damage_type`, `skill`? (`physique` ; sinon Armes de trait à distance, Armes de mêlée), `parry`? (seuil de parade à une main ; absent : ne pare pas), `parry_two_hands`?, `weight`? (poids à une main ; absent : à deux mains seulement, propriété `two_handed`), `weight_two_hands`?, `crit_bonus`? (Perçante : dégâts en plus sur un critique), `reload`? (actions de rechargement après un tir), `fragile`? (Imprévisible : nombre de 10 au jet d'attaque qui brisent l'arme), `properties` (`improvised` (arme improvisée équipable), `ammunition` (à flèches ou carreaux : peut tirer une munition spéciale), `ranged`, `two_handed`, `thrown`, `dangerous_parry`, `impact`, `reach`, `assassin`, `crossbow`) |
 | `armor` | `armor_type` (`clothing`, `light`, `medium`, `heavy`), `armor` (points d'Armure), `weight` (poids, toutes pièces comprises) |
 | `shield` | `armor` (points d'Armure), `parry` (4), `weight` ; pare aussi les attaques à distance |
 | `accessory` | `slot` : `head` (couvre-chef), `hands` (gants), `legs` (jambes), `feet` (chaussures), `neck` (collier) ou `ring` (anneau : `ring_1`, ou `ring_2` si le premier est pris) ; son `weight` ne compte pas |
@@ -491,6 +504,8 @@ de mailles → armure de mailles).
   membre choisi.
 - **Objets de quête** (`"quest": true` dans `items.json`) : ni vendus ni jetés.
 - **Butin** : les créatures peuvent lâcher de l'équipement (`loot`), comme le brigand (dague, épée courte, cuir
+- **Pièces portées par les créatures** : chacune a `rules.json › combat › gear_drop_chance` (0,5) de tomber en butin,
+  en bon état.
   clouté) ou l'Alpha (Anneau de protection). L'effet `equip` range l'objet remplacé dans le sac.
 
 **Règles appliquées :**
@@ -505,6 +520,12 @@ de mailles → armure de mailles).
 - **Coup de bouclier** : un bouclier avec `damage` / `damage_type` ajoute la variante « Attaque et coup de bouclier »
   (`Combatant.action_variants`, effet `"shield_bash": true`) ; `Combatant.shield_bashed` : le bouclier ne pare plus
   jusqu'au prochain tour.
+- **Fioles et potions** (`Items.splash_effects`) : un objet avec `"splash"` (`items.json`) ou une potion (soins,
+  antidote) se brise quand on le lance et applique son effet si l'attaque touche ; il n'est pas rendu. Objets :
+  `flask_oil` (brûlure 2, 2 po), `holy_water` (4 dés ≤ 6 radiants, 10 po), vendus à l'herboristerie.
+- **Munitions spéciales** : un objet de `items.json` avec `"ammo": {"bonus_damage": [...], "effects"?: [...]}`
+  (`fire_arrow`, `frost_arrow`, `lightning_arrow`, vendus à l'armurerie). Avec une arme `ammunition` en main, une
+  variante d'Attaque par munition du sac ; une munition est consommée par tir. Sans munition : flèche ordinaire.
 - Passé verrouillé : `"locked": true`, `"unlock_hint"` (`Meta.is_background_available`, `background:custom`
   débloqué par une mort de vieillesse ; tout est disponible en mode debug).
 - **Encombrement** (`Character.encumbrance`, `rules.json › encumbrance`) : poids de l'armure, du bouclier et des
@@ -638,6 +659,30 @@ Calcul des dégâts subis :
 - `[{"id", "name", "item", "count"? (1), "skill", "ability"?, "difficulty", "failure"?, "fumble"?, "fumble_hp"?}]`.
 - `EventEngine.gather_event(location)` construit un événement (un choix par ressource + « Renoncer ») ; bouton
   « Chercher des ressources » dans les lieux qui en ont.
+- `stock`? (par ressource) : maximum récolté par semaine. `LifeState.gathered` (`{lieu: {id: quantité}}`, sauvegardé)
+  est remis à zéro au début de chaque semaine (jours 1, 8, 15…) ; un choix épuisé affiche « (épuisé cette
+  semaine) ». Effet d'événement `gather` `{location, resource, id, count}` (récolte directe, compte dans le stock).
+- `hunt` : `[{…, "group"?}]` ; `group` : groupe de créatures prévenu par un retour de fuyards (voir Ennemis enfuis).
+
+## Objets perdus (`rules.json › lost_items`)
+
+- `LifeState.lost_items` (`{lieu: {objet: quantité}}`, sauvegardé) : après une fuite ou une défaite, les objets
+  lancés qui ne se sont pas brisés y sont rangés.
+- Chercher… › Des ressources › « Fouiller les lieux d'un combat » : `{skill: perception, difficulty: 1}` ; réussite :
+  un objet au hasard ; critique : tous. Ce qu'on retrouve est retiré de la liste.
+- Effet d'événement `find_lost` : `{location, all?}`.
+
+## Ennemis enfuis (`rules.json › fled_enemies`)
+
+- Dans un lieu sauvage, un ennemi enfui peut revenir du lendemain jusqu'à 7 jours plus tard (`LifeState.revenge`,
+  sauvegardé). Chaque événement tiré dans le lieu a 35 % de chances d'être leur retour
+  (`EventEngine.revenge_event`), avec 1 renfort (4 ennemis au plus). Rien n'est certain.
+- `creatures.json › group` (ex. `"bandits"`) : le groupe est prévenu 7 jours (`LifeState.warned`, sauvegardé). Un
+  combat avec `"group"` contre lui (camp des brigands, chasse au camp) compte un ennemi de plus ; les ennemis sont
+  tous préparés au premier tour (`prepared_enemies`).
+- Les retours n'arrivent que dans les lieux sauvages. Validateur : un événement d'un lieu non sauvage a toujours un
+  choix sans combat, sauf `"unsafe"` sur le lieu ou l'événement (voir [Towns.md](Towns.md)).
+
 
 ## Emplois du temps des PNJ
 

@@ -82,6 +82,12 @@ func start_combat(spec: Dictionary) -> Combat:
 		if light != "":
 			spec = spec.duplicate()
 			spec["light"] = light
+	# Un groupe prévenu par un fuyard (creatures.json › group) : un ennemi de plus, et tous préparés.
+	if life.is_warned(spec.get("group", "")) and not spec.get("enemies", []).is_empty():
+		spec = spec.duplicate()
+		spec["enemies"] = spec["enemies"] + [spec["enemies"][0]]
+		spec["prepared_enemies"] = true
+		spec.erase("group")
 	life.pending_combat = spec
 	combat = Combat.new(spec, life)
 	return combat
@@ -107,6 +113,11 @@ func finish_combat() -> Dictionary:
 				var gold := maxi(0, int(Dice.roll_expr(creature["gold"], life.rng)["total"]))
 				life.character.gold += gold
 				lines.append(Loc.ui("Butin : %d po") % gold)
+			# Créature équipée : son arme, son bouclier, son armure peuvent tomber (en bon état).
+			for item_id: String in enemy.gear().values():
+				if item_id != "" and life.rng.randf() < float(Combat.setting("gear_drop_chance", 0.5)):
+					life.character.add_item(item_id)
+					lines.append(Loc.ui("Butin : %s ×1") % Items.name_of(item_id))
 			for loot: Dictionary in creature.get("loot", []):
 				if life.rng.randf() < float(loot.get("chance", 1.0)):
 					life.character.add_item(loot["item"], int(loot.get("count", 1)))
@@ -122,6 +133,12 @@ func finish_combat() -> Dictionary:
 		var picked := c.recover_thrown()
 		if not picked.is_empty():
 			lines.append(Loc.ui("Vous ramassez : %s.") % ", ".join(PackedStringArray(picked)))
+	elif not c.thrown.is_empty() and life.location != "":
+		# Fuite ou défaite : les objets lancés restent sur place, à retrouver en fouillant le lieu.
+		for t: Dictionary in c.thrown:
+			life.lose_item(life.location, t["id"])
+		lines.append(Loc.ui("Vos objets lancés restent sur place (Chercher… › Des ressources pour les retrouver)."))
+		c.thrown.clear()
 
 	# Les membres du groupe à 0 PV étaient inconscients : après une victoire ou une fuite (ou une bagarre),
 	# les autres les ramènent à eux (1 PV). Si tout le groupe est tombé dans un combat mortel, ils meurent.
@@ -139,6 +156,8 @@ func finish_combat() -> Dictionary:
 		if not knockout:
 			lines.append(Loc.ui("Vos compagnons vous ramènent à vous."))
 
+	var fled_ids: Array = c.enemies().filter(func(e): return e.fled and e.creature.has("id")).map(func(e): return e.creature["id"])
+	life.note_fled(life.location, fled_ids)
 	var key := c.outcome
 	var foes := PackedStringArray(c.enemies().map(func(e): return e.name))
 	life.log_journal("combat", {"victory": Loc.ui("Victoire contre : %s."), "fled": Loc.ui("Fuite devant : %s."),

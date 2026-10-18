@@ -9,7 +9,7 @@
 		"stock": {
 			"knife": 3, "dagger": 3, "brass_knuckles": 1, "club": 2, "quarterstaff": 2, "mace": 2, "warhammer": 1, "handaxe": 2,
 			"woodcutter_axe": 1, "battleaxe": 1, "shortsword": 2, "foil": 1, "rapier": 1, "longsword": 2, "bastard_sword": 1,
-			"greatsword": 1, "greataxe": 1, "maul": 1, "spear": 2, "halberd": 1, "torch": 3, "javelin": 3, "shuriken": 2, "sling": 1,
+			"greatsword": 1, "greataxe": 1, "maul": 1, "spear": 2, "halberd": 1, "torch": 3, "javelin": 3, "shuriken": 2, "sling": 1, "fire_arrow": 5, "frost_arrow": 5, "lightning_arrow": 3,
 			"shortbow": 1, "longbow": 1, "hand_crossbow": 1, "light_crossbow": 1, "heavy_crossbow": 1,
 			"clothes": 3, "padded": 2, "leather": 2, "studded_leather": 1, "brigandine": 1,
 			"chain_mail": 1, "scale_mail": 1, "breastplate": 1, "plate": 1, "shield": 2,
@@ -23,7 +23,7 @@
 		"description": "Une échoppe embaumée de sauge, où fioles et bocaux s'entassent jusqu'au plafond.",
 		"price_rate": 1.0,
 		"restock_days": 3,
-		"stock": {"potion_heal": 4, "antidote": 3, "healing_herbs": 5, "scroll_fire_bolt": 2, "scroll_magic_missile": 1, "scroll_sleep": 1, "scroll_mage_shield": 1},
+		"stock": {"potion_heal": 4, "antidote": 3, "flask_oil": 3, "holy_water": 1, "healing_herbs": 5, "scroll_fire_bolt": 2, "scroll_magic_missile": 1, "scroll_sleep": 1, "scroll_mage_shield": 1},
 		"crafting": "alchemy"
 	},
 	{

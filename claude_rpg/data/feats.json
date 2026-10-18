@@ -199,7 +199,7 @@
 		"name": "Bagarreur de taverne",
 		"category": "origin",
 		"description": "Un dé de dégâts de plus à mains nues ou avec une arme improvisée.",
-		"modifiers": [{"type": "unarmed_fighting", "amount": 1}]
+		"modifiers": [{"type": "unarmed_fighting", "amount": 1}, {"type": "improvised_damage", "amount": 1}]
 	},
 	{
 		"id": "tough",
