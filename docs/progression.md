@@ -23,13 +23,13 @@
 
 L'XP de combat pousse à se battre ; dans un jeu de vies, d'autres chemins devraient compter. Lesquelles garder ?
 
-- Combats (actuel).
-- Événements réussis (actuel, au cas par cas).
-- Quêtes et demandes de PNJ terminées.
-- Découvertes : un nouveau lieu, un fait révélé, un secret.
-- Métiers : forger une pièce de maître, une première vente, une recette inventée.
-- Social : se marier, élever un enfant, devenir chef de faction.
-- Le simple temps qui passe (expérience de la vie : un peu d'XP par an).
+- Combats (actuel). => Oui
+- Événements réussis (actuel, au cas par cas). => Oui pourquoi pas, mais peut être redondant avec les fins de quêtes
+- Quêtes et demandes de PNJ terminées. => Oui
+- Découvertes : un nouveau lieu, un fait révélé, un secret. => Oui
+- Métiers : forger une pièce de maître, une première vente, une recette inventée. => Pourquoi pas, via un système d'achievments notamment
+- Social : se marier, élever un enfant, devenir chef de faction. => Via un système d'achievments.
+- Le simple temps qui passe (expérience de la vie : un peu d'XP par an). => Pas fan.
 
 ### 2. Une seule XP ou plusieurs ?
 
@@ -39,12 +39,14 @@ L'XP de combat pousse à se battre ; dans un jeu de vies, d'autres chemins devra
 - **C. Mixte** : l'XP donne les niveaux, et l'usage donne de temps en temps un rang gratuit dans la compétence
   utilisée (« vous avez appris à force de forger »).
 
+  => Système A.
+
 ### 3. Quel rythme dans une vie ?
 
 - Une vie dure des dizaines d'années de jeu. À quel âge un aventurier typique doit-il atteindre le niveau 5 ? 10 ?
-  Le niveau 20 doit-il être réservé à une vie exceptionnelle ? Oui clairement le niveau 20 doit être particulièrement difficile à atteindre.
-- Faut-il garder la table de D&D ou en faire une plus plate (les premiers niveaux vite, les suivants très lents) ?
-- La vieillesse doit-elle freiner la progression (moins d'XP après un certain âge) ? => non pas spécialement.
+  => Le niveau 20 doit-il être réservé à une vie exceptionnelle ? Oui clairement le niveau 20 doit être particulièrement difficile à atteindre.
+- Faut-il garder la table de D&D ou en faire une plus plate (les premiers niveaux vite, les suivants très lents) ? => garder d&d actuellement
+- La vieillesse doit-elle freiner la progression (moins d'XP après un certain âge) ? => non pas spécialement
 
 ### 4. Quand applique-t-on un niveau ?
 
