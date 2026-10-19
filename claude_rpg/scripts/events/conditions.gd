@@ -56,7 +56,7 @@ static func check(c: Dictionary, life: LifeState, meta: MetaState) -> bool:
 		"seen":
 			return life.seen.has(c["event"])
 		"ability":
-			return _in_range(ch.ability_score(c["id"]), c)
+			return _in_range(ch.ability_score(c["id"], false), c)
 		"skill_proficient":
 			return ch.is_proficient(c["id"])
 		"passive":

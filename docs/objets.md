@@ -107,8 +107,10 @@
 
 ### Consommables
 
+- **Parchemins (faits)** : `scroll_fire_bolt`, `scroll_magic_missile`, `scroll_sleep`, `scroll_mage_shield`, vendus à l'herboristerie. En combat, lire un parchemin coûte une action : le sort part une fois sans emplacement, avec la compétence Langues. Lire un parchemin de magicien débloque la classe pour les vies suivantes. Voir [modele_donnees.md](modele_donnees.md).
+
 - Potions de soins supérieure et majeure, potion de résistance (à un type de dégâts), potion de force de géant,
-  huile d'arme (ajoute du feu ou du poison pour un combat), parchemins de sort, bombes alchimiques, rations et
+  huile d'arme (ajoute du feu ou du poison pour un combat), bombes alchimiques, rations et
   repas (bonus temporaires, voir la cuisine).
 
 ### Matériaux

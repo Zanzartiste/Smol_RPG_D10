@@ -30,6 +30,9 @@ var _inventory_button := Button.new()
 var _carnet_button := Button.new()
 var _rest_button := Button.new()
 var _last_social_session: Dictionary = {}
+var _on_hub := false  # le hub est affiché (la montée de niveau ne se fait que là)
+var _leveling := false  # montée de niveau en cours (ses choix s'enchaînent avant le retour au hub)
+var _asked_whereabouts: Dictionary = {}  # id de PNJ -> période où l'on a demandé où il est (_period_key)
 var _overlay: Control  # fenêtre ouverte par-dessus l'écran : inventaire ou boutique (null sinon)
 var _event_on_screen: Dictionary = {}  # événement dont les choix sont affichés (pour les réafficher en debug)
 var drawer := SideDrawer.new()  # tiroir latéral : personnage, inventaire, quêtes, relations, sorts
@@ -63,6 +66,7 @@ func _ready() -> void:
 	drawer.life = Game.life
 	drawer.inventory_requested.connect(open_inventory)
 	drawer.carnet_requested.connect(open_carnet)
+	drawer.level_up_requested.connect(_on_level_up_requested)
 	add_child(drawer)
 	_refresh_sheet()
 	_show_hub()
@@ -96,6 +100,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		open_carnet()
 		accept_event()
 		return
+	if key.keycode == KEY_V and not dice_tray.is_playing():
+		open_map()
+		accept_event()
+		return
 	if key.keycode == KEY_F12:
 		Game.toggle_debug()
 		accept_event()
@@ -119,10 +127,21 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 # --- Écrans ------------------------------------------------------------------
 
+## Bouton « Monter de niveau » de la fiche : seulement depuis le hub (pas au milieu d'un événement).
+func _on_level_up_requested() -> void:
+	if not _on_hub:
+		Game.life.notices.append(tr("Vous monterez de niveau une fois de retour au calme."))
+		return
+	drawer.close()
+	_leveling = true
+	_show_hub()
+
+
 func _show_hub() -> void:
-	# Un membre du groupe a gagné une amélioration en montant de niveau : on la lui fait choisir d'abord.
+	# Montée de niveau demandée : ses choix s'enchaînent, membre par membre, puis retour au hub.
 	Saves.save_all()
-	for member in Game.life.party():
+	_on_hub = false
+	for member in Game.life.party() if _leveling else []:
 		if member.pending_class_levels > 0:
 			_show_class_level_choice(member)
 			return
@@ -139,22 +158,17 @@ func _show_hub() -> void:
 		if member.can_spend_skill_point():
 			_show_skill_point_choice(member)
 			return
+	_leveling = false
+	drawer.refresh()
 	var life := Game.life
 	var visit := Social.initiative_event(life)  # un PNJ vient parfois vous voir
 	if not visit.is_empty():
 		_show_event(visit)
 		return
-	illustration.texture = ArtProvider.location_image("town", life)
-	title_label.text = tr("Jour %d — %s — %s") % [life.day, life.slot_name(), Weather.describe(life.day)]
 	var text := ""
 	for notice in life.take_notices():
 		text += "[color=%s]• %s[/color]\n" % [UITheme.GOLD.to_html(false), notice]
-	body_text.text = text + tr("Où souhaitez-vous aller ?")
-	_clear_choices()
-	for loc_id in DB.location_order:
-		var loc: Dictionary = DB.locations[loc_id]
-		_add_choice("%s — %s" % [loc["name"], loc.get("description", "")], _on_location_chosen.bind(loc_id))
-	_add_choice("%s (R)" % Game.rest_name(), _on_rest)
+	_show_location_menu(WorldMap.current(life), text)
 
 func _show_event(ev: Dictionary) -> void:
 	var life := Game.life
@@ -169,12 +183,18 @@ func _show_event_choices(ev: Dictionary) -> void:
 	var life := Game.life
 	_clear_choices()
 	_event_on_screen = ev
-	for entry in EventEngine.visible_choices(ev, life, Meta, Game.debug):
+	var show_locked: bool = Game.debug or Meta.settings.get("show_locked_choices", false)
+	for entry in EventEngine.visible_choices(ev, life, Meta, show_locked):
 		var choice: Dictionary = entry["choice"]
 		var label := Loc.fill(Loc.t("evt.%s.%s.text" % [ev["id"], choice["id"]], choice.get("text", "")), life)
 		if choice.has("check"):
-			var chance := Dice.success_chance(life.character, choice["check"])
-			label += "   [%s — %d %%]" % [Dice.label(choice["check"]), roundi(chance * 100)]
+			var parts := PackedStringArray()
+			if Meta.settings.get("show_check_skill", true):
+				parts.append(Dice.label(choice["check"]))
+			if Meta.settings.get("show_check_chance", true):
+				parts.append("%d %%" % roundi(Dice.success_chance(life.character, choice["check"]) * 100))
+			if not parts.is_empty():
+				label += "   [%s]" % " — ".join(parts)
 		if not entry["available"]:
 			label += "   (%s)" % entry["reason"]
 		var button := _add_choice(label, _on_choice.bind(choice), entry["available"])
@@ -296,8 +316,9 @@ func _on_pending_chosen(member: Character, key: String, value: String) -> void:
 
 func _show_ability_choice(member: Character) -> void:
 	title_label.text = tr("Amélioration — %s") % member.name
-	body_text.text = tr("%s a atteint le niveau %d : choisissez l'attribut à augmenter de 1 (maximum %d).") % [
-		member.name, member.level, Progression.max_ability_score()]
+	body_text.text = tr("%s a atteint le niveau %d : choisissez l'attribut à augmenter de 1.") % [member.name, member.level]
+	if Progression.max_ability_score() > 0:
+		body_text.text += " " + tr("(maximum %d)") % Progression.max_ability_score()
 	_clear_choices()
 	for id in Abilities.ids():
 		var score := int(member.abilities[id])
@@ -309,8 +330,7 @@ func _show_ability_choice(member: Character) -> void:
 ## Point de compétence gagné en montant de niveau : +1 rang dans la compétence choisie.
 func _show_skill_point_choice(member: Character) -> void:
 	title_label.text = tr("Compétences — %s") % member.name
-	body_text.text = tr("%s a progressé : choisissez la compétence qui gagne un rang (rang %d au plus à ce niveau).") % [
-		member.name, member.max_trained_rank()]
+	body_text.text = tr("%s a progressé : choisissez la compétence qui gagne un rang.") % member.name
 	if member.pending_skill_points > 1:
 		body_text.text += " " + tr("(%d points à placer)") % member.pending_skill_points
 	_clear_choices()
@@ -354,38 +374,46 @@ func _on_feat_chosen(member: Character, feat_id: String) -> void:
 
 
 
-## Un lieu avec des boutiques ou des habitants ouvre son menu ; les autres tirent directement un événement.
+## Se rendre dans un lieu (carte, « Où est… ? ») : on arrive dans son menu.
 func _on_location_chosen(location_id: String) -> void:
-	Game.life.location = location_id
+	WorldMap.travel(Game.life, location_id)
 	_refresh_sheet()
-	if Shops.of_location(location_id).is_empty() and not _has_people(location_id):
-		_show_event(Game.draw_event(location_id))
-	else:
-		_show_location_menu(location_id)
+	Saves.save_all()
+	_show_hub()
+
+
+## Carte du monde (touche V) : cliquer un lieu accessible y emmène.
+func open_map() -> void:
+	if _can_open_overlay() and Game.current_event.is_empty():
+		var view := WorldMapView.new(Game.life)
+		view.travel_requested.connect(_on_location_chosen, CONNECT_DEFERRED)
+		_open_overlay(view)
 
 
 func _has_people(location_id: String) -> bool:
 	return not Social.roles_in(location_id).is_empty()
 
 
-## Menu d'un lieu : se promener (événement au hasard), entrer dans une boutique, ou revenir.
-## Les boutiques ne font pas passer le temps.
-func _show_location_menu(location_id: String) -> void:
+## Menu du lieu où l'on se trouve (c'est le hub) : se promener (événement au hasard), parler, chercher, entrer
+## dans une boutique, ouvrir la carte, se reposer. Les boutiques ne font pas passer le temps.
+func _show_location_menu(location_id: String, intro := "") -> void:
+	var life := Game.life
 	var loc: Dictionary = DB.locations[location_id]
-	illustration.texture = ArtProvider.location_image(loc.get("art", location_id), Game.life)
-	title_label.text = loc["name"]
-	body_text.text = loc.get("description", "")
+	illustration.texture = ArtProvider.location_image(loc.get("art", location_id), life)
+	title_label.text = tr("%s — Jour %d — %s — %s") % [loc["name"], life.day, life.slot_name(), Weather.describe(life.day)]
+	body_text.text = intro + loc.get("description", "")
 	_clear_choices()
 	_add_choice(tr("Se promener (événement au hasard)"), _show_event_from.bind(location_id))
-	if not EventEngine.gather_event(location_id).is_empty():
-		_add_choice(tr("Chercher des ressources"), func(): _show_event(EventEngine.gather_event(location_id)))
 	if _has_people(location_id):
-		_add_choice(tr("Parler à quelqu'un"), _show_people.bind(location_id))
+		_add_choice(tr("Parler à quelqu'un que vous voyez"), _show_people.bind(location_id))
+	_add_choice(tr("Chercher…"), _show_search_menu.bind(location_id))
 	for shop_id in Shops.of_location(location_id):
 		_add_choice("%s — %s" % [Shops.name_of(shop_id), Shops.def(shop_id).get("description", "")],
 			open_shop.bind(shop_id))
+	_add_choice(tr("Carte (V)"), open_map)
 	_add_choice("%s (R)" % Game.rest_name(), _on_rest)
-	_add_choice(tr("Retour"), _show_hub)
+	_add_choice(tr("Repos court (une période)"), _on_rest.bind(true))
+	_on_hub = true
 
 
 ## Les gens présents dans un lieu, et la possibilité de chercher un garde, un villageois…
@@ -401,6 +429,86 @@ func _show_people(location_id: String) -> void:
 	for role_id in Social.searchable_roles(location_id):
 		_add_choice(tr("Chercher : %s") % String(DB.npc_roles[role_id]["name"]).to_lower(), _on_search.bind(role_id))
 	_add_choice(tr("Retour"), _show_location_menu.bind(location_id))
+
+
+## Chercher… : quelqu'un à qui parler, une créature précise (chasse), des ressources. Dans la nature, un
+## échec peut finir en combat.
+func _show_search_menu(location_id: String) -> void:
+	title_label.text = tr("%s — Chercher…") % DB.locations[location_id]["name"]
+	body_text.text = tr("Que cherchez-vous ?")
+	_clear_choices()
+	if not Social.searchable_roles(location_id).is_empty():
+		var check := EventEngine.stranger_check(location_id)
+		var label := tr("Quelqu'un à qui parler")
+		if not check.is_empty():
+			label += "   [%s]" % Dice.label(check)
+		_add_choice(label, _on_search_stranger.bind(location_id))
+	if not Social.absent_known(location_id, Game.life.slot_id()).is_empty():
+		_add_choice(tr("Quelqu'un que vous connaissez   [%s]") % Dice.label(Social.whereabouts_check()),
+			_show_absent_known.bind(location_id))
+	if not DB.locations[location_id].get("hunt", []).is_empty():
+		_add_choice(tr("Une créature précise (chasse)"), func(): _show_event(EventEngine.hunt_event(location_id, Game.life.rng)))
+	if not EventEngine.gather_event(location_id, null, Game.life).is_empty():
+		_add_choice(tr("Des ressources"), func(): _show_event(EventEngine.gather_event(location_id, Game.life.rng, Game.life)))
+	_add_choice(tr("Retour"), _show_location_menu.bind(location_id))
+
+
+## Un inconnu à qui parler : en ville, sans test ; dans la nature, un test de Nature, et un échec mène
+## à autre chose (un combat ou un événement du lieu).
+func _on_search_stranger(location_id: String) -> void:
+	var check := EventEngine.stranger_check(location_id)
+	if not check.is_empty():
+		var roll := Game.roll_check({"check": check})
+		_clear_choices()
+		await dice_tray.play(roll)
+		if not roll["success"]:
+			var mishap := EventEngine.mishap_event(location_id, Game.life, Meta,
+				tr("Vous ne croisez personne… sauf ce qui rôde entre les arbres."))
+			if not mishap.is_empty():
+				_show_event(mishap)
+				return
+			_show_search_menu(location_id)
+			return
+	var roles := Social.searchable_roles(location_id)
+	_on_search(roles[Game.life.rng.randi_range(0, roles.size() - 1)])
+
+
+## « Où est … ? » : les PNJ connus absents d'ici ; un test de Perspicacité (un essai par PNJ et par
+## période) dit où les trouver. Dans la nature, un échec mène à autre chose, comme toute recherche.
+func _show_absent_known(location_id: String) -> void:
+	title_label.text = tr("%s — Où est… ?") % DB.locations[location_id]["name"]
+	body_text.text = tr("Qui cherchez-vous ?")
+	_clear_choices()
+	for n in Social.absent_known(location_id, Game.life.slot_id()):
+		_add_choice("%s — %s" % [n.name, n.role_name()], _on_find_known.bind(n, location_id),
+			_asked_whereabouts.get(n.id, -1) != _period_key())
+	_add_choice(tr("Retour"), _show_search_menu.bind(location_id))
+
+
+func _on_find_known(n: Npc, location_id: String) -> void:
+	_asked_whereabouts[n.id] = _period_key()
+	var roll := Game.roll_check({"check": Social.whereabouts_check()})
+	_clear_choices()
+	await dice_tray.play(roll)
+	if not roll["success"]:
+		var mishap := EventEngine.mishap_event(location_id, Game.life, Meta,
+			tr("Pendant que vous cherchez une trace, quelque chose vous trouve."))
+		if not mishap.is_empty():
+			_show_event(mishap)
+			return
+	body_text.text = "%s
+
+%s" % [roll["text"], Social.whereabouts_text(n, Game.life.slot_id()) if roll["success"]
+		else tr("Impossible de deviner où %s se trouve en ce moment.") % n.name]
+	var target := n.location_at(Game.life.slot_id())
+	if roll["success"] and DB.locations.has(target) and target != location_id:
+		_add_choice(tr("Y aller"), _on_location_chosen.bind(target))
+	_add_choice(tr("Retour"), _show_absent_known.bind(location_id))
+
+
+## Jour et période : un essai de « Où est… ? » par PNJ et par période.
+func _period_key() -> int:
+	return Game.life.day * 100 + Game.life.slot
 
 
 func _on_search(role_id: String) -> void:
@@ -439,10 +547,10 @@ func _on_social_closed(acted: bool, location_id: String) -> void:
 
 
 ## Repos (bouton de la fiche) : hors combat et hors fenêtre ; une nuit agitée tire un événement du lieu.
-func _on_rest() -> void:
+func _on_rest(short := false) -> void:
 	if not _can_open_overlay() or not Game.current_event.is_empty():
 		return
-	var result := Game.rest()
+	var result := Game.rest(short)
 	title_label.text = tr("Repos")
 	body_text.text = result["text"]
 	_refresh_sheet()
@@ -473,12 +581,20 @@ func _on_choice(choice: Dictionary) -> void:
 		roll = Game.roll_check(choice)
 		_clear_choices()
 		await dice_tray.play(roll)
+		# Dons « une fois par jour » en mode manuel : proposés après un échec.
+		for feat_id: String in Dice.daily_feat_options(Game.life.character, roll):
+			if await _ask(tr("Test raté. Utiliser %s ?") % Feats.name_of(feat_id), Feats.description_of(feat_id)):
+				Dice.use_daily_feat(Game.life.character, roll, feat_id, Game.life.rng)
+				await dice_tray.play(roll)
+				break
 	_show_result(Game.resolve_choice(choice, roll))
 
 
 func _on_continue(goto: String) -> void:
 	if Game.life.dead:
 		_show_death()
+	elif goto.begins_with(Effects.RANDOM_EVENT_PREFIX):
+		_show_event(EventEngine.mishap_event(goto.substr(1), Game.life, Meta))
 	elif goto != "":
 		_show_event(DB.events[goto])
 	else:
@@ -578,6 +694,7 @@ func _refresh_sheet() -> void:
 
 func _clear_choices() -> void:
 	_event_on_screen = {}
+	_on_hub = false
 	for child in choices_box.get_children():
 		choices_box.remove_child(child)
 		child.queue_free()
@@ -623,3 +740,19 @@ func _on_debug_changed() -> void:
 	_debug_badge.visible = Game.debug
 	if not _event_on_screen.is_empty():
 		_show_event_choices(_event_on_screen)
+
+
+## Question oui / non dans une fenêtre ; retourne true pour « Oui ».
+func _ask(question: String, details: String) -> bool:
+	var dialog := ConfirmationDialog.new()
+	dialog.title = question
+	dialog.dialog_text = details
+	dialog.ok_button_text = tr("Oui")
+	dialog.cancel_button_text = tr("Non")
+	add_child(dialog)
+	dialog.popup_centered()
+	var answer := [false]
+	dialog.confirmed.connect(func(): answer[0] = true)
+	await dialog.visibility_changed
+	dialog.queue_free()
+	return answer[0]

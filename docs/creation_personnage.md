@@ -16,9 +16,8 @@ L'écran a un aperçu à gauche (portrait, nom, fiche mise à jour en direct) et
 
 ### Classe
 
-- Choix de la classe, avec sa description, ses sauvegardes, son équipement, ses actions et ses aptitudes par niveau.
-- **Compétences de classe** au choix (2, ou 4 pour le Roublard), dans la liste de la classe ; celles du passé sont
-  grisées.
+- Choix de la classe, avec sa description, son équipement, ses actions et ses aptitudes par niveau.
+- **Compétences de classe** : rangs fixes (8 au total), non choisis.
 
 ### Passé
 
@@ -26,7 +25,13 @@ L'écran a un aperçu à gauche (portrait, nom, fiche mise à jour en direct) et
 
 ### Attributs
 
-- **Achat de points** façon BG3 : 27 points, valeurs de 8 à 15, puis +2 et +1.
+- **Répartition** (décision du 2026-10-14) : 3 partout, 9 points à répartir, 6 au plus.
+
+### Compétences
+
+- Le passé donne 4 rangs (1 par compétence), la classe 8 (2 au plus par compétence ; fixes), puis 8 rangs libres (`rules.json › creation_skills`), soit environ 20 rangs.
+- Plafond de 5 rangs par compétence à la création (`max_rank`) : l'excédent de départ + passé + classe s'ajoute aux rangs libres.
+- Changer de classe à la création reprend la répartition suggérée.
 - Bouton « Revenir au modèle de la classe ».
 
 ### Creator Points

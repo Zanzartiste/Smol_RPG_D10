@@ -144,5 +144,15 @@
 		"prepared": true,
 		"decay": 0,
 		"color": "#d8b04a"
+	},
+	{
+		"id": "raging",
+		"name": "Enragé",
+		"negative": false,
+		"description": "Ne peut qu'attaquer au corps à corps ; les succès de ses jets d'attaque et de ceux qui l'attaquent sont doublés. Disparaît au début de son tour.",
+		"attack_successes_multiplier": 2,
+		"melee_only": true,
+		"decay": 1,
+		"color": "#c0392b"
 	}
 ]

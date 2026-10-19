@@ -72,10 +72,8 @@ func _build_header(ch: Character) -> void:
 func _build_defenses(ch: Character) -> void:
 	var dex := ch.ability_score("dex")
 	var initiative := tr("Dextérité %d + Intelligence %d") % [dex, ch.ability_score("int")]
-	if ch.has_modifier("initiative_rank"):
-		initiative += tr(" + Physique %d (Vigilant)") % ch.skill_rank("physique")
-	if ch.roll_penalty("dex") > 0:
-		initiative += tr(" − %d (encombrement)") % ch.roll_penalty("dex")
+	if ch.is_encumbered():
+		initiative += tr(" (Dextérité après l'encombrement)")
 	_add_pair(make_label(tr("PV : %d / %d") % [ch.hp, ch.max_hp], tr("(taille %d + 2) × Constitution %d + 7%s") % [
 		ch.size(), ch.ability_score("con"), _extra_hp_text(ch)]),
 		make_label(tr("Initiative : %d") % ch.initiative_base(), initiative + tr("\n+ 1d10 au début du combat.")))
@@ -84,7 +82,9 @@ func _build_defenses(ch: Character) -> void:
 		make_label(tr("Armure : %d") % ch.armor(), _parts_text(ch.armor_parts(), tr("Aucune armure.")) +
 			tr("\nBaisse d'autant le seuil des dégâts subis (sans passer sous 1).")))
 	if ch.is_encumbered():
-		add_child(make_label(tr("Encombré : −%d dé(s) aux jets de FOR et DEX") % ch.encumbrance_penalty(), "", "", UITheme.BAD))
+		add_child(make_label(tr("Encombrement %d : Dextérité −%d") % [ch.encumbrance(), ch.encumbrance()],
+			tr("Poids porté %s (armure, bouclier, armes en main) − Force − Constitution + taille × 2 + armure naturelle × 2.") \
+				% String.num(ch.equipped_weight()), "", UITheme.BAD))
 
 
 func _build_abilities(ch: Character) -> void:

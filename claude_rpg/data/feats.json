@@ -3,130 +3,226 @@
 		"id": "alert",
 		"name": "Vigilant",
 		"category": "origin",
-		"source": "SRD 5.2",
-		"description": "Toujours sur le qui-vive : vous ajoutez votre rang de Physique à l'initiative.",
-		"modifiers": [{"type": "initiative_rank"}]
+		"description": "À l'initiative, vous lancez un dé de plus et gardez le meilleur.",
+		"modifiers": [{"type": "initiative_advantage"}]
+	},
+	{
+		"id": "aquatic",
+		"name": "Aquatique",
+		"category": "origin",
+		"description": "Un dé de plus aux tests d'aisance dans l'eau (apnée, nage).",
+		"modifiers": [{"type": "check_tag_die", "tag": "swim"}]
+	},
+	{
+		"id": "brawny",
+		"name": "Costaud",
+		"category": "origin",
+		"description": "Une fois par jour, après un test raté sous la Force, vous lancez un dé de plus.",
+		"resources": {"brawny": 1},
+		"modifiers": [{"type": "daily_ability_die", "id": "str", "resource": "brawny"}]
+	},
+	{
+		"id": "charming",
+		"name": "Charmeur",
+		"category": "origin",
+		"description": "Une fois par jour, après un test raté sous le Charisme, vous lancez un dé de plus.",
+		"resources": {"charming": 1},
+		"modifiers": [{"type": "daily_ability_die", "id": "cha", "resource": "charming"}]
+	},
+	{
+		"id": "clever",
+		"name": "Malin",
+		"category": "origin",
+		"description": "Une fois par jour, après un test raté sous l'Intelligence, vous lancez un dé de plus.",
+		"resources": {"clever": 1},
+		"modifiers": [{"type": "daily_ability_die", "id": "int", "resource": "clever"}]
+	},
+	{
+		"id": "insightful",
+		"name": "Perspicace",
+		"category": "origin",
+		"description": "Une fois par jour, après un test raté sous la Sagesse, vous lancez un dé de plus.",
+		"resources": {"insightful": 1},
+		"modifiers": [{"type": "daily_ability_die", "id": "wis", "resource": "insightful"}]
+	},
+	{
+		"id": "nimble",
+		"name": "Agile",
+		"category": "origin",
+		"description": "Une fois par jour, après un test raté sous la Dextérité, vous lancez un dé de plus.",
+		"resources": {"nimble": 1},
+		"modifiers": [{"type": "daily_ability_die", "id": "dex", "resource": "nimble"}]
+	},
+	{
+		"id": "vigorous",
+		"name": "Vigoureux",
+		"category": "origin",
+		"description": "Une fois par jour, après un test raté sous la Constitution, vous lancez un dé de plus.",
+		"resources": {"vigorous": 1},
+		"modifiers": [{"type": "daily_ability_die", "id": "con", "resource": "vigorous"}]
+	},
+	{
+		"id": "climate_adapted",
+		"name": "Adapté au climat",
+		"category": "origin",
+		"description": "Vous n'avez pas à résister au climat choisi (chaud ou froid). Les dégâts de feu ou de froid s'appliquent normalement.",
+		"choices": [
+			{"id": "climate", "name": "Climat", "type": "option", "count": 1, "default": ["cold"], "options": [{"id": "hot", "name": "Chaud", "description": "Chaleur, désert, canicule.", "modifiers": [{"type": "climate_adapted", "id": "hot"}]}, {"id": "cold", "name": "Froid", "description": "Froid, neige, blizzard.", "modifiers": [{"type": "climate_adapted", "id": "cold"}]}]}
+		]
+	},
+	{
+		"id": "crafter",
+		"name": "Artisan accompli",
+		"category": "origin",
+		"description": "Un dé de plus pour fabriquer un objet.",
+		"modifiers": [{"type": "skill_advantage", "id": "crafting"}]
+	},
+	{
+		"id": "cunning",
+		"name": "Rusé",
+		"category": "origin",
+		"description": "Un piège ne se déclenche que si vous échouez de façon critique à le désamorcer.",
+		"modifiers": [{"type": "feat_flag", "id": "cunning"}]
+	},
+	{
+		"id": "gambler",
+		"name": "Joueur",
+		"category": "origin",
+		"description": "Aux mini-jeux, vous lancez un dé de plus et gardez celui de votre choix.",
+		"modifiers": [{"type": "feat_flag", "id": "gambler"}]
+	},
+	{
+		"id": "healer",
+		"name": "Guérisseur",
+		"category": "origin",
+		"description": "Un dé de plus pour soigner une créature.",
+		"modifiers": [{"type": "skill_advantage", "id": "medicine"}]
+	},
+	{
+		"id": "orientation",
+		"name": "Orientation",
+		"category": "origin",
+		"description": "Un dé de plus aux tests d'orientation (ne pas se perdre).",
+		"modifiers": [{"type": "check_tag_die", "tag": "orientation"}]
+	},
+	{
+		"id": "linguist",
+		"name": "Linguiste",
+		"category": "origin",
+		"description": "Vous déchiffrez les textes en langue inconnue : 2 caractères par rang de Langues.",
+		"modifiers": [{"type": "feat_flag", "id": "linguist"}]
+	},
+	{
+		"id": "lucky",
+		"name": "Chanceux",
+		"category": "origin",
+		"description": "Une fois par jour, un échec critique devient un simple échec.",
+		"resources": {"lucky": 1},
+		"modifiers": [{"type": "lucky"}]
 	},
 	{
 		"id": "magic_initiate",
-		"name": "Initié à la magie",
+		"name": "Initié à la magie (clerc)",
 		"category": "origin",
-		"source": "SRD 5.2",
-		"description": "Vous avez appris deux tours de magie et un sort du 1er niveau, que vous pouvez lancer une fois par repos long sans emplacement.",
-		"resources": {"magic_initiate": 1},
-		"modifiers": [{"type": "skill_rank", "id": "magic", "amount": 1}],
+		"description": "Vous connaissez un tour de magie de clerc au choix.",
+		"modifiers": [{"type": "spellcasting_ability", "id": "wis"}],
 		"choices": [
-			{"id": "ability", "name": "Attribut d'incantation", "type": "ability", "count": 1, "options": ["int", "wis", "cha"],
-				"modifiers": [{"type": "spellcasting_ability", "id": "$"}], "default": ["int"]},
-			{"id": "cantrips", "name": "Tours de magie", "type": "action", "count": 2, "options": ["fire_bolt", "ray_of_frost"],
-				"default": ["fire_bolt", "ray_of_frost"]},
-			{"id": "spell", "name": "Sort du 1er niveau", "type": "action", "count": 1, "cost": "magic_initiate",
-				"options": ["magic_missile", "burning_hands", "sleep", "mage_shield", "find_familiar"], "default": ["magic_missile"]}
+			{"id": "cantrip", "name": "Tour de magie", "type": "action", "count": 1, "options": ["sacred_flame", "toll_the_dead"], "default": ["sacred_flame"]}
 		]
+	},
+	{
+		"id": "magic_initiate_wizard",
+		"name": "Initié à la magie (magicien)",
+		"category": "origin",
+		"description": "Vous connaissez un tour de magie de magicien au choix.",
+		"modifiers": [{"type": "spellcasting_ability", "id": "int"}],
+		"choices": [
+			{"id": "cantrip", "name": "Tour de magie", "type": "action", "count": 1, "options": ["fire_bolt", "ray_of_frost"], "default": ["fire_bolt"]}
+		]
+	},
+	{
+		"id": "magic_initiate_druid",
+		"name": "Initié à la magie (druide)",
+		"category": "origin",
+		"description": "Vous connaissez un tour de magie de druide au choix.",
+		"modifiers": [{"type": "spellcasting_ability", "id": "wis", "skill": "survival"}],
+		"choices": [
+			{"id": "cantrip", "name": "Tour de magie", "type": "action", "count": 1, "options": ["thorn_whip", "produce_flame"], "default": ["thorn_whip"]}
+		]
+	},
+	{
+		"id": "musician",
+		"name": "Musicien",
+		"category": "origin",
+		"description": "Un dé de plus pour une création ou une représentation artistique (pas pour les sorts).",
+		"modifiers": [{"type": "skill_advantage", "id": "arts"}]
+	},
+	{
+		"id": "mystic_insight",
+		"name": "Intuition mystique",
+		"category": "origin",
+		"description": "Une fois par jour, un dé de plus à une réaction.",
+		"modifiers": [{"type": "feat_flag", "id": "mystic_insight"}]
+	},
+	{
+		"id": "nature_affinity",
+		"name": "Affinité naturelle",
+		"category": "origin",
+		"description": "Un dé de plus pour chercher plantes ou nourriture en milieu sauvage.",
+		"modifiers": [{"type": "check_tag_die", "tag": "forage"}]
 	},
 	{
 		"id": "savage_attacker",
 		"name": "Frappe brutale",
 		"category": "origin",
-		"source": "SRD 5.2",
-		"description": "Une fois par tour, quand vous touchez avec une arme, vous lancez ses dés de dégâts deux fois et gardez le meilleur résultat.",
+		"description": "Une fois par tour, un dé de dégâts de plus sur une attaque réussie.",
 		"modifiers": [{"type": "savage_attacker"}]
 	},
 	{
 		"id": "skilled",
 		"name": "Doué",
 		"category": "origin",
-		"source": "SRD 5.2",
-		"description": "+1 rang dans trois compétences de votre choix.",
+		"description": "+1 rang dans deux compétences de votre choix.",
 		"choices": [
-			{"id": "skills", "name": "Compétences", "type": "skill", "count": 3, "modifiers": [{"type": "skill_rank", "id": "$", "amount": 1}],
-				"default": ["insight", "persuasion", "lore"]}
+			{"id": "skills", "name": "Compétences", "type": "skill", "count": 2, "modifiers": [{"type": "skill_rank", "id": "$", "amount": 1}], "default": ["insight", "persuasion"]}
 		]
+	},
+	{
+		"id": "tactical",
+		"name": "Tacticien",
+		"category": "origin",
+		"description": "Une fois par jour, un dé de plus à un jet fait sur un allié.",
+		"modifiers": [{"type": "feat_flag", "id": "tactical"}]
+	},
+	{
+		"id": "tavern_brawler",
+		"name": "Bagarreur de taverne",
+		"category": "origin",
+		"description": "Un dé de dégâts de plus à mains nues ou avec une arme improvisée.",
+		"modifiers": [{"type": "unarmed_fighting", "amount": 1}, {"type": "improvised_damage", "amount": 1}]
 	},
 	{
 		"id": "tough",
 		"name": "Robuste",
 		"category": "origin",
-		"description": "Votre endurance est hors du commun.",
-		"modifiers": [{"type": "max_hp", "amount": 3}]
+		"description": "+2 PV max.",
+		"modifiers": [{"type": "max_hp", "amount": 2}]
 	},
 	{
-		"id": "healer",
-		"name": "Guérisseur",
+		"id": "urban_affinity",
+		"name": "Citadin",
 		"category": "origin",
-		"description": "Vous savez panser les plaies du corps comme celles de l'âme.",
-		"modifiers": [{"type": "ability", "id": "wis", "amount": 1}, {"type": "skill_rank", "id": "medicine", "amount": 1}]
-	},
-	{
-		"id": "crafter",
-		"name": "Artisan accompli",
-		"category": "origin",
-		"description": "Un œil exercé repère la moindre malfaçon… et le moindre détail suspect.",
-		"modifiers": [{"type": "skill_rank", "id": "crafting", "amount": 1}, {"type": "skill_rank", "id": "perception", "amount": 1}]
-	},
-	{
-		"id": "silver_tongue",
-		"name": "Langue d'argent",
-		"category": "origin",
-		"description": "Vous trouvez toujours les mots, surtout ceux qui ne sont pas vrais.",
-		"modifiers": [{"type": "ability", "id": "cha", "amount": 1}, {"type": "skill_rank", "id": "persuasion", "amount": 1}]
-	},
-	{
-		"id": "musician",
-		"name": "Musicien",
-		"category": "origin",
-		"description": "Votre talent apaise les foules et vous ouvre bien des portes.",
-		"modifiers": [{"type": "ability", "id": "cha", "amount": 1}, {"type": "skill_rank", "id": "arts", "amount": 1}]
-	},
-	{
-		"id": "athlete",
-		"name": "Athlète",
-		"category": "origin",
-		"description": "Un entraînement physique rigoureux a forgé votre corps.",
-		"modifiers": [{"type": "skill_rank", "id": "physique", "amount": 1}],
-		"choices": [
-			{"id": "ability", "name": "Attribut", "type": "ability", "count": 1, "options": ["str", "dex"],
-				"modifiers": [{"type": "ability", "id": "$", "amount": 1}], "default": ["str"]}
-		]
-	},
-	{
-		"id": "scholar",
-		"name": "Érudit des arcanes",
-		"category": "origin",
-		"description": "Des nuits entières passées sur les grimoires ont aiguisé votre esprit.",
-		"modifiers": [{"type": "ability", "id": "int", "amount": 1}, {"type": "skill_rank", "id": "lore", "amount": 1}]
-	},
-	{
-		"id": "nimble",
-		"name": "Agile",
-		"category": "origin",
-		"description": "Les ruelles vous ont appris à esquiver, sauter et filer.",
-		"modifiers": [{"type": "ability", "id": "dex", "amount": 1}, {"type": "skill_rank", "id": "physique", "amount": 1}]
-	},
-	{
-		"id": "ability_score_improvement",
-		"name": "Amélioration d'attribut",
-		"category": "general",
-		"source": "SRD 5.2",
-		"description": "+2 à un attribut, ou +1 à deux attributs (20 au maximum).",
-		"prerequisites": [{"type": "level", "min": 4}],
-		"choices": [
-			{"id": "abilities", "name": "Attributs (+1, deux fois)", "type": "ability", "count": 2, "allow_repeat": true,
-				"modifiers": [{"type": "ability", "id": "$", "amount": 1}]}
-		]
+		"description": "En ville, vous trouvez toujours où dormir et manger sans payer.",
+		"modifiers": [{"type": "feat_flag", "id": "urban_affinity"}]
 	},
 	{
 		"id": "grappler",
 		"name": "Lutteur",
 		"category": "general",
 		"source": "SRD 5.2",
-		"description": "+1 FOR ou DEX. Vous savez frapper et empoigner d'un même geste : l'Empoignade entrave la cible.",
+		"description": "Vous savez frapper et empoigner d'un même geste : l'Empoignade entrave la cible.",
 		"prerequisites": [{"type": "level", "min": 4}, {"type": "any", "conditions": [{"type": "ability", "id": "str", "min": 5}, {"type": "ability", "id": "dex", "min": 5}]}],
-		"actions": ["grapple"],
-		"choices": [
-			{"id": "ability", "name": "Attribut", "type": "ability", "count": 1, "options": ["str", "dex"],
-				"modifiers": [{"type": "ability", "id": "$", "amount": 1}], "default": ["str"]}
-		]
+		"actions": ["grapple"]
 	},
 	{
 		"id": "defensive_duelist",
@@ -140,56 +236,42 @@
 		"id": "resilient",
 		"name": "Résistant",
 		"category": "general",
-		"description": "+1 à un attribut, et un dé de plus pour résister avec lui.",
+		"description": "Un dé de plus pour résister avec l'attribut choisi.",
 		"choices": [
 			{"id": "ability", "name": "Attribut", "type": "ability", "count": 1,
-				"modifiers": [{"type": "ability", "id": "$", "amount": 1}, {"type": "resist_proficiency", "id": "$"}], "default": ["con"]}
+				"modifiers": [{"type": "resist_proficiency", "id": "$"}], "default": ["con"]}
 		]
 	},
 	{
 		"id": "elemental_adept",
 		"name": "Adepte élémentaire",
 		"category": "general",
-		"description": "+1 INT, SAG ou CHA. Vos sorts ignorent la résistance de vos cibles à l'élément choisi.",
+		"description": "Vos sorts ignorent la résistance de vos cibles à l'élément choisi.",
 		"prerequisites": [{"type": "class", "in": ["wizard"]}],
 		"choices": [
 			{"id": "element", "name": "Élément", "type": "damage_type", "count": 1, "options": ["fire", "cold", "lightning", "thunder"],
-				"modifiers": [{"type": "ignore_resistance", "damage_type": "$"}], "default": ["fire"]},
-			{"id": "ability", "name": "Attribut", "type": "ability", "count": 1, "options": ["int", "wis", "cha"],
-				"modifiers": [{"type": "ability", "id": "$", "amount": 1}], "default": ["int"]}
+				"modifiers": [{"type": "ignore_resistance", "damage_type": "$"}], "default": ["fire"]}
 		]
 	},
 	{
 		"id": "heavy_armor_training",
 		"name": "Entraînement aux armures lourdes",
 		"category": "general",
-		"description": "+1 FOR ou CON. Les armures vous pèsent moins : leur Force conseillée baisse de 2.",
+		"description": "Les armures vous pèsent moins : votre encombrement baisse de 2.",
 		"prerequisites": [{"type": "level", "min": 4}],
-		"modifiers": [{"type": "armor_strength_reduction", "amount": 1}],
-		"choices": [
-			{"id": "ability", "name": "Attribut", "type": "ability", "count": 1, "options": ["str", "con"],
-				"modifiers": [{"type": "ability", "id": "$", "amount": 1}], "default": ["str"]}
-		]
+		"modifiers": [{"type": "encumbrance_reduction", "amount": 2}]
 	},
 	{
 		"id": "archery",
-		"name": "Style : Archerie",
+		"name": "Style : À distance",
 		"category": "fighting_style",
 		"source": "SRD 5.2",
 		"description": "Un dé de plus aux attaques avec une arme à distance.",
 		"modifiers": [{"type": "ranged_attack", "amount": 1}]
 	},
 	{
-		"id": "defense",
-		"name": "Style : Défense",
-		"category": "fighting_style",
-		"source": "SRD 5.2",
-		"description": "+1 Armure tant que vous portez une armure (pas de simples vêtements).",
-		"modifiers": [{"type": "armored", "amount": 1}]
-	},
-	{
 		"id": "great_weapon_fighting",
-		"name": "Style : Armes à deux mains",
+		"name": "Style : À deux mains",
 		"category": "fighting_style",
 		"source": "SRD 5.2",
 		"description": "Avec une arme tenue à deux mains, vous relancez une fois les dés de dégâts ratés.",
@@ -197,9 +279,23 @@
 	},
 	{
 		"id": "dueling",
-		"name": "Style : Duel",
+		"name": "Style : À une main",
 		"category": "fighting_style",
-		"description": "Un dé de dégâts de plus avec une arme de corps à corps tenue à une main.",
+		"description": "Un dé de dégâts de plus avec une arme de corps à corps tenue à une main, sans arme dans l'autre main (un bouclier est permis).",
 		"modifiers": [{"type": "dueling", "amount": 1}]
+	},
+	{
+		"id": "unarmed_fighting",
+		"name": "Style : À mains nues",
+		"category": "fighting_style",
+		"description": "Un dé de dégâts de plus avec vos attaques à mains nues.",
+		"modifiers": [{"type": "unarmed_fighting", "amount": 1}]
+	},
+	{
+		"id": "two_weapon_fighting",
+		"name": "Style : À deux armes",
+		"category": "fighting_style",
+		"description": "Avec une arme (ou un bouclier) dans chaque main, une Attaque peut frapper des deux mains : l'arme principale, puis la seconde.",
+		"modifiers": [{"type": "two_weapon_fighting"}]
 	}
 ]

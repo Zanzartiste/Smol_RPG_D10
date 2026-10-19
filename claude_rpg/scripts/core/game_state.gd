@@ -22,10 +22,23 @@ func start_life(character: Character, seed_value: int = 0) -> void:
 	life = LifeState.new()
 	life.rng.seed = seed_value if seed_value != 0 else randi()
 	life.character = character
+	_place_in_start_district(life)
+	WorldMap.visit(life, WorldMap.current(life))
 	Social.on_new_life()  # les relations avec le héros repartent de zéro, les souvenirs restent
 	current_event = {}
 	life_changed.emit()
 	Saves.save_all()
+
+
+## Quartier de départ selon le passé (rules.json › districts) : lieu de départ, marqueur district_<id>, annonce.
+static func _place_in_start_district(life: LifeState) -> void:
+	var districts: Dictionary = DB.rules.get("districts", {})
+	var district_id: String = DB.backgrounds.get(life.character.background_id, {}).get("start_district", districts.get("default", ""))
+	for d: Dictionary in districts.get("list", []):
+		if d["id"] == district_id:
+			life.location = d["location"]
+			life.flags["district_" + district_id] = true
+			life.notices.append(Loc.ui("Votre vie commence dans %s.") % d["name"])
 
 
 ## Commence une vie avec un personnage aléatoire (tests, lancement direct de la scène principale).
@@ -47,7 +60,6 @@ func begin_event(ev: Dictionary) -> void:
 
 ## Lance les dés d'un choix avec test, sans appliquer ses effets.
 func roll_check(choice: Dictionary) -> Dictionary:
-	life.refresh_load()
 	return Dice.roll_check(life.character, choice["check"], life.rng)
 
 
@@ -71,8 +83,13 @@ func start_combat(spec: Dictionary) -> Combat:
 		if light != "":
 			spec = spec.duplicate()
 			spec["light"] = light
+	# Un groupe prévenu par un fuyard (creatures.json › group) : un ennemi de plus, et tous préparés.
+	if life.is_warned(spec.get("group", "")) and not spec.get("enemies", []).is_empty():
+		spec = spec.duplicate()
+		spec["enemies"] = spec["enemies"] + [spec["enemies"][0]]
+		spec["prepared_enemies"] = true
+		spec.erase("group")
 	life.pending_combat = spec
-	life.refresh_load()
 	combat = Combat.new(spec, life)
 	return combat
 
@@ -97,6 +114,11 @@ func finish_combat() -> Dictionary:
 				var gold := maxi(0, int(Dice.roll_expr(creature["gold"], life.rng)["total"]))
 				life.character.gold += gold
 				lines.append(Loc.ui("Butin : %d po") % gold)
+			# Créature équipée : son arme, son bouclier, son armure peuvent tomber (en bon état).
+			for item_id: String in enemy.gear().values():
+				if item_id != "" and life.rng.randf() < float(Combat.setting("gear_drop_chance", 0.5)):
+					life.character.add_item(item_id)
+					lines.append(Loc.ui("Butin : %s ×1") % Items.name_of(item_id))
 			for loot: Dictionary in creature.get("loot", []):
 				if life.rng.randf() < float(loot.get("chance", 1.0)):
 					life.character.add_item(loot["item"], int(loot.get("count", 1)))
@@ -109,6 +131,15 @@ func finish_combat() -> Dictionary:
 					life.log_journal("level", Loc.ui("%s atteint le niveau %d.") % [member.name, new_level])
 		if xp > 0:
 			lines.push_front(Loc.ui("+%d XP") % xp)
+		var picked := c.recover_thrown()
+		if not picked.is_empty():
+			lines.append(Loc.ui("Vous ramassez : %s.") % ", ".join(PackedStringArray(picked)))
+	elif not c.thrown.is_empty() and life.location != "":
+		# Fuite ou défaite : les objets lancés restent sur place, à retrouver en fouillant le lieu.
+		for t: Dictionary in c.thrown:
+			life.lose_item(life.location, t["id"])
+		lines.append(Loc.ui("Vos objets lancés restent sur place (Chercher… › Des ressources pour les retrouver)."))
+		c.thrown.clear()
 
 	# Les membres du groupe à 0 PV étaient inconscients : après une victoire ou une fuite (ou une bagarre),
 	# les autres les ramènent à eux (1 PV). Si tout le groupe est tombé dans un combat mortel, ils meurent.
@@ -126,6 +157,8 @@ func finish_combat() -> Dictionary:
 		if not knockout:
 			lines.append(Loc.ui("Vos compagnons vous ramènent à vous."))
 
+	var fled_ids: Array = c.enemies().filter(func(e): return e.fled and e.creature.has("id")).map(func(e): return e.creature["id"])
+	life.note_fled(life.location, fled_ids)
 	var key := c.outcome
 	var foes := PackedStringArray(c.enemies().map(func(e): return e.name))
 	life.log_journal("combat", {"victory": Loc.ui("Victoire contre : %s."), "fled": Loc.ui("Fuite devant : %s."),
@@ -155,27 +188,31 @@ func end_event() -> void:
 
 
 ## Repos du lieu actuel (rules : locations.json › rest) : camper (gratuit, une nuit agitée est possible),
-## nuit à l'auberge (payante), dormir chez soi. Le temps passe jusqu'au matin, et tout le groupe fait un
-## repos long. Retourne {"ok", "text", "event_location"} (lieu d'un événement nocturne, ou "").
-func rest() -> Dictionary:
+## nuit à l'auberge (payante), dormir chez soi. Repos long : deux périodes, tout le groupe récupère tout ;
+## repos court (`short`, gratuit, sans limite) : une période, la moitié des PV et du mana manquants. Retourne {"ok", "text",
+## "event_location"} (lieu d'un événement qui interrompt le repos, ou "").
+func rest(short := false) -> Dictionary:
 	var loc_id := life.location if life.location != "" else DB.location_order[0]
 	var spec: Dictionary = DB.locations.get(loc_id, {}).get("rest", {})
 	if spec.is_empty():
 		return {"ok": false, "text": Loc.ui("Impossible de se reposer ici."), "event_location": ""}
-	var cost := int(spec.get("cost", 0))
+	var cost := 0 if short else int(spec.get("cost", 0))
 	if life.character.gold < cost:
 		return {"ok": false, "text": Loc.ui("Pas assez d'or (%d po).") % cost, "event_location": ""}
 	life.character.gold -= cost
-	life.advance_time(DB.slots_per_day() - life.slot)  # jusqu'au matin suivant
+	life.advance_time(1 if short else 2)
 	for member in life.party():
 		if member.hp > 0:
-			member.long_rest()
-	var text: String = {"camp": Loc.ui("Vous montez le camp et dormez à la belle étoile."),
+			if short:
+				member.short_rest()
+			else:
+				member.long_rest()
+	var text: String = Loc.ui("Vous faites une pause de quelques heures.") if short else {"camp": Loc.ui("Vous montez le camp et dormez à la belle étoile."),
 		"inn": Loc.ui("Vous louez une chambre à l'auberge (%d po) et dormez d'un sommeil de plomb.") % cost,
 		"home": Loc.ui("Vous dormez chez vous, dans votre lit.")}.get(spec.get("type", ""), "")
-	text += "\n" + Loc.ui("Le groupe a récupéré ses forces.")
+	text += "\n" + (Loc.ui("Le groupe a repris un peu de forces.") if short else Loc.ui("Le groupe a récupéré ses forces."))
 	var event_location := ""
-	if life.rng.randf() < float(spec.get("event_chance", 0.0)):
+	if life.rng.randf() < float(spec.get("event_chance", 0.0)) * (0.5 if short else 1.0):
 		event_location = loc_id
 		text += "\n" + Loc.ui("Mais la nuit est agitée…")
 	_after_change()

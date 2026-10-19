@@ -17,8 +17,11 @@ const SCHEMA := {
 	"xp": ["amount"],
 	"ability": ["id", "amount"],
 	"add_item": ["id"],
+	"gather": ["location", "resource", "id"],  # {"location", "resource", "id", "count"?} : récolte limitée (gather › stock)
+	"find_lost": ["location"],  # {"location", "all"?} : retrouve un objet perdu du lieu (tous avec "all")
 	"remove_item": ["id"],
 	"goto": ["event"],
+	"random_event": ["location"],  # enchaîne sur un événement tiré au hasard dans ce lieu
 	"pass_time": [],
 	"die": [],
 	"long_rest": [],
@@ -32,6 +35,10 @@ const SCHEMA := {
 	"reputation": ["amount"],  # {"amount", "location"?} : réputation dans un lieu (le lieu actuel par défaut)
 	"quest": ["id", "action"],  # {"id", "action": start | advance | complete | fail, "step"?} (voir Quests)
 }
+
+
+## « goto » vers un événement tiré au hasard d'un lieu : ce préfixe suivi de l'id du lieu.
+const RANDOM_EVENT_PREFIX := "@"
 
 
 ## Retourne {"lines": Array[String], "goto": String, "combat": Dictionary}.
@@ -94,12 +101,39 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 				var count := int(e.get("count", 1))
 				ch.add_item(e["id"], count)
 				lines.append(Loc.ui("Obtenu : %s ×%d") % [Items.name_of(e["id"]), count])
+			"gather":
+				var res := {"id": e["resource"]}
+				for r: Dictionary in DB.locations.get(e["location"], {}).get("gather", []):
+					if r["id"] == e["resource"]:
+						res = r
+				var left := life.gather_left(e["location"], res)
+				var count := int(e.get("count", 1)) if left < 0 else mini(int(e.get("count", 1)), left)
+				life.note_gathered(e["location"], e["resource"], count)
+				if count > 0:
+					ch.add_item(e["id"], count)
+					lines.append(Loc.ui("Obtenu : %s ×%d") % [Items.name_of(e["id"]), count])
+				else:
+					lines.append(Loc.ui("Il n'en reste plus cette semaine."))
+			"find_lost":
+				var here: Dictionary = life.lost_items.get(e["location"], {})
+				var found: Array[String] = []
+				for item_id: String in here.keys():
+					for i in int(here[item_id]):
+						found.append(item_id)
+				if not e.get("all", false) and not found.is_empty():
+					found = [found[life.rng.randi_range(0, found.size() - 1)]]
+				for item_id in found:
+					life.take_lost_item(e["location"], item_id)
+					ch.add_item(item_id)
+					lines.append(Loc.ui("Retrouvé : %s") % Items.name_of(item_id))
 			"remove_item":
 				var removed := ch.remove_item(e["id"], int(e.get("count", 1)))
 				if removed > 0:
 					lines.append(Loc.ui("Perdu : %s ×%d") % [Items.name_of(e["id"]), removed])
 			"goto":
 				goto = e["event"]
+			"random_event":
+				goto = RANDOM_EVENT_PREFIX + String(e["location"])
 			"pass_time":
 				life.advance_time(int(e.get("slots", 0)) + int(e.get("days", 0)) * DB.slots_per_day())
 				lines.append(Loc.ui("Le temps passe…"))
@@ -108,7 +142,7 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 			"long_rest":
 				for member in life.party():
 					member.long_rest()
-				lines.append(Loc.ui("PV et emplacements de sort restaurés."))
+				lines.append(Loc.ui("PV et mana restaurés."))
 			"recruit":
 				if life.has_companion(e["companion"]):
 					pass
@@ -130,8 +164,8 @@ static func apply_all(effects: Array, life: LifeState, meta: MetaState) -> Dicti
 					if removed != Equipment.UNARMED:
 						ch.add_item(removed)  # l'objet remplacé retourne dans le sac
 				lines.append(Loc.ui("Équipé : %s") % Equipment.name_of(e["id"]))
-				if ch.encumbrance_reason(e["id"]) != "":
-					lines.append(ch.encumbrance_reason(e["id"]))
+				if ch.is_encumbered():
+					lines.append(Loc.ui("Encombrement %d : Dextérité −%d") % [ch.encumbrance(), ch.encumbrance()])
 			"add_defense":
 				ch.defenses.add(e["kind"], e["id"])
 				lines.append(Modifiers.describe({"type": e["kind"], "damage_type": e["id"], "status": e["id"]}))

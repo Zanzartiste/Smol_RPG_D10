@@ -12,14 +12,13 @@
 - Un **9** ou un **10** ne donne jamais de succès.
 - Un **1** est toujours un succès, et il est **relancé** : il peut redonner un succès, ou un autre 1 relancé à son
   tour.
-- Si le nombre de succès **atteint la difficulté**, le jet est réussi. Les succès au-delà sont des **succès
-  supplémentaires**.
+- Si le nombre de succès **atteint la difficulté**, le jet est réussi. Les succès au-delà sont des **succès supplémentaires**.
 - Une action très facile ne demande pas de jet (ouvrir une porte, marcher tranquillement).
 
 ## Jet de compétence
 
 - On lance **[rang de la compétence] d10** contre un seuil égal à **l'attribut** utilisé.
-- Le jeu prend le meilleur attribut de la compétence, sauf si le test en impose un (option : le choisir soi-même).
+- Le jeu prend le meilleur attribut automatiquement si plusieurs sont autorisés, sauf si une option dans le menu est cochée, permettant de choisir un attribut plus faible si souhaité.
 
 ## Difficultés
 
@@ -34,10 +33,9 @@
 
 ## Bonus et malus
 
-- En général, un bonus ou un malus **modifie la difficulté** (avantage : −1, désavantage : +1).
-- Sinon, il **ajoute ou retire des dés**.
-- Si un malus devait faire tomber le jet à 0 dé, on lance quand même **1 dé** et c'est le **seuil qui baisse**
-  d'autant.
+- En général, plutôt que d'appliquer un bonus ou malus, on modifie la difficulté du jet.
+- Sinon, s'il est précisé qu'il y a bien un malus/bonus, on **ajoute ou retire des dés**.
+- Si un malus devait faire tomber le jet à 0 dé, on lance quand même **1 dé** et c'est le **seuil qui baisse** d'autant.
 - **Attribut au-dessus de 8** : chaque point au-delà de 8 donne un dé de plus, au seuil 8. Exemple : Force 10 et
   Physique 3 → 5 dés au seuil 8.
 - **Règle des dés nombreux** (option dans les réglages) : à partir de 10 dés, on retire 10 dés et on gagne
@@ -76,20 +74,25 @@ chance de réussite (calculée exactement).
 
 ## Attributs
 
-- De **3 à 8** pour un humain ; une personne ordinaire a **4** partout. Maximum : 10 (`max_ability_score`).
-- **Création** : chaque attribut part de 3 ; 10 points à répartir (coût total : 4 → 1, 5 → 2, 6 → 4), 6 au plus
-  avant les bonus ; puis deux bonus de +1 sur des attributs différents. Modèle par classe : 6, 5, 5, 4, 4, 3.
-- Améliorations : +1 à un attribut tous les 4 niveaux (comme avant).
+- De **3 à 8** pour un humain en règle générale ; une personne ordinaire a **4** partout. Pas de maximum.
+- **Création** (décision du 2026-10-14) : chaque attribut part de 3, quelles que soient l'espèce et la classe ;
+  9 points à répartir (1 point = +1), 6 au plus ; tous les points doivent être dépensés. Pas de bonus. Modèle
+  suggéré par classe : 6, 5, 5, 4, 4, 3.
+- Améliorations : +1 à un attribut aux niveaux 5, 10, 15 et 20 (`rules.json › advancement`). Aucun don ne donne
+  d'attribut.
 - **Vieillesse** : passé l'âge limite, chaque année a 40 % de chances de retirer 1 point (`aging_chance`).
 
 ## Résister (ex-jets de sauvegarde)
-
-- Résister à un effet (poison, sort, peur…) est un jet de **compétence** contre l'attribut concerné :
-  - FOR, DEX, CON → **Physique** ;
-  - SAG → **Perspicacité** ; INT → **Érudition** ; CHA → **Persuasion** (`rules.json › dice › resist_skills`).
-- +1 dé si la classe de départ maîtrise cette sauvegarde, +1 par don Résistant, +1 par objet de protection.
-- Contre un **sort qui impose un état** (Sommeil) : opposition entre la Magie du lanceur et la résistance de la
-  cible ; contre des **dégâts** (Mains brûlantes, Boule de feu) : chaque succès de résistance retire un point.
+- Résister à un effet (poison, sort, peur…) est un simple jet de **compétence**, sans maîtrise de classe : chaque
+  effet ou altération demande sa compétence, le plus souvent **Physique** pour les effets physiques (poison,
+  brûlure, croc-en-jambe…) et **Détermination** pour les effets mentaux (peur, sommeil, charme…).
+- *Technique, provisoire* : les données indiquent encore un attribut (`"resist": {"ability": "dex"}`), traduit en
+  compétence par `rules.json › dice › resist_skills` (FOR, DEX, CON → Physique ; SAG → Détermination ;
+  INT → Érudition ; CHA → Persuasion) ; le seuil est cet attribut.
+- +1 dé par don Résistant, +1 par objet de protection.
+- Contre un **sort qui impose un état** (Sommeil) : opposition entre la compétence d'incantation du lanceur et la résistance de la
+  cible ; les sorts de dégâts (Mains brûlantes, Boule de feu) sont des attaques de sort, sans résistance
+  (la résistance qui retire un point par succès reste pour les autres dégâts, pièges et souffles).
 - C'est l'option B de [jets_de_sauvegarde.md](jets_de_sauvegarde.md), mise en place à titre provisoire.
 
 ## Points de vie
@@ -97,14 +100,24 @@ chance de réussite (calculée exactement).
 - **(Taille + 2) × CON + 7**, au moins 1 (décision du 2026-10-14 ; `rules.json › hit_points`). Humain moyen (taille
   0, CON 4) : 15 PV ; humain CON 6 : 19 PV ; nain (taille −1) CON 6 : 13 PV ; un grand colosse dépasse 40 PV.
 - Fourchette visée : de 1 à 55 PV selon la Constitution et la taille.
-- Certains dons modifieront les PV (Robuste). La progression des PV par niveau reste à décider.
+- Certains dons modifieront les PV (Robuste). Pas de progression des PV par niveau pour l'instant.
 - Les dégâts sont à la même échelle : un coup fait le plus souvent 2 à 5 points.
+
+## Compétences à la création
+
+- Rang de départ : 2 pour une compétence instinctive, 1 pour les autres.
+- Le **passé** donne 4 rangs (1 par compétence), la **classe** 8 (2 au plus par compétence) (tableur `Classes.ods`, voir [classes.md](classes.md)).
+- Puis **8 rangs libres** ; tous doivent être répartis. Une répartition suggérée par la classe est proposée.
+- **Plafond** : aucune compétence ne dépasse 5 à la création, rang de départ, passé et classe compris ; un rang
+  au-delà revient aux rangs libres.
+- Au total, environ 20 rangs répartis (4 + 8 + 8).
 
 ## Points de compétence
 
-- À chaque niveau à partir du 2 (`rules.json › skill_points › by_level`, réglable niveau par niveau), le personnage
-  gagne 1 point de compétence à dépenser à la montée de niveau : chaque point monte d'un rang une compétence.
-- Rang maximal d'une compétence : 3 + niveau ÷ 2 (arrondi à l'inférieur).
+- Tous les deux niveaux, aux niveaux 2, 4, 6… 20 (`rules.json › skill_points › by_level`, réglable niveau par
+  niveau), le personnage gagne 1 point de compétence à dépenser à la montée de niveau : chaque point monte d'un rang une compétence.
+- Après la création, pas de plafond : chaque point fait monter une compétence d'un rang, et une même compétence
+  ne monte que d'un rang par niveau au plus (décision du 2026-10-14 ; `Character.level_raises`).
 
 ---
 
@@ -112,7 +125,7 @@ chance de réussite (calculée exactement).
 
 ### Initiative
 
-- **Initiative de base** = Dextérité + Intelligence (+ rang de Physique avec Vigilant), moins l'encombrement.
+- **Initiative de base** = Dextérité (après l'encombrement) + Intelligence.
 - En début de combat : **1d10 + initiative de base**, tous les dés lancés ensemble.
 - Égalité : la plus haute Dextérité joue d'abord, puis la plus haute Intelligence, puis au hasard.
 
@@ -121,15 +134,15 @@ chance de réussite (calculée exactement).
 - **Deux actions par tour** (rarement plus pour certaines créatures : `actions_per_turn`).
 - Chaque action **non utilisée** pendant son tour donne une **réaction défensive** jusqu'à son tour suivant.
 - S'il reste des réactions au début de son tour, on les perd et on devient **Préparé** : +2 dés au prochain jet
-  de combat (attaque, esquive, parade).
+  de combat (attaque, esquive, parade, sort...).
 - On peut aussi dépenser une action pour **Se préparer**.
 - La Fougue donne une action de plus ; la Ruse permet de Se cacher sans dépenser d'action (une fois par tour) ;
   Mains lestes : utiliser un objet ne coûte pas d'action.
 
 ### Attaque
 
-- **[Rang de la compétence de l'arme] d10** contre l'attribut d'attaque (FOR ; finesse : le meilleur de FOR et DEX ;
-  à distance : DEX ; sort : Magie contre l'attribut d'incantation).
+- **[Rang de la compétence de l'arme] d10** contre la **DEX**, quelle que soit l'arme (décision du 2026-10-15 ;
+  sort : compétence d'incantation contre l'attribut d'incantation).
 - **Mêlée** : la difficulté est l'**Esquive naturelle** de la cible = **Dextérité ÷ 3**, arrondie à l'inférieur,
   au moins 1 (DEX 1 à 5 : 1 ; 6 à 8 : 2 ; 9 : 3).
 - **Distance** (arcs, sorts) : la difficulté est le **Couvert** de la cible : 1 par défaut, jamais moins ;
@@ -144,20 +157,31 @@ chance de réussite (calculée exactement).
 
 - **Esquive** : après une attaque réussie, avant les dégâts. Jet de Physique (DEX) ; chaque succès retire un succès
   à l'attaque (une attaque critique peut redevenir normale, une attaque réussie peut rater).
-- **Parade** : quand on va subir des dégâts d'une attaque. Jet d'Armes de mêlée (DEX) avec une arme ou un bouclier,
-  de Physique (DEX) à mains nues ; certaines armes peuvent imposer un autre seuil (`"parry"`). Chaque succès retire
-  un point de dégâts.
-  - Une attaque à distance ne se pare qu'avec un bouclier.
-  - Une parade par tour, ou une par main avec une arme (ou un bouclier) dans chaque main.
-  - On ne pare pas à mains nues une attaque armée (les crocs et les griffes ne sont pas des armes).
+- **Parade** : quand on va subir des dégâts d'une attaque. [Rang d'Armes de mêlée] d10 (Physique pour les mains
+  nues et les armes de cette compétence) contre le **seuil de parade** de l'objet qui pare (épée 4, dague 2, bâton
+  2 à une main et 5 à deux mains, bouclier 4 ; voir [equipements.md](equipements.md)). Chaque succès retire un
+  point de dégâts.
+  - Une attaque à distance ne se pare qu'avec un bouclier ; une arme sans seuil de parade (arc, arme de jet) ne
+    pare pas.
+  - Une arme à impact (haches) baisse de 1 le seuil de parade de l'adversaire.
+  - Parade dangereuse (mains nues, poing américain, crochet) contre une arme qui ne l'est pas : 1 PV perdu par dé
+    à 10, même si la parade réussit. Contre des crocs, des griffes ou des poings, aucun risque.
+  - Une parade par tour, ou une par main avec une arme (ou un bouclier) dans chaque main. Quand deux objets peuvent
+    parer, le joueur choisit lequel (un tir ne se pare qu'au bouclier).
   - On peut parer après une esquive qui n'a pas suffi.
+  - **Bouclier magique** : un lanceur qui connaît le sort Bouclier (équipé, avec le mana pour le payer) peut parer
+    avec, même un tir : [rang de Magie] d10 contre son seuil d'incantation. La parade coûte le mana du sort. C'est
+    un choix de parade de plus ; l'IA ne s'en sert que si rien d'autre ne pare.
 - **Contre-attaque** : avant le jet de l'attaquant. L'Esquive naturelle tombe à 0 pour les deux ; les deux font un
   jet d'attaque en opposition ; le plus de succès touche (égalité : l'attaquant initial), avec un critique selon
   l'écart ; le perdant ne peut ni esquiver ni parer cette attaque. Contre un tir, il faut soi-même une arme de tir
   (le Couvert tombe alors à 0).
 - **Contresort** : quand un ennemi lance un sort, un lanceur de sorts peut le contrer, avant de savoir si le sort
-  touchera : jet de Magie contre jet de Magie ; s'il a plus de succès, le sort est annulé (l'action est perdue).
+  touchera : opposition des compétences d'incantation ; s'il a plus de succès, le sort est annulé (l'action est perdue).
   Il dépense sa réaction.
+- **Barre d'actions** : les actions sont rangées en catégories (Attaques, Sorts, Capacités, Objets, Lancer).
+  Survoler une catégorie l'ouvre (souris), un clic aussi (tactile) ; Tab passe à la suivante, 1-9 choisit.
+  La catégorie ouverte est gardée d'un tour à l'autre.
 - **Réactions automatiques** (option de l'écran titre) : tout le groupe réagit seul, comme l'IA.
 - **Qui choisit** : le joueur, pour ses personnages, sauf ceux joués par l'IA. Pendant le tour ennemi, le jeu
   s'arrête à chaque occasion (« Contre-attaquer / Laisser venir », « Esquiver / Ne pas esquiver », « Parer /
@@ -165,21 +189,29 @@ chance de réussite (calculée exactement).
 
 ### Dégâts et Armure
 
-- **[Rang de la compétence de l'arme] d10** contre le **seuil de l'arme** : chaque succès est un point de dégâts.
-  - Seuil : celui de l'attaque (FOR, ou DEX pour une arme de finesse) ; ou un seuil fixe (arc court 5, arc long 6).
-  - Les **armes plus grosses donnent des dés en plus** (décision du 2026-10-13) : dague, gourdin −1 ; épée courte,
-    masse, bâton +0 ; rapière, épée longue +1 ; hache à deux mains +2 ; mains nues −1 ; polyvalente à deux mains
-    +1. Une arme magique +1 donne un dé d'attaque et un dé de dégâts ; le style Duel, un dé de dégâts.
-  - Exemple : guerrier FOR 7, épée longue à deux mains (+2 dés), Armes de mêlée 2 → 4d10 contre 7.
-- L'**Armure** de la cible (armure portée + bouclier + objets) **baisse le seuil** des dégâts d'autant, sans passer
-  sous 1 (décision du 2026-10-13) : au seuil 1, seuls les 1 font des dégâts, si bien qu'une marée de rats finit
-  quand même par blesser un chevalier en harnois. Vêtements 0, armures légères 1, intermédiaires 1 ou 2, cotte de mailles 3, harnois 4, bouclier +1.
+- **Les dés de l'arme** contre le **seuil de l'arme** : chaque succès est un point de dégâts (décision du
+  2026-10-15 : le rang de la compétence ne compte plus dans les dégâts d'une arme).
+  - Dés : de 4 (mains nues, couteau, fleuret) à 7 (épée longue, hache de bataille, masse d'armes…) ; crocs et
+    griffes 5, crocs puissants 7.
+  - Seuil : FOR (FOR +1 pour l'épée bâtarde et la hallebarde, FOR +2 pour l'épée et le marteau à deux mains), DEX
+    (fleuret, rapière, fronde, shuriken), ou un seuil fixe (arc 5, arbalètes 4, 6 ou 7).
+  - Une arme magique +1 donne un dé d'attaque et un dé de dégâts ; le style À une main, un dé de dégâts.
+  - Exemple : guerrier FOR 7, épée longue → 7d10 contre 7.
+  - Perçante (fleuret, lances, faux, javelot, arcs, arbalètes) : sur un critique, 3 dégâts de plus.
+  - Les sorts gardent leurs dés selon le rang (voir les questions).
+- L'**Armure** de la cible (armure portée + bouclier + armure naturelle + objets) **baisse le seuil** des dégâts
+  d'autant, sans passer sous 1 (décision du 2026-10-13) : au seuil 1, seuls les 1 font des dégâts, si bien qu'une
+  marée de rats finit quand même par blesser un chevalier en armure de plates. Vêtements 0, cuir 1, cuir clouté 2,
+  mailles et brigandine 3, écailles et cuirasse 4, plates 5, bouclier +1.
+- **Encombrement** = poids de l'armure, du bouclier et des armes en main − FOR − CON + taille × 2 + armure
+  naturelle × 2 (au moins 0). Chaque point retire 1 à la Dextérité (attaque, Esquive naturelle, esquive, parade,
+  initiative…). À 0 de Dextérité, on passe son tour. Détails : [equipements.md](equipements.md).
 - **Critique N** : on peut relancer jusqu'à N fois les dés de dégâts en échec. Un dé relancé qui fait 1 se relance
   comme d'habitude ; un dé né d'un 1 ne se relance pas grâce au critique.
 - **Attaque surprise** (la cible ignore votre présence : vous êtes caché, ou elle dort, ou elle est paralysée) :
   - Esquive naturelle à 1 (le Couvert ne change pas) ;
   - pas de réaction possible ;
-  - l'armure est ignorée, sauf une armure naturelle ;
+  - avec une arme assassine (dague, couteau), l'armure est ignorée, sauf une armure naturelle ;
   - critique 1 dès 1 succès supplémentaire (2 dès 4, 3 dès 7).
 
 ### Autres règles de combat
@@ -190,41 +222,106 @@ chance de réussite (calculée exactement).
   - meute : elle peut fuir quand son chef (`leader`) tombe, ou quand la moitié des siens est hors de combat ;
   - sans peur : se bat jusqu'au bout.
   Une créature enfuie ne rapporte ni XP ni butin.
+- **Jet d'incantation** : un sort sans autre jet du lanceur (ni attaque de sort, ni effet à opposition contre la
+  réserve d'incantation) demande un jet de la réserve
+  d'incantation contre la difficulté `rules.json › casting › difficulty` (1, quel que soit le niveau du sort). Raté : le sort ne part pas, le mana est
+  dépensé. Échec critique : contrecoups. L'IA pondère ses sorts par cette chance. Une difficulté variable selon la
+  cible passe par une opposition (Sommeil). Détails : [magie.md](magie.md).
+- **Lancer une fiole** : un objet à effet de projection (`splash` : fiole d'huile, eau bénite) ou une potion
+  (soins, antidote) se brise quand on le lance : le jet de lancer sert à toucher, la fiole ne fait pas de dégâts
+  par elle-même (`no_damage`) et applique son effet si l'attaque touche. Il n'est pas rendu.
+- **Munitions spéciales** : avec un arc ou une arbalète en main, l'attaque peut consommer une munition du sac
+  (flèche de feu, de glace, de foudre) qui ajoute ses dégâts et ses effets. Sans munition, c'est une flèche
+  ordinaire, sans limite. Il n'y a pas de différence entre flèches et carreaux.
+- **Créatures équipées** : certaines créatures portent armes, armure et bouclier (brigand, rebouteux). Leur Armure
+  vaut leur armure propre plus celle qu'elles portent ; elles parent avec leur arme ou leur bouclier ; l'encombrement
+  s'applique comme pour un personnage (DEX en moins). Chaque pièce a une chance sur deux de tomber en butin, en bon
+  état (`gear_drop_chance`).
+- **Ennemis enfuis** : dans un lieu sauvage, ils peuvent revenir du lendemain jusqu'à 7 jours plus tard (chaque
+  événement tiré dans le lieu a 35 % de chances d'être leur retour), avec 1 renfort (4 ennemis au plus). Rien n'est
+  certain. Leur groupe (ex. les bandits) est prévenu pendant 7 jours : un combat contre ce groupe compte un ennemi
+  de plus, et tous les ennemis sont préparés au premier tour (camp des brigands, chasse au camp).
 - **IA des ennemis** : les chasseurs (`"ai": "hunter"`) visent le plus faible, les brutes frappent au hasard.
   Soigner ne sert que si un allié est sous 50 % de ses PV, protéger que sous 75 % ; ces actions deviennent alors
   prioritaires et visent l'allié le plus mal en point (`ai_heal_below`, `ai_protect_below`, `ai_support_bonus`).
 - **Météo** : brouillard et orage plongent les combats en plein air dans la pénombre (Couvert +1).
-- **Sorts** : attaque de sort contre le Couvert ; dégâts = rang de Magie (+ dés du sort) contre l'attribut
-  d'incantation + bonus ; les sorts de zone se résistent (DEX : chaque succès retire un point).
+- **Compétence d'incantation** : arcanique → Érudition (Magicien), divine → Détermination, primale → Nature,
+  artistique → Arts ; Initié à la magie : magicien → Érudition, clerc → Détermination, druide → Nature.
+- **Progression** : un rang de compétence aux niveaux pairs, une aptitude de sous-classe tous les 3 niveaux (3, 6, 9,
+  12, 15), +1 attribut tous les 5 niveaux, un don (pas d'origine) tous les 4 niveaux. Table d'XP de D&D. La montée de
+  niveau se fait au hub, avec le bouton « ★ Monter de niveau » de la fiche ; l'onglet Personnage brille tant qu'elle
+  attend.
+- **Chercher les points faibles** (action commune) : test d'Érudition, ou de Nature si elle vaut mieux contre une
+  créature naturelle (`"natural": true` : bêtes), difficulté 2 (Se préparer avant : +2 dés, donc deux actions).
+  Réussi : les résistances, immunités et vulnérabilités de la cible s'affichent (étiquette « Points faibles ») ;
+  elles restent connues pour toute son espèce (carnet de bestiaire de la vie, `LifeState.bestiary`).
+- **Chercher…** (menu d'un lieu) : quelqu'un à qui parler (en ville sans test ; dans la nature, Nature contre
+  `stranger_difficulty`, un échec attire un groupe de `encounters`) ; une créature précise (`locations.json › hunt` :
+  réussite = combat contre elle, critique = un de plus ; échec = embuscade d'un groupe du lieu sauvage, échec critique =
+  un de plus) ; des ressources (récolte ; un échec critique dans la nature finit aussi en combat) ; quelqu'un qu'on
+  connaît et qui n'est pas là (« Où est… ? » : Perspicacité, `social › whereabouts_difficulty`, un essai par PNJ et
+  par période ; réussi, on apprend où il est à ce moment et on peut y aller). Dans la nature, toute recherche ratée
+  mène à autre chose : un événement du lieu une fois sur deux, sinon une embuscade (effet `random_event`).
+- **Rythme des combats** (option, activée par défaut) : les dés restent affichés jusqu'au clic, et le tour d'un
+  ennemi attend un clic n'importe où (ou Entrée / Espace), comme les dés (« Au tour de … »).
+- **Mana** : réserve = niveau de lanceur × 2 (demi-lanceur : moitié de ses niveaux) ; un sort de niveau N coûte
+  N mana, les tours de magie rien. Le mana manquant se paie en PV (1 pour 1), jusqu'à 0 PV (on tombe). L'IA ne
+  puise jamais dans ses PV. Repos long : tout le mana revient ; repos court : la moitié du mana manquant.
+- **Dons « 1/jour »** (Costaud, Malin, Agile…) : après un test raté sous l'attribut du don, un dé de plus est lancé
+  d'office (on a vu le résultat), ou proposés par une fenêtre si l'option « Dons une fois par jour automatiques » est
+  coupée. Degré d'un échec critique (aucun succès) = nombre de dés à 10 ; Chanceux le baisse de 1 (à 0, ce n'est plus qu'un
+  échec). Recharge au repos long.
+- **Options d'affichage** (menu Options) : compétence et difficulté des tests, probabilité, choix verrouillés.
+- **Sorts** : un sort de dégâts est une attaque de sort contre le Couvert (ou l'Esquive naturelle) de chaque cible,
+  comme une attaque à l'arme (les sorts de zone attaquent chaque ennemi, sans résistance DEX) ; dégâts = rang de la
+  compétence d'incantation (+ dés du sort) contre l'attribut d'incantation + bonus. Un sort qui impose un état est
+  une opposition contre la résistance de la cible.
 - **Paliers** : les tours de magie gagnent un dé de dégâts aux niveaux 5, 11 et 17 ; l'Attaque sournoise ajoute un
   dé de dégâts par palier (1 au niveau 1, 6 au niveau 11).
 - **Emplacements de sort** (décision du 2026-10-14) : une seule réserve d'emplacements « de niveau 1 » ; lancer un
   sort de niveau N coûte N emplacements. La réserve vaut la table du SRD pondérée par le niveau des sorts (magicien :
   2 au niveau 1, 8 au niveau 3, 16 au niveau 5) ; la table fixe aussi le niveau de sort le plus haut lançable.
 - **Sorts connus et équipés** : un lanceur connaît les sorts de sa classe, mais seuls les sorts **équipés** sont
-  utilisables en combat : 2 + rang de Magie (4 pour un magicien débutant). Les **tours de magie** sont toujours
+  utilisables en combat : 2 + rang de la compétence d'incantation (5 pour un magicien débutant sans rang libre). Les **tours de magie** sont toujours
   prêts, en plus de cette limite (décision du 2026-10-14). Un sort appris est équipé d'office s'il reste de la place.
   On les change hors combat, dans l'onglet Sorts du tiroir.
 - **États** : Poison (1 dégât par tour, les charges sont la durée), Affaibli (un dé de dégâts de moins par charge),
   Protection (chaque charge absorbe 1 point), Endormi et Paralysé (pris par surprise), Invisible (caché : ses
-  attaques sont des surprises, Couvert +1), Préparé (+2 dés).
+  attaques sont des surprises, Couvert +1), Préparé (+2 dés), Enragé (Rage du Barbare : corps à corps seulement,
+  succès des attaques doublés dans les deux sens).
+- **Critiques** : Attaques précises (Roublard) ajoute 3 dés de dégâts à une attaque critique.
+- **Deux mains** (pour tous) : une arme de corps à corps à une main ou un bouclier peut se tenir en main secondaire
+  (bouton « Main secondaire » de l'inventaire). Chaque action d'Attaque se fait alors au choix avec l'arme principale
+  ou avec la main secondaire (variante « Attaque (<objet>) » ; avec un bouclier, c'est un coup de bouclier). Pas de
+  seconde attaque automatique ni de malus. Le style À deux armes ajoute la variante « Attaque des deux mains » :
+  l'arme principale puis la main secondaire, sans malus. L'intérêt est tactique : deux armes de types de dégâts
+  différents, ou une arme et un bouclier.
+- **Parchemins** : objets à usage unique qui lancent un sort, sans emplacement, avec la compétence Langues (et son
+  meilleur attribut) à la place de la compétence d'incantation (`rules.json › scrolls`). Lire un parchemin coûte
+  une action et débloque le Magicien pour les vies suivantes.
 
 ---
 
 ## Hors combat
 
-- **Événements** : `"check": {"skill": "physique", "ability"?: "dex", "difficulty": 2}` ; un test d'attribut seul
-  (`{"ability": "dex", "difficulty": 1}`) lance 2 dés ; résister : `{"resist": "con", "difficulty": 1}`.
+- **Événements** : `"check": {"skill": "physique", "ability"?: "dex", "difficulty": 2}` ; résister :
+  `{"resist": "con", "difficulty": 1}`. Pas de test d'attribut seul (règle retirée le 2026-10-15).
 - **Actions sociales** : contre une difficulté (+ l'humeur et les traits du PNJ : radieux −1, maussade +1,
   furieux +2), ou en opposition contre une compétence du PNJ (ses traits et son humeur lui ajoutent des dés). Un dé
   de moins sans langue commune.
 - **Perspicacité passive** (et autres valeurs passives) : le nombre moyen de succès de la réserve, arrondi.
-- **Fabrication** : Artisanat (DEX) à la forge, Potions et cuisine à l'alchimie, contre la difficulté de la recette
+- **Fabrication** : Artisanat (DEX) à la forge, Alchimie à l'alchimie, contre la difficulté de la recette
   (1 par défaut).
 - **Prix** : la remise vaut 5 % par succès moyen de la Persuasion du meilleur négociateur, au plus 15 %.
 - **Talent fiable** (Roublard) : un test d'une compétence entraînée a toujours au moins un succès.
 - **Récolte** (« Chercher des ressources », lieux sauvages, `locations.json › gather`) : un test par ressource ;
   réussite : la ressource ; critique : le double ; échec critique : une petite blessure.
+- **Ressources limitées** : chaque ressource peut avoir un `stock` (maximum par semaine). Le compte est remis à
+  zéro au début de chaque semaine (jours 1, 8, 15…). Un choix épuisé s'affiche « (épuisé cette semaine) ».
+  Forêt : herbes 6 par semaine, branche solide 2.
+- **Objets perdus** : après une fuite ou une défaite, les objets lancés qui ne se sont pas brisés restent sur les
+  lieux du combat. « Chercher… › Des ressources › Fouiller les lieux d'un combat » : Perception contre une
+  difficulté de 1 ; réussite : un objet au hasard, critique : tous. Ce qu'on retrouve sort de la liste.
 - **Demandes des PNJ** (« Proposer ses services ») : le PNJ confie une demande de son métier (`npc_roles.json ›
   requests`) qui devient une quête ; « Remettre la commande » rapporte l'or promis et de l'amitié. Une demande à la
   fois par PNJ, trois jours entre deux.
@@ -244,24 +341,27 @@ chance de réussite (calculée exactement).
 5. **Créatures** : attributs convertis (÷ 2,5) ; PV calculés comme ceux des personnages (sauf l'Alpha : 12) ;
    l'Alpha a une armure naturelle de 1, le brigand une armure de cuir (1).
 6. **Échelles converties** : anciens DD → difficulté (11 et moins → 1, 12-14 → 2, 15-17 → 3, 18-20 → 4) ; dégâts
-   et soins des événements ÷ 2,5 ; Force des armures 4 / 5 / 6 ; capacité de charge 18 kg par point de Force ;
-   encombrement −1 dé par point de Force manquant (au plus −3).
-7. **Dons** : Robuste +3 PV ; Archerie +1 dé ; Duel +1 dé de dégâts ; Défense +1 Armure ; Armes à deux mains : une
+   et soins des événements ÷ 2,5. (L'ancien encombrement par la Force conseillée et la charge du groupe a été
+   remplacé le 2026-10-15 par l'encombrement au poids, voir [equipements.md](equipements.md).)
+7. **Dons** : Robuste +3 PV ; À distance +1 dé ; À une main +1 dé de dégâts ; Armes à deux mains : une
    relance des dés de dégâts ratés ; Critique amélioré : un succès supplémentaire compté en plus ; Évocation
    renforcée : un dé de dégâts ; Dérobade : chaque succès de résistance (DEX) en retire deux ; Inflexible : relance
-   une résistance ratée ; Vigilant : rang de Physique à l'initiative ; Esquive instinctive : dégâts divisés par deux.
+   une résistance ratée ; Esquive instinctive : dégâts divisés par deux.
 8. **Croc-en-jambe du loup** : il met À terre au lieu d'étourdir.
+
+
+## Décisions (2026-10-16, reprises de questions_suite.md)
+
+- Combat au rythme du clic (option) : le tour ennemi attend un clic n'importe où (ou Entrée / Espace), comme les
+  dés, pas un clic sur un choix précis (fait). Il n'attend qu'au début du tour de chaque ennemi.
+- Lancer un objet, coup de bouclier (devenu l'attaque de la main secondaire) : voir [equipements.md](equipements.md), « Décisions (2026-10-16) ».
+- Dégâts des sorts et contrecoups des échecs critiques : voir [magie.md](magie.md), « Décisions (2026-10-16,
+  deuxième série) ».
 
 ## Questions
 
-1. **Améliorations d'attribut** (à régler avec la courbe de puissance) : tous les 4 niveaux de classe, +1 à un
-   attribut et un don ; le don « Amélioration d'attribut » (+1 à deux attributs, ou +2 au même) et les demi-dons
-   (+1) ; le don du passé à la création. Un guerrier peut passer de FOR 7 à 10 au niveau 4.
-2. **Test d'attribut sans compétence** (2 dés contre l'attribut) : la règle existe, mais aucun contenu ne s'en sert
-   pour l'instant (les deux tests d'attribut des événements sont devenus des tests de compétence). À garder pour
-   les cas sans compétence évidente (soulever une herse, résister au sommeil sans Perspicacité…) ?
-3. **Puissance des sorts** (reformulation de la question 13) : les grosses armes lancent plus de dés (une hache à
+1. **Puissance des sorts** (reformulation de la question 13) : les grosses armes lancent plus de dés (une hache à
    deux mains : +1 dé). Les sorts, eux, rendent leur seuil plus facile : Trait de feu lance autant de dés que le
    rang de Magie, et chaque dé réussit sur INT + 2 au lieu de INT. Faut-il plutôt donner aux sorts des dés en plus,
    comme les armes (Trait de feu : rang de Magie + 1 dé, seuil INT) ? Les dés en plus montent plus haut (plus de
-   critiques), le seuil facile rend les dégâts plus réguliers.
+   critiques), le seuil facile rend les dégâts plus réguliers. => Pas vraiment comme ça que je le vois, cf les notes ajoutées à équipements.

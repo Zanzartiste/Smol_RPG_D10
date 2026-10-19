@@ -9,6 +9,7 @@ extends Control
 
 signal inventory_requested
 signal carnet_requested
+signal level_up_requested
 
 const PANEL_WIDTH := 440.0
 const TAB_WIDTH := 132.0
@@ -38,6 +39,7 @@ var _open := 0.0  # 0 replié, 1 déroulé
 var _outside := 0.0  # temps passé hors du tiroir
 var _skills_open := true  # section Compétences dépliée
 var _journal_filter := ""  # sorte d'entrées du journal affichée ("" : toutes)
+var _level_up_glow := false  # un membre du groupe peut monter de niveau
 var _tab_timer := 0.0  # rafraîchissement régulier des onglets
 
 
@@ -70,6 +72,9 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if _level_up_glow:
+		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 250.0)
+		_tab_buttons["character"].modulate = Color.WHITE.lerp(UITheme.GOLD * 1.6, pulse)
 	_tab_timer += delta
 	if _tab_timer > 0.5 and life != null:
 		_tab_timer = 0.0
@@ -148,6 +153,10 @@ func _refresh_tabs() -> void:
 	_tab_buttons["character"].add_theme_color_override("font_color",
 		UITheme.BAD if hero.hp <= hero.max_hp / 3.0 else UITheme.TEXT)
 	_tab_buttons["character"].tooltip_text = tr("Personnage")
+	# Une montée de niveau attend : l'onglet brille (voir _process).
+	_level_up_glow = life.party().any(func(c): return c.has_level_up())
+	if not _level_up_glow:
+		_tab_buttons["character"].modulate = Color.WHITE
 	_tab_buttons["inventory"].text = short_gold(hero.gold)
 	_tab_buttons["inventory"].tooltip_text = tr("Inventaire et équipement")
 	_tab_buttons["quests"].text = tr("Quêtes (%d)") % Quests.with_status(life, "active").size()
@@ -229,6 +238,8 @@ func _member_selector(only: Callable = Callable()) -> void:
 
 func _build_character() -> void:
 	_member_selector()
+	if life.party().any(func(c): return c.has_level_up()):
+		_add_button(tr("★ Monter de niveau"), func(): level_up_requested.emit(), not locked)
 	var page := CharacterPage.new()
 	page.skills_open = _skills_open
 	page.skills_toggled.connect(func(open): _skills_open = open)
@@ -239,9 +250,6 @@ func _build_character() -> void:
 func _build_inventory() -> void:
 	var hero := life.character
 	_add_label(tr("Or : %d po") % hero.gold, "", "SectionLabel")
-	var capacity := life.carry_capacity()
-	_add_label((tr("Charge : %.1f / %.0f kg") % [life.carried_weight(), capacity]).replace(".", ","),
-		tr("Le groupe porte 18 kg par point de Force de chaque membre ; au-delà, des dés en moins aux jets de FOR et DEX."))
 	_add_separator()
 	_member_selector()
 	_add_label(tr("Équipement de %s") % member.name, "", "", UITheme.TEXT_DIM)
@@ -380,10 +388,11 @@ func _build_spells() -> void:
 	_member_selector(func(c): return c.max_resource(Spellcasting.SLOT_KEY) > 0 or not c.known_spells().is_empty())
 	var ch := member
 	_add_label(tr("Sorts de %s") % ch.name, "", "SectionLabel")
-	_add_label(tr("Emplacements : %d / %d") % [int(ch.resources.get(Spellcasting.SLOT_KEY, 0)), ch.max_resource(Spellcasting.SLOT_KEY)],
-		tr("Un sort de niveau N coûte N emplacements. Un repos long les restaure.\nSorts jusqu'au niveau %d.") % ch.max_spell_level())
+	_add_label(tr("Mana : %d / %d") % [int(ch.resources.get(Spellcasting.SLOT_KEY, 0)), ch.max_resource(Spellcasting.SLOT_KEY)],
+		tr("Un sort de niveau N coûte N mana ; le mana manquant se paie en PV. Un repos long le restaure.\nSorts jusqu'au niveau %d.") % ch.max_spell_level())
 	_add_label(tr("Sorts équipés : %d / %d") % [ch.equipped_spells.size(), ch.max_equipped_spells()],
-		tr("Seuls les sorts équipés sont utilisables en combat : 2 + rang de Magie (%d). Les tours de magie sont toujours prêts, en plus.") % ch.skill_rank("magic"))
+		tr("Seuls les sorts équipés sont utilisables en combat : 2 + rang de %s (%d). Les tours de magie sont toujours prêts, en plus.") % [
+			Skills.name_of(ch.spell_skill()), ch.skill_rank(Skills.SPELL)])
 	if locked:
 		_add_label(tr("On ne change pas ses sorts pendant un combat."), "", "", UITheme.TEXT_DIM)
 	_add_separator()

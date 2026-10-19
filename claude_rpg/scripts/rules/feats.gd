@@ -42,9 +42,12 @@ static func summary_of(id: String) -> String:
 	return description_of(id) + (" (%s)" % mods if mods != "" else "")
 
 
-## Don accordé par un passé ("" si aucun).
-static func for_background(background_id: String) -> String:
-	return DB.backgrounds.get(background_id, {}).get("feat", "")
+## Dons proposés par un passé (choix "feat" ; tous les dons d'origine s'il ne liste rien).
+static func for_background(background_id: String) -> Array:
+	for spec: Dictionary in DB.backgrounds.get(background_id, {}).get("choices", []):
+		if spec.get("type") == "feat":
+			return Choices.raw_options(spec)
+	return []
 
 
 static func modifiers_of(id: String) -> Array:

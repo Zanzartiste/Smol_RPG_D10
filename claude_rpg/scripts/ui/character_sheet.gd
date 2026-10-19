@@ -27,7 +27,7 @@ static func bbcode(ch: Character) -> String:
 	t += "[color=%s]%s[/color] %d    [color=%s]XP[/color] %d\n" % [gold, Loc.ui("Niveau"), ch.level, gold, ch.xp]
 	for resource_id: String in ch.max_resources():
 		if Spellcasting.is_slot(resource_id):
-			t += "[color=%s]%s[/color] %d / %d (%s)\n" % [gold, Loc.ui("Emplacements de sort"),
+			t += "[color=%s]%s[/color] %d / %d (%s)\n" % [gold, Loc.ui("Mana"),
 				int(ch.resources.get(resource_id, 0)), ch.max_resource(resource_id),
 				Loc.ui("sorts jusqu'au niveau %d") % ch.max_spell_level()]
 		else:
@@ -67,7 +67,7 @@ static func bbcode(ch: Character) -> String:
 		t += "[color=%s]%s[/color] %s\n" % [gold, Loc.ui("Métier"), ", ".join(PackedStringArray(Game.life.professions()))]
 	if ch.is_encumbered():
 		t += "[color=%s]%s[/color]\n" % [UITheme.BAD.to_html(false),
-			Loc.ui("Encombré : −%d dé(s) aux jets de FOR et DEX") % ch.encumbrance_penalty()]
+			Loc.ui("Encombrement %d : Dextérité −%d") % [ch.encumbrance(), ch.encumbrance()]]
 	t += "\n"
 
 	# Compétences par catégorie : réserve (rang d10 ≤ meilleur attribut) ; entraînées en clair, les autres grisées.

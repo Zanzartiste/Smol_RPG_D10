@@ -25,6 +25,8 @@ extends RefCounted
 ##   no_flee                         ne peut pas fuir
 ##   no_hostile_actions              ne peut rien entreprendre contre ses ennemis (Charmé)
 ##   wake_on_damage                  disparaît s'il subit des dégâts (Endormi)
+##   attack_successes_multiplier     multiplie les succès de ses jets d'attaque et de ceux qui le visent (Rage : 2)
+##   melee_only                      ne peut qu'attaquer au corps à corps (Rage)
 
 
 static func ids() -> Array[String]:

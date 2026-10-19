@@ -14,9 +14,8 @@ extends RefCounted
 ##   - échec critique : aucun succès et au moins un 10 (rules.json › dice › fumble_needs_ten).
 ##
 ## Un test s'écrit {"skill": "physique", "difficulty": 2} (avec le meilleur attribut de la compétence),
-## {"skill": "persuasion", "ability": "str", "difficulty": 2} (attribut imposé : intimider),
-## {"ability": "dex", "difficulty": 1} (attribut seul : rules.json › dice › attribute_dice dés) ou
-## {"resist": "con", "difficulty": 1} (résister : voir Character.resist_pool).
+## {"skill": "persuasion", "ability": "str", "difficulty": 2} (attribut imposé : intimider) ou
+## {"resist": "con", "difficulty": 1} (résister : voir Character.resist_pool). Pas de test d'attribut seul.
 ## "bonus" : dés en plus (ou en moins) ; "advantage": true / "disadvantage": true : difficulté −1 / +1.
 
 const MAX_FACE_SUCCESS := 8  # un 9 ou un 10 n'est jamais un succès
@@ -108,6 +107,11 @@ static func _roll_die(rng: RandomNumberGenerator, threshold: int, dice: Array[Di
 	return successes
 
 
+## Nombre de dés d'un jet (relances comprises, sauf les dés écartés) qui montrent cette valeur.
+static func count_value(roll: Dictionary, value: int) -> int:
+	return roll.get("dice", []).filter(func(d): return int(d["value"]) == value and not d.get("dropped", false)).size()
+
+
 ## Niveau de réussite critique : N pour N × critical_step succès supplémentaires (0 sinon).
 ## `bonus` : succès supplémentaires comptés en plus pour le critique (attaque surprise : 2).
 static func critical_level(extra: int, bonus := 0) -> int:
@@ -122,8 +126,15 @@ static func critical_level(extra: int, bonus := 0) -> int:
 static func judge(successes: int, difficulty: int, crit_bonus := 0, dice: Array = []) -> Dictionary:
 	var success := successes >= difficulty
 	var extra := successes - difficulty
+	var fumble := is_fumble(successes, dice)
 	return {"successes": successes, "difficulty": difficulty, "success": success, "extra": extra,
-		"critical": critical_level(extra, crit_bonus) if success else 0, "fumble": is_fumble(successes, dice)}
+		"critical": critical_level(extra, crit_bonus) if success else 0, "fumble": fumble,
+		"fumble_level": fumble_level(dice) if fumble else 0}
+
+
+## Degré d'un échec critique : le nombre de dés à 10.
+static func fumble_level(dice: Array) -> int:
+	return dice.filter(func(d): return int(d.get("value", 0)) == 10 and not d.get("dropped", false)).size()
 
 
 ## Échec critique : aucun succès, et au moins un 10 si la règle l'exige.
@@ -212,11 +223,14 @@ static func check_pool(ch: Character, check: Dictionary) -> Dictionary:
 	var bonus := int(check.get("bonus", 0))
 	if ch != null and check.has("skill") and Modifiers.grants(ch.modifiers(), "skill_advantage", check["skill"]):
 		bonus += 1
+	if ch != null:
+		for m: Dictionary in ch.modifiers():
+			if m.get("type") == "check_tag_die" and m["tag"] in check.get("tags", []):
+				bonus += 1
 	if check.has("skill"):
 		return ch.skill_pool(check["skill"], check.get("ability", ""), bonus)
-	if check.has("resist") or check.has("save"):
-		return ch.resist_pool(check.get("resist", check.get("save", "con")), bonus)
-	return ch.ability_pool(check.get("ability", "str"), bonus)
+	return ch.resist_pool(check.get("resist", check.get("save", "con")), bonus)
+
 
 
 static func label(check: Dictionary) -> String:
@@ -255,14 +269,65 @@ static func roll_check(ch: Character, check: Dictionary, rng: RandomNumberGenera
 		roll["successes"] = maxi(1, int(roll["successes"]))
 	var result := judge(int(roll["successes"]), difficulty_of(check), 0, roll["dice"])
 	result.merge(roll)
+	_apply_daily_feats(ch, pool, result, rng)
 	result["pool"] = true  # pour le plateau de dés
 	result["label"] = label(check)
 	result["stat"] = stat_name(check)
 	result["text"] = describe(result["stat"], result)
+	if result.has("feats"):
+		result["text"] += " (%s)" % ", ".join(PackedStringArray(result["feats"]))
 	return result
 
 
 ## Texte d'un jet jugé : « Physique : 3d10 ≤ 5, 2 succès pour une difficulté de 2 — réussite ».
+## Dons « une fois par jour » (Costaud, Malin… ; Chanceux) : après un échec, d'office si l'option
+## auto_daily_feats est active (par défaut), sinon proposés au joueur (daily_feat_options, use_daily_feat).
+static func _apply_daily_feats(ch: Character, pool: Dictionary, result: Dictionary, rng: RandomNumberGenerator) -> void:
+	result["ability"] = pool.get("ability", "")
+	result["threshold"] = int(pool["threshold"])
+	if ch == null or not Meta.settings.get("auto_daily_feats", true):
+		return
+	for feat_id in daily_feat_options(ch, result):
+		use_daily_feat(ch, result, feat_id, rng)
+		if result["success"]:
+			break
+
+
+## Dons « une fois par jour » utilisables après ce jet raté (ids des dons, qui sont aussi leurs ressources).
+static func daily_feat_options(ch: Character, result: Dictionary) -> Array[String]:
+	var options: Array[String] = []
+	if ch == null or result.get("success", true) or not result.has("ability"):
+		return options
+	for m: Dictionary in ch.modifiers():
+		if m.get("type") == "daily_ability_die" and m["id"] == result["ability"] and int(ch.resources.get(m["resource"], 0)) > 0:
+			options.append(m["resource"])
+			break
+	if int(result.get("fumble_level", 0)) > 0 and ch.has_modifier("lucky") and int(ch.resources.get("lucky", 0)) > 0:
+		options.append("lucky")
+	return options
+
+
+## Utilise un don « une fois par jour » sur un jet raté : un dé de plus (Costaud…) ou un degré d'échec
+## critique en moins (Chanceux). Met à jour le jet et son texte.
+static func use_daily_feat(ch: Character, result: Dictionary, feat_id: String, rng: RandomNumberGenerator) -> void:
+	ch.resources[feat_id] = int(ch.resources.get(feat_id, 0)) - 1
+	var notes: Array = result.get("feats", [])
+	if feat_id == "lucky":
+		result["fumble_level"] = int(result["fumble_level"]) - 1
+		result["fumble"] = result["fumble_level"] > 0
+		notes.append(Loc.ui("Chanceux : un degré d'échec critique en moins"))
+	else:
+		var extra := roll_pool(rng, 1, int(result["threshold"]))
+		var dice: Array = result["dice"] + extra["dice"]
+		var judged := judge(int(result["successes"]) + int(extra["successes"]), int(result["difficulty"]), 0, dice)
+		result.merge(judged, true)
+		result["dice"] = dice
+		notes.append(Loc.ui("%s : un dé de plus") % Feats.name_of(feat_id))
+	result["feats"] = notes
+	if result.has("stat"):
+		result["text"] = describe(result["stat"], result) + " (%s)" % ", ".join(PackedStringArray(notes))
+
+
 static func describe(stat: String, result: Dictionary) -> String:
 	return Loc.ui("%s : %s, %d succès pour une difficulté de %d — %s") % [stat,
 		pool_text(int(result["count"]), int(result["threshold"])), int(result["successes"]), int(result["difficulty"]),

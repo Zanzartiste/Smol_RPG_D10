@@ -22,9 +22,15 @@ const TESTS := [
 	"_test_dice_expressions",
 	"_test_actions",
 	"_test_spell_progression",
+	"_test_backlash",
 	"_test_class_features",
 	"_test_inventory",
-	"_test_armor_strength",
+	"_test_encumbrance",
+	"_test_weapon_properties",
+	"_test_throw_and_shield",
+	"_test_magic_shield_parry",
+	"_test_lost_items_and_stock",
+	"_test_world_map",
 	"_test_new_species",
 	"_test_damage_types",
 	"_test_economy",
@@ -107,40 +113,63 @@ func _test_data() -> bool:
 	return true
 
 func _test_character() -> bool:
-	# Modèle du magicien : 6/5/5/4/4/3 selon ses priorités, +1 INT, +1 CON. Aucun effet de l'espèce.
+	# Quartier de départ selon le passé : le Marin commence au port, l'Ermite dans la forêt.
+	Game.start_life(Character.create("human", "fighter", "Mousse", {"background": "sailor"}), 3)
+	_expect(Game.life.has_flag("district_port") and Game.life.location == "town", "Marin : départ au port")
+	Game.start_life(Character.create("human", "fighter", "Sage", {"background": "hermit"}), 3)
+	_expect(Game.life.has_flag("district_woods") and Game.life.location == "forest", "Ermite : départ en forêt")
+	# Modèle du magicien : 3 partout + 9 points, soit 6/5/5/4/4/3 selon ses priorités. Aucun effet de l'espèce.
 	var c := Character.create("goblin", "wizard", "Grik", {"background": "sage", "gender": "female"})
-	_expect(c.abilities["int"] == 7 and c.abilities["con"] == 6, "modèle du magicien : INT 6+1, CON 5+1")
+	_expect(c.abilities["int"] == 6 and c.abilities["con"] == 5, "modèle du magicien : INT 6, CON 5")
 	_expect(c.abilities["dex"] == 5 and c.abilities["str"] == 3, "l'espèce ne modifie pas les attributs")
-	# Passé Érudit -> don « Érudit des arcanes » : +1 INT (7 -> 8).
-	_expect(c.has_feat("scholar") and c.ability_score("int") == 8, "don du passé appliqué à la création")
-	_expect(c.skill_rank("lore") == 3 and c.skill_pool("lore") == {"count": 3, "threshold": 8, "ability": "int"},
-		"Érudition : rang 1 + passé Érudit + don Érudit des arcanes : 3d10 contre INT 8")
-	_expect(c.skill_rank("perception") == 3 and c.skill_pool("perception")["threshold"] == 8,
-		"Perception : instinctive (2) + choix de classe, avec le meilleur attribut (INT)")
+	# Passé Érudit -> son premier don au choix par défaut (Intuition mystique) ; les dons ne donnent pas d'attribut.
+	_expect(c.has_feat("mystic_insight") and c.ability_score("int") == 6, "don du passé appliqué à la création")
+	var bare := Character.create("goblin", "wizard", "Nu", {"background": "sage", "skill_ranks": {}})
+	_expect(bare.skill_rank("lore") == 4 and bare.skill_pool("lore") == {"count": 4, "threshold": 6, "ability": "int"},
+		"Érudition : 1 + passé Érudit 1 + classe 2 : 4d10 contre INT 6")
+	_expect(bare.skill_rank("perception") == 2 and bare.skill_pool("perception")["threshold"] == 6,
+		"Perception : instinctive (2), avec le meilleur attribut (INT)")
 	_expect(c.skill_pool("perception", "wis")["threshold"] == c.ability_score("wis"), "attribut imposé par le test")
-	_expect(c.skill_rank("physique") == 2 and c.skill_rank("sleight_of_hand") == 1 and c.skill_rank("magic") == 2
-		and not c.is_trained("physique"), "rangs de départ : instinctive 2, autre 1, Magie 2 pour un lanceur")
-	_expect(Character.create("goblin", "fighter", "F").skill_rank("magic") == 0, "Magie : 0 pour un non-lanceur")
+	_expect(bare.skill_rank("physique") == 2 and bare.skill_rank("sleight_of_hand") == 1 and bare.skill_rank("determination") == 3
+		and not bare.is_trained("physique"), "rangs de départ : instinctive 2, autre 1 ; Détermination 1 + classe 2")
+	var free := 0
+	for id: String in c.skill_points:
+		free += int(c.skill_points[id])
+	_expect(free == c.creation_free_ranks() and Skills.ids().all(func(id): return int(c.skill_points.get(id, 0)) == 0 or c.skill_rank(id) <= 5),
+		"création : 8 rangs (+ ceux rendus par le plafond) répartis selon la classe, sans pousser une compétence au-delà de 5")
+	# Plafond de création : départ + passé + classe ne dépassent pas 5 ; l'excédent revient aux rangs libres.
+	var sneaky := Character.create("goblin", "rogue", "S", {"background": "criminal", "skill_ranks": {}})
+	_expect(sneaky.skill_rank("stealth") == 5 and sneaky.creation_free_ranks() == 8,
+		"Furtivité : instinctive 2 + passé 1 + classe 2 = 5, le plafond de création")
+	sneaky.background_id = ""
+	DB.backgrounds["_heavy"] = {"id": "_heavy", "name": "Test", "skills": {"stealth": 3}}
+	sneaky.background_id = "_heavy"
+	_expect(sneaky.skill_rank("stealth") == 5 and sneaky.creation_free_ranks() == 8 + 2, "au-delà de 5 : les rangs reviennent aux rangs libres")
+	DB.backgrounds.erase("_heavy")
+	_expect(Character.create("human", "rogue", "R", {"skill_ranks": {"arts": 3}}).skill_rank("arts") == 4, "rangs répartis donnés")
+	_expect(Character.create("goblin", "fighter", "F").skill_rank(Skills.SPELL) == 0 and c.spell_skill() == "lore"
+		and c.skill_rank(Skills.SPELL) == c.skill_rank("lore"), "sorts : Érudition pour le Magicien, rien pour un non-lanceur")
+
 	_expect(c.skill_pool("athletics") == c.skill_pool("physique"), "ancien id (Athlétisme) traduit en Physique")
-	_expect(c.max_hp == (-1 + 2) * 6 + 7 and Character.hp_from(4, 0) == 15 and Character.hp_from(8, 4) == 55,
+	_expect(c.max_hp == (-1 + 2) * 5 + 7 and Character.hp_from(4, 0) == 15 and Character.hp_from(8, 4) == 55,
 		"PV : (taille + 2) × CON + 7 ; humain moyen 15, colosse endurant 55")
 	_expect(c.size() == -1 and Character.create("human", "wizard", "H").size() == 0 and DB.size_name(-1) == "Petite",
 		"la taille dépend de l'espèce")
 	_expect(c.age_years() == 18 and c.life_stage() == "adult", "gobelin de 18 ans adulte (majorité)")
-	_expect(Character.create("human", "fighter", "N", {"background": "noble"}).gold == 15 + 25, "or du passé Noble")
+	_expect(Character.create("human", "fighter", "N", {"background": "noble"}).gold == 15, "pas d'or de passé")
 
 	# PV : Constitution × 1,414^taille ; humain (taille 0) au modèle du guerrier : CON 6.
 	var life := _new_life("human", "fighter")
 	var f := life.character
-	_expect(f.max_hp == 19 and f.hp == 19, "PV du guerrier humain : 2 × CON 6 + 7")
+	_expect(f.max_hp == 17 and f.hp == 17, "PV du guerrier humain : 2 × CON 5 + 7")
 	f.hp = 10
 	life.change_ability("con", -2, "test")
-	_expect(f.max_hp == 15 and f.hp == 6, "CON 6 -> 4 : PV max et actuels -4")
+	_expect(f.max_hp == 13 and f.hp == 6, "CON 5 -> 3 : PV max et actuels -4")
 	life.change_ability("con", 4, "test")
-	_expect(f.max_hp == 23 and f.hp == 14, "CON 4 -> 8 : PV max et actuels +8")
+	_expect(f.max_hp == 21 and f.hp == 14, "CON 3 -> 7 : PV max et actuels +8")
 	f.add_xp(300)
-	_expect(f.level == 2 and f.max_hp == 23, "niveau 2 : les PV ne montent pas avec le niveau")
-	_expect(Character.create("dwarf", "fighter", "N").max_hp == 13, "nain (taille −1) : 1 × CON 6 + 7 = 13 PV")
+	_expect(f.level == 2 and f.max_hp == 21, "niveau 2 : les PV ne montent pas avec le niveau")
+	_expect(Character.create("dwarf", "fighter", "N").max_hp == 12, "nain (taille −1) : 1 × CON 5 + 7 = 12 PV")
 	_expect(f.natural_dodge() == 1 and f.armor() == 3 and f.initiative_base() == 5 + 3,
 		"Esquive naturelle DEX 5 / 3 = 1, Armure 3 (cotte de mailles), initiative DEX + INT")
 	f.hp = 1
@@ -176,23 +205,32 @@ func _test_rule_apis() -> bool:
 func _test_equipment() -> bool:
 	_expect(Equipment.armor_value("robe") == 0 and Equipment.armor_value("leather") == 1 and Equipment.armor_value("chain_mail") == 3
 		and Equipment.armor_value("shield") == 1 and Equipment.armor_value("longsword") == 0, "points d'Armure")
-	_expect(Equipment.attack_ability("rapier", 6, 4) == "str" and Equipment.attack_ability("rapier", 4, 6) == "dex",
-		"finesse : meilleur de FOR et DEX")
-	_expect(Equipment.attack_ability("shortbow", 8, 3) == "dex", "arme à distance : DEX")
-	_expect(Equipment.weapon_damage("longsword") == {"threshold": "weapon", "bonus": 0, "dice": 1}
-		and Equipment.weapon_damage("longsword", true)["dice"] == 2 and Equipment.weapon_damage("longbow")["threshold"] == 6,
-		"dégâts : seuil de l'attaque, dés en plus (polyvalente : +1 dé à deux mains), ou seuil fixe (arc)")
-	_expect(Equipment.describe("longsword") == "Épée longue — tranchant, seuil attaque, +1 dé(s) (polyvalente : +1 dé à deux mains)",
+	_expect(Equipment.weapon_damage("longsword") == {"threshold": "str", "bonus": 0, "dice": 7, "fixed": true}
+		and Equipment.weapon_damage("bastard_sword")["bonus"] == 1 and Equipment.weapon_damage("rapier")["threshold"] == "dex"
+		and Equipment.weapon_damage("longbow")["threshold"] == 5, "dégâts : dés de l'arme, seuil FOR (+N), DEX ou fixe")
+	_expect(Equipment.parry_of("longsword") == 4 and Equipment.parry_of("quarterstaff") == 2 and Equipment.parry_of("quarterstaff", true) == 5
+		and Equipment.parry_of("longbow") == -1 and Equipment.parry_of("shield") == 4, "seuils de parade (bâton : 5 à deux mains)")
+	_expect(Equipment.weight_of("longsword") == 4.0 and Equipment.weight_of("longsword", true) == 3.0 and Equipment.weight_of("longbow") == 4.0
+		and not Equipment.is_one_handed("longbow") and Equipment.is_one_handed("greatsword"), "poids à une et à deux mains")
+	_expect(Equipment.skills_for("unarmed") == ["physique"] and Equipment.skills_for("javelin") == ["physique"]
+		and Equipment.skills_for("light_crossbow") == ["weapon_ranged"], "compétences : Physique, Armes de trait")
+	_expect(Equipment.describe("longsword") == "Épée longue — tranchant, 7d10, seuil FOR (parade 4, poids 4 (3 à deux mains))",
 		"description d'arme")
 
 	var c := Character.create("human", "fighter", "Testeur")
-	_expect(c.weapon_id() == "longsword" and c.armor() == 3, "équipement de départ de la classe")
+	_expect(c.weapon_id() == "longsword" and c.armor() == 3 and c.two_handed_grip(), "équipement de départ : épée tenue à deux mains")
 	c.equip("shield")
-	_expect(c.armor() == 4 and c.weapon_damage()["dice"] == 1, "bouclier : +1 Armure, épée à une main")
+	_expect(c.armor() == 4 and c.weapon_damage()["dice"] == 7 and not c.two_handed_grip(), "bouclier : +1 Armure, épée à une main")
 	c.equip("greataxe")
-	_expect(not c.equipment.has("off_hand") and c.weapon_damage()["dice"] == 2, "arme à deux mains : le bouclier est retiré")
+	_expect(c.equipment.has("off_hand") and not c.two_handed_grip(), "une hache à deux mains se tient aussi à une main (plus lourde)")
+	c.equip("longbow")
+	_expect(not c.equipment.has("off_hand"), "arc (deux mains seulement) : le bouclier est retiré")
 	c.equip("shield")
-	_expect(c.weapon_id() == Equipment.UNARMED, "bouclier : l'arme à deux mains est rangée")
+	_expect(c.weapon_id() == Equipment.UNARMED, "bouclier : l'arc est rangé")
+	var older := Character.from_dict({"species_id": "human", "class_id": "fighter", "equipment": {"main_hand": "scimitar",
+		"armor": "hide"}, "inventory": {"chain_shirt": 1}})
+	_expect(older.equipment == {"main_hand": "shortsword", "armor": "leather"} and older.inventory == {"chain_mail": 1},
+		"anciennes sauvegardes : équipements retirés remplacés")
 
 	var life := _new_life("human", "fighter")
 	Effects.apply_all([{"type": "equip", "id": "rapier"}], life, Meta)
@@ -205,45 +243,103 @@ func _test_feats() -> bool:
 	var c := life.character
 	var hp := c.max_hp
 	var init := c.initiative_base()
-	Effects.apply_all([{"type": "add_feat", "id": "tough"}, {"type": "add_feat", "id": "alert"}], life, Meta)
-	_expect(c.max_hp == hp + 3 and c.hp == c.max_hp, "Robuste : +3 PV")
-	_expect(c.initiative_base() == init + c.skill_rank("physique"), "Vigilant : rang de Physique à l'initiative")
+	Effects.apply_all([{"type": "add_feat", "id": "tough"}, {"type": "add_feat", "id": "nimble"}], life, Meta)
+	_expect(c.max_hp == hp + 2 and c.hp == c.max_hp, "Robuste : +2 PV")
+	_expect(c.initiative_base() == init, "Robuste et Agile ne changent pas l'initiative")
 	c.add_xp(300)
-	_expect(c.max_hp == hp + 3, "Robuste ne dépend pas du niveau")
-	var str_before := c.ability_score("str")
-	c.add_feat("athlete")
-	_expect(c.choice_options("feat:athlete/ability") == ["str", "dex"] and c.choose("feat:athlete/ability", "str")
-		and not c.choose("feat:athlete/ability", "dex"), "Athlète : choix de l'attribut, une seule fois")
-	_expect(c.ability_score("str") == str_before + 1 and c.abilities["str"] == str_before, "Athlète : +1 FOR (bonus, base inchangée)")
-	_expect(c.is_proficient("athletics"), "Athlète : maîtrise d'Athlétisme")
-	_expect(Conditions.check({"type": "has_feat", "id": "alert"}, life, Meta), "condition has_feat")
-	_expect(not c.add_feat("alert"), "pas de don en double")
+	_expect(c.max_hp == hp + 2, "Robuste ne dépend pas du niveau")
+	# Agile : une fois par jour, un test raté sous la DEX reçoit un dé de plus.
+	c.resources = c.max_resources()
+	_expect(c.resources.get("nimble", 0) == 1, "Agile : une utilisation par jour")
+	var rng := RandomNumberGenerator.new()
+	var used := false
+	for seed in 40:
+		rng.seed = seed
+		var roll := Dice.roll_check(c, {"skill": "stealth", "ability": "dex", "difficulty": 6}, rng)
+		if roll.has("feats"):
+			used = true
+			_expect(roll["dice"].size() == c.skill_pool("stealth", "dex")["count"] + 1 or roll["dice"].size() > 1,
+				"Agile : un dé lancé en plus")
+			break
+	_expect(used and c.resources["nimble"] == 0, "Agile : dépensé après un échec")
+	_expect(Dice.fumble_level([{"value": 10}, {"value": 9}, {"value": 10}, {"value": 10, "dropped": true}]) == 2,
+		"degré d'échec critique : les dés à 10")
+	# Chanceux : un échec critique devient un échec.
+	c.add_feat("lucky")
+	c.resources = c.max_resources()
+	var saved_fumble := false
+	for seed in 400:
+		rng.seed = seed
+		var roll := Dice.roll_check(c, {"skill": "arts", "ability": "cha", "difficulty": 9}, rng)
+		if roll.get("feats", []).any(func(n): return "Chanceux" in n):
+			saved_fumble = int(roll["fumble_level"]) == Dice.fumble_level(roll["dice"]) - 1 and roll["fumble"] == (roll["fumble_level"] > 0)
+			break
+	_expect(saved_fumble and c.resources["lucky"] == 0, "Chanceux : un degré d'échec critique en moins")
+	# Mode manuel : rien d'office, le don est proposé après l'échec.
+	Meta.settings["auto_daily_feats"] = false
+	c.resources = c.max_resources()
+	var proposed := false
+	for seed in 40:
+		rng.seed = seed
+		var roll := Dice.roll_check(c, {"skill": "stealth", "ability": "dex", "difficulty": 6}, rng)
+		if not roll["success"]:
+			proposed = not roll.has("feats") and "nimble" in Dice.daily_feat_options(c, roll)
+			Dice.use_daily_feat(c, roll, "nimble", rng)
+			proposed = proposed and c.resources["nimble"] == 0 and roll.has("feats")
+			break
+	Meta.settings["auto_daily_feats"] = true
+	_expect(proposed, "dons 1/jour manuels : proposés puis utilisés à la demande")
+	# Doué : deux compétences au choix ; Aquatique : un dé de plus aux tests marqués « swim ».
+	c.add_feat("skilled")
+	_expect(int(DB.feats["skilled"]["choices"][0]["count"]) == 2, "Doué : deux compétences")
+	c.add_feat("aquatic")
+	var swim := Dice.check_pool(c, {"skill": "physique", "tags": ["swim"]})
+	_expect(int(swim["count"]) == int(Dice.check_pool(c, {"skill": "physique"})["count"]) + 1, "Aquatique : +1 dé pour nager")
+	_expect(Conditions.check({"type": "has_feat", "id": "nimble"}, life, Meta), "condition has_feat")
+	_expect(not c.add_feat("nimble"), "pas de don en double")
 
-	# Chaque passé accorde un don ; tous les 4 niveaux : +1 attribut au choix et un don.
+	# Chaque passé propose des dons ; +1 attribut au choix aux niveaux 5, 10, 15 et 20 (pas de don).
 	for bg_id: String in DB.backgrounds:
-		_expect(Feats.has(Feats.for_background(bg_id)), "le passé %s accorde un don" % bg_id)
-	var soldier := Character.create("human", "fighter", "Soldat", {"background": "soldier"})
+		var offered := Feats.for_background(bg_id)
+		_expect(not offered.is_empty() and offered.all(func(id): return Feats.has(id)), "le passé %s propose des dons" % bg_id)
+	# Passé Sur mesure : quatre compétences et un don au choix.
+	var free := Character.create("human", "fighter", "Libre", {"background": "custom", "skill_ranks": {},
+		"choices": {"background/feat": ["lucky"], "background/skills": ["arts", "medicine", "stealth", "languages"]}})
+	var plain := Character.create("human", "fighter", "Base", {"skill_ranks": {}})
+	_expect(free.has_feat("lucky") and free.skill_rank("arts") == plain.skill_rank("arts") + 1
+		and free.skill_rank("medicine") == plain.skill_rank("medicine") + 1,
+		"Sur mesure : don et compétences choisis")
+	var soldier := Character.create("human", "fighter", "Soldat", {"background": "soldier",
+		"choices": {"background/feat": ["savage_attacker"]}})
 	var sword := Combatant.from_character(soldier, true)
 	var weapon := {"type": "attack", "weapon": true}
-	_expect(sword.damage_pool(weapon, sword.attack_pool(weapon)) == {"count": 2 + 2, "threshold": 7}
-		and soldier.has_modifier("savage_attacker"), "épée longue à deux mains : 2 + 2 dés contre FOR 7 ; Frappe brutale")
+	_expect(sword.damage_pool(weapon, sword.attack_pool(weapon)) == {"count": soldier.skill_rank("weapon_melee") + 2, "threshold": 6}
+		and soldier.has_modifier("savage_attacker"), "épée longue à deux mains : rang + 2 dés contre FOR 6 ; Frappe brutale")
 	var hero := Character.create("goblin", "fighter", "Héros")  # pas d'humain : il a un don en plus dès le départ
 	hero.add_xp(300)
 	_level_up(hero)
 	_expect(hero.level == 2 and hero.pending_ability_points == 0 and hero.pending_feats == 0 and hero.pending_skill_points == 1, "niveau 2 : pas d'amélioration, un point de compétence")
 	hero.add_xp(2700 - 300)
 	_level_up(hero)
-	_expect(hero.level == 4 and hero.pending_feats == 1 and hero.pending_ability_points == 1, "niveau 4 : attribut + don")
-	_expect(hero.increase_ability("str") and hero.abilities["str"] == 8, "+1 FOR (7 -> 8)")
+	_expect(hero.level == 4 and hero.pending_feats == 1 and hero.pending_ability_points == 0, "niveau 4 : un don")
+	_expect("lucky" not in hero.available_feats() and hero.choose_feat("heavy_armor_training"), "niveau 4 : pas de don d'origine")
+	hero.add_xp(6500 - 2700)
+	_level_up(hero)
+	_expect(hero.level == 5 and hero.pending_feats == 0 and hero.pending_ability_points == 1, "niveau 5 : +1 attribut, pas de don")
+	_expect(hero.increase_ability("str") and hero.abilities["str"] == 7, "+1 FOR (6 -> 7)")
 	_expect(hero.pending_ability_points == 0 and not hero.increase_ability("dex"), "un seul point à placer")
-	_expect("alert" in hero.available_feats() and "elemental_adept" not in hero.available_feats(),
+	hero.pending_feats = 1  # don en plus (humain, événement)
+	_expect("grappler" in hero.available_feats() and "elemental_adept" not in hero.available_feats(),
 		"dons disponibles selon les prérequis")
 	_expect(not hero.choose_feat("elemental_adept"), "impossible de choisir un don sans les prérequis")
-	_expect(hero.choose_feat("alert") and hero.pending_feats == 0 and hero.has_feat("alert"), "choix d'un don")
+	_expect(hero.choose_feat("grappler") and hero.pending_feats == 0 and hero.has_feat("grappler"), "choix d'un don")
 	hero.add_xp(355000)
 	_level_up(hero)
 	_expect(hero.level == Progression.max_level() and Progression.max_level() == 20, "niveau maximum 20")
-	_expect(hero.pending_feats == 4 and hero.pending_ability_points == 4, "améliorations aux niveaux 8, 12, 16 et 20")
+	_expect(hero.pending_feats == 4 and hero.pending_ability_points == 3, "attributs aux niveaux 10, 15 et 20, dons aux niveaux 8, 12, 16 et 20")
+	hero.abilities["str"] = 12
+	_expect(hero.can_raise("str"), "pas de maximum d'attribut")
+
 	var clumsy := Character.create("human", "wizard", "x",
 		{"abilities": {"str": 3, "dex": 4, "con": 6, "int": 6, "wis": 5, "cha": 5}})
 	_expect(not Feats.meets_prerequisites("defensive_duelist", clumsy), "prérequis non remplis (DEX 5)")
@@ -300,22 +396,19 @@ func _test_defenses() -> bool:
 
 func _test_point_buy() -> bool:
 	var pb := PointBuy.from_class("wizard")
-	_expect(pb.remaining() == 0 and pb.is_valid(), "le modèle de classe dépense exactement 10 points")
+	_expect(pb.remaining() == 0 and pb.is_valid() and pb.bonuses.is_empty(), "le modèle de classe dépense exactement 9 points, sans bonus")
 	_expect(not pb.can_increase("str"), "plus de points disponibles")
 	pb.decrease("int")
-	_expect(pb.base["int"] == 5 and pb.remaining() == 2, "6 -> 5 rend 2 points")
+	_expect(pb.base["int"] == 5 and pb.remaining() == 1 and not pb.is_valid(), "6 -> 5 rend 1 point ; il faut tout dépenser")
 	pb.increase("str")
-	_expect(pb.base["str"] == 4 and pb.remaining() == 1, "3 -> 4 coûte 1 point")
+	_expect(pb.base["str"] == 4 and pb.remaining() == 0 and pb.is_valid(), "3 -> 4 coûte 1 point")
 	for i in 10:
 		pb.decrease("str")
 	_expect(pb.base["str"] == 3, "pas en dessous de 3")
-	pb.set_bonus(1, "int")
-	_expect(pb.bonuses == ["con", "int"] and pb.final_score("con") == 6 and pb.final_score("int") == 6,
-		"donner le second bonus à l'attribut du premier échange les bonus")
 	var max_pb := PointBuy.from_class("fighter")
 	max_pb.decrease("con")
 	max_pb.decrease("con")
-	_expect(not max_pb.can_increase("str"), "pas au-dessus de 6 avant bonus")
+	_expect(not max_pb.can_increase("str"), "pas au-dessus de 6")
 	return true
 
 
@@ -403,6 +496,10 @@ func _test_aging() -> bool:
 	_expect(life.dead and life.death_cause == "Mort de vieillesse", "la vieillesse finit par tuer")
 	_expect(ch.abilities.values().has(0) or ch.hp == 0, "mort quand un attribut (ou la CON, donc les PV) atteint 0")
 	DB.rules["aging_chance"] = chance
+	_expect(not Meta.is_background_available("custom") and Meta.is_background_available("soldier"), "passé Sur mesure verrouillé")
+	Meta.record_life(life)
+	_expect(Meta.is_background_available("custom"), "mourir de vieillesse débloque le passé Sur mesure")
+	Meta.reset()
 	return true
 
 
@@ -418,8 +515,8 @@ func _test_engine() -> bool:
 	life.advance_time(2)
 	_expect(life.slot_id() == "evening", "le temps avance jusqu'au soir")
 	_expect(EventEngine.is_eligible(DB.events["town_tavern_brawl"], life, meta), "taverne possible le soir")
-	life.advance_time(1)
-	_expect(life.day == 2 and life.slot == 0, "nouveau jour")
+	life.advance_time(2)
+	_expect(life.day == 2 and life.slot == 0, "nouveau jour (après la période « Coucher »)")
 
 	var market: Dictionary = DB.events["town_market"]
 	life.character.gold = 0
@@ -433,8 +530,28 @@ func _test_engine() -> bool:
 	_expect(EventEngine.visible_choices(shrine, life, meta).size() == 2, "choix secrets cachés sans le flag ni le passé")
 
 	# Récolte dans un lieu sauvage : un test par ressource.
+	# Chercher… : chasse (combat si on trouve la créature, embuscade sinon), quelqu'un à qui parler.
+	var hunt := EventEngine.hunt_event("forest", RandomNumberGenerator.new())
+	var wolves: Dictionary = hunt["choices"][0]
+	_expect(wolves["success"]["effects"][0] == {"type": "combat", "enemies": ["wolf"]}
+		and wolves["critical_success"]["effects"][0]["enemies"].size() == 2 and not wolves["failure"]["effects"].is_empty(),
+		"chasse aux loups : trouvés, plus nombreux sur un critique, autre chose sur un échec")
+	_expect(EventEngine.hunt_event("town", RandomNumberGenerator.new())["choices"][0]["failure"]["effects"].is_empty(),
+		"chasse en ville : un échec ne lance pas de combat")
+	_expect(EventEngine.stranger_check("town").is_empty() and EventEngine.stranger_check("forest")["difficulty"] == 3
+		and not EventEngine.ambush_event("forest", RandomNumberGenerator.new(), "").is_empty(),
+		"chercher quelqu'un : sans test en ville, Nature 3 en forêt, embuscade sinon")
+	_expect(wolves["failure"]["effects"] == [{"type": "random_event", "location": "forest"}], "chasse ratée : autre chose arrive")
+	var mishaps := {}
+	for i in 40:
+		var mishap_ev := EventEngine.mishap_event("forest", life, meta)
+		mishaps[mishap_ev.get("title") == "Embuscade"] = true
+	_expect(mishaps.size() == 2 and EventEngine.mishap_event("town", life, meta).is_empty(),
+		"recherche ratée dans la nature : un combat ou un autre événement, rien en ville")
+	_expect(Effects.apply_all([{"type": "random_event", "location": "forest"}], life, meta)["goto"] == "@forest",
+		"effet random_event : enchaîne sur un événement du lieu")
 	var gather := EventEngine.gather_event("forest")
-	_expect(EventEngine.gather_event("town").is_empty() and gather["choices"].size() == 3, "récolte : seulement dans les lieux sauvages")
+	_expect(EventEngine.gather_event("town").is_empty() and gather["choices"].size() == 4, "récolte : seulement dans les lieux sauvages")
 	var errors_gather: Array[String] = []
 	DataValidator._validate_event(DB, gather, errors_gather)
 	_expect(errors_gather.is_empty(), "récolte : un événement valide %s" % str(errors_gather))
@@ -466,8 +583,9 @@ func _test_creation() -> bool:
 	for button: Button in screen.species_buttons.get_children() + screen.class_buttons.get_children():
 		if button.disabled:
 			locked += 1
-	_expect(locked == 2, "création : Elfe et Roublard verrouillés au départ")
+	_expect(locked == 2, "création : Elfe et Magicien verrouillés au départ")
 	screen._on_class_selected("fighter")
+	screen._apply_class_template()
 	screen.name_edit.text = "Bob"
 	screen._on_name_typed("Bob")
 	screen._on_species_selected("goblin")
@@ -480,10 +598,20 @@ func _test_creation() -> bool:
 		"création : passé et genre appliqués")
 	screen._on_decrease("str")
 	screen._on_increase("cha")
-	screen._on_bonus(0, "dex")
 	ch = screen.build_character()
-	_expect(ch.abilities["str"] == 5 and ch.abilities["cha"] == 5 and ch.abilities["dex"] == 6,
-		"création : l'achat de points et les bonus modifient le personnage")
+	_expect(ch.abilities["str"] == 5 and ch.abilities["cha"] == 5 and ch.abilities["dex"] == 5,
+		"création : la répartition des points modifie le personnage")
+	screen._suggest_skill_ranks()  # le passé tiré au hasard a pu rendre des rangs (plafond de 5)
+	_expect(screen.free_ranks_left() == 0, "création : 12 rangs suggérés")
+	var arts_before: int = screen.build_character().skill_rank("arts")
+	screen.change_skill_rank("perception", -1)
+	_expect(screen.free_ranks_left() == 1 and screen.start_button.disabled, "création : un rang à replacer bloque le départ")
+	screen.change_skill_rank("arts", 1)
+	_expect(screen.free_ranks_left() == 0 and screen.build_character().skill_rank("arts") == arts_before + 1,
+		"création : rang libre placé")
+	for i in 5:
+		screen.change_skill_rank("arts", 1)
+	_expect(screen.build_character().skill_rank("arts") <= 5, "création : pas au-delà de 5")
 	screen._on_class_selected("wizard")
 	var sheet_labels: Array = screen._sheet.find_children("*", "Label", true, false).map(func(l): return l.text)
 	_expect(sheet_labels.any(func(t): return t.begins_with("PV : ")) and not sheet_labels.any(func(t): return "≤" in t or "d10" in t),
@@ -503,7 +631,9 @@ func _test_creation() -> bool:
 	_expect(screen._look["skin"] in DB.species["human"]["art"]["skin"] and screen._look["hair_style"] == "braids",
 		"creation : changer d'espece retire les couleurs, garde la coupe")
 	screen._on_class_selected("wizard")
-	_expect(screen.build_character().abilities["int"] == 7, "création : changer de classe réapplique son modèle")
+	_expect(screen.build_character().abilities["int"] == 3, "création : changer de classe garde les attributs répartis")
+	screen._apply_class_template()
+	_expect(screen.build_character().abilities["int"] == 6, "création : le bouton applique le modèle de la classe")
 	screen.free()
 	return true
 
@@ -588,6 +718,8 @@ func _test_creator_points() -> bool:
 	screen._on_rank("ability_point", 1)
 	screen._on_rank("ability_point", 1)
 	_expect(screen._point_buy.remaining() == 2 and screen.build_character().level == 2, "création : bonus appliqués à l'aperçu")
+	screen._on_increase("wis")
+	screen._on_increase("wis")
 	screen._on_rank("start_level", 1)
 	screen._on_rank("start_level", 1)
 	_expect(screen._cp_ranks["start_level"] == 2, "création : impossible de dépasser le solde (6 + 12 + 20 > 30)")
@@ -598,7 +730,7 @@ func _test_creator_points() -> bool:
 	Meta.creator_points = 15
 	_expect(Meta.buy_unlock("species:elf") and Meta.creator_points == 0 and Meta.is_species_available("elf"),
 		"déblocage définitif acheté")
-	_expect(not Meta.buy_unlock("class:rogue"), "déblocage refusé sans assez de points")
+	_expect(not Meta.buy_unlock("class:wizard") and not Meta.is_class_available("wizard"), "une classe ne s'achète pas : elle se débloque par un succès")
 	Meta.load_dict(backup)
 	return true
 
@@ -822,15 +954,17 @@ func _test_combat() -> bool:
 	var fighter := Combatant.from_character(life.character, true)
 	var weapon := {"type": "attack", "weapon": true}
 	var attack := fighter.attack_pool(weapon)
-	_expect(attack["count"] == 2 and attack["threshold"] == 7 and fighter.damage_pool(weapon, attack) == {"count": 4, "threshold": 7},
-		"guerrier : toucher 2d10 ≤ 7, dégâts 4d10 ≤ 7")
+	_expect(attack["count"] == life.character.skill_rank("weapon_melee") and attack["threshold"] == fighter.ability_score("dex")
+		and fighter.damage_pool(weapon, attack) == {"count": 7, "threshold": fighter.ability_score("str")},
+		"guerrier : toucher [Armes de mêlée] d10 ≤ DEX, dégâts 7d10 (épée longue) ≤ FOR")
 	_expect(fighter.damage_type(weapon) == "slashing" and fighter.armor() == 3 and fighter.natural_dodge() == 1,
 		"épée longue tranchante ; Armure 3, Esquive naturelle 1")
 	var mage := Combatant.from_character(Character.create("goblin", "wizard", "Mage"), true)
 	var bolt: Dictionary = Actions.def("fire_bolt")["effects"][0]
 	var spell := mage.attack_pool(bolt)
-	_expect(spell["count"] == 2 and spell["threshold"] == 7 and mage.damage_pool(bolt, spell) == {"count": 2, "threshold": 9}
-		and mage.is_ranged_attack(bolt), "trait de feu : Magie 2d10 ≤ INT 7, dégâts seuil INT + 2, à distance")
+	var magic_rank := mage.character.skill_rank(Skills.SPELL)
+	_expect(spell["count"] == magic_rank and spell["threshold"] == 6 and mage.damage_pool(bolt, spell) == {"count": 6, "threshold": 6}
+		and mage.is_ranged_attack(bolt), "trait de feu : [Magie] d10 ≤ INT 6, dégâts 6 dés seuil INT, à distance")
 
 	var combat := Game.start_combat({"enemies": ["wolf", "wolf"]})
 	_expect(combat.combatants.size() == 3 and combat.order.size() == 3, "combat : héros + 2 loups")
@@ -843,7 +977,8 @@ func _test_combat() -> bool:
 	var result := Game.finish_combat()
 	_expect(result["outcome"] in ["victory", "defeat"], "le combat aboutit à une victoire ou une défaite")
 	if result["outcome"] == "victory":
-		_expect(life.character.item_count("wolf_pelt") == 2 and life.character.xp == 100, "victoire : XP et butin")
+		var killed := combat.enemies().filter(func(w): return not w.fled).size()
+		_expect(life.character.item_count("wolf_pelt") == killed and life.character.xp == 50 * killed, "victoire : XP et butin (loups tués)")
 	else:
 		_expect(life.dead and life.death_cause == "Dévoré par un loup", "défaite mortelle : cause de la mort")
 
@@ -902,8 +1037,28 @@ func _test_actions() -> bool:
 	await combat.perform(mage, missile, combat.living("enemy")[0])
 	await combat.perform(mage, missile, combat.living("enemy")[0] if not combat.living("enemy").is_empty() else null)
 	_expect(Game.life.character.resources["spell_slot"] == 0, "projectile magique : 2 emplacements dépensés")
-	_expect(combat.action_unavailable_reason(mage, missile) == "pas assez d'emplacements de sort", "plus d'emplacement")
+	# Chercher les points faibles : un test d'Érudition ; réussi, les défenses de la cible sont connues.
+	var rat: Combatant = combat.living("enemy")[0] if not combat.living("enemy").is_empty() else null
+	if rat != null:
+		Game.life.character.skill_points["lore"] = 30
+		combat.actions_left = 2
+		await combat.perform(mage, Actions.def("find_weakness"), rat)
+		_expect(rat.weaknesses_known, "Chercher les points faibles : défenses révélées")
+		_expect(Game.life.bestiary.has("giant_rat") and combat.living("enemy").all(func(c): return c.weaknesses_known),
+			"points faibles : connus pour toute l'espèce")
+		Game.life.character.skill_points["survival"] = 30
+		Game.life.character.skill_points["lore"] = 0
+		_expect(combat._best_skill(mage, ["lore", "survival"], 2) == "survival", "points faibles : la meilleure compétence")
+	_expect(mage.unavailable_reason(missile) == "", "plus de mana : le sort reste possible, payé en PV")
+	var hp_before := mage.hp
+	_expect(mage.consume(missile) == 1 and mage.hp == hp_before - 1 and Game.life.character.resources["spell_slot"] == 0, "mana manquant : 1 PV par point")
 	Game.finish_combat()
+	var again := Game.start_combat({"enemies": ["giant_rat", "bandit"]})
+	_expect(again.living("enemy").map(func(c): return c.weaknesses_known) == [true, false], "carnet de bestiaire : points faibles déjà connus")
+	Game.finish_combat()
+	Game.life.character.resources["spell_slot"] = 0
+	Game.life.character.short_rest()
+	_expect(Game.life.character.resources["spell_slot"] == 1, "repos court : moitié du mana manquant")
 	Effects.apply_all([{"type": "long_rest"}], Game.life, Meta)
 	_expect(Game.life.character.resources["spell_slot"] == 2, "repos long : emplacements restaurés")
 
@@ -930,8 +1085,8 @@ func _test_actions() -> bool:
 	_expect(hero.is_prepared() and combat.actions_left == 1, "action Se préparer")
 	hero.statuses.clear()
 
-	# Parade : une par main armée et par tour ; pas d'attaque à distance sans bouclier ; pas à mains nues
-	# contre une arme.
+	# Parade : une par main armée et par tour ; pas d'attaque à distance sans bouclier ; à mains nues contre
+	# une arme, la parade est dangereuse.
 	var wolf := combat.enemies()[0]
 	var bite: Dictionary = wolf.creature["actions"][0]["effects"][0]
 	beats.clear()
@@ -946,7 +1101,10 @@ func _test_actions() -> bool:
 	_expect(hero.parries_per_turn() == 2, "arme et bouclier : deux parades par tour")
 	hero.character.unequip("main_hand")
 	hero.character.unequip("off_hand")
-	_expect(combat._parry(wolf, hero, {"type": "attack", "weapon": "dagger"}, beats, true) == 0, "pas de parade à mains nues contre une arme")
+	_expect(combat._parry(wolf, hero, {"type": "attack", "weapon": "dagger"}, beats, true) >= 0 and hero.reactions == 0,
+		"mains nues contre une arme : parade possible (dangereuse)")
+	hero.reactions = 1
+	hero.parries_used = 0
 	_expect(combat._parry(wolf, hero, bite, beats, true) >= 0 and hero.reactions == 0, "mains nues contre des crocs : parade possible")
 	hero.character.equip("longsword")
 	hero.reactions = 1
@@ -1013,15 +1171,15 @@ func _test_actions() -> bool:
 	await combat._attack(duelist, hero, lunge, beats, true)
 	_expect(asked.is_empty(), "option : réactions automatiques pour tout le groupe")
 	Meta.settings["auto_reactions"] = false
-	# Contresort : Magie contre Magie, quand un adversaire lance un sort.
-	DB.creatures["_witch"] = {"id": "_witch", "name": "Sorcière", "hp": 30, "abilities": {"int": 8},
-		"skills": {"magic": 30}, "actions": [{"name": "Rien", "weight": 1, "target": "self", "effects": [{"type": "status", "status": "shielded", "stacks": 0}]}]}
+	# Contresort : opposition des compétences d'incantation, quand un adversaire lance un sort.
+	DB.creatures["_witch"] = {"id": "_witch", "name": "Sorcière", "hp": 30, "abilities": {"int": 8}, "spell_ability": "int",
+		"skills": {"lore": 30}, "actions": [{"name": "Rien", "weight": 1, "target": "self", "effects": [{"type": "status", "status": "shielded", "stacks": 0}]}]}
 	var witch := Combatant.from_creature("_witch", "Sorcière", "enemy")
 	combat._add(witch)
 	witch.reactions = 1
 	var counter_beats: Array[Dictionary] = []
 	var countered: bool = await combat._counterspell(hero, Actions.def("fire_bolt"), counter_beats)
-	_expect(countered and witch.reactions == 0, "contresort : la sorcière contre le sort (Magie 30 contre 0)")
+	_expect(countered and witch.reactions == 0, "contresort : la sorcière contre le sort (Érudition 30)")
 	_expect(not await combat._counterspell(hero, Actions.def("weapon_attack"), counter_beats), "pas de contresort contre une attaque d'arme")
 	DB.creatures.erase("_witch")
 	asked.clear()
@@ -1033,8 +1191,8 @@ func _test_actions() -> bool:
 	Game.combat = null
 	_expect(Actions.text_of("pommel_strike") == "Attaque avec votre arme. Si elle touche : 1 Étourdi.",
 		"texte généré d'une action")
-	_expect(Actions.text_of("burning_hands").begins_with("Tous les ennemis : Inflige feu (Magie + 1, seuil sort) (la cible résiste : DEX)"),
-		"texte : cible multiple et résistance")
+	_expect(Actions.text_of("sleep").begins_with("Tous les ennemis :") and "résiste : SAG" in Actions.text_of("sleep"),
+		"texte : cible multiple et résistance %s" % Actions.text_of("sleep"))
 	return true
 
 
@@ -1046,10 +1204,267 @@ func _at_level(species: String, cls: String, level: int) -> Character:
 	return ch
 
 
+func _test_backlash() -> bool:
+	# Contrecoups (rules.json › backlash) : un tirage par dé à 10 de l'échec critique d'un sort.
+	_expect(DB.rules["backlash"]["table"].size() == 10, "table des contrecoups : 10 lignes")
+	Game.start_life(_at_level("human", "wizard", 3), 21)
+	var combat := Game.start_combat({"enemies": ["wolf", "wolf"]})
+	var hero := combat.hero
+	var beats: Array[Dictionary] = []
+	combat._begin_cast(Actions.def("fire_bolt"))
+	combat._note_fumble(2)
+	await combat._end_cast(hero, beats)
+	_expect(beats.filter(func(b): return String(b["text"]).begins_with("Contrecoup")).size() == 2,
+		"échec critique de degré 2 : deux contrecoups")
+	beats.clear()
+	combat._begin_cast(Actions.def("prepare"))
+	combat._note_fumble(3)
+	await combat._end_cast(hero, beats)
+	_expect(beats.is_empty(), "pas de contrecoup hors d'un sort")
+	await combat.backlash(hero, 1, beats, 1)
+	_expect(combat.spec.has("weather"), "contrecoup 1 : la météo du combat change")
+	# Lignes 6 à 10 : tout le monde, de plus en plus fort, avec un type de dégâts auquel on peut résister.
+	var table: Array = DB.rules["backlash"]["table"]
+	for face in range(6, 11):
+		var effects: Array = table[face - 1]["effects"]
+		_expect(effects.all(func(e): return e.get("who") == "all"), "contrecoup %d : frappe tout le monde" % face)
+		_expect(face == 6 or int(effects[0].get("extra_dice", 0)) >= int(table[face - 2]["effects"][0].get("extra_dice", 0)),
+			"contrecoup %d : au moins aussi fort que le précédent" % face)
+	await combat.backlash(hero, 1, beats, 9)
+	_expect(hero.stacks("poisoned") > 0 or not hero.is_alive(),
+		"contrecoup 9 : le lanceur aussi est empoisonné")
+	combat.hero.hp = combat.hero.max_hp()
+	# Jet d'incantation : seulement pour un sort sans autre jet du lanceur.
+	# Sorts de dégâts : attaques de sort contre le Couvert ; états : opposition ; les autres : jet d'incantation.
+	_expect(["fire_bolt", "sleep", "magic_missile", "fireball", "burning_hands"].all(func(id): return Combat.has_caster_roll(Actions.def(id)))
+		and not Combat.has_caster_roll(Actions.def("mage_shield")) and not Combat.has_caster_roll(Actions.def("find_familiar")),
+		"jet d'incantation : seulement les sorts sans cible à toucher")
+	_expect(combat.cast_chance(hero, Actions.def("mage_shield")) < 1.0 and combat.cast_chance(hero, Actions.def("prepare")) == 1.0,
+		"jet d'incantation : Bouclier peut échouer, pas une action ordinaire")
+	var failed := 0
+	for i in 40:
+		beats.clear()
+		combat._begin_cast(Actions.def("mage_shield"))
+		if not combat._cast_check(hero, Actions.def("mage_shield"), beats):
+			failed += 1
+		combat._casting_level = 0
+		combat._cast_fumble = 0
+	_expect(failed > 0 and failed < 40, "jet d'incantation : Bouclier réussit ou échoue")
+	Game.combat = null
+	return true
+
+
+func _test_throw_and_shield() -> bool:
+	# Lancer : arme de lancer telle quelle, le reste en arme improvisée (selon le poids).
+	_expect(Combat.throw_weapon("dagger") == "dagger" and Combat.throw_weapon("shield") == "improvised_medium"
+		and Combat.throw_weapon("halberd") == "improvised_large", "lancer : dague de lancer, bouclier et hallebarde improvisés")
+	var thrower := Character.create("human", "fighter", "Lanceur")
+	thrower.equipment["main_hand"] = "dagger"
+	thrower.add_item("javelin", 2)
+	Game.start_life(thrower, 21)
+	var combat := Game.start_combat({"enemies": ["wolf"]})
+	var hero := combat.hero
+	var choices := combat.throwables(hero)
+	_expect(choices[0]["id"] == "dagger" and choices[0]["slot"] == "main_hand"
+		and choices.any(func(c): return c["id"] == "javelin" and c["count"] == 2), "lancer : arme en main et objets du sac")
+	combat.actions_left = 2
+	await combat.throw_item(hero, choices[0], combat.living("enemy")[0])
+	_expect(thrower.weapon_id() == Equipment.UNARMED and combat.actions_left == 1 and combat.thrown.size() == 1,
+		"lancer la dague : une action, la main est vide")
+	await combat.throw_item(hero, combat.throwables(hero).filter(func(c): return c["id"] == "javelin")[0], combat.enemies()[0])
+	_expect(thrower.item_count("javelin") == 1, "lancer un javelot : retiré du sac")
+	combat.outcome = "victory"
+	var result := Game.finish_combat()
+	_expect(thrower.weapon_id() == "dagger" and thrower.item_count("javelin") == 2
+		and result["lines"].any(func(l): return l.begins_with("Vous ramassez")), "victoire : les objets lancés sont ramassés")
+
+	# Deux mains : chaque Attaque se fait au choix avec l'arme ou le bouclier ; on choisit aussi avec quoi parer.
+	var knight := Character.create("human", "fighter", "Bouclier")
+	knight.equipment["main_hand"] = "longsword"
+	knight.equipment["off_hand"] = "shield"
+	Game.start_life(knight, 21)
+	combat = Game.start_combat({"enemies": ["dire_wolf"]})
+	var variants := combat.hero.action_variants(Actions.def("weapon_attack"))
+	_expect(variants.size() == 2 and variants[1]["effects"][0]["weapon"] == "shield"
+		and combat.hero.off_hand_attack(variants[0]["effects"][0]).is_empty(), "coup de bouclier : une Attaque au choix, sans seconde attaque")
+	_expect(combat.hero.parry_options() == ["longsword", "shield"] and combat.hero.parry_options(true) == ["shield"],
+		"parade : l'épée ou le bouclier ; un tir, le bouclier seul")
+	combat.hero.parry_choice = "longsword"
+	_expect(combat.hero.parry_item() == "longsword" and combat.hero.parry_item(true) == "shield", "parade au choix du joueur")
+	combat.hero.parry_choice = ""
+	Game.combat = null
+	return true
+
+
+func _test_magic_shield_parry() -> bool:
+	# Bouclier magique : un lanceur qui connaît le sort Bouclier peut parer avec, même un tir, par la
+	# compétence d'incantation ; la parade coûte le mana du sort. Sans mana, il n'est plus proposé.
+	var mage := _at_level("human", "wizard", 5)
+	for entry: Dictionary in mage.choice_specs():
+		if entry["spec"].get("id") == "spells":
+			mage.choices[entry["key"]] = ["magic_missile", "mage_shield", "sleep"]
+	mage.equip_spell("mage_shield")
+	Game.start_life(mage, 21)
+	var combat := Game.start_combat({"enemies": ["dire_wolf"]})
+	var hero := combat.hero
+	_expect(Combatant.MAGIC_SHIELD in hero.parry_options(true), "bouclier magique : il pare même un tir")
+	hero.parry_choice = Combatant.MAGIC_SHIELD
+	var pool := hero.parry_pool()
+	_expect(pool["item"] == Combatant.MAGIC_SHIELD and pool["count"] == hero.spell_pool()["count"]
+		and pool["threshold"] == hero.spell_threshold(), "bouclier magique : jet de Magie contre l'incantation")
+	var wolf := combat.enemies()[0]
+	var bite: Dictionary = wolf.creature["actions"][0]["effects"][0]
+	var mana := int(Game.life.character.resources["spell_slot"])
+	var beats: Array[Dictionary] = []
+	hero.reactions = 1
+	combat._parry(wolf, hero, bite, beats, true)
+	_expect(hero.reactions == 0 and int(Game.life.character.resources["spell_slot"]) == mana - Spellcasting.cost_of(Actions.def("mage_shield")),
+		"bouclier magique : une réaction et le mana du sort")
+	Game.life.character.resources["spell_slot"] = 0
+	_expect(Combatant.MAGIC_SHIELD not in hero.parry_options(true), "sans mana, pas de bouclier magique")
+	hero.parry_choice = ""
+	Game.combat = null
+	return true
+
+
+func _test_world_map() -> bool:
+	# Carte : on va dans un lieu relié (on le découvre) ou déjà visité (téléportation) ; les liaisons valent
+	# dans les deux sens ; les lieux visités sont sauvegardés.
+	Game.start_life(Character.create("human", "fighter", "Carto"), 21)
+	var life := Game.life
+	life.location = "home"
+	life.visited.assign(["home"])
+	_expect(WorldMap.links_of("home") == ["town"] and "home" in WorldMap.links_of("town"), "liaisons dans les deux sens")
+	_expect(WorldMap.can_travel(life, "town") and not WorldMap.can_travel(life, "forest") and not WorldMap.can_travel(life, "home"),
+		"depuis chez soi : la ville voisine, pas la forêt (trop loin) ni le lieu actuel")
+	WorldMap.travel(life, "town")
+	WorldMap.travel(life, "forest")
+	_expect(life.location == "forest" and WorldMap.can_travel(life, "home") and WorldMap.is_visited(life, "home"),
+		"un lieu déjà visité est accessible de partout")
+	_expect(WorldMap.is_safe("town") and not WorldMap.is_safe("forest"), "lieu sûr ou sauvage")
+	_expect(LifeState.from_dict(life.to_dict()).visited == life.visited, "lieux visités sauvegardés")
+	return true
+
+
+func _test_lost_items_and_stock() -> bool:
+	# Fiole lancée : elle se brise (pas rendue), son effet s'applique si elle touche.
+	_expect(Items.splash_effects("flask_oil")[0]["status"] == "burning" and Items.splash_effects("potion_heal")[0]["type"] == "heal"
+		and Items.splash_effects("dagger").is_empty(), "fioles : huile, potion ; une dague ne se brise pas")
+	var hero_char := Character.create("human", "fighter", "Fioles")
+	hero_char.add_item("flask_oil", 1)
+	hero_char.add_item("javelin", 1)
+	Game.start_life(hero_char, 21)
+	Game.life.location = "forest"
+	var combat := Game.start_combat({"enemies": ["wolf"]})
+	combat.actions_left = 2
+	var oil: Dictionary = combat.throwables(combat.hero).filter(func(c): return c["id"] == "flask_oil")[0]
+	var wolf_hp := combat.living("enemy")[0].hp
+	var beats: Array[Dictionary] = await combat.throw_item(combat.hero, oil, combat.living("enemy")[0])
+	_expect(combat.thrown.is_empty() and beats.any(func(b): return String(b["text"]).ends_with("se brise.")),
+		"fiole lancée : elle se brise")
+	_expect(combat.enemies()[0].hp == wolf_hp, "fiole lancée : pas de dégâts, seulement son effet")
+	await combat.throw_item(combat.hero, combat.throwables(combat.hero).filter(func(c): return c["id"] == "javelin")[0],
+		combat.enemies()[0])
+	combat.outcome = "fled"
+	Game.finish_combat()
+	_expect(Game.life.lost_items.get("forest", {}).get("javelin", 0) == 1 and hero_char.item_count("javelin") == 0,
+		"fuite : le javelot reste dans la forêt")
+	var ev := EventEngine.gather_event("forest", null, Game.life)
+	var search: Dictionary = ev["choices"][0]
+	_expect(search["id"] == "lost", "récolte : fouiller les lieux d'un combat")
+	EventEngine.resolve_choice(ev, search, Game.life, Meta, {"success": true, "critical": 0, "fumble": false})
+	_expect(hero_char.item_count("javelin") == 1 and not Game.life.lost_items.has("forest"), "objet perdu retrouvé et retiré de la liste")
+	_expect(EventEngine.gather_event("town", null, Game.life).is_empty(), "rien à fouiller en ville")
+	# Stock de la semaine : 6 herbes, puis épuisé ; il repousse au début de la semaine suivante.
+	ev = EventEngine.gather_event("forest", null, Game.life)
+	var herbs: Dictionary = ev["choices"].filter(func(c): return c["id"] == "herbs")[0]
+	for i in 4:
+		EventEngine.resolve_choice(ev, herbs, Game.life, Meta, {"success": true, "critical": 1, "fumble": false})
+	_expect(hero_char.item_count("healing_herbs") == 6 and Game.life.gather_left("forest", DB.locations["forest"]["gather"][0]) == 0,
+		"récolte : pas plus que le stock de la semaine")
+	herbs = EventEngine.gather_event("forest", null, Game.life)["choices"].filter(func(c): return c["id"] == "herbs")[0]
+	_expect(not herbs.has("check"), "récolte épuisée : plus de test")
+	var copy := LifeState.from_dict(JSON.parse_string(JSON.stringify(Game.life.to_dict())))
+	_expect(copy.gather_left("forest", DB.locations["forest"]["gather"][0]) == 0, "sauvegarde : récoltes de la semaine")
+	while Game.life.day < 8:
+		Game.life.advance_time(DB.slots_per_day())
+	_expect(Game.life.gather_left("forest", DB.locations["forest"]["gather"][0]) == 6, "nouvelle semaine : les herbes ont repoussé")
+	# Armes improvisées équipables : Bagarreur de taverne ajoute un dé.
+	var brawler := Character.create("human", "fighter", "Bagarreur")
+	brawler.equipment["main_hand"] = "big_sausage"
+	Game.start_life(brawler, 21)
+	combat = Game.start_combat({"enemies": ["wolf"]})
+	var attack: Dictionary = Actions.def("weapon_attack")["effects"][0]
+	var before := int(combat.hero.damage_pool(attack, combat.hero.attack_pool(attack))["count"])
+	brawler.feats.append("tavern_brawler")
+	_expect(Equipment.has_property("big_sausage", "improvised")
+		and int(combat.hero.damage_pool(attack, combat.hero.attack_pool(attack))["count"]) == before + 1,
+		"arme improvisée : +1 dé avec Bagarreur de taverne")
+	# Créatures équipées : Armure de l'armure portée, parade avec l'arme, encombrement, butin.
+	combat = Game.start_combat({"enemies": ["bandit"]})
+	var bandit := combat.enemies()[0]
+	_expect(bandit.armor() == Equipment.armor_value("leather") and bandit.parry_item() == "shortsword"
+		and bandit.creature_encumbrance() == 0, "brigand : armure de cuir, épée courte (à deux mains), pas encombré")
+	bandit.creature = bandit.creature.duplicate(true)
+	bandit.creature["equipment"]["armor"] = "chain_mail"
+	var heavy := ceili(Equipment.weight_of("chain_mail") + Equipment.weight_of("shortsword", true) - 4 - 5)
+	_expect(bandit.creature_encumbrance() == heavy and bandit.ability_score("dex") == maxi(0, 5 - heavy),
+		"brigand en cotte de mailles : encombré, DEX réduite")
+	var drops := 0
+	for i in 20:
+		combat = Game.start_combat({"enemies": ["bandit"]})
+		combat.outcome = "victory"
+		var lines: Array = Game.finish_combat()["lines"]
+		drops += lines.filter(func(l): return l == "Butin : Épée courte ×1" or l == "Butin : Armure de cuir ×1").size()
+	_expect(drops > 0 and drops < 40, "brigand : son équipement tombe parfois en butin")
+	Game.combat = null
+	# Ennemis enfuis : ils reviendront peut-être, avec du renfort ; leur camp est sur ses gardes.
+	Game.life.location = "forest"
+	combat = Game.start_combat({"enemies": ["bandit", "wolf"]})
+	combat.enemies()[0].fled = true
+	combat.outcome = "victory"
+	Game.finish_combat()
+	_expect(Game.life.revenge.size() == 1 and Game.life.revenge[0]["enemies"] == ["bandit", "bandit"]
+		and Game.life.is_warned("bandits"), "brigand enfui : retour possible avec un renfort, camp prévenu")
+	_expect(EventEngine.revenge_event("forest", Game.life).is_empty(), "pas de retour le jour même")
+	Game.life.day += 1
+	var back := {}
+	for i in 30:
+		back = EventEngine.revenge_event("forest", Game.life)
+		if not back.is_empty():
+			break
+	_expect(not back.is_empty() and back["choices"][0]["outcome"]["effects"][0]["enemies"] == ["bandit", "bandit"]
+		and Game.life.revenge.is_empty(), "les fuyards reviennent une fois")
+	combat = Game.start_combat({"enemies": ["bandit", "bandit", "bandit_mender"], "group": "bandits"})
+	_expect(combat.enemies().size() == 4 and combat.enemies().all(func(e): return e.is_prepared()),
+		"camp prévenu : un brigand de plus, tous préparés")
+	Game.life.day += 8
+	combat = Game.start_combat({"enemies": ["bandit", "bandit", "bandit_mender"], "group": "bandits"})
+	_expect(combat.enemies().size() == 3, "le camp oublie au bout d'une semaine")
+	var copy2 := LifeState.from_dict(JSON.parse_string(JSON.stringify(Game.life.to_dict())))
+	_expect(copy2.warned.has("bandits"), "sauvegarde : groupes prévenus")
+	Game.combat = null
+	# Munitions spéciales : une variante d'Attaque par sorte de flèche, avec ses dégâts en plus.
+	var archer := Character.create("human", "fighter", "Archère")
+	archer.equipment["main_hand"] = "longbow"
+	archer.equipment.erase("off_hand")
+	archer.add_item("fire_arrow", 1)
+	Game.start_life(archer, 21)
+	combat = Game.start_combat({"enemies": ["dire_wolf"]})
+	var shots := combat.hero.action_variants(Actions.def("weapon_attack")).filter(func(v): return v["effects"][0].has("ammo"))
+	_expect(shots.size() == 1 and combat.hero.bonus_damage(shots[0]["effects"][0]).any(func(p): return p["damage_type"] == "fire"),
+		"flèche de feu : variante d'attaque avec dégâts de feu")
+	combat.actions_left = 2
+	await combat.perform(combat.hero, shots[0], combat.living("enemy")[0])
+	_expect(archer.item_count("fire_arrow") == 0, "flèche de feu : consommée au tir")
+	Game.combat = null
+	return true
+
+
 func _test_spell_progression() -> bool:
-	_expect(Spellcasting.slots("full", 1) == {"spell_slot": 2} and Spellcasting.slots("full", 5) == {"spell_slot": 4 + 3 * 2 + 2 * 3},
-		"une seule réserve : la table SRD pondérée par le niveau des sorts")
-	_expect(Spellcasting.slots("half", 1).is_empty() and Spellcasting.slots("half", 5) == {"spell_slot": 4 + 2 * 2},
+	_expect(Spellcasting.slots("full", 1) == {"spell_slot": 2} and Spellcasting.slots("full", 5) == {"spell_slot": 10},
+		"mana : niveau de lanceur × 2")
+	_expect(Spellcasting.slots("half", 1).is_empty() and Spellcasting.slots("half", 5) == {"spell_slot": 4},
 		"demi-lanceur : rien au niveau 1")
 	_expect(Spellcasting.max_level("full", 5) == 3 and Spellcasting.max_level("full", 20) == 9 and Spellcasting.max_level("half", 1) == 0,
 		"niveau de sort le plus haut selon la table")
@@ -1060,10 +1475,10 @@ func _test_spell_progression() -> bool:
 	mage.resources["spell_slot"] = 0
 	mage.add_xp(Progression.xp_for(3) - mage.xp)
 	_level_up(mage)
-	_expect(mage.resources["spell_slot"] == 6, "montée de niveau : les emplacements gagnés sont disponibles, les dépensés le restent")
+	_expect(mage.resources["spell_slot"] == 4, "montée de niveau : les emplacements gagnés sont disponibles, les dépensés le restent")
 	mage.long_rest()
-	_expect(mage.resources == {"spell_slot": 8} and mage.max_spell_level() == 2, "repos long : tous les emplacements")
-	_expect(ClassFeatures.announce(mage, 3).size() == 3, "annonce : nouvelles aptitudes (sorts, tradition) et emplacements")
+	_expect(mage.resources == {"spell_slot": 6} and mage.max_spell_level() == 2, "repos long : tous les emplacements")
+	_expect(ClassFeatures.announce(mage, 3).size() == 2, "annonce : nouvelle aptitude (tradition) et emplacements")
 
 	var old := Character.from_dict({"species_id": "goblin", "class_id": "wizard", "level": 1,
 		"resources": {"spell_slot_1": 1, "spell_slot_2": 1}})
@@ -1072,7 +1487,7 @@ func _test_spell_progression() -> bool:
 	# Sorts connus et équipés : seuls les sorts équipés sont proposés en combat.
 	var wizard := Character.create("human", "wizard", "W")
 	var known := wizard.known_spells()
-	_expect(known.size() == 5 and "weapon_attack" not in known and wizard.max_equipped_spells() == 2 + wizard.skill_rank("magic"),
+	_expect(known.size() == 5 and "weapon_attack" not in known and wizard.max_equipped_spells() == 2 + wizard.skill_rank(Skills.SPELL),
 		"magicien : 2 tours de magie et 3 sorts choisis à la création ; 2 + rang de Magie équipés")
 	_expect(wizard.equipped_spells.size() == 3 and "find_familiar" not in wizard.combat_actions()
 		and "weapon_attack" in wizard.combat_actions(), "les sorts choisis sont équipés d'office")
@@ -1081,65 +1496,83 @@ func _test_spell_progression() -> bool:
 	_expect(wizard.unequip_spell("sleep") and "sleep" not in wizard.combat_actions() and wizard.equip_spell("sleep")
 		and "sleep" in wizard.combat_actions(), "changer de sort équipé")
 	_expect(not wizard.equip_spell("find_familiar"), "on n'équipe qu'un sort connu")
-	# Sorts appris au choix en montant de niveau, parmi ceux qu'on peut lancer.
+	# Plus de sort appris en montant de niveau (ancienne progression retirée, tableur des classes).
 	var apprentice := Character.create("human", "wizard", "A")
 	apprentice.add_xp(300)
 	_level_up(apprentice)
-	var key := "feature:new_spell_2/spell"
-	_expect(apprentice.choice_options(key) == ["mage_shield", "find_familiar"],
-		"niveau 2 : un nouveau sort au choix, parmi les sorts de niveau 1 inconnus")
-	apprentice.choose(key, "find_familiar")
-	_expect("find_familiar" in apprentice.known_spells() and "find_familiar" in apprentice.equipped_spells, "le sort appris est équipé s'il reste de la place")
-	apprentice.add_xp(Progression.xp_for(3) - apprentice.xp)
-	_level_up(apprentice)
-	_expect(apprentice.choice_options("feature:new_spell_3/spell")[0] == "scorching_ray", "niveau 3 : les sorts de niveau 2 s'ouvrent")
+	_expect(ClassFeatures.at_level("wizard", 2).is_empty() and apprentice.known_spells().size() == 5, "niveau 2 : pas de nouveau sort")
 	var reloaded := Character.from_dict(JSON.parse_string(JSON.stringify(wizard.to_dict())))
 	_expect(reloaded.equipped_spells == wizard.equipped_spells, "sorts équipés sauvegardés")
 
 	# Tours de magie : un dé de dégâts de plus par palier ; sorts lancés à un niveau supérieur.
 	var hero := Combatant.from_character(Character.create("human", "wizard", "W"), true)
 	var bolt: Dictionary = Actions.def("fire_bolt")["effects"][0]
-	var rank := hero.skill_rank("magic")
-	_expect(hero.damage_pool(bolt, hero.attack_pool(bolt))["count"] == rank, "Trait de feu : rang de Magie au niveau 1")
+	_expect(hero.damage_pool(bolt, hero.attack_pool(bolt))["count"] == 6, "Trait de feu : 6 dés au niveau 1")
 	hero.character.level = 5
-	_expect(hero.damage_pool(bolt, hero.attack_pool(bolt))["count"] == rank + 1, "Trait de feu : +1 dé au niveau 5")
+	_expect(hero.damage_pool(bolt, hero.attack_pool(bolt))["count"] == 7, "Trait de feu : +1 dé au niveau 5")
 	hero.character.level = 17
-	_expect(hero.damage_pool(bolt, hero.attack_pool(bolt))["count"] == rank + 3, "Trait de feu : +3 dés au niveau 17")
+	_expect(hero.damage_pool(bolt, hero.attack_pool(bolt))["count"] == 9, "Trait de feu : +3 dés au niveau 17")
 
 	var evoker := _at_level("human", "wizard", 5)
 	evoker.unequip_spell("mage_shield")
-	evoker.equip_spell("fireball")
 	Game.start_life(evoker, 21)
 	var combat := Game.start_combat({"enemies": ["dire_wolf"]})
 	var missiles := combat.action_choices(combat.hero).filter(func(c): return c["action"]["id"] == "magic_missile")
 	_expect(missiles.size() == 3, "Projectile magique proposé aux niveaux 1, 2 et 3")
 	var high: Dictionary = missiles[2]["action"]
-	_expect(high["name"] == "Projectile magique (niv. 3)" and high["effects"][0]["damage"]["dice"] == 5,
-		"niveau 3 : deux dés de plus")
-	_expect(Actions.def("magic_missile")["effects"][0]["damage"]["dice"] == 3, "l'action de base n'est pas modifiée")
+	_expect(high["name"] == "Projectile magique (niv. 3)" and high["effects"][0]["damage"]["dice"] == 11,
+		"niveau 3 : quatre dés de plus")
+	_expect(Actions.def("magic_missile")["effects"][0]["damage"]["dice"] == 7, "l'action de base n'est pas modifiée")
 	await combat.perform(combat.hero, high, combat.living("enemy")[0])
-	_expect(Game.life.character.resources["spell_slot"] == 16 - 3, "lancé au niveau 3 : 3 emplacements dépensés")
-	_expect(combat.action_choices(combat.hero).any(func(c): return c["action"]["id"] == "fireball"), "Boule de feu au niveau 5")
+	_expect(Game.life.character.resources["spell_slot"] == Game.life.character.max_resource("spell_slot") - 3, "lancé au niveau 3 : 3 emplacements dépensés")
 	Game.combat = null
+
+	# Parchemin : le sort part une fois, avec la compétence Langues, sans emplacement ; il débloque le Magicien.
+	var backup := Meta.to_dict()
+	Meta.unlocks.erase("class:wizard")
+	var reader := Character.create("human", "fighter", "Lecteur")
+	reader.add_item("scroll_fire_bolt")
+	Game.start_life(reader, 22)
+	combat = Game.start_combat({"enemies": ["dire_wolf"]})
+	var reader_c := combat.hero
+	reader.spell_override = "languages"
+	_expect(reader_c.attack_pool(bolt)["count"] == reader.skill_rank("languages")
+		and reader_c.attack_pool(bolt)["ability"] == reader.best_skill_ability("languages"), "parchemin : Langues et son meilleur attribut")
+	reader.spell_override = ""
+	combat.turn = combat.order.find(reader_c)
+	combat.start_turn()
+	_expect(combat.usable_items().any(func(i): return i["item"]["id"] == "scroll_fire_bolt"), "parchemin utilisable en combat")
+	await combat.use_item(reader_c, "scroll_fire_bolt", combat.living("enemy")[0])
+	_expect(reader.item_count("scroll_fire_bolt") == 0 and reader.spell_override == "" and combat.actions_left == 1
+		and Meta.is_class_available("wizard"), "parchemin lu : consommé, une action, Magicien débloqué")
+	Game.combat = null
+	Meta.load_dict(backup)
 	return true
 
 
 func _test_class_features() -> bool:
 	DB.creatures["_target"] = {"id": "_target", "name": "Cible", "hp": 200, "abilities": {"int": 8, "dex": 10},
-		"skills": {"magic": 40, "physique": 40},
+		"skills": {"lore": 40, "physique": 40},
 		"actions": [{"name": "Rien", "weight": 1, "target": "self", "effects": [{"type": "status", "status": "shielded", "stacks": 0}]}]}
 
-	# Résister : compétence liée à l'attribut, un dé de plus pour une sauvegarde de la classe.
+	# Résister : un simple test de la compétence liée à l'attribut (pas de maîtrise de classe).
 	var fighter := Character.create("human", "fighter", "G")
-	_expect(fighter.is_proficient_save("con") and not fighter.is_proficient_save("dex")
-		and fighter.resist_pool("con") == {"count": fighter.skill_rank("physique") + 1, "threshold": 6, "ability": "con"}
-		and fighter.resist_pool("wis")["count"] == fighter.skill_rank("insight"), "résister : Physique (+1 maîtrisée), Perspicacité pour SAG")
+	_expect(not fighter.is_proficient_save("con")
+		and fighter.resist_pool("con") == {"count": fighter.skill_rank("physique"), "threshold": fighter.ability_score("con"), "ability": "con"}
+		and fighter.resist_pool("wis")["count"] == fighter.skill_rank("determination"), "résister : Physique, Détermination pour SAG")
 	var check := {"resist": "con", "difficulty": 1}
 	_expect(Dice.check_pool(fighter, check) == fighter.resist_pool("con") and Dice.stat_name(check) == "Résister (Constitution)",
 		"test de résistance dans un événement")
 
-	# Guerrier : Fougue, Attaque supplémentaire, Inflexible.
-	Game.start_life(_at_level("human", "fighter", 9), 31)
+	# Ancienne progression du SRD (Fougue, Attaque supplémentaire, Inflexible, Attaque sournoise, Esquive
+	# instinctive, Dérobade, Talent fiable) : retirée des classes, mais ses mécaniques restent pour de futurs dons.
+	DB.feats["_legacy"] = {"id": "_legacy", "name": "Ancienne progression", "category": "general", "description": "Test.",
+		"actions": ["action_surge", "sneak_attack"], "resources": {"indomitable": 1},
+		"modifiers": [{"type": "extra_attack", "amount": 1}, {"type": "uncanny_dodge"}, {"type": "evasion"}, {"type": "reliable_talent"}]}
+	var veteran := _at_level("human", "fighter", 9)
+	veteran.add_feat("_legacy")
+	veteran.long_rest()
+	Game.start_life(veteran, 31)
 	var combat := Game.start_combat({"enemies": ["_target"]})
 	var hero := combat.hero
 	combat.turn = combat.order.find(hero)
@@ -1151,15 +1584,17 @@ func _test_class_features() -> bool:
 	_expect(combat.log.slice(before).count("Niv9 : attaque supplémentaire.") == 1, "Attaque supplémentaire : deux coups au niveau 9")
 	_expect(combat.actions_left == 2, "il reste deux actions")
 	var beats: Array[Dictionary] = []
-	_expect(Game.life.character.resources["indomitable"] == 1, "Inflexible : 1 utilisation au niveau 9")
+	_expect(Game.life.character.resources["indomitable"] == 1, "Inflexible : 1 utilisation")
 	combat._resists(combat.enemies()[0], hero, {"ability": "dex"}, beats, true)
 	_expect(Game.life.character.resources["indomitable"] == 0 and beats.size() == 2, "Inflexible : relance une résistance ratée")
 	Game.combat = null
 
-	# Roublard : Expertise, Attaque sournoise, Esquive instinctive, Dérobade, Talent fiable.
+	# Roublard : Attaques précises ; puis les mécaniques de l'ancienne progression.
 	var rogue := _at_level("goblin", "rogue", 11)
-	_expect(rogue.skill_rank("stealth") - int(rogue.skill_points.get("stealth", 0)) == 4 and rogue.skill_pool("stealth")["count"] == rogue.skill_rank("stealth") - rogue.roll_penalty("dex")
-		and rogue.skill_pool("stealth")["threshold"] == rogue.ability_score("dex"), "Expertise : instinctive 2 + choix de classe + Expertise")
+	_expect(Combatant.from_character(rogue, true).critical_damage_dice() == 3
+		and Combatant.from_character(fighter, true).critical_damage_dice() == 0, "Attaques précises : 3 dés de plus sur un critique")
+
+	rogue.add_feat("_legacy")
 	var sneak := Combatant.from_character(rogue, true)
 	var sneak_effect: Dictionary = Actions.def("sneak_attack")["effects"][0]
 	var attack := sneak.attack_pool(sneak_effect)
@@ -1199,6 +1634,7 @@ func _test_class_features() -> bool:
 	_expect(hp == target.hp and target.stacks("burning") == 0, "résisté : aucun dégât et pas d'état")
 	Game.combat = null
 	DB.creatures.erase("_target")
+	DB.feats.erase("_legacy")
 	return true
 
 
@@ -1228,8 +1664,9 @@ func _test_inventory() -> bool:
 
 	hero.add_item("shield")
 	hero.add_item("greataxe")
+	hero.add_item("longbow")
 	life.equip(hero, "shield")
-	life.equip(hero, "greataxe")
+	life.equip(hero, "longbow")
 	_expect(hero.item_count("shield") == 1 and hero.item_count("longsword_plus_1") == 1 and not hero.equipment.has("off_hand"),
 		"arme à deux mains : bouclier et ancienne arme retournent dans le sac")
 	_expect(not life.equip(hero, "plate"), "impossible d'équiper un objet absent du sac")
@@ -1269,7 +1706,7 @@ func _test_inventory() -> bool:
 	_expect(life.use_item("potion_heal", hero) != "" and hero.hp > 1 and hero.item_count("potion_heal") == potions - 1,
 		"potion bue hors combat")
 	_expect(life.use_item("antidote", hero) == "", "antidote : inutile hors combat")
-	_expect(life.drop_item("greataxe") == 0 and life.drop_item("shield") == 1 and hero.item_count("shield") == 0, "jeter")
+	_expect(life.drop_item("longbow") == 0 and life.drop_item("shield") == 1 and hero.item_count("shield") == 0, "jeter")
 
 	# Fenêtre d'inventaire.
 	var view := InventoryView.new(life)
@@ -1296,46 +1733,124 @@ func _test_inventory() -> bool:
 	return true
 
 
-func _test_armor_strength() -> bool:
-	_expect(Equipment.strength_required("robe") == 0 and Equipment.strength_required("leather") == 4
-		and Equipment.strength_required("chain_shirt") == 5 and Equipment.strength_required("plate") == 6
-		and Equipment.strength_required("longsword") == 0, "Force conseillée : vêtements 0, légère 4, intermédiaire 5, lourde 6")
-	_expect(Equipment.describe("chain_mail").ends_with("FOR 6"), "description : Force conseillée")
-
+func _test_encumbrance() -> bool:
 	var weak := {"str": 3, "dex": 6, "con": 5, "int": 4, "wis": 5, "cha": 5}
 	var fighter := Character.create("goblin", "fighter", "Fluet", {"abilities": weak})
-	_expect(fighter.equipment["armor"] == "chain_mail" and fighter.is_encumbered(),
-		"armure trop lourde : portée quand même, mais encombré")
-	_expect(fighter.encumbrance_reason("chain_mail") == "Force 6 conseillée (vous avez 3) : −3 dé(s) aux jets de FOR et DEX"
-		and fighter.encumbrance_reason("robe") == "", "raison de l'encombrement")
-	_expect(not Character.create("goblin", "fighter", "Costaud").is_encumbered(), "guerrier au modèle (FOR 7) : pas encombré")
+	# Mailles 10 + épée longue à deux mains 3 − FOR 3 − CON 5 + taille (−1) × 2 = 3.
+	_expect(fighter.equipment["armor"] == "chain_mail" and fighter.equipped_weight() == 13.0 and fighter.encumbrance() == 3,
+		"encombrement : poids porté − FOR − CON + taille × 2")
+	_expect(fighter.ability_score("dex") == 3 and fighter.initiative_base() == 3 + 4 and fighter.natural_dodge() == 1,
+		"encombré : DEX −3 (initiative, Esquive naturelle)")
+	_expect(fighter.attack_pool("weapon")["ability"] == "dex" and fighter.attack_pool("weapon")["threshold"] == 3,
+		"attaque contre la DEX, encombrement compris")
+	_expect(fighter.encumbrance_reason("plate") == "Encombrement 7 : DEX −7" and fighter.encumbrance_reason("robe") == ""
+		and fighter.equipment["armor"] == "chain_mail", "ce que coûterait une armure (sans l'équiper)")
+	fighter.equip("shield")  # bouclier 3, et l'épée passe à une main (4)
+	_expect(fighter.encumbrance() == 7, "bouclier : son poids, et l'épée tenue à une main pèse plus")
+	fighter.unequip("armor")
+	fighter.unequip("off_hand")
+	_expect(fighter.encumbrance() == 0 and fighter.ability_score("dex") == 6, "sans armure : plus encombré")
+	DB.species["goblin"]["natural_armor"] = 1
+	fighter.equip("chain_mail")
+	_expect(fighter.encumbrance() == 5 and fighter.armor() == 4, "armure naturelle : +1 Armure, +2 d'encombrement")
+	DB.species["goblin"].erase("natural_armor")
+	fighter.equip("plate")
+	_expect(fighter.encumbrance() == 7 and fighter.ability_score("dex") == 0, "trop encombré : DEX 0")
 
-	# Malus : un dé de moins par point de Force manquant, sur tous les jets de FOR et de DEX.
-	_expect(fighter.encumbrance_penalty() == 3 and fighter.roll_penalty("dex") == 3 and fighter.roll_penalty("int") == 0,
-		"malus proportionnel au manque de Force")
-	_expect(fighter.initiative_base() == 6 + 4 - 3 and fighter.resist_pool("dex")["count"] == fighter.skill_rank("physique") - 3
-		and fighter.skill_pool("stealth")["count"] == 2 - 3 and fighter.attack_pool("weapon")["count"] == 2 - 3,
-		"initiative, résistance, compétence, attaque")
-	_expect(fighter.ability_pool("str")["count"] == 2 - 3 and fighter.ability_pool("int")["count"] == 2, "tests d'attribut")
 	Game.start_life(fighter, 71)
-	Game.life.unequip(fighter, "armor")
-	_expect(not fighter.is_encumbered() and fighter.initiative_base() == 6 + 4, "sans armure : plus de malus")
+	var combat := Game.start_combat({"enemies": ["wolf"]})
+	combat.turn = combat.order.find(combat.hero)
+	var beats := combat.start_turn()
+	_expect(combat.skipped and beats.any(func(b): return b["text"].contains("Dextérité 0")), "DEX 0 : on ne peut plus agir")
+	Game.combat = null
+	fighter.add_feat("heavy_armor_training")
+	_expect(fighter.encumbrance() == 5, "Entraînement aux armures lourdes : encombrement −2")
+	return true
 
-	# Charge : capacité = 18 kg par point de Force ; 1 malus par tranche de 25 % au-delà.
-	var life := Game.life
-	_expect(is_equal_approx(life.carry_capacity(), 54.0), "capacité : FOR 3 × 18 kg")
-	life.refresh_load()
-	_expect(fighter.load_penalty == 0, "chargé sous sa capacité : pas de malus")
-	fighter.add_item("iron_ore", 60)  # 120 kg de plus
-	life.refresh_load()
-	var over := (life.carried_weight() - 54.0) / 54.0 * 100.0
-	_expect(fighter.load_penalty == ceili(over / 25.0) and fighter.encumbrance_penalty() == 3, "surcharge : malus plafonné à 3")
-	var mira := Character.create_companion("mira")
-	life.companions.append(mira)
-	life.refresh_load()
-	_expect(life.carry_capacity() > 54.0 and mira.load_penalty == fighter.load_penalty, "la capacité du groupe s'additionne")
-	life.drop_item("iron_ore", 60)
-	_expect(fighter.load_penalty == 0, "jeter : la charge baisse")
+
+func _test_weapon_properties() -> bool:
+	DB.creatures["_swordsman"] = {"id": "_swordsman", "name": "Bretteur", "hp": 500, "abilities": {"str": 5, "dex": 5},
+		"skills": {"weapon_melee": 4},
+		"actions": [{"name": "Taille", "weight": 1, "target": "enemy", "effects": [{"type": "attack", "weapon": "longsword"}]}]}
+	Game.start_life(Character.create("human", "fighter", "Garde"), 5)
+	var combat := Game.start_combat({"enemies": ["_swordsman", "wolf"]})
+	var hero := combat.hero
+	var sword := combat.enemies()[0]
+	var wolf := combat.enemies()[1]
+	var cut: Dictionary = sword.creature["actions"][0]["effects"][0]
+	var bite: Dictionary = wolf.creature["actions"][0]["effects"][0]
+	_expect(sword.damage_pool(cut, sword.attack_pool(cut))["count"] == 7 and wolf.damage_pool(bite, wolf.attack_pool(bite))["count"] == 5,
+		"dégâts : les dés de l'arme (ou des crocs), sans le rang")
+	_expect(sword.attack_pool(cut)["threshold"] == 5 and sword.attack_pool(cut)["ability"] == "dex", "attaque : contre la DEX")
+
+	# Parade : seuil de l'objet qui pare (bâton à deux mains 5, bouclier 4), −1 contre une arme à impact.
+	var ch := hero.character
+	ch.equip("quarterstaff")
+	_expect(hero.parry_pool()["threshold"] == 5 and hero.parry_pool(0, false, true)["threshold"] == 4, "bâton à deux mains : parade 5 (4 contre une hache)")
+	ch.equip("shield")
+	_expect(hero.parry_pool()["item"] == "shield" and hero.parry_pool()["threshold"] == 4 and hero.parry_pool(0, true)["item"] == "shield",
+		"bouclier : parade 4, même contre un tir")
+	ch.unequip("off_hand")
+	ch.equip("longbow")
+	hero.reactions = 1
+	_expect(not combat.can_parry(sword, hero, cut), "un arc ne pare pas")
+
+	# Parade dangereuse : à mains nues contre une épée, 1 PV perdu par 10 ; contre des crocs, aucun risque.
+	ch.unequip("main_hand")
+	ch.max_hp = 999
+	hero.hp = 999
+	var hurt := false
+	var beats: Array[Dictionary] = []
+	for i in 40:
+		hero.reactions = 1
+		hero.parries_used = 0
+		combat._parry(wolf, hero, bite, beats, true)
+	_expect(hero.hp == 999 and not beats.any(func(b): return b["text"].contains("Parade dangereuse")), "mains nues contre des crocs : sans risque")
+	for i in 40:
+		hero.reactions = 1
+		hero.parries_used = 0
+		combat._parry(sword, hero, cut, beats, true)
+	hurt = beats.any(func(b): return b["text"].contains("Parade dangereuse"))
+	_expect(hurt and hero.hp < 999, "mains nues contre une épée : parade dangereuse")
+
+	# Perçante : dégâts en plus sur un critique.
+	var before := wolf.hp
+	wolf.hp = 999
+	await combat._roll_damage(hero, wolf, {"count": 1, "threshold": 1}, "piercing", 0, beats, {"extra": 3})
+	_expect(999 - wolf.hp >= 3, "Perçante : +3 dégâts")
+	wolf.hp = before
+
+	# Imprévisible : l'arme improvisée se brise sur un 10 au jet d'attaque.
+	ch.equip("improvised_medium")
+	hero.hp = hero.max_hp()
+	var broken := false
+	for i in 60:
+		hero.reactions = 0
+		sword.reactions = 0
+		await combat._attack(hero, sword, {"type": "attack", "weapon": true}, beats, true)
+		if ch.weapon_id() == Equipment.UNARMED:
+			broken = true
+			break
+	_expect(broken and beats.any(func(b): return b["text"].contains("se brise")), "Imprévisible : l'arme se brise")
+
+	# Recharge : arbalète légère R2, −1 si l'on a la force de la tenir à une main.
+	ch.equip("light_crossbow")
+	var attack := Actions.def("weapon_attack")
+	var reload := Actions.def(Combatant.RELOAD_ACTION)
+	_expect(hero.combat_actions().any(func(a): return a.get("id") == "reload") and hero.unavailable_reason(reload) == "arme chargée",
+		"action Recharger, inutile tant que l'arme est chargée")
+	var expected := 1 if ch.ability_score("str") >= 5 else 2
+	hero.hp = hero.max_hp()
+	combat.turn = combat.order.find(hero)
+	combat.start_turn()
+	combat.actions_left = 5
+	await combat.perform(hero, attack, sword)
+	_expect(hero.reload_left == expected and hero.unavailable_reason(attack) == "arme à recharger", "après un tir : à recharger")
+	for i in expected:
+		await combat.perform(hero, reload)
+	_expect(hero.reload_left == 0 and hero.unavailable_reason(attack) == "", "rechargée : on peut tirer de nouveau")
+	DB.creatures.erase("_swordsman")
+	Game.combat = null
 	return true
 
 
@@ -1368,7 +1883,7 @@ func _test_new_species() -> bool:
 func _test_damage_types() -> bool:
 	DB.creatures["_target"] = {"id": "_target", "name": "Cible", "hp": 200,
 		"actions": [{"name": "Rien", "weight": 1, "target": "self", "effects": [{"type": "status", "status": "shielded", "stacks": 0}]}]}
-	_expect(Equipment.describe("flame_tongue").begins_with("Langue de feu — tranchant, seuil attaque, +1 dé(s) + feu 2d10 ≤ 5"),
+	_expect(Equipment.describe("flame_tongue").begins_with("Langue de feu — tranchant, 7d10, seuil FOR + feu 2d10 ≤ 5"),
 		"arme à deux types de dégâts")
 
 	# Une attaque peut infliger plusieurs types de dégâts, lancés séparément.
@@ -1413,7 +1928,13 @@ func _test_damage_types() -> bool:
 	_expect(combat.log.slice(before).any(func(l): return "armure : seuil 4 → 1" in l), "Armure 5 : seuil 4 → 1")
 	before = combat.log.size()
 	await combat._hit(combat.hero, target, weapon, combat.hero.attack_pool(weapon), 0, true, false, beats, true)
-	_expect(not combat.log.slice(before).any(func(l): return "armure" in l), "surprise : armure ignorée")
+	_expect(combat.log.slice(before).any(func(l): return "armure" in l), "surprise sans arme assassine : l'armure compte")
+	var held := combat.hero.character.weapon_id()
+	combat.hero.character.equipment["main_hand"] = "dagger"
+	before = combat.log.size()
+	await combat._hit(combat.hero, target, weapon, combat.hero.attack_pool(weapon), 0, true, false, beats, true)
+	_expect(not combat.log.slice(before).any(func(l): return "armure" in l), "surprise avec une dague (assassine) : armure ignorée")
+	combat.hero.character.equipment["main_hand"] = held
 	target.creature["natural_armor"] = true
 	before = combat.log.size()
 	await combat._hit(combat.hero, target, weapon, combat.hero.attack_pool(weapon), 0, true, false, beats, true)
@@ -1432,8 +1953,8 @@ func _test_economy() -> bool:
 		"wis": 5, "cha": 4}})
 	Game.start_life(hero, 101)
 	var life := Game.life
-	_expect(is_equal_approx(Shops.discount(life), Dice.expected(2, 4) * 0.05),
-		"CHA 4, Persuasion instinctive (rang 2) : 5 % par succès moyen")
+	_expect(is_equal_approx(Shops.discount(life), minf(0.15, Dice.expected(hero.skill_rank("persuasion"), 4) * 0.05)),
+		"CHA 4 : 5 % par succès moyen de Persuasion")
 	_expect(Shops.buy_price("apothecary", "potion_heal", life) == 10 and Shops.sell_price("potion_heal", life) == 5,
 		"prix : valeur à l'achat (arrondie au-dessus), moitié à la revente")
 	hero.abilities["cha"] = 10  # 4 dés au seuil 8 : plafonné à 15 %
@@ -1563,8 +2084,26 @@ func _test_advantage() -> bool:
 	_expect(not combat.can_flee_now(hero), "Entravé : pas de fuite")
 	hero.statuses.clear()
 
-	# Sommeil : opposition entre la Magie du lanceur et la résistance (SAG) de la cible.
-	var mage := Character.create("human", "wizard", "Mage")
+	# Barbare : Rage (action gratuite) : corps à corps seulement, succès des attaques doublés dans les deux sens.
+	Game.start_life(Character.create("human", "barbarian", "Brakka"), 113)
+	combat = Game.start_combat({"enemies": ["_target"]})
+	var brute := combat.hero
+	target = combat.enemies()[0]
+	combat.turn = combat.order.find(brute)
+	combat.start_turn()
+	await combat.perform(brute, Actions.def("rage"))
+	_expect(brute.stacks("raging") == 1 and combat.actions_left == 2, "Rage : action gratuite")
+	_expect(brute.attack_successes_multiplier(target) == 2 and target.attack_successes_multiplier(brute) == 2,
+		"Rage : succès ×2 pour ses attaques et celles qu'il subit")
+	_expect(combat.action_unavailable_reason(brute, Actions.def("weapon_attack")) == ""
+		and combat.action_unavailable_reason(brute, Actions.def("rage")) != ""
+		and combat.action_unavailable_reason(brute, Actions.def("prepare")) != "", "Rage : seulement des attaques au corps à corps")
+	combat.start_turn()
+	_expect(brute.stacks("raging") == 0, "Rage : finit au début de son tour suivant")
+	Game.combat = null
+
+	# Sommeil : opposition entre la compétence d'incantation (Érudition) du lanceur et la résistance (SAG).
+	var mage := Character.create("human", "wizard", "Mage", {"skill_ranks": {}})  # Érudition 3
 	Game.start_life(mage, 112)
 	combat = Game.start_combat({"enemies": ["_target"]})
 	target = combat.enemies()[0]
@@ -1581,15 +2120,11 @@ func _test_advantage() -> bool:
 
 
 func _test_choices() -> bool:
-	# Compétences de classe : au choix à la création, sinon par défaut ; pas une compétence du passé.
-	var fighter := Character.create("human", "fighter", "G", {"background": "sage",
-		"choices": {"class/skills": ["lore", "survival"]}})
-	_expect("lore" not in fighter.choices["class/skills"] and fighter.choices["class/skills"] == ["survival", "physique"],
-		"compétence déjà donnée par le passé : refusée, complétée par une valeur par défaut")
-	fighter = Character.create("goblin", "fighter", "G", {"background": "acolyte", "choices": {"class/skills": ["persuasion", "survival"]}})
-	_expect(fighter.skill_rank("persuasion") == 3 and fighter.skill_rank("survival") == 2 and not fighter.is_trained("physique"),
-		"compétences de classe choisies : +1 rang")
-	_expect(Character.create("goblin", "fighter", "D").choices["class/skills"] == ["physique", "perception"], "valeurs par défaut")
+	# Rangs de création : 4 du passé, 8 de la classe (plus de choix de compétences de classe).
+	var fighter := Character.create("goblin", "fighter", "G", {"background": "acolyte", "skill_ranks": {}})
+	_expect(fighter.skill_rank("lore") == 1 + 1 and fighter.skill_rank("insight") == 2 + 1 and fighter.skill_rank("weapon_melee") == 1 + 2
+		and fighter.skill_rank("physique") == 2 + 2 and fighter.skill_rank("weapon_siege") == 1 + 1
+		and fighter.skill_rank("determination") == 1 + 1 + 1 and not fighter.choices.has("class/skills"), "passé (4 rangs) et classe (8 rangs)")
 
 	# Ascendance du tieffelin.
 	var tiefling := Character.create("tiefling", "wizard", "T", {"choices": {"species/ancestry": ["cold"]}})
@@ -1599,12 +2134,55 @@ func _test_choices() -> bool:
 
 	# Style de combat (Guerrier niveau 1) : choix en attente, puis effet.
 	_expect(fighter.pending_choice().get("key") == "feature:fighting_style/style", "Style de combat à choisir au hub")
-	_expect("defense" in fighter.choice_options("feature:fighting_style/style") and "alert" not in fighter.choice_options("feature:fighting_style/style"),
-		"seulement les dons de style")
-	var ac := fighter.armor()
-	_expect(fighter.choose("feature:fighting_style/style", "defense") and fighter.has_feat("defense") and fighter.armor() == ac + 1,
-		"Défense : +1 Armure en armure")
-	_expect("defense" not in fighter.available_feats(), "les styles ne s'obtiennent pas en montant de niveau")
+	var styles := fighter.choice_options("feature:fighting_style/style")
+	_expect(styles.size() == 5 and "unarmed_fighting" in styles and "two_weapon_fighting" in styles and "nimble" not in styles,
+		"seulement les cinq dons de style")
+	_expect(fighter.choose("feature:fighting_style/style", "dueling") and fighter.has_feat("dueling"), "style À une main choisi")
+	var duelist := Combatant.from_character(fighter, true)
+	var swing := {"type": "attack", "weapon": true}
+	var two_hands: int = duelist.damage_pool(swing, duelist.attack_pool(swing))["count"]
+	fighter.equipment["off_hand"] = "shield"
+	var with_shield: int = duelist.damage_pool(swing, duelist.attack_pool(swing))["count"]
+	fighter.equipment["off_hand"] = "dagger"
+	var with_dagger: int = duelist.damage_pool(swing, duelist.attack_pool(swing))["count"]
+	fighter.equipment.erase("off_hand")
+	_expect(with_shield == two_hands + 1 and with_dagger == two_hands,
+		"À une main : un dé de plus avec un bouclier, rien à deux mains ni avec une arme dans l'autre main")
+	_expect("dueling" not in fighter.available_feats(), "les styles ne s'obtiennent pas en montant de niveau")
+	# Deux armes (pour tous) : chaque Attaque se fait avec l'une ou l'autre ; le style À deux armes frappe des deux.
+	var twin := Character.create("goblin", "fighter", "T", {"choices": {"feature:fighting_style/style": ["two_weapon_fighting"]}})
+	var plain := Character.create("goblin", "fighter", "P")
+	for wielder: Character in [twin, plain]:
+		wielder.unequip("main_hand")
+		wielder.equip("shortsword")
+	plain.equip("dagger")
+	_expect(plain.weapon_id() == "dagger" and not plain.equipment.has("off_hand"), "équiper une arme remplace l'arme principale")
+	plain.unequip("main_hand")
+	plain.equip("shortsword")
+	_expect(plain.can_dual_wield("dagger") and plain.can_dual_wield("greataxe") and not plain.can_dual_wield("shortbow")
+		and not plain.can_dual_wield("javelin"), "seconde arme : de corps à corps, tenue à une main (même lourde)")
+	plain.equip("dagger", "off_hand")
+	twin.equip("dagger", "off_hand")
+	_expect(plain.weapon_id() == "shortsword" and plain.equipment.get("off_hand") == "dagger", "seconde arme en main secondaire")
+	var hand := Combatant.from_character(plain, true)
+	var hand_variants := hand.action_variants(Actions.def("weapon_attack"))
+	_expect(hand_variants.size() == 2 and hand_variants[1]["effects"][0]["weapon"] == "dagger"
+		and hand.attack_pool(hand_variants[1]["effects"][0])["count"] == plain.weapon_rank("dagger")
+		and hand.off_hand_attack(swing).is_empty(), "deux armes : une Attaque avec l'une ou l'autre, sans malus ni seconde attaque")
+	var dual := Combatant.from_character(twin, true)
+	var dual_variants := dual.action_variants(Actions.def("weapon_attack"))
+	_expect(dual_variants.size() == 3 and dual.off_hand_attack(dual_variants[2]["effects"][0]).get("weapon") == "dagger",
+		"style À deux armes : Attaque des deux mains")
+	DB.creatures["_dummy"] = {"id": "_dummy", "name": "Mannequin", "hp": 300, "abilities": {"dex": 1},
+		"actions": [{"name": "Rien", "weight": 1, "target": "self", "effects": [{"type": "status", "status": "shielded", "stacks": 0}]}]}
+	Game.start_life(twin, 131)
+	var duel := Game.start_combat({"enemies": ["_dummy"]})
+	duel.turn = duel.order.find(duel.hero)
+	duel.start_turn()
+	await duel.perform(duel.hero, duel.hero.action_variants(Actions.def("weapon_attack"))[2], duel.enemies()[0])
+	_expect(duel.log.any(func(l): return "main secondaire" in l), "À deux armes : l'attaque de la main secondaire suit")
+	Game.combat = null
+	DB.creatures.erase("_dummy")
 
 	# Sous-classe au niveau 3 : Champion.
 	fighter.add_xp(Progression.xp_for(3) - fighter.xp)
@@ -1618,48 +2196,43 @@ func _test_choices() -> bool:
 		"Athlète remarquable : un dé de plus en Physique")
 	_expect(CharacterSheet.bbcode(fighter).contains("Guerrier (Champion)"), "fiche : sous-classe affichée")
 
-	# Doué (Noble) : trois compétences au choix.
-	var noble := Character.create("goblin", "wizard", "N", {"background": "noble"})
+	# Doué (Noble) : deux compétences au choix.
+	var noble := Character.create("goblin", "wizard", "N", {"background": "noble", "choices": {"background/feat": ["skilled"]}})
 	_expect(noble.choices.get("feat:skilled/skills", []).is_empty() and "stealth" in noble.choice_options("feat:skilled/skills"),
 		"Doué : choix proposé")
-	for skill in ["stealth", "physique", "survival"]:
+	var stealth_before := noble.skill_rank("stealth")
+	for skill in ["stealth", "survival"]:
 		noble.choose("feat:skilled/skills", skill)
-	_expect(noble.skill_rank("stealth") == 3 and noble.skill_rank("survival") == 2 and noble.choices["feat:skilled/skills"].size() == 3
+	_expect(noble.skill_rank("stealth") == stealth_before + 1 and noble.choices["feat:skilled/skills"].size() == 2
 		and not noble.choose("feat:skilled/skills", "arts"),
-		"Doué : +1 rang dans 3 compétences")
+		"Doué : +1 rang dans 2 compétences")
 
-	# Amélioration d'attribut : deux fois le même attribut = +2.
-	var str_score := noble.ability_score("str")
-	noble.feats.append("ability_score_improvement")
-	_expect(noble.choose("feat:ability_score_improvement/abilities", "str") and noble.choose("feat:ability_score_improvement/abilities", "str")
-		and noble.ability_score("str") == str_score + 2, "Amélioration d'attribut : +2 FOR")
+	_expect(not Feats.has("ability_score_improvement") and not Feats.has("defense") and not Feats.has("athlete"),
+		"plus d'Amélioration d'attribut, de Défense ni d'Athlète")
 
-	# Initié à la magie : un guerrier lance Sommeil une fois par repos long, avec l'attribut choisi.
+	# Initié à la magie (magicien) : un tour de magie au choix, lancé avec l'INT et l'Érudition.
 	var knight := Character.create("goblin", "fighter", "K")
-	knight.feats.append("magic_initiate")
+	knight.feats.append("magic_initiate_wizard")
 	knight.complete_all_choices()
-	knight.long_rest()
-	_expect("magic_missile|magic_initiate" in knight.combat_actions() and knight.resources.get("magic_initiate", 0) == 1
-		and knight.action_ability("spell") == "int", "Initié à la magie : sort, ressource, attribut")
-	Game.start_life(knight, 121)
-	var combat := Game.start_combat({"enemies": ["wolf"]})
-	var missile := Actions.def("magic_missile|magic_initiate")
-	await combat.perform(combat.hero, missile, combat.enemies()[0])
-	_expect(knight.resources["magic_initiate"] == 0 and combat.action_unavailable_reason(combat.hero, missile) != "",
-		"Initié à la magie : une fois par repos long")
-	Game.combat = null
+	_expect("fire_bolt" in knight.combat_actions() and knight.action_ability("spell") == "int" and knight.spell_skill() == "lore",
+		"Initié à la magie (magicien) : tour de magie, INT, Érudition")
+	var druid_friend := Character.create("goblin", "fighter", "D")
+	druid_friend.feats.append("magic_initiate_druid")
+	druid_friend.complete_all_choices()
+	_expect("thorn_whip" in druid_friend.combat_actions() and druid_friend.spell_skill() == "survival",
+		"Initié à la magie (druide) : Fouet épineux, Nature")
 
 	# Évocateur : tour de magie puissant ; Voleur : Mains lestes.
 	var evoker := _at_level("goblin", "wizard", 10)
 	_expect(evoker.choices.get("feature:subclass/subclass") == ["evoker"] and evoker.has_modifier("empowered_evocation"), "Évocateur niveau 10")
 	var caster := Combatant.from_character(evoker, true)
 	var bolt: Dictionary = Actions.def("fire_bolt")["effects"][0]
-	_expect(caster.damage_pool(bolt, caster.attack_pool(bolt))["count"] == evoker.skill_rank("magic") + 2,
+	_expect(caster.damage_pool(bolt, caster.attack_pool(bolt))["count"] == 6 + 2,
 		"niveau 10 : un dé de tour de magie et un dé d'Évocation renforcée")
 	var thief := _at_level("goblin", "rogue", 3)
 	thief.add_item("potion_heal")
 	Game.start_life(thief, 122)
-	combat = Game.start_combat({"enemies": ["wolf"]})
+	var combat := Game.start_combat({"enemies": ["wolf"]})
 	combat.turn = combat.order.find(combat.hero)
 	combat.start_turn()
 	await combat.use_item(combat.hero, "potion_heal", combat.hero)
@@ -1682,40 +2255,50 @@ func _test_choices() -> bool:
 
 
 func _test_skill_ranks() -> bool:
-	# Attaques : [rang de la compétence de l'arme] d10 contre l'attribut ; sorts : rang de Magie.
-	var fighter := Character.create("goblin", "fighter", "G")
-	_expect(fighter.skill_rank("weapon_melee") == 2 and fighter.attack_pool("weapon") == {"count": 2, "threshold": 7, "ability": "str"},
-		"Guerrier : Armes de mêlée 1 + 1 (classe), contre FOR 7")
-	var mage := Character.create("goblin", "wizard", "M")
-	_expect(mage.attack_pool("weapon")["count"] == 1 and mage.attack_pool("spell") == {"count": 2, "threshold": 7, "ability": "int"},
-		"Magicien : bâton au rang 1, sorts au rang de Magie 2 contre INT")
-	_expect(Equipment.skills_for("longbow") == ["weapon_ranged"] and Equipment.skills_for("unarmed") == ["weapon_melee", "physique"],
-		"compétence de l'arme (mains nues : mêlée ou Physique)")
-	_expect(fighter.weapon_rank("unarmed") == maxi(fighter.skill_rank("weapon_melee"), fighter.skill_rank("physique")),
-		"mains nues : le meilleur rang")
-	_expect(fighter.resist_pool("con")["count"] == fighter.skill_rank("physique") + 1
-		and fighter.resist_pool("dex")["count"] == fighter.skill_rank("physique"), "résister : +1 dé si la classe maîtrise")
+	# Attaques : [rang de la compétence de l'arme] d10 contre l'attribut ; sorts : compétence d'incantation.
+	var fighter := Character.create("goblin", "fighter", "G", {"skill_ranks": {}})
+	_expect(fighter.skill_rank("weapon_melee") == 3
+		and fighter.attack_pool("weapon") == {"count": 3, "threshold": fighter.ability_score("dex"), "ability": "dex"},
+		"Guerrier : Armes de mêlée 1 + 2 (classe), contre la DEX")
+	var mage := Character.create("goblin", "wizard", "M", {"skill_ranks": {}})
+	_expect(mage.attack_pool("weapon")["count"] == 1 and mage.attack_pool("spell") == {"count": 3, "threshold": 6, "ability": "int"},
+		"Magicien : bâton au rang 1, sorts au rang d'Érudition 3 (1 + 2 de classe) contre INT")
+	_expect(Equipment.skills_for("longbow") == ["weapon_ranged"] and Equipment.skills_for("unarmed") == ["physique"],
+		"compétence de l'arme (mains nues : Physique)")
+	_expect(fighter.weapon_rank("unarmed") == fighter.skill_rank("physique"), "mains nues : rang de Physique")
+	_expect(fighter.resist_pool("con")["count"] == fighter.skill_rank("physique")
+		and fighter.resist_pool("dex")["count"] == fighter.skill_rank("physique"), "résister : pas de maîtrise de classe")
 
-	# Points de compétence : un par niveau atteint, +1 rang au choix, jusqu'à un plafond selon le niveau.
+
+	# Points de compétence : un tous les deux niveaux (2, 4, 6…), +1 rang au choix, sans plafond.
 	var learner := Character.create("human", "fighter", "Élève")
-	learner.add_xp(Progression.xp_for(3) - learner.xp)
+	learner.add_xp(Progression.xp_for(4) - learner.xp)
 	_level_up(learner)
 	var lore_before := learner.skill_rank("lore")
-	_expect(learner.pending_skill_points == 2 and learner.has_pending_advancement() and learner.max_trained_rank() == 3 + 1,
-		"niveau 3 : deux points de compétence, rang 4 au plus")
+	_expect(learner.pending_skill_points == 2 and learner.has_pending_advancement(),
+		"niveau 4 : deux points de compétence (niveaux 2 et 4)")
 	_expect(learner.spend_skill_point("lore") and learner.skill_rank("lore") == lore_before + 1 and learner.pending_skill_points == 1,
 		"un point : +1 rang")
-	learner.skill_points["lore"] = 10
-	_expect(not learner.can_raise_skill("lore"), "plafond de rang")
+	_expect(learner.can_raise_skill("lore") and learner.spend_skill_point("lore") and learner.pending_skill_points == 0,
+		"deux niveaux d'un coup : deux rangs possibles dans la même compétence")
+	var steady := Character.create("human", "fighter", "Pas à pas")
+	steady.add_xp(Progression.xp_for(2) - steady.xp)
+	_level_up(steady)
+	steady.pending_skill_points = 2  # deux points pour un seul niveau
+	_expect(steady.spend_skill_point("lore") and not steady.can_raise_skill("lore") and steady.can_raise_skill("arts"),
+		"un rang par compétence et par niveau au plus")
+	steady.skill_points["lore"] = 10
+	_expect(steady.skill_rank("lore") > 10, "pas de plafond de rang après la création")
 	var reloaded := Character.from_dict(JSON.parse_string(JSON.stringify(learner.to_dict())))
-	_expect(reloaded.skill_points == learner.skill_points and reloaded.pending_skill_points == 1, "points de compétence sauvegardés")
+	_expect(reloaded.skill_points == learner.skill_points and reloaded.level_raises == learner.level_raises, "points de compétence sauvegardés")
 
 	# Langues : une langue à choisir par rang de Langues, en plus du Commun.
 	_expect(fighter.known_languages() == ["common"] and fighter.choice_options("skill/languages").size() == 5, "langues à choisir")
 	fighter.choose("skill/languages", "elvish")
 	_expect(fighter.known_languages() == ["common", "elvish"] and not fighter.choose("skill/languages", "orc"), "rang 1 : une langue")
-	var sage := Character.create("human", "wizard", "S", {"background": "sage"})
-	_expect(sage.skill_rank("languages") == 2 and sage.choice_options("skill/languages").size() == 5, "passé Érudit : deux langues")
+	var sage := Character.create("human", "wizard", "S", {"background": "sage", "skill_ranks": {}})
+	_expect(sage.skill_rank("languages") == 4 and sage.choice_options("skill/languages").size() == 5, "Érudit Magicien : Langues 1 + 1 + 2")
+
 
 	# Valeur passive (condition d'événement) : succès moyens de la réserve.
 	var life := LifeState.new()
@@ -1785,6 +2368,12 @@ func _test_social() -> bool:
 	_expect(herbalist_seen.call("forest", "morning") and not herbalist_seen.call("town", "morning")
 		and herbalist_seen.call("town", "afternoon") and not herbalist_seen.call("forest", "evening"),
 		"emploi du temps : l'herboriste cueille en forêt le matin, tient boutique ensuite")
+	var herbalist: Npc = Social.at_location("town", rng, "afternoon").filter(func(n): return n.role == "herbalist")[0]
+	herbalist.player["met"] = true
+	_expect(Social.absent_known("town", "morning").has(herbalist) and not Social.absent_known("town", "afternoon").has(herbalist)
+		and "Forêt des Murmures" in Social.whereabouts_text(herbalist, "morning")
+		and Social.whereabouts_check()["skill"] == "insight", "où est… ? : Perspicacité, le lieu selon l'emploi du temps")
+	herbalist.player["met"] = false
 	var guard := Social.generate("guard", rng)
 	_expect(guard.location == "town" and guard.traits.size() == 2 and guard.facts.is_empty() and guard.age(Meta.world_day) >= 18,
 		"garde généré : 2 traits, aucun fait avant de les apprendre")
@@ -1921,22 +2510,23 @@ func _test_multiclass_and_rest() -> bool:
 		"un niveau de Magicien")
 	_expect(hero.choice_options("class:wizard/cantrips") == ["fire_bolt", "ray_of_frost"], "multiclassage : les sorts du magicien sont à choisir")
 	hero.apply_default_choices()
-	_expect(hero.is_caster() and hero.skill_rank("magic") == 2 and hero.max_resource("spell_slot") == 2
+	_expect(hero.is_caster() and hero.skill_rank(Skills.SPELL) == hero.fixed_skill_rank(Skills.SPELL) and hero.fixed_skill_rank(Skills.SPELL) == 3 and hero.max_resource("spell_slot") == 2
 		and "fire_bolt" in hero.combat_actions() and "second_wind" in hero.combat_actions(), "actions et sorts des deux classes")
 	hero.assign_class_level("fighter")
-	_expect(hero.class_levels == {"fighter": 2, "wizard": 1} and "action_surge" in hero.combat_actions()
+	_expect(hero.class_levels == {"fighter": 2, "wizard": 1} and "pommel_strike" in hero.combat_actions()
 		and hero.classes_text() == "Guerrier 2 / Magicien 1", "Guerrier 2 / Magicien 1")
 	_expect(Conditions.check({"type": "class", "in": ["wizard"]}, _life_of(hero), null), "condition de classe : toutes les classes")
-	_expect(hero.resist_pool("str")["count"] == hero.skill_rank("physique") + 1 and not hero.is_proficient_save("int"),
-		"résister : maîtrises de la classe principale seulement")
+	_expect(hero.resist_pool("str")["count"] == hero.skill_rank("physique") and not hero.is_proficient_save("int"),
+		"résister : pas de maîtrise de classe")
 	var saved := Character.from_dict(JSON.parse_string(JSON.stringify(hero.to_dict())))
 	_expect(saved.class_levels == hero.class_levels and saved.combat_actions() == hero.combat_actions(), "multiclassage sauvegardé")
-	# Améliorations par niveau de classe : Guerrier 4 donne attribut + don, même au niveau total 5.
-	hero.add_xp(Progression.xp_for(5) - hero.xp)
+	# Améliorations par niveau de classe : Guerrier 5 donne +1 attribut, même au niveau total 6.
+	hero.add_xp(Progression.xp_for(6) - hero.xp)
 	hero.assign_class_level("fighter")
 	hero.assign_class_level("fighter")
-	_expect(hero.class_level("fighter") == 4 and hero.pending_ability_points == 1 and hero.pending_feats == 1,
-		"amélioration au niveau 4 de Guerrier")
+	hero.assign_class_level("fighter")
+	_expect(hero.class_level("fighter") == 5 and hero.pending_ability_points == 1 and hero.pending_feats == 1,
+		"amélioration au niveau 5 de Guerrier (et le don du niveau 4)")
 	var old := Character.from_dict({"species_id": "human", "class_id": "rogue", "level": 3})
 	_expect(old.class_levels == {"rogue": 3}, "anciennes sauvegardes : tous les niveaux dans la classe principale")
 
@@ -1950,8 +2540,11 @@ func _test_multiclass_and_rest() -> bool:
 	life.character.gold = 20
 	var day := life.day
 	var result := Game.rest()
-	_expect(result["ok"] and life.character.gold == 15 and life.character.hp == life.character.max_hp and life.day == day + 1
-		and life.slot == 0, "nuit à l'auberge : 5 po, PV au maximum, matin suivant")
+	_expect(result["ok"] and life.character.gold == 15 and life.character.hp == life.character.max_hp and life.day == day
+		and life.slot_id() == "evening", "auberge : 5 po, PV au maximum, deux périodes passées")
+	life.character.hp = 1
+	_expect(Game.rest(true)["ok"] and life.character.gold == 15 and life.character.hp == 1 + (life.character.max_hp - 1) / 2
+		and life.slot_id() == "late", "repos court : gratuit, une période, moitié des PV manquants")
 	life.location = "forest"
 	_expect(Game.rest_name() == "Camper" and Game.rest()["ok"] and life.character.gold == 15, "camper : gratuit")
 	return true
@@ -2158,7 +2751,7 @@ func _test_companions() -> bool:
 	_expect(combat.allies().size() == 2, "le compagnon participe au combat")
 	var ally := combat.allies()[1]
 	_expect(ally.kind == "companion" and ally.is_player_controlled(), "compagnon contrôlé par le joueur")
-	_expect(combat.action_choices(ally).any(func(c): return c["action"]["id"] == "sneak_attack"),
+	_expect(combat.action_choices(ally).any(func(c): return c["action"]["id"] == "poisoned_blade"),
 		"le compagnon a les actions de sa classe")
 	var choice := combat.auto_choice(ally)
 	var ally_beats: Array[Dictionary] = await combat.perform(ally, choice["action"], choice["target"])

@@ -4,17 +4,18 @@ extends RefCounted
 ##   {"id", "name", "category": combat | social | roguery | knowledge,
 ##    "abilities": attributs utilisables (le meilleur par défaut, sauf si le test en impose un),
 ##    "instinctive"?: true, "base_rank"?, "caster_base_rank"?}
-## Chaque compétence a un **rang** : 1 au départ, 2 si elle est instinctive (Magie : 0, ou 2 pour un
-## lanceur de sorts). Le passé, la classe, les dons et l'équipement ajoutent des rangs (modificateur
+## Chaque compétence a un **rang** : 1 au départ, 2 si elle est instinctive. Le passé, la classe, les dons et l'équipement ajoutent des rangs (modificateur
 ## "skill_rank"). Un test lance [rang] d10 contre un seuil égal à l'attribut (voir Dice).
 
 const CATEGORY_NAMES := {"combat": "Combat", "social": "Social", "roguery": "Roublardise", "knowledge": "Connaissances et métiers"}
 ## Anciennes compétences (D&D) -> nouvelles, pour les anciennes sauvegardes et les anciens tests.
 const ALIASES := {
-	"athletics": "physique", "acrobatics": "physique", "arcana": "lore", "history": "lore", "nature": "lore",
+	"athletics": "physique", "acrobatics": "physique", "arcana": "lore", "history": "lore", "nature": "survival",
 	"religion": "lore", "investigation": "perception", "deception": "persuasion", "intimidation": "persuasion",
-	"performance": "arts",
+	"performance": "arts", "magic": "lore",
 }
+## Pseudo-compétence des sorts : la compétence d'incantation du lanceur (Érudition pour le Magicien…).
+const SPELL := "spell"
 
 
 ## Ids dans l'ordre d'affichage.
@@ -44,6 +45,8 @@ static func def(id: String) -> Dictionary:
 
 
 static func name_of(id: String) -> String:
+	if id == SPELL:
+		return Loc.ui("Incantation")
 	return def(id).get("name", id)
 
 

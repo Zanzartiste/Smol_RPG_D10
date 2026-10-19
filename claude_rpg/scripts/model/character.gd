@@ -18,7 +18,9 @@ var pending_feats := 0  # dons à choisir (gagnés en montant de niveau)
 var pending_ability_points := 0  # points d'attribut à répartir (gagnés en montant de niveau)
 var pending_skill_points := 0  # points de compétence à répartir (gagnés en montant de niveau)
 var skill_points: Dictionary = {}  # id de compétence -> rangs achetés avec des points de compétence
+var level_raises: Dictionary = {}  # id de compétence -> points de niveau dépensés dessus (un par niveau au plus)
 var equipment: Dictionary = {}  # emplacement (Equipment.SLOTS) -> id d'équipement
+var spell_override := ""  # compétence d'un sort lancé depuis un parchemin (le temps du sort, non sauvegardé)
 var defenses := Defenses.new()  # défenses propres au personnage (accordées par des événements)
 var level := 1
 var xp := 0
@@ -33,7 +35,7 @@ var look := {}  # apparence choisie à la création (PixelArt.portrait) ; vide :
 var template_id := ""  # pour un compagnon : son id dans companions.json
 var npc_id := ""  # PNJ du monde lié à ce personnage (compagnon recruté, ou compagnon avec relation)
 var auto_combat := false  # en combat, l'IA joue ce personnage
-var load_penalty := 0  # malus de charge du groupe (calculé par LifeState.refresh_load, non sauvegardé)
+
 var resources: Dictionary = {}  # ressources restantes (spell_slot, indomitable…), rechargées par un repos long
 var equipped_spells: Array[String] = []  # sorts équipés (utilisables en combat), parmi les sorts connus
 var seen_spells: Array[String] = []  # sorts déjà proposés (un sort appris est équipé d'office s'il reste de la place)
@@ -57,16 +59,18 @@ static func create(species: String, cls: String, char_name: String, options: Dic
 		scores = PointBuy.from_class(cls).final_scores()
 	for ability in Abilities.ids():
 		c.abilities[ability] = int(scores.get(ability, 4))
-	var background_feat := Feats.for_background(c.background_id)
-	if background_feat != "":
-		c.feats.append(background_feat)
 	c.equipment = class_data.get("equipment", {}).duplicate()
 	var given: Dictionary = options.get("choices", {})
 	for key: String in given:
 		for value: String in given[key]:
 			c.choose(key, value)
 	c.apply_default_choices(true)
-
+	# Rangs de compétence répartis à la création (rules.json › creation_skills) : ceux donnés, sinon la
+	# répartition suggérée par la classe.
+	if options.has("skill_ranks"):
+		c.skill_points = Character._int_dict(options["skill_ranks"])
+	else:
+		c.skill_points = c.suggested_skill_ranks()
 
 	c.max_hp = c.compute_max_hp()
 	c.hp = c.max_hp
@@ -79,6 +83,36 @@ static func create(species: String, cls: String, char_name: String, options: Dic
 			c.add_item(item_id, int(start_items[item_id]))
 	c.start_age = int(DB.species[species].get("start_age", 18))
 	return c
+
+
+## Répartition suggérée des rangs libres de la création : 3, 3, 2, 2, 1, 1 selon les priorités de la classe
+## (classes.json › skill_priority), sans dépasser le rang maximal de création ; le reste va aux suivantes.
+func suggested_skill_ranks() -> Dictionary:
+	var rules: Dictionary = DB.rules.get("creation_skills", {})
+	var left := creation_free_ranks()
+	var cap := int(rules.get("max_rank", 5))
+
+	var saved := skill_points
+	skill_points = {}
+	var order: Array = DB.classes[class_id].get("skill_priority", []).duplicate()
+	for id in Skills.ids():
+		if id not in order:
+			order.append(id)
+	var wanted := [3, 3, 2, 2, 1, 1]
+	var result := {}
+	for pass_index in 2:
+		for i in order.size():
+			if left <= 0:
+				break
+			var id: String = order[i]
+			var want: int = (wanted[i] if i < wanted.size() else 0) if pass_index == 0 else left
+			var room := cap - fixed_skill_rank(id) - int(result.get(id, 0))
+			var amount := mini(mini(want, room), left)
+			if amount > 0:
+				result[id] = int(result.get(id, 0)) + amount
+				left -= amount
+	skill_points = saved
+	return result
 
 
 ## Personnage aléatoire parmi les espèces et classes débloquées.
@@ -152,21 +186,44 @@ func all_defenses() -> Defenses:
 
 # --- Attributs et compétences ------------------------------------------------
 
-## Valeur d'un attribut : base + modificateurs (dons…).
-func ability_score(ability_id: String) -> int:
-	return int(abilities.get(ability_id, 4)) + Modifiers.sum(modifiers(), "ability", ability_id)
+## Valeur d'un attribut : base + modificateurs (dons…) ; la DEX perd un point par point d'encombrement
+## (sans passer sous 0), sauf `encumbered` = false (prérequis, conditions : ce dont le personnage est capable).
+func ability_score(ability_id: String, encumbered := true) -> int:
+	var score := int(abilities.get(ability_id, 4)) + Modifiers.sum(modifiers(), "ability", ability_id)
+	if ability_id == "dex" and encumbered:
+		score = maxi(0, score - encumbrance())
+	return score
 
 
 # --- Compétences : rangs et réserves de dés ---------------------------------------------
 # Attributs : de 3 à 8 pour un humain (4 pour une personne ordinaire) ; la valeur sert de seuil.
-# Rang = rang de départ (1, 2 si instinctive ; Magie : 0, ou 2 pour un lanceur de sorts)
-#        + 1 par passé qui la donne + rangs de la classe (skill_ranks) + modificateurs "skill_rank"
-#        (choix de classe, dons, Expertise, équipement…).
+# Rang = rang de départ (1, 2 si instinctive) + rangs du passé (backgrounds.json › skills)
+#        + rangs de la classe (skill_ranks) + rangs répartis (skill_points : 12 à la création, puis les points
+#        de compétence des niveaux) + modificateurs "skill_rank" (dons, Expertise, équipement…).
 # Test = [rang] d10 contre un seuil égal à l'attribut (voir Dice).
 
 ## Le personnage lance-t-il des sorts par sa classe ?
 func is_caster() -> bool:
 	return class_levels.keys().any(func(cls): return DB.classes[cls].has("spellcasting"))
+
+
+## Compétence d'incantation : celle de la classe (classes.json › spell_skill : Érudition pour le
+## Magicien), sinon celle de l'attribut d'incantation (rules.json › spells › skill_by_ability : Initié à
+## la magie). "" si le personnage ne lance pas de sorts.
+func spell_skill() -> String:
+	if spell_override != "":
+		return spell_override
+	for cls: String in [class_id] + class_levels.keys():
+		if DB.classes.has(cls) and DB.classes[cls].has("spellcasting"):
+			return DB.classes[cls].get("spell_skill", _skill_for_spell_ability(DB.classes[cls]["spellcasting"]))
+	for m: Dictionary in modifiers():
+		if m.get("type") == "spellcasting_ability":
+			return m.get("skill", _skill_for_spell_ability(m["id"]))
+	return ""
+
+
+func _skill_for_spell_ability(ability_id: String) -> String:
+	return DB.rules.get("spells", {}).get("skill_by_ability", {}).get(ability_id, "lore")
 
 
 ## Rangs de compétence donnés par les classes (skill_ranks) : le meilleur parmi ses classes.
@@ -178,15 +235,44 @@ func _class_skill_ranks(skill_id: String) -> int:
 
 
 func skill_base_rank(skill_id: String) -> int:
-	return Skills.base_rank(Skills.resolve(skill_id), is_caster())
+	return Skills.base_rank(Skills.resolve(skill_id))
+
+
+## Rangs donnés par le passé (backgrounds.json › skills : {compétence: rangs}).
+func background_skill_ranks(skill_id: String) -> int:
+	return int(DB.backgrounds.get(background_id, {}).get("skills", {}).get(skill_id, 0))
+
+
+## Rangs fixes de création : départ + passé + classe, plafonnés au rang maximal de création
+## (rules.json › creation_skills › max_rank). L'excédent devient des rangs libres (creation_free_ranks).
+func creation_rank(skill_id: String) -> int:
+	var id := Skills.resolve(skill_id)
+	return mini(skill_base_rank(id) + background_skill_ranks(id) + _class_skill_ranks(id), max_creation_rank())
+
+
+static func max_creation_rank() -> int:
+	return int(DB.rules.get("creation_skills", {}).get("max_rank", 5))
+
+
+## Rangs libres de la création : rules.json › creation_skills › free_ranks, plus les rangs perdus par le
+## plafond (Furtivité 2 + passé 2 + classe 2 = 6 : un rang à replacer ailleurs).
+func creation_free_ranks() -> int:
+	var overflow := 0
+	for id in Skills.ids():
+		overflow += skill_base_rank(id) + background_skill_ranks(id) + _class_skill_ranks(id) - creation_rank(id)
+	return int(DB.rules.get("creation_skills", {}).get("free_ranks", 8)) + overflow
+
+
+## Rang sans les rangs répartis : départ + passé + classe + modificateurs.
+func fixed_skill_rank(skill_id: String) -> int:
+	return skill_rank(skill_id) - int(skill_points.get(Skills.resolve(skill_id), 0))
 
 
 func skill_rank(skill_id: String) -> int:
+	if skill_id == Skills.SPELL:
+		return skill_rank(spell_skill()) if spell_skill() != "" else 0
 	var id := Skills.resolve(skill_id)
-	var rank := skill_base_rank(id) + _class_skill_ranks(id) + int(skill_points.get(id, 0))
-	if id in DB.backgrounds.get(background_id, {}).get("skills", []):
-		rank += 1
-	return rank + Modifiers.sum(modifiers(), "skill_rank", id)
+	return creation_rank(id) + int(skill_points.get(id, 0)) + Modifiers.sum(modifiers(), "skill_rank", id)
 
 
 ## Détail du rang d'une compétence, pour l'affichage : [[source, rangs], ...].
@@ -195,10 +281,13 @@ func skill_rank_parts(skill_id: String) -> Array:
 	var parts: Array = [[Loc.ui("départ"), skill_base_rank(id)]]
 	if _class_skill_ranks(id) > 0:
 		parts.append([Loc.ui("classe"), _class_skill_ranks(id)])
-	if id in DB.backgrounds.get(background_id, {}).get("skills", []):
-		parts.append([Loc.ui("passé"), 1])
+	if background_skill_ranks(id) > 0:
+		parts.append([Loc.ui("passé"), background_skill_ranks(id)])
+	var capped := creation_rank(id) - skill_base_rank(id) - background_skill_ranks(id) - _class_skill_ranks(id)
+	if capped < 0:
+		parts.append([Loc.ui("plafond de création"), capped])
 	if int(skill_points.get(id, 0)) > 0:
-		parts.append([Loc.ui("points de compétence"), int(skill_points[id])])
+		parts.append([Loc.ui("rangs répartis"), int(skill_points[id])])
 	var bonus := Modifiers.sum(modifiers(), "skill_rank", id)
 	if bonus != 0:
 		parts.append([Loc.ui("choix, dons, aptitudes, objets"), bonus])
@@ -224,42 +313,32 @@ func best_skill_ability(skill_id: String) -> String:
 	return best
 
 
-## Valeur d'un attribut pour départager deux attributs : le seuil, moins un point par dé de malus.
+## Valeur d'un attribut pour départager deux attributs : le seuil.
 func _pool_value(ability_id: String) -> int:
-	return ability_score(ability_id) - roll_penalty(ability_id)
+	return ability_score(ability_id)
 
 
-## Réserve d'un test de compétence : {"count": rang + bonus − encombrement, "threshold": attribut}.
+## Réserve d'un test de compétence : {"count": rang + bonus, "threshold": attribut}.
 func skill_pool(skill_id: String, ability := "", bonus := 0) -> Dictionary:
 	var used := ability if ability != "" else best_skill_ability(skill_id)
-	return {"count": skill_rank(skill_id) + bonus - roll_penalty(used), "threshold": ability_score(used),
-		"ability": used}
+	return {"count": skill_rank(skill_id) + bonus, "threshold": ability_score(used), "ability": used}
 
 
-## Test d'attribut seul (sans compétence) : rules.json › dice › attribute_dice dés.
-func ability_pool(ability_id: String, bonus := 0) -> Dictionary:
-	return {"count": int(Dice.setting("attribute_dice", 2)) + bonus - roll_penalty(ability_id),
-		"threshold": ability_score(ability_id), "ability": ability_id}
-
-
-## Résistance maîtrisée (classe de départ, ou Résistant) : un dé de plus pour résister.
+## Résistance maîtrisée (Résistant) : un dé de plus pour résister.
 func is_proficient_save(ability_id: String) -> bool:
-	return ability_id in DB.classes[class_id].get("resist_proficiencies", []) \
-		or Modifiers.grants(modifiers(), "resist_proficiency", ability_id)
+	return Modifiers.grants(modifiers(), "resist_proficiency", ability_id)
 
 
 ## Résister à un effet (poison, sort, peur…) : la compétence liée à l'attribut (rules.json › dice ›
 ## resist_skills : Physique pour FOR, DEX et CON, Perspicacité pour SAG…), contre un seuil égal à
-## l'attribut ; +1 dé par maîtrise (classe de départ, Résistant) et par modificateur "resist_dice".
+## l'attribut ; +1 dé par maîtrise (Résistant) et par modificateur "resist_dice".
 func resist_pool(ability_id: String, bonus := 0) -> Dictionary:
 	var skill: String = Dice.setting("resist_skills", {}).get(ability_id, "physique")
 	var dice := skill_rank(skill) + bonus + Modifiers.sum(modifiers(), "resist_dice")
-	if ability_id in DB.classes[class_id].get("resist_proficiencies", []):
-		dice += 1
 	for m: Dictionary in modifiers():
 		if m.get("type") == "resist_proficiency" and m.get("id") == ability_id:
 			dice += 1
-	return {"count": dice - roll_penalty(ability_id), "threshold": ability_score(ability_id), "ability": ability_id}
+	return {"count": dice, "threshold": ability_score(ability_id), "ability": ability_id}
 
 
 ## Valeur passive (repérer sans lancer de dé) : nombre moyen de succès de la réserve, arrondi.
@@ -293,12 +372,19 @@ func add_feat(feat_id: String) -> bool:
 	return true
 
 
-## Dons que le personnage peut choisir en montant de niveau : prérequis remplis, pas encore possédés,
+## Une montée de niveau attend-elle (classe, choix, attribut, don, point de compétence) ? Le joueur la fait
+## depuis la fiche (bouton « Monter de niveau »).
+func has_level_up() -> bool:
+	return pending_class_levels > 0 or not pending_choice().is_empty() or can_increase_ability() 		or can_choose_feat() or can_spend_skill_point()
+
+
+## Dons que le personnage peut choisir en montant de niveau : prérequis remplis, pas encore possédés, pas un
+## don d'origine (ceux-là viennent du passé),
 ## et pas un style de combat (ceux-là s'obtiennent par l'aptitude Style de combat).
 func available_feats() -> Array[String]:
 	var result: Array[String] = []
 	for feat_id in Feats.ids():
-		if Feats.category_of(feat_id) != "fighting_style" and not has_feat(feat_id) and Feats.meets_prerequisites(feat_id, self):
+		if Feats.category_of(feat_id) not in ["fighting_style", "origin"] and not has_feat(feat_id) and Feats.meets_prerequisites(feat_id, self):
 			result.append(feat_id)
 	return result
 
@@ -324,14 +410,17 @@ static func _skill_rules() -> Dictionary:
 	return DB.rules.get("skill_points", {})
 
 
-## Rang le plus haut qu'on peut atteindre avec des points de compétence à ce niveau.
-func max_trained_rank() -> int:
-	var rules := _skill_rules()
-	return int(rules.get("max_rank_base", 3)) + floori(level * float(rules.get("max_rank_per_level", 0.5)))
-
-
+## Après la création, pas de plafond de rang, mais une compétence monte d'un rang par niveau au plus : elle ne
+## reçoit jamais plus de points que de niveaux atteints qui en ont donné.
 func can_raise_skill(skill_id: String) -> bool:
-	return pending_skill_points > 0 and skill_rank(skill_id) < max_trained_rank()
+	var id := Skills.resolve(skill_id)
+	return pending_skill_points > 0 and Skills.has(id) and int(level_raises.get(id, 0)) < _point_levels()
+
+
+## Nombre de niveaux atteints qui ont donné des points de compétence (rules.json › skill_points › by_level).
+func _point_levels() -> int:
+	var by_level: Dictionary = _skill_rules().get("by_level", {})
+	return range(2, level + 1).filter(func(l): return int(by_level.get(str(l), 0)) > 0).size()
 
 
 ## Reste-t-il un point de compétence à placer (et une compétence sous le plafond) ?
@@ -345,6 +434,7 @@ func spend_skill_point(skill_id: String) -> bool:
 		return false
 	pending_skill_points -= 1
 	skill_points[skill_id] = int(skill_points.get(skill_id, 0)) + 1
+	level_raises[skill_id] = int(level_raises.get(skill_id, 0)) + 1
 	return true
 
 
@@ -357,6 +447,8 @@ func choice_specs() -> Array[Dictionary]:
 		result.append({"key": "species/" + spec["id"], "spec": spec, "source": DB.species[species_id]["name"]})
 	for spec: Dictionary in DB.classes[class_id].get("choices", []):
 		result.append({"key": "class/" + spec["id"], "spec": spec, "source": DB.classes[class_id]["name"]})
+	for spec: Dictionary in DB.backgrounds.get(background_id, {}).get("choices", []):
+		result.append({"key": "background/" + spec["id"], "spec": spec, "source": DB.backgrounds[background_id]["name"]})
 	# Classes prises en multiclassage : leurs choix marqués "multiclass" (sorts du magicien…).
 	for cls: String in class_levels:
 		if cls == class_id:
@@ -383,10 +475,7 @@ func choice_specs() -> Array[Dictionary]:
 
 ## Rang de Langues, lu sans passer par les choix (pour éviter une boucle choix -> modificateurs).
 func _languages_rank() -> int:
-	var rank := skill_base_rank("languages") + _class_skill_ranks("languages") + int(skill_points.get("languages", 0))
-	if "languages" in DB.backgrounds.get(background_id, {}).get("skills", []):
-		rank += 1
-	return rank
+	return creation_rank("languages") + int(skill_points.get("languages", 0))
 
 
 func _choice_entry(key: String) -> Dictionary:
@@ -474,7 +563,7 @@ func choice_label(key: String) -> String:
 
 
 func can_raise(ability_id: String) -> bool:
-	return int(abilities.get(ability_id, 4)) < Progression.max_ability_score()
+	return Progression.max_ability_score() <= 0 or int(abilities.get(ability_id, 4)) < Progression.max_ability_score()
 
 
 ## Dépense un point d'attribut gagné en montant de niveau.
@@ -498,66 +587,65 @@ func choose_feat(feat_id: String) -> bool:
 # --- Équipement --------------------------------------------------------------
 
 # --- Encombrement ----------------------------------------------------------------
-# Deux sources, cumulées et plafonnées (rules.json › encumbrance) : une armure qui demande plus de
-# Force que le personnage n'en a, et la charge du groupe au-delà de sa capacité (load_penalty).
-# Le malus s'applique à tous les jets de FOR et de DEX.
+# Encombrement = poids porté (armure, bouclier, armes en main) − FOR − CON + taille × 2 + armure naturelle × 2
+# (rules.json › encumbrance), moins les modificateurs "encumbrance_reduction", au moins 0. Chaque point
+# retire 1 à la Dextérité ; à 0 de Dextérité, on ne peut plus agir.
 
 static func _encumbrance(key: String, default: Variant) -> Variant:
 	return DB.rules.get("encumbrance", {}).get(key, default)
 
 
-## Points de Force qui manquent pour porter un équipement sans malus (0 si aucun). Entraînement aux
-## armures lourdes réduit la Force conseillée.
-func strength_missing(item_id: String) -> int:
-	var required := Equipment.strength_required(item_id)
-	if required > 0:
-		required -= Modifiers.sum(modifiers(), "armor_strength_reduction")
-	return maxi(0, required - ability_score("str"))
+## Poids qui compte dans l'encombrement : armure, bouclier, et armes en main (à une ou à deux mains).
+func equipped_weight() -> float:
+	var total := Equipment.weight_of(equipment.get("armor", "")) + Equipment.weight_of(equipment.get("off_hand", ""))
+	return total + Equipment.weight_of(weapon_id(), two_handed_grip())
 
 
-## Malus dû aux armures trop lourdes.
-func armor_penalty() -> int:
-	var missing := 0
-	for slot: String in equipment:
-		missing = maxi(missing, strength_missing(equipment[slot]))
-	return ceili(missing / float(_encumbrance("armor_points_per_penalty", 2)))
+## Armure naturelle de l'espèce (species.json › natural_armor) : s'ajoute à l'Armure, et compte double
+## dans l'encombrement (une armure s'ajuste mal à une carapace).
+func natural_armor() -> int:
+	return int(DB.species.get(species_id, {}).get("natural_armor", 0))
 
 
-## Malus total aux jets de FOR et de DEX.
-func encumbrance_penalty() -> int:
-	return mini(armor_penalty() + load_penalty, int(_encumbrance("max_penalty", 5)))
+## Encombrement (points de DEX en moins).
+func encumbrance() -> int:
+	var value := equipped_weight() - int(abilities.get("str", 4)) - Modifiers.sum(modifiers(), "ability", "str") \
+		- int(abilities.get("con", 4)) - Modifiers.sum(modifiers(), "ability", "con") \
+		+ size() * int(_encumbrance("size_factor", 2)) + natural_armor() * int(_encumbrance("natural_armor_factor", 2)) \
+		- Modifiers.sum(modifiers(), "encumbrance_reduction")
+	return maxi(0, ceili(value))
 
 
 func is_encumbered() -> bool:
-	return encumbrance_penalty() > 0
+	return encumbrance() > 0
 
 
-## Malus d'un jet selon l'attribut utilisé (FOR et DEX seulement).
-func roll_penalty(ability_id: String) -> int:
-	return encumbrance_penalty() if ability_id in ["str", "dex"] else 0
+## Encombrement si l'on équipait cet objet (sans rien changer).
+func encumbrance_with(item_id: String) -> int:
+	var saved := equipment.duplicate()
+	equip(item_id)
+	var value := encumbrance()
+	equipment = saved
+	refresh_max_hp()
+	return value
 
 
-## Charge que ce personnage peut porter sans malus (kg).
-func carry_capacity() -> float:
-	return ability_score("str") * float(_encumbrance("carry_per_strength", 7.5))
-
-
-## Poids de ce que le personnage porte sur lui (kg).
-func equipped_weight() -> float:
-	var total := 0.0
-	for slot: String in equipment:
-		total += Equipment.weight_of(equipment[slot])
-	return total
-
-
-## Pourquoi un équipement encombrerait le personnage ("" s'il le porte sans malus de Force).
+## Ce qu'un équipement coûterait en Dextérité ("" s'il n'encombre pas plus que l'équipement actuel).
 func encumbrance_reason(item_id: String) -> String:
-	var missing := strength_missing(item_id)
-	if missing <= 0:
+	if not Equipment.is_weapon(item_id) and not Equipment.is_armor(item_id) and not Equipment.is_shield(item_id):
 		return ""
-	var penalty := ceili(missing / float(_encumbrance("armor_points_per_penalty", 2)))
-	return Loc.ui("Force %d conseillée (vous avez %d) : −%d dé(s) aux jets de FOR et DEX") % [
-		ability_score("str") + missing, ability_score("str"), penalty]
+	var value := encumbrance_with(item_id)
+	if value <= encumbrance() or value <= 0:
+		return ""
+	return Loc.ui("Encombrement %d : DEX −%d") % [value, value]
+
+
+## L'arme en main est tenue à deux mains : arme qui ne se tient qu'à deux mains, ou arme qui le permet, la
+## main secondaire libre.
+func two_handed_grip() -> bool:
+	var weapon := weapon_id()
+	return Equipment.has_property(weapon, "two_handed") \
+		or (Equipment.can_use_two_hands(weapon) and not equipment.has("off_hand"))
 
 
 func weapon_id() -> String:
@@ -567,9 +655,12 @@ func weapon_id() -> String:
 ## Équipe un objet à son emplacement naturel ; retourne les ids retirés pour lui faire de la place
 ## (l'objet de l'emplacement, et la main secondaire libérée par une arme à deux mains, ou l'arme à
 ## deux mains libérée par un bouclier). Un anneau prend le premier emplacement d'anneau libre.
-func equip(item_id: String) -> Array[String]:
+## `slot` : "off_hand" pour tenir une seconde arme dans l'autre main (voir can_dual_wield).
+func equip(item_id: String, slot_wanted := "") -> Array[String]:
 	var removed: Array[String] = []
 	var candidates := Equipment.slots_for(item_id)
+	if slot_wanted == "off_hand" and can_dual_wield(item_id):
+		candidates = ["off_hand"]
 	var slot: String = candidates[0]
 	for candidate: String in candidates:
 		if not equipment.has(candidate):
@@ -588,6 +679,16 @@ func equip(item_id: String) -> Array[String]:
 	return removed
 
 
+## Une arme peut-elle aller en main secondaire ? Une arme de corps à corps qui se tient à une main, si la main
+## principale en tient déjà une (elle attaque alors après l'arme principale, voir Combatant.off_hand_attack).
+func can_dual_wield(item_id: String) -> bool:
+	return _one_handed_melee(item_id) and _one_handed_melee(weapon_id())
+
+
+static func _one_handed_melee(item_id: String) -> bool:
+	return Equipment.is_one_handed(item_id) and item_id != Equipment.UNARMED and not Equipment.has_property(item_id, "ranged")
+
+
 ## Retire l'objet d'un emplacement ; retourne son id ("" si l'emplacement était vide).
 func unequip(slot: String) -> String:
 	var previous: String = equipment.get(slot, "")
@@ -596,9 +697,9 @@ func unequip(slot: String) -> String:
 	return previous
 
 
-## Dégâts de l'arme en main (polyvalente à deux mains si la main secondaire est libre).
+## Dégâts de l'arme en main.
 func weapon_damage() -> Dictionary:
-	return Equipment.weapon_damage(weapon_id(), not equipment.has("off_hand"))
+	return Equipment.weapon_damage(weapon_id())
 
 
 func weapon_damage_type() -> String:
@@ -613,15 +714,16 @@ func natural_dodge() -> int:
 	return maxi(1, ability_score("dex") / divisor) + Modifiers.sum(modifiers(), "natural_dodge")
 
 
-## Armure : celle de l'armure portée + bouclier + modificateurs ("armor" ; style Défense : "armored",
+## Armure : celle de l'armure portée + bouclier + modificateurs ("armor" ; "armored" :
 ## avec une vraie armure). Elle baisse le seuil des dégâts subis.
 func armor() -> int:
 	var mods := modifiers()
 	var total := Equipment.armor_value(equipment.get("armor", "")) + Equipment.armor_value(equipment.get("off_hand", "")) \
-		+ Modifiers.sum(mods, "armor")
+		+ Modifiers.sum(mods, "armor") + natural_armor()
 	var worn := Equipment.def(equipment.get("armor", ""))
 	if not worn.is_empty() and worn.get("armor_type") != "clothing":
-		total += Modifiers.sum(mods, "armored")  # style Défense
+		total += Modifiers.sum(mods, "armored")
+
 	return maxi(0, total)
 
 
@@ -637,26 +739,24 @@ func armor_parts() -> Array:
 		parts.append([Loc.ui("objets et dons"), Modifiers.sum(mods, "armor")])
 	var worn := Equipment.def(equipment.get("armor", ""))
 	if not worn.is_empty() and worn.get("armor_type") != "clothing" and Modifiers.sum(mods, "armored") != 0:
-		parts.append([Loc.ui("style Défense"), Modifiers.sum(mods, "armored")])
+		parts.append([Loc.ui("bonus d'armure"), Modifiers.sum(mods, "armored")])
 	return parts
 
 
-## Initiative de base : Dextérité + Intelligence (+ rang de Physique avec Vigilant, + modificateurs),
-## moins l'encombrement. On y ajoute 1d10 en début de combat.
+## Initiative de base : Dextérité (après l'encombrement) + Intelligence (+ modificateurs). On y ajoute
+## 1d10 en début de combat.
 func initiative_base() -> int:
-	var base := ability_score("dex") + ability_score("int") + Modifiers.sum(modifiers(), "initiative") - roll_penalty("dex")
-	if has_modifier("initiative_rank"):
-		base += skill_rank("physique")  # Vigilant
-	return base
+	return ability_score("dex") + ability_score("int") + Modifiers.sum(modifiers(), "initiative")
 
 
 ## Attribut utilisé par une action : "weapon" (celui de l'arme), "spell" (celui de la classe) ou un id d'attribut.
 func action_ability(ability: String) -> String:
 	match ability:
 		"weapon":
-			return Equipment.attack_ability(weapon_id(), ability_score("str") - roll_penalty("str"),
-				ability_score("dex") - roll_penalty("dex"))
+			return Equipment.ATTACK_ABILITY
 		"spell":
+			if spell_override != "":
+				return best_skill_ability(spell_override)  # parchemin : l'attribut de la compétence utilisée
 			if DB.classes[class_id].has("spellcasting"):
 				return DB.classes[class_id]["spellcasting"]
 			for cls: String in class_levels:
@@ -670,16 +770,16 @@ func action_ability(ability: String) -> String:
 
 
 ## Réserve d'attaque : [rang de la compétence] d10 contre l'attribut. "weapon" : l'arme en main
-## (compétence de son type, voir Equipment.skills_for) ; "spell" : Magie ; un attribut : l'arme
+## (compétence de son type, voir Equipment.skills_for) ; "spell" : compétence d'incantation ; un attribut : l'arme
 ## `weapon` donnée. Retourne {"count", "threshold", "ability"}.
 func attack_pool(ability: String, weapon := "", bonus := 0) -> Dictionary:
 	var used := action_ability(ability)
 	var rank := 0
 	if ability == "spell":
-		rank = skill_rank("magic")
+		rank = skill_rank(Skills.SPELL)
 	else:
 		rank = weapon_rank(weapon if weapon != "" else weapon_id())
-	return {"count": rank + bonus - roll_penalty(used), "threshold": ability_score(used), "ability": used}
+	return {"count": rank + bonus, "threshold": ability_score(used), "ability": used}
 
 
 ## Rang d'attaque avec une arme : le meilleur rang parmi ses compétences (mains nues : mêlée ou Physique).
@@ -751,9 +851,9 @@ func assign_class_level(cls: String) -> Array[String]:
 	lines.append(Loc.ui("%s devient %s de niveau %d.") % [name, String(DB.classes[cls]["name"]).to_lower(), lvl])
 	lines.append_array(ClassFeatures.announce(self, lvl, cls))
 	if Progression.is_advancement_level(lvl):
-		pending_ability_points += Progression.ability_points_per_advancement()
-		pending_feats += Progression.feats_per_advancement()
-		lines.append(Loc.ui("%s : %s.") % [name, Progression.advancement_text()])
+		pending_ability_points += Progression.ability_points_at(lvl)
+		pending_feats += Progression.feats_at(lvl)
+		lines.append(Loc.ui("%s : %s.") % [name, Progression.advancement_text(lvl)])
 	_sync_resources(previous_max)
 	refresh_max_hp()
 	sync_spells()
@@ -799,7 +899,8 @@ func known_spells() -> Array[String]:
 
 
 func max_equipped_spells() -> int:
-	return Spellcasting.max_equipped(skill_rank("magic"))
+	return Spellcasting.max_equipped(skill_rank(Skills.SPELL))
+
 
 
 ## Sort prêt en combat : un tour de magie, ou un sort équipé.
@@ -895,6 +996,15 @@ func _all_combat_actions() -> Array:
 func long_rest() -> void:
 	hp = max_hp
 	resources = max_resources()
+
+
+## Repos court : la moitié des PV et du mana manquants (arrondi à l'inférieur).
+func short_rest() -> void:
+	hp += (max_hp - hp) / 2
+	var max_mana := int(max_resources().get(Spellcasting.SLOT_KEY, 0))
+	if max_mana > 0:
+		var mana := int(resources.get(Spellcasting.SLOT_KEY, 0))
+		resources[Spellcasting.SLOT_KEY] = mana + (max_mana - mana) / 2
 
 
 ## Ajuste les ressources après un changement de niveau : les nouvelles sont pleines, celles qui
@@ -1001,7 +1111,7 @@ func to_dict() -> Dictionary:
 		"class_levels": class_levels, "pending_class_levels": pending_class_levels,
 		"gender": gender, "abilities": abilities, "feats": feats, "choices": choices, "pending_feats": pending_feats,
 		"pending_ability_points": pending_ability_points, "equipment": equipment, "defenses": defenses.to_dict(),
-		"pending_skill_points": pending_skill_points, "skill_points": skill_points,
+		"pending_skill_points": pending_skill_points, "skill_points": skill_points, "level_raises": level_raises,
 		"level": level, "xp": xp, "hp": hp, "max_hp": max_hp, "gold": gold, "inventory": inventory,
 		"start_age": start_age, "age_days": age_days, "art_seed": art_seed, "look": look, "template_id": template_id, "npc_id": npc_id, "auto_combat": auto_combat,
 		"resources": resources, "equipped_spells": equipped_spells, "seen_spells": seen_spells,
@@ -1028,6 +1138,7 @@ static func from_dict(data: Dictionary) -> Character:
 	c.pending_ability_points = int(data.get("pending_ability_points", 0))
 	c.pending_skill_points = int(data.get("pending_skill_points", 0))
 	c.skill_points = _int_dict(data.get("skill_points", {}))
+	c.level_raises = _int_dict(data.get("level_raises", {}))
 	c.equipment = data.get("equipment", {})
 	# Anciennes sauvegardes : amulet -> neck, ring -> ring_1.
 	for old_slot: String in {"amulet": "neck", "ring": "ring_1"}:
@@ -1043,6 +1154,14 @@ static func from_dict(data: Dictionary) -> Character:
 	c.max_hp = int(data.get("max_hp", 1))
 	c.gold = int(data.get("gold", 0))
 	c.inventory = _int_dict(data.get("inventory", {}))
+	# Anciennes sauvegardes : équipements retirés du catalogue (2026-10-15) -> leur remplaçant.
+	for old_id: String in RENAMED_ITEMS:
+		for slot: String in c.equipment.keys():
+			if c.equipment[slot] == old_id:
+				c.equipment[slot] = RENAMED_ITEMS[old_id]
+		if c.inventory.has(old_id):
+			c.inventory[RENAMED_ITEMS[old_id]] = int(c.inventory.get(RENAMED_ITEMS[old_id], 0)) + int(c.inventory[old_id])
+			c.inventory.erase(old_id)
 	c.start_age = int(data.get("start_age", 18))
 	c.age_days = int(data.get("age_days", 0))
 	c.art_seed = int(data.get("art_seed", 0))
@@ -1072,6 +1191,10 @@ static func from_dict(data: Dictionary) -> Character:
 			c.resources.erase(id)
 	c.sync_spells()
 	return c
+
+
+## Équipements retirés du catalogue -> leur remplaçant (anciennes sauvegardes).
+const RENAMED_ITEMS := {"scimitar": "shortsword", "hide": "leather", "chain_shirt": "chain_mail"}
 
 
 static func _int_dict(data: Variant) -> Dictionary:

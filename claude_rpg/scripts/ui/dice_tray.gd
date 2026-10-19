@@ -32,6 +32,8 @@ var _phase := 0  # 0 inactif, 1 roulement, 2 verdict
 var _friction := FRICTION
 var _result_time := RESULT_TIME
 var _result_timer := 0.0
+var hold := false  # le verdict reste affiché jusqu'au clic (combat, option click_to_continue_combat)
+var _released := false
 var _rng := RandomNumberGenerator.new()
 
 
@@ -80,6 +82,7 @@ func play(roll: Dictionary, fast := false) -> void:
 			"pop": 0.0,
 		})
 	_phase = 1
+	_released = false
 	visible = true
 	set_process(true)
 	queue_redraw()
@@ -104,6 +107,7 @@ func skip() -> void:
 		_result_timer = 0.6
 	elif _phase == 2:
 		_result_timer = 0.0
+		_released = true
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -121,7 +125,7 @@ func _process(delta: float) -> void:
 		_result_timer = _result_time
 	elif _phase == 2:
 		_result_timer -= delta
-		if _result_timer <= 0.0:
+		if _result_timer <= 0.0 and (not hold or _released):
 			_phase = 0
 			visible = false
 			set_process(false)
@@ -207,6 +211,9 @@ func _draw() -> void:
 		_draw_die(d, font)
 	if _phase == 2:
 		_draw_verdict(font)
+		if hold and not _released:
+			draw_string(font, Vector2(0, size.y - 8), Loc.ui("Cliquez pour continuer"), HORIZONTAL_ALIGNMENT_RIGHT,
+				size.x - 16, 14, UITheme.TEXT)
 
 
 func _draw_die(d: Dictionary, font: Font) -> void:

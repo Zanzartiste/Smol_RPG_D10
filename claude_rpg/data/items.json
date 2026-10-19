@@ -18,6 +18,87 @@
 		"use": {"cleanse": "poisoned", "target": "ally"}
 	},
 	{
+		"id": "fire_arrow",
+		"weight": 0.05,
+		"category": "consumable",
+		"name": "Flèche de feu",
+		"description": "Une flèche (ou un carreau) à la pointe enduite de poix : elle s'enflamme en touchant. Pour un arc ou une arbalète.",
+		"value": 2,
+		"ammo": {"bonus_damage": [{"dice": 2, "threshold": 5, "damage_type": "fire"}], "effects": [{"type": "status", "status": "burning", "stacks": 1}]}
+	},
+	{
+		"id": "frost_arrow",
+		"weight": 0.05,
+		"category": "consumable",
+		"name": "Flèche de glace",
+		"description": "Une pointe de cristal glacé qui engourdit la cible. Pour un arc ou une arbalète.",
+		"value": 2,
+		"ammo": {"bonus_damage": [{"dice": 2, "threshold": 5, "damage_type": "cold"}], "effects": [{"type": "status", "status": "weakened", "stacks": 1}]}
+	},
+	{
+		"id": "lightning_arrow",
+		"weight": 0.05,
+		"category": "consumable",
+		"name": "Flèche de foudre",
+		"description": "Une pointe de cuivre gravée de runes qui libère un éclair à l'impact. Pour un arc ou une arbalète.",
+		"value": 3,
+		"ammo": {"bonus_damage": [{"dice": 3, "threshold": 5, "damage_type": "lightning"}]}
+	},
+	{
+		"id": "flask_oil",
+		"weight": 0.25,
+		"category": "consumable",
+		"name": "Fiole d'huile",
+		"description": "De l'huile lourde dans une fiole de verre. Lancée, elle se brise et met le feu à la cible.",
+		"value": 2,
+		"splash": [{"type": "status", "status": "burning", "stacks": 2}]
+	},
+	{
+		"id": "holy_water",
+		"weight": 0.25,
+		"category": "consumable",
+		"name": "Eau bénite",
+		"description": "Une fiole d'eau consacrée. Lancée, elle se brise et brûle les morts-vivants et les démons.",
+		"value": 10,
+		"splash": [{"type": "damage", "damage": {"dice": 4, "threshold": 6, "fixed": true}, "damage_type": "radiant"}]
+	},
+	{
+		"id": "scroll_fire_bolt",
+		"weight": 0.1,
+		"category": "consumable",
+		"name": "Parchemin : Trait de feu",
+		"description": "Un sort couché à l'encre sur un vélin usé. On le lance en le lisant à voix haute, puis il tombe en poussière.",
+		"value": 15,
+		"use": {"spell": "fire_bolt", "target": "enemy", "unlock": "class:wizard"}
+	},
+	{
+		"id": "scroll_magic_missile",
+		"weight": 0.1,
+		"category": "consumable",
+		"name": "Parchemin : Projectile magique",
+		"description": "Un sort couché à l'encre sur un vélin usé. On le lance en le lisant à voix haute, puis il tombe en poussière.",
+		"value": 30,
+		"use": {"spell": "magic_missile", "target": "enemy", "unlock": "class:wizard"}
+	},
+	{
+		"id": "scroll_sleep",
+		"weight": 0.1,
+		"category": "consumable",
+		"name": "Parchemin : Sommeil",
+		"description": "Un sort couché à l'encre sur un vélin usé. On le lance en le lisant à voix haute, puis il tombe en poussière.",
+		"value": 30,
+		"use": {"spell": "sleep", "target": "all_enemies", "unlock": "class:wizard"}
+	},
+	{
+		"id": "scroll_mage_shield",
+		"weight": 0.1,
+		"category": "consumable",
+		"name": "Parchemin : Bouclier",
+		"description": "Un sort couché à l'encre sur un vélin usé. On le lance en le lisant à voix haute, puis il tombe en poussière.",
+		"value": 25,
+		"use": {"spell": "mage_shield", "target": "self", "unlock": "class:wizard"}
+	},
+	{
 		"id": "healing_herbs",
 		"weight": 0.1,
 		"category": "material",

@@ -16,7 +16,8 @@ var next_npc_id := 0
 ## Réglages du joueur (conservés même quand on efface le monde) :
 ##   manual_skill_ability : choisir soi-même l'attribut d'un test de compétence (sinon le meilleur) ;
 ##   many_dice : règle des dés nombreux (10 dés -> seuil + 1 succès automatiques, voir Dice).
-var settings := {"manual_skill_ability": false, "many_dice": false, "auto_reactions": false}  # Creator Points disponibles (gagnés à chaque mort, dépensés à la création)
+var settings := {"manual_skill_ability": false, "many_dice": false, "auto_reactions": false, "auto_daily_feats": true,
+	"show_check_skill": true, "show_check_chance": true, "show_locked_choices": false, "click_to_continue_combat": true}  # Creator Points disponibles (gagnés à chaque mort, dépensés à la création)
 
 
 func has_world_flag(id: String) -> bool:
@@ -50,6 +51,8 @@ func unlock_name(id: String) -> String:
 				return DB.species.get(parts[1], {}).get("name", id)
 			"class":
 				return DB.classes.get(parts[1], {}).get("name", id)
+			"background":
+				return DB.backgrounds.get(parts[1], {}).get("name", id)
 	return id
 
 
@@ -70,12 +73,18 @@ func buy_unlock(unlock_id: String) -> bool:
 	return true
 
 
+## En mode debug, tout est disponible (espèces, classes, passés).
 func is_species_available(species_id: String) -> bool:
-	return not DB.species[species_id].get("locked", false) or is_unlocked("species:" + species_id)
+	return Game.debug or not DB.species[species_id].get("locked", false) or is_unlocked("species:" + species_id)
 
 
 func is_class_available(class_id: String) -> bool:
-	return not DB.classes[class_id].get("locked", false) or is_unlocked("class:" + class_id)
+	return Game.debug or not DB.classes[class_id].get("locked", false) or is_unlocked("class:" + class_id)
+
+
+## Passé verrouillé (Sur mesure) : débloqué en mourant de vieillesse (voir record_life).
+func is_background_available(background_id: String) -> bool:
+	return Game.debug or not DB.backgrounds[background_id].get("locked", false) or is_unlocked("background:" + background_id)
 
 
 func mark_event_seen(event_id: String) -> void:
@@ -87,6 +96,8 @@ func record_life(life: LifeState) -> void:
 	var ch := life.character
 	var earned := CreatorPoints.earned_for(ch.xp)
 	creator_points += earned
+	if life.died_of_old_age():
+		unlock("background:custom")
 	chronicle.append({
 		"xp": ch.xp,
 		"creator_points": earned,

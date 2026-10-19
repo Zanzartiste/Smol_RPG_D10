@@ -285,7 +285,7 @@ Le détail est dans les catalogues ([equipements.md](equipements.md), [objets.md
 |---|---|
 | **Création de personnage** | À retravailler plus tard ([creation_personnage.md](creation_personnage.md)). |
 | **Jets de sauvegarde** | À réexaminer : usages et options dans [jets_de_sauvegarde.md](jets_de_sauvegarde.md). |
-| **Points de vie** | Selon la **taille** et l'**endurance** (Constitution), pas la classe ; peut-être pas de progression par niveau (fragilité voulue). |
+| **Points de vie** | Selon la **taille** et l'**endurance** (Constitution), pas la classe ; pas de progression par niveau pour l'instant (fragilité voulue, décision du 2026-10-15). |
 | **Tailles** | Échelle de −4 (insecte) à 5+ (colosse) ; humain 0, nain et enfant −1, ogre 2, géant 3, baleine 4. |
 | **Mort** | Pas de jets contre la mort : un membre du groupe qui tombe est inconscient tant qu'un autre tient debout, et il est ramené à lui après le combat ; si tout le groupe tombe, c'est la mort. Un moyen de revenir à la vie est à prévoir. |
 | **Classes suivantes** | Barde, Rôdeur, Clerc, Druide, Artificier. Le système de magie (sorts appris) reste à définir. |
@@ -374,13 +374,24 @@ Le d20 de D&D est remplacé par des **réserves de d10 à succès**, inspirées 
     relations, sorts), emplacements de sort en une réserve, sorts équipés, quêtes, journal chronologique et
     filtrable, mort des PNJ de vieillesse, archétypes d'IA (chasseur, lâche), événements de Survie.
 15. **Temps long** : événement voyage (durée, transport, événements en route, se perdre), activités de 1, 2, 5 ou
-    10 ans, journal de la vie.
-16. **PNJ générés progressivement** et relations : faits enregistrés, jauges, interactions sociales.
-17. **Mariage et enfants**, puis **monde autonome** (PNJ qui vieillissent, lieux qui changent).
-18. **Compagnons à la BG3** : approbation, dialogues, départ.
-19. **Métiers en sous-systèmes**, en commençant par la forge.
-20. **Multiclassage**.
-21. **Options** (dés, texte, langue) et **exports** Windows et Web dès qu'une version de test est voulue.
+    10 ans, journal de la vie. Fiche [temps_et_voyages.md](temps_et_voyages.md).
+16. ~~**PNJ générés progressivement** et relations~~ : faits, jauges, interactions sociales (fait en 14 ter).
+17. ~~**Mariage et enfants**, puis **monde autonome**~~ (fait en 14 ter) ; restent les lieux qui changent.
+18. ~~**Compagnons à la BG3**~~ : approbation et recrutement (fait en 14 ter) ; restent dialogues et départ.
+19. **Métiers en sous-systèmes** : ~~la forge~~ (fait en 13) ; les suivants à concevoir.
+20. ~~**Multiclassage**~~ (fait en 14 quater).
+21. **Options** (dés, texte, langue). ~~Export Web~~ : la branche `main` est déployée sur GitHub Pages, c'est la
+    version de test. Export Windows plus tard.
+
+**Chantiers de conception (2026-10-15)**, fiches à remplir par l'auteur avant le code :
+
+22. **Classes, dons et passés** selon le tableur [Classes.ods](Classes.ods) : sous-classes, dons de niveau, nouvelles
+    classes ([classes.md](classes.md), [dons.md](dons.md), [passes.md](passes.md)).
+23. **Magie** : qui lance des sorts, comment on les apprend, ce qu'ils coûtent, catalogue
+    ([magie.md](magie.md)). Bloque Barde, Clerc, Druide et Artificier.
+24. **Progression** : sources d'XP, rythme sur une vie, dons de niveau ([progression.md](progression.md)).
+25. **Bestiaire** : familles de créatures, dosage des rencontres, boss ([bestiaire.md](bestiaire.md)).
+26. **Événements** : ton, tirage, nouveaux lieux, catalogue d'idées ([evenements.md](evenements.md)).
 
 ## 11. Backlog (idées validées, non prioritaires)
 
@@ -390,7 +401,9 @@ désormais dans la feuille de route du §10. Restent ici :
 - **Conjoint ou enfant comme personnage suivant**, et enfance jouable.
 - **Creator Points** : barème à ajuster avec les testeurs ; autres bonus possibles.
 - **Combat** : contresort, revenir à la vie, archétypes d'IA de plus (se soigner, protéger un allié).
-- **Classes** : Barde, Rôdeur, Clerc, Druide, Artificier ; système de magie (sorts appris) à définir.
+- **Classes** : Barde, Rôdeur, Clerc, Druide, Artificier ; système de magie : voir [magie.md](magie.md).
+- **Équilibrage** des sorts, des armes et des armures : plus tard.
+- **Vies précédentes** (lien du héros avec les vies passées, héritage) : bien plus tard.
 - **Lore et univers** : fournis par l'auteur, à intégrer (noms de lieux, factions, campagnes).
 - **Son et musique**, **pipeline d'images IA**, **traduction anglaise**.
 
@@ -398,4 +411,6 @@ désormais dans la feuille de route du §10. Restent ici :
 
 - **Banc d'équilibrage** : `tools/combat_bench.tscn` (taux de victoire par classe et par rencontre).
 - **Mode debug** : F12 en jeu, ou lancer avec `-- --debug`. Il affiche les choix verrouillés (grisés, avec la raison),
-  qui sont cachés en jeu normal.
+  qui sont cachés en jeu normal, et débloque tout à la création (espèces, classes, passés).
+- **Tutoriel** : une première vie guidée (réinitialisable à la création), mais seulement quand les systèmes seront
+  stabilisés, pour ne pas expliquer un système qui pourrait disparaître.

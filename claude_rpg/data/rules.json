@@ -1,19 +1,23 @@
 {
 	"standard_array": [6, 5, 5, 4, 4, 3],
 	"point_buy": {
-		"_doc": "Attributs de 3 à 8 pour un humain (4 pour une personne ordinaire). Chaque attribut part de min ; le barème donne le coût total d'une valeur ; puis deux bonus de +1 sur des attributs différents.",
-		"budget": 10,
+		"_doc": "Création : chaque attribut part de 3, quelles que soient l'espèce et la classe ; on répartit budget points (1 point = +1), sans dépasser max. Tout le budget doit être dépensé.",
+		"budget": 9,
 		"min": 3,
 		"max": 6,
-		"costs": {"3": 0, "4": 1, "5": 2, "6": 4},
-		"bonuses": [1, 1]
+		"costs": {"3": 0, "4": 1, "5": 2, "6": 3},
+		"bonuses": []
+	},
+	"creation_skills": {
+		"_doc": "Création : le passé donne 4 rangs (backgrounds.json › skills) et la classe 8 (classes.json › skill_ranks), puis on répartit free_ranks rangs librement, sans qu'aucune compétence dépasse max_rank. Tous les rangs doivent être répartis.",
+		"free_ranks": 8,
+		"max_rank": 5
 	},
 	"dice": {
-		"_doc": "Réserves de d10 : critical_step succès supplémentaires par niveau de réussite critique ; échec critique : aucun succès (et au moins un 10 si fumble_needs_ten) ; attribute_dice dés pour un test d'attribut sans compétence ; resist_skills : compétence utilisée pour résister selon l'attribut.",
+		"_doc": "Réserves de d10 : critical_step succès supplémentaires par niveau de réussite critique ; échec critique : aucun succès (et au moins un 10 si fumble_needs_ten) ; resist_skills : compétence utilisée pour résister selon l'attribut.",
 		"critical_step": 3,
 		"fumble_needs_ten": true,
-		"attribute_dice": 2,
-		"resist_skills": {"str": "physique", "dex": "physique", "con": "physique", "int": "lore", "wis": "insight", "cha": "persuasion"}
+		"resist_skills": {"str": "physique", "dex": "physique", "con": "physique", "int": "lore", "wis": "determination", "cha": "persuasion"}
 	},
 	"genders": [{"id": "female", "name": "Femme"}, {"id": "male", "name": "Homme"}, {"id": "nonbinary", "name": "Non-binaire"}],
 	"sizes": [
@@ -63,12 +67,27 @@
 			{"id": "snow", "name": "Neige"}
 		]
 	},
-	"time_slots": [{"id": "morning", "name": "Matin"}, {"id": "afternoon", "name": "Après-midi"}, {"id": "evening", "name": "Soir"}],
+	"time_slots": [{"id": "night", "name": "Nuit"}, {"id": "dawn", "name": "Aube"}, {"id": "morning", "name": "Matin"},
+		{"id": "afternoon", "name": "Après-midi"}, {"id": "evening", "name": "Soirée"}, {"id": "late", "name": "Coucher"}],
+	"_time_doc": "Six périodes de 4 h (0-4 nuit, 4-8 aube…). Une vie commence à start_slot. Repos court : 1 période, la moitié des PV manquants ; repos long : 2 périodes, tout revient.",
+	"start_slot": 2,
+	"districts": {
+		"_doc": "Quartiers de départ (backgrounds.json › start_district, sinon default) : lieu où commence la vie, et marqueur district_<id> (condition flag).",
+		"default": "market",
+		"list": [
+			{"id": "market", "name": "la place du marché de Brumeval", "location": "town"},
+			{"id": "port", "name": "le port de Brumeval", "location": "town"},
+			{"id": "temple", "name": "le temple de Brumeval", "location": "town"},
+			{"id": "farms", "name": "les fermes autour de Brumeval", "location": "town"},
+			{"id": "woods", "name": "une cabane dans la Forêt des Murmures", "location": "forest"}
+		]
+	},
 	"days_per_year": 365,
 	"majority_age": 18,
-	"common_actions": ["prepare", "hide", "intimidate", "first_aid"],
+	"common_actions": ["prepare", "hide", "intimidate", "first_aid", "find_weakness"],
 	"social": {
-		"_doc": "Interactions sociales : humeurs du jour (difficulty : modificateur de la difficulté des tests contre le PNJ, gain : multiplicateur des gains de relation), saluts selon l'humeur, nombre de traits, chance qu'un partenaire jaloux apprenne une infidélité, durée d'une grossesse (jours), rencontres quotidiennes entre PNJ par lieu, seuil d'Amitié sous lequel un compagnon part.",
+		"_doc": "Interactions sociales : humeurs du jour (difficulty : modificateur de la difficulté des tests contre le PNJ, gain : multiplicateur des gains de relation), saluts selon l'humeur, nombre de traits, chance qu'un partenaire jaloux apprenne une infidélité, durée d'une grossesse (jours), rencontres quotidiennes entre PNJ par lieu, seuil d'Amitié sous lequel un compagnon part, difficulté du test de Perspicacité pour savoir où trouver un PNJ connu (whereabouts_difficulty).",
+		"whereabouts_difficulty": 2,
 		"moods": [
 			{"id": "radiant", "name": "radieux", "difficulty": -1, "gain": 1.25, "weight": 1},
 			{"id": "good", "name": "de bonne humeur", "difficulty": 0, "gain": 1.1, "weight": 2},
@@ -101,6 +120,25 @@
 		{"id": "orc", "name": "Orque"},
 		{"id": "infernal", "name": "Infernal"}
 	],
+	"mana": {"_doc": "Réserve de mana (ressource spell_slot) = niveau de lanceur × per_caster_level ; un sort de niveau N coûte N mana, le manque se paie en PV.", "per_caster_level": 2},
+	"backlash": {
+		"_doc": "Contrecoups : quand le jet d'un sort (attaque, ou opposition contre une résistance) est un échec critique, on tire 1d10 sur cette table, une fois par dé à 10 (au plus max_rolls) ; les lignes 6 à 10, de plus en plus fortes, frappent tout le monde avec un type de dégâts ou un état, auxquels on peut se préparer (résistances, immunités). N = niveau du sort lancé (1 pour un tour de magie). Effets : weather (change la météo du combat), heal / damage ({who: caster | random | all, dice: N + extra_dice, threshold, damage_type : id ou random}), mana (le lanceur perd N mana), status ({who, status : id ou random parmi random_statuses, stacks}).",
+		"max_rolls": 3,
+		"threshold": 4,
+		"random_statuses": ["poisoned", "burning", "weakened", "blinded", "frightened", "prone"],
+		"table": [
+			{"text": "Le ciel répond au sort raté : le temps change.", "effects": [{"type": "weather"}]},
+			{"text": "Une vague de vie s'échappe vers un combattant au hasard.", "effects": [{"type": "heal", "who": "random"}]},
+			{"text": "L'énergie du sort frappe un combattant au hasard.", "effects": [{"type": "damage", "who": "random", "damage_type": "random"}]},
+			{"text": "Le sort explose et frappe tout le monde.", "effects": [{"type": "damage", "who": "all", "damage_type": "random"}]},
+			{"text": "Une onde de vie parcourt le champ de bataille.", "effects": [{"type": "heal", "who": "all"}]},
+			{"text": "Une gerbe de flammes jaillit du sort raté et frappe tout le monde.", "effects": [{"type": "damage", "who": "all", "damage_type": "fire", "extra_dice": 1}]},
+			{"text": "Un souffle glacé balaie le champ de bataille.", "effects": [{"type": "damage", "who": "all", "damage_type": "cold", "extra_dice": 2}, {"type": "status", "who": "all", "status": "weakened", "stacks": 1}]},
+			{"text": "La foudre jaillit en arcs vers tous les combattants.", "effects": [{"type": "damage", "who": "all", "damage_type": "lightning", "extra_dice": 3}]},
+			{"text": "Un nuage de miasmes empoisonne tout le monde.", "effects": [{"type": "damage", "who": "all", "damage_type": "poison", "extra_dice": 3}, {"type": "status", "who": "all", "status": "poisoned", "stacks": 2}]},
+			{"text": "Le sort éclate dans un coup de tonnerre qui renverse tout le monde.", "effects": [{"type": "damage", "who": "all", "damage_type": "thunder", "extra_dice": 4}, {"type": "status", "who": "all", "status": "prone", "stacks": 1}]}
+		]
+	},
 	"spell_slots": {
 		"_doc": "Table SRD 5.1 par niveau de classe : ligne n = niveau n, colonne i = sorts de niveau i+1. Le jeu en fait une seule réserve d'emplacements (somme pondérée par le niveau ; un sort de niveau N coûte N emplacements) et le niveau de sort le plus haut lançable.",
 		"full": [
@@ -148,10 +186,33 @@
 				[4, 3, 3, 3, 2]
 		]
 	},
+	"fled_enemies": {
+		"_doc": "Créatures qui fuient un combat : dans un lieu sauvage, elles peuvent revenir du lendemain jusqu'à days jours plus tard (chaque événement tiré dans le lieu a chance d'être leur retour), avec reinforcements créatures de plus (au plus max_enemies). Leur groupe (creatures.json › group) est prévenu pendant warn_days jours : un combat contre ce groupe (« group » sur le combat) compte un ennemi de plus, tous préparés au premier tour.",
+		"days": 7,
+		"chance": 0.35,
+		"reinforcements": 1,
+		"max_enemies": 4,
+		"warn_days": 7
+	},
+	"lost_items": {
+		"_doc": "Objets laissés sur place après une fuite ou une défaite (objets lancés) : on les retrouve en fouillant le lieu (Chercher… › Des ressources), test de skill contre difficulty ; une réussite en rend un, une réussite critique tous.",
+		"skill": "perception",
+		"difficulty": 1
+	},
+	"casting": {
+		"_doc": "Jet d'incantation : un sort de dégâts est une attaque de sort contre le Couvert (ou l'Esquive naturelle) de chaque cible, un sort qui impose un état une opposition contre la résistance de la cible. Un sort sans cible à toucher (Bouclier, Appel du familier) demande un jet de la réserve d'incantation contre difficulty. Raté, le sort ne part pas ; un échec critique déclenche ses contrecoups.",
+		"enabled": true,
+		"difficulty": 1
+	},
+	"scrolls": {
+		"_doc": "Parchemins (items.json › use.spell) : compétence utilisée pour lancer leur sort, avec son meilleur attribut.",
+		"skill": "languages"
+	},
 	"spells": {
-		"_doc": "Sorts équipés (utilisables en combat) parmi les sorts connus : equipped_base + equipped_per_magic_rank × rang de Magie.",
+		"_doc": "Sorts équipés (utilisables en combat) parmi les sorts connus : equipped_base + equipped_per_magic_rank × rang de la compétence d'incantation. Compétence d'incantation : classes.json › spell_skill, sinon celle de l'attribut d'incantation (skill_by_ability : Initié à la magie).",
 		"equipped_base": 2,
-		"equipped_per_magic_rank": 1
+		"equipped_per_magic_rank": 1,
+		"skill_by_ability": {"int": "lore", "wis": "determination", "cha": "arts"}
 	},
 	"dice_scaling": {
 		"_doc": "Dés de dégâts en plus selon le niveau de classe (le palier le plus haut atteint) : tours de magie (palier − 1) et Attaque sournoise (palier).",
@@ -186,25 +247,18 @@
 		"upgrade_rarities": ["uncommon", "rare", "very_rare"]
 	},
 	"encumbrance": {
-		"_doc": "Dés en moins aux jets de FOR et de DEX (attaques, résistances, tests, fuite ; l'initiative perd autant de points) : 1 par tranche de armor_points_per_penalty points de Force manquants pour l'armure portée, + 1 par tranche de overload_percent_per_penalty % de charge au-delà de la capacité du groupe (somme de carry_per_strength kg par point de Force de chaque membre), au plus max_penalty.",
-		"armor_points_per_penalty": 1,
-		"carry_per_strength": 18,
-		"overload_percent_per_penalty": 25,
-		"max_penalty": 3
-	},
-	"armor_strength": {
-		"_doc": "Force conseillée pour une armure, selon son type (un objet peut la redéfinir avec \"strength\"). En dessous, l'armure reste portable mais encombre (voir encumbrance).",
-		"clothing": 0,
-		"light": 4,
-		"medium": 5,
-		"heavy": 6
+		"_doc": "Encombrement = poids de l'armure, du bouclier et des armes en main (une ou deux mains) − FOR − CON + taille × size_factor + armure naturelle × natural_armor_factor, au moins 0. Chaque point retire 1 à la Dextérité (jusqu'à 0 : on ne peut plus agir).",
+		"size_factor": 2,
+		"natural_armor_factor": 2
 	},
 	"max_companions": 3,
 	"combat": {
-		"_doc": "actions_per_turn : actions par tour (les actions gardées deviennent des réactions jusqu'au tour suivant ; s'il en reste au début de son tour, on devient Préparé). dodge_divisor : Esquive naturelle = DEX ÷ dodge_divisor (au moins 1). prepared_dice : dés en plus quand on est Préparé. surprise_crit_bonus : succès comptés en plus pour le critique d'une attaque surprise. cover : Couvert des attaques à distance (base, minimum).",
+		"_doc": "actions_per_turn : actions par tour (les actions gardées deviennent des réactions jusqu'au tour suivant ; s'il en reste au début de son tour, on devient Préparé). dodge_divisor : Esquive naturelle = DEX ÷ dodge_divisor (au moins 1). prepared_dice : dés en plus quand on est Préparé. surprise_crit_bonus : succès comptés en plus pour le critique d'une attaque surprise. cover : Couvert des attaques à distance (base, minimum). throw_large_weight : poids à partir duquel un objet lancé (qui n'est pas une arme de lancer) compte comme une arme improvisée grande, sinon moyenne. gear_drop_chance : chance que chaque pièce d'équipement d'une créature équipée (creatures.json › equipment) tombe en butin.",
 		"actions_per_turn": 2,
 		"dodge_divisor": 3,
 		"prepared_dice": 2,
+		"throw_large_weight": 5,
+		"gear_drop_chance": 0.5,
 		"surprise_crit_bonus": 2,
 		"flee_difficulty": 2,
 		"ai_heal_below": 0.5,
@@ -217,15 +271,17 @@
 		"sprite_scale": {"-4": 0.3, "-3": 0.35, "-2": 0.45, "-1": 0.6, "0": 1, "1": 1.3, "2": 1.8, "3": 2.3, "4": 2.6, "5": 2.8}
 	},
 	"xp_by_level": [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000],
-	"advancement_levels": [4, 8, 12, 16, 20],
-	"advancement": {"ability_points": 1, "feats": 1},
-	"skill_points": {
-		"_doc": "Points de compétence gagnés à chaque niveau atteint (by_level : niveau -> points ; absent : 0). Un point = +1 rang dans une compétence, jusqu'au rang max_rank_base + niveau × max_rank_per_level.",
-		"by_level": {"2": 1, "3": 1, "4": 1, "5": 1, "6": 1, "7": 1, "8": 1, "9": 1, "10": 1, "11": 1, "12": 1, "13": 1, "14": 1, "15": 1, "16": 1, "17": 1, "18": 1, "19": 1, "20": 1},
-		"max_rank_base": 3,
-		"max_rank_per_level": 0.5
+	"advancement": {
+		"_doc": "Niveaux de classe qui donnent des points d'attribut (ability_levels) et des dons (feat_levels : à placer dans la courbe de progression).",
+		"ability_levels": [5, 10, 15, 20],
+		"ability_points": 1,
+		"feat_levels": [4, 8, 12, 16, 20],
+		"feats": 1
 	},
-	"max_ability_score": 10,
+	"skill_points": {
+		"_doc": "Points de compétence gagnés aux niveaux atteints (by_level : niveau -> points ; absent : 0). Un point = +1 rang dans une compétence, sans plafond : on progresse rang par rang (jamais +2 d'un coup).",
+		"by_level": {"2": 1, "4": 1, "6": 1, "8": 1, "10": 1, "12": 1, "14": 1, "16": 1, "18": 1, "20": 1}
+	},
 	"aging_chance": 0.4,
 	"creator_points": {
 		"xp_per_point": 100,

@@ -8,6 +8,7 @@ var out_dir := ""
 
 func _ready() -> void:
 	Saves.enabled = false  # les captures ne touchent pas aux vraies sauvegardes
+	Meta.settings["click_to_continue_combat"] = false  # les combats capturés avancent seuls
 	var args := OS.get_cmdline_user_args()
 	out_dir = args[0] if args.size() > 0 else ProjectSettings.globalize_path("user://screenshots")
 	DirAccess.make_dir_recursive_absolute(out_dir)
@@ -29,6 +30,7 @@ func _ready() -> void:
 	creation._on_species_selected("tiefling")  # pour montrer le choix d'ascendance
 	creation._class_buttons["fighter"].button_pressed = true
 	creation._on_class_selected("fighter")
+	creation._on_background_selected("custom")  # le passé Sur mesure : ses longues listes de choix
 	for tab in creation.pages.get_tab_count():
 		creation.tab_buttons.get_child(tab).button_pressed = true
 		creation.pages.current_tab = tab
@@ -87,6 +89,9 @@ func _ready() -> void:
 	social.close_view()
 	main.open_carnet()
 	await _capture("2h_carnet.png")
+	main._overlay.close_view()
+	main.open_map()
+	await _capture("2i_map.png")
 	main._overlay.close_view()
 	main._show_hub()
 	Meta.settings["manual_skill_ability"] = true  # pour montrer les boutons d'attribut

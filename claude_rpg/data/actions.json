@@ -36,23 +36,51 @@
 		"name": "Trait de feu",
 		"description": "Tour de magie : un trait de flammes jaillit de vos doigts.",
 		"target": "enemy",
-		"effects": [{"type": "attack", "ability": "spell", "damage": {"threshold": "spell", "bonus": 2}, "damage_type": "fire", "scaling": {"table": "cantrip"}, "cantrip": true, "school": "evocation"}]
+		"effects": [{"type": "attack", "ability": "spell", "damage": {"dice": 6, "threshold": "spell", "fixed": true}, "damage_type": "fire", "scaling": {"table": "cantrip"}, "cantrip": true, "school": "evocation"}]
 	},
 	{
 		"id": "ray_of_frost",
 		"name": "Rayon de givre",
 		"description": "Tour de magie : un rayon glacé qui engourdit la cible.",
 		"target": "enemy",
-		"effects": [{"type": "attack", "ability": "spell", "damage": {"threshold": "spell", "bonus": 1}, "damage_type": "cold", "scaling": {"table": "cantrip"}, "cantrip": true, "school": "evocation"}, {"type": "status", "status": "weakened", "stacks": 2}]
+		"effects": [{"type": "attack", "ability": "spell", "damage": {"dice": 5, "threshold": "spell", "fixed": true}, "damage_type": "cold", "scaling": {"table": "cantrip"}, "cantrip": true, "school": "evocation"}, {"type": "status", "status": "weakened", "stacks": 2}]
+	},
+	{
+		"id": "thorn_whip",
+		"name": "Fouet épineux",
+		"description": "Tour de magie de druide : une liane épineuse fouette la cible.",
+		"target": "enemy",
+		"effects": [{"type": "attack", "ability": "spell", "damage": {"dice": 5, "threshold": "spell", "fixed": true}, "damage_type": "piercing", "scaling": {"table": "cantrip"}, "cantrip": true, "school": "transmutation"}]
+	},
+	{
+		"id": "produce_flame",
+		"name": "Flammes",
+		"description": "Tour de magie de druide : une flamme naît dans votre paume et part vers la cible.",
+		"target": "enemy",
+		"effects": [{"type": "attack", "ability": "spell", "damage": {"dice": 6, "threshold": "spell", "fixed": true}, "damage_type": "fire", "scaling": {"table": "cantrip"}, "cantrip": true, "school": "conjuration"}]
+	},
+	{
+		"id": "sacred_flame",
+		"name": "Flamme sacrée",
+		"description": "Tour de magie de clerc : une flamme radieuse descend sur la cible.",
+		"target": "enemy",
+		"effects": [{"type": "attack", "ability": "spell", "damage": {"dice": 5, "threshold": "spell", "fixed": true}, "damage_type": "radiant", "scaling": {"table": "cantrip"}, "cantrip": true, "school": "evocation"}]
+	},
+	{
+		"id": "toll_the_dead",
+		"name": "Glas",
+		"description": "Tour de magie de clerc : le son d'une cloche funèbre blesse l'esprit de la cible.",
+		"target": "enemy",
+		"effects": [{"type": "attack", "ability": "spell", "damage": {"dice": 6, "threshold": "spell", "fixed": true}, "damage_type": "necrotic", "scaling": {"table": "cantrip"}, "cantrip": true, "school": "necromancy"}]
 	},
 	{
 		"id": "magic_missile",
 		"name": "Projectile magique",
-		"description": "Trois fléchettes de force qui touchent toujours leur cible.",
+		"description": "Trois fléchettes de force qui filent vers la cible.",
 		"target": "enemy",
 		"cost": "spell_slot",
 		"spell_level": 1,
-		"effects": [{"type": "damage", "damage": {"dice": 3, "threshold": 6}, "damage_type": "force", "upcast": 1, "school": "evocation"}]
+		"effects": [{"type": "attack", "ability": "spell", "damage": {"dice": 7, "threshold": 6, "fixed": true}, "damage_type": "force", "upcast": 2, "school": "evocation"}]
 	},
 	{
 		"id": "burning_hands",
@@ -61,7 +89,7 @@
 		"target": "all_enemies",
 		"cost": "spell_slot",
 		"spell_level": 1,
-		"effects": [{"type": "damage", "damage": {"skill": "magic", "dice": 1, "threshold": "spell"}, "damage_type": "fire", "resist": {"ability": "dex"}, "upcast": 1, "school": "evocation"}, {"type": "status", "status": "burning", "stacks": 1}]
+		"effects": [{"type": "attack", "ability": "spell", "damage": {"dice": 8, "threshold": "spell", "fixed": true}, "damage_type": "fire", "upcast": 2, "school": "evocation"}, {"type": "status", "status": "burning", "stacks": 1}]
 	},
 	{
 		"id": "sleep",
@@ -75,7 +103,7 @@
 	{
 		"id": "mage_shield",
 		"name": "Bouclier",
-		"description": "Une barrière de force invisible vous protège.",
+		"description": "Une barrière de force invisible vous protège. En réaction, le sort sert aussi à parer un coup, même un tir : jet de Magie contre votre seuil d'incantation, pour son coût en mana.",
 		"target": "self",
 		"cost": "spell_slot",
 		"spell_level": 1,
@@ -114,6 +142,13 @@
 		"effects": [{"type": "check", "skill": "stealth", "difficulty": 2}, {"type": "status", "status": "invisible", "stacks": 2}]
 	},
 	{
+		"id": "reload",
+		"name": "Recharger",
+		"description": "Vous rechargez votre fronde ou votre arbalète : après chaque tir, il faut autant d'actions que sa recharge.",
+		"target": "self",
+		"effects": [{"type": "reload"}]
+	},
+	{
 		"id": "intimidate",
 		"name": "Intimider",
 		"description": "Un rugissement, une menace : la cible prend peur.",
@@ -136,6 +171,14 @@
 		"effects": [{"type": "attack", "weapon": "unarmed", "ability": "str"}, {"type": "status", "status": "restrained", "stacks": 2}]
 	},
 	{
+		"id": "rage",
+		"name": "Rage",
+		"description": "Vous laissez éclater votre fureur jusqu'au début de votre prochain tour : vous ne pouvez plus qu'attaquer au corps à corps, et les succès des jets d'attaque que vous faites et que vous subissez sont doublés.",
+		"target": "self",
+		"free": true,
+		"effects": [{"type": "status", "status": "raging", "stacks": 1}]
+	},
+	{
 		"id": "action_surge",
 		"name": "Fougue",
 		"description": "Vous puisez dans vos réserves pour agir une deuxième fois.",
@@ -152,10 +195,17 @@
 		"cost": "spell_slot",
 		"spell_level": 2,
 		"effects": [
-			{"type": "attack", "ability": "spell", "damage": {"threshold": "spell", "bonus": 1}, "damage_type": "fire", "school": "evocation"},
-			{"type": "attack", "ability": "spell", "damage": {"threshold": "spell", "bonus": 1}, "damage_type": "fire", "school": "evocation"},
-			{"type": "attack", "ability": "spell", "damage": {"threshold": "spell", "bonus": 1}, "damage_type": "fire", "school": "evocation"}
+			{"type": "attack", "ability": "spell", "damage": {"dice": 6, "threshold": "spell", "fixed": true}, "damage_type": "fire", "school": "evocation"},
+			{"type": "attack", "ability": "spell", "damage": {"dice": 6, "threshold": "spell", "fixed": true}, "damage_type": "fire", "school": "evocation"},
+			{"type": "attack", "ability": "spell", "damage": {"dice": 6, "threshold": "spell", "fixed": true}, "damage_type": "fire", "school": "evocation"}
 		]
+	},
+	{
+		"id": "find_weakness",
+		"name": "Chercher les points faibles",
+		"description": "Vous observez l'ennemi (Érudition, ou Nature si c'est mieux contre une bête) pour découvrir ses résistances et ses faiblesses, qui restent connues pour toutes les créatures de son espèce. Préparez-vous d'abord pour +2 dés.",
+		"target": "enemy",
+		"effects": [{"type": "check", "skill": "lore", "natural_skill": "survival", "difficulty": 2}, {"type": "reveal_weaknesses"}]
 	},
 	{
 		"id": "prepare",
@@ -171,6 +221,6 @@
 		"target": "all_enemies",
 		"cost": "spell_slot",
 		"spell_level": 3,
-		"effects": [{"type": "damage", "damage": {"skill": "magic", "dice": 4, "threshold": "spell", "bonus": 1}, "damage_type": "fire", "resist": {"ability": "dex"}, "upcast": 1, "school": "evocation"}]
+		"effects": [{"type": "attack", "ability": "spell", "damage": {"dice": 12, "threshold": "spell", "fixed": true}, "damage_type": "fire", "upcast": 2, "school": "evocation"}]
 	}
 ]

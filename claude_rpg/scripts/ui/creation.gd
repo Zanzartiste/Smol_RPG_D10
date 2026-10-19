@@ -1,5 +1,6 @@
 extends Control
-## Écran de création de personnage, en onglets : espèce et genre, apparence, classe, passé, attributs, Creator Points.
+## Écran de création de personnage, en onglets : espèce et genre, apparence, attributs (3 partout + 9 points,
+## 6 au plus), classe, passé (4 rangs de compétence chacun), compétences (12 rangs libres, 5 au plus), Creator Points.
 ## Les Creator Points (gagnés par les vies précédentes) achètent des bonus pour cette vie (dépensés au
 ## lancement) ou des déblocages définitifs d'espèces et de classes (dépensés tout de suite).
 ## L'aperçu (portrait, nom, fiche) reste visible à gauche et se met à jour en direct.
@@ -38,6 +39,9 @@ var _art_seed := 0
 var _look := {}  # apparence choisie (onglet Apparence) : skin, hair, eyes, hair_style, beard, body
 var _look_box := VBoxContainer.new()
 var _sheet := CharacterPage.new()  # fiche en direct, comme celle du tiroir
+var _skill_ranks := {}  # rangs de compétence répartis librement (rules.json › creation_skills)
+var _skill_box := VBoxContainer.new()
+var _skills_seeded := false  # la répartition suggérée a été posée une première fois
 var _point_buy: PointBuy
 var _name_is_random := true  # le nom suit l'espèce tant que le joueur ne l'a pas tapé lui-même
 var _rng := RandomNumberGenerator.new()
@@ -49,6 +53,7 @@ var _class_buttons := {}
 var _creation_choices := {}  # clé de choix (« class/skills », « species/ancestry ») -> valeurs choisies
 var _class_choice_box := VBoxContainer.new()
 var _species_choice_box := VBoxContainer.new()
+var _background_choice_box := VBoxContainer.new()
 
 
 func _ready() -> void:
@@ -69,25 +74,39 @@ func _ready() -> void:
 	_look_box.add_theme_constant_override("separation", 8)
 	pages.add_child(_look_box)
 	pages.move_child(_look_box, 1)
+	# Ordre : espèce, apparence, attributs, classe, passé, compétences, Creator Points.
+	pages.move_child(pages.get_node("Attributs"), 2)
+	# Page Compétences : longue, donc dans un défilement.
+	var skill_scroll := ScrollContainer.new()
+	skill_scroll.name = tr("Compétences")
+	skill_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_skill_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_skill_box.add_theme_constant_override("separation", 4)
+	skill_scroll.add_child(_skill_box)
+	pages.add_child(skill_scroll)
+	pages.move_child(skill_scroll, 5)
 	_build_tabs()
 
 	var species := _fill_buttons(species_buttons, DB.species, Meta.is_species_available, _on_species_selected)
 	var classes := _fill_buttons(class_buttons, DB.classes, Meta.is_class_available, _on_class_selected)
 	_species_buttons = species
 	_class_buttons = classes
-	var backgrounds := _fill_buttons(background_buttons, DB.backgrounds, func(_id): return true, _on_background_selected)
+	var backgrounds := _fill_buttons(_scroll_row(background_buttons), DB.backgrounds,
+		Meta.is_background_available, _on_background_selected)
 	var genders := _fill_buttons(gender_buttons, _index(DB.rules["genders"]), func(_id): return true, _on_gender_selected)
 	_build_ability_grid()
 	_build_upgrade_grid()
 	class_text.get_parent().add_child(_class_choice_box)
 	species_text.get_parent().add_child(_species_choice_box)
 	species_text.get_parent().move_child(_species_choice_box, species_text.get_index() + 1)
+	background_text.get_parent().add_child(_background_choice_box)
+	background_text.get_parent().move_child(_background_choice_box, background_text.get_index() + 1)
 
 	random_name_button.pressed.connect(_randomize_name)
 	appearance_button.pressed.connect(_on_appearance_pressed)
 	name_edit.text_changed.connect(_on_name_typed)
 	name_edit.text_submitted.connect(func(_text): _on_start())
-	template_button.pressed.connect(func(): _on_class_selected(_class))
+	template_button.pressed.connect(_apply_class_template)
 	start_button.pressed.connect(_on_start)
 	footer_text.text = _footer()
 
@@ -113,6 +132,7 @@ func build_character() -> Character:
 		"background": _background,
 		"gender": _gender,
 		"choices": _creation_choices,
+		"skill_ranks": _skill_ranks,
 	})
 	ch.art_seed = _art_seed
 	ch.look = _look.duplicate()
@@ -130,7 +150,7 @@ func _build_tabs() -> void:
 		button.toggle_mode = true
 		button.button_group = group
 		button.button_pressed = i == 0
-		button.custom_minimum_size = Vector2(120, 0)
+		button.custom_minimum_size = Vector2(90, 0)
 		button.pressed.connect(func(): pages.current_tab = i)
 		tab_buttons.add_child(button)
 
@@ -152,6 +172,21 @@ func _fill_buttons(container: Container, table: Dictionary, is_available: Callab
 		container.add_child(button)
 		buttons[id] = button
 	return buttons
+
+
+## Remplace `container` (à sa place) par une ligne horizontale qui défile ; retourne la ligne à remplir.
+func _scroll_row(container: Control) -> HBoxContainer:
+	var scroll := ScrollContainer.new()
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var row := HBoxContainer.new()
+	scroll.add_child(row)
+	var parent := container.get_parent()
+	parent.add_child(scroll)
+	parent.move_child(scroll, container.get_index())
+	container.queue_free()
+	return row
 
 
 ## Grille de l'achat de points : Attribut | − | valeur | + | +2 | +1 | total (modificateur).
@@ -215,19 +250,123 @@ func _on_species_selected(species_id: String) -> void:
 	_refresh()
 
 
-## Changer de classe réapplique son modèle d'attributs (comme dans BG3).
+## Les attributs se répartissent avant la classe : changer de classe ne les touche pas (le bouton « Revenir
+## au modèle de la classe » applique sa répartition suggérée). La première fois, on part du modèle.
 func _on_class_selected(class_id: String) -> void:
 	_class = class_id
 	_reset_creation_choices("class/", DB.classes[class_id])
-	_point_buy = PointBuy.from_class(class_id)
+	_skills_seeded = false  # la répartition suggérée suit les priorités de la nouvelle classe
+	if _point_buy == null:
+		_apply_class_template()
+	_refresh()
+
+
+func _apply_class_template() -> void:
+	_point_buy = PointBuy.from_class(_class)
 	_point_buy.extra_budget = CreatorPoints.bonus(_cp_ranks, "point_buy")
 	_refresh()
 
 
+# --- Compétences : rangs libres -------------------------------------------------
+
+## Rangs libres : ceux des règles, plus les rangs perdus par le plafond de création (Character.creation_free_ranks).
+func free_ranks_total() -> int:
+	return build_character().creation_free_ranks()
+
+
+func max_creation_rank() -> int:
+	return Character.max_creation_rank()
+
+
+func free_ranks_left() -> int:
+	var spent := 0
+	for id: String in _skill_ranks:
+		spent += int(_skill_ranks[id])
+	return free_ranks_total() - spent
+
+
+## Ajoute (+1) ou retire (−1) un rang libre à une compétence, dans les limites.
+func change_skill_rank(skill_id: String, delta: int) -> void:
+	var ch := build_character()
+	if delta > 0 and (free_ranks_left() <= 0 or ch.skill_rank(skill_id) >= max_creation_rank()):
+		return
+	if delta < 0 and int(_skill_ranks.get(skill_id, 0)) <= 0:
+		return
+	_skill_ranks[skill_id] = int(_skill_ranks.get(skill_id, 0)) + delta
+	if _skill_ranks[skill_id] == 0:
+		_skill_ranks.erase(skill_id)
+	_refresh()
+
+
+func _suggest_skill_ranks() -> void:
+	_skill_ranks = {}
+	_skill_ranks = build_character().suggested_skill_ranks()
+	_refresh()
+
+
+## Un passé ou une classe qui donne déjà des rangs peut faire dépasser le maximum : on reprend alors la
+## répartition suggérée (sinon des rangs resteraient à replacer et bloqueraient le départ).
+func _clamp_skill_ranks() -> void:
+	var ch := build_character()
+	for id: String in _skill_ranks.keys():
+		if int(_skill_ranks[id]) > 0 and ch.skill_rank(id) > max_creation_rank():
+			_skill_ranks = ch.suggested_skill_ranks()
+			return
+
+
+func _fill_skill_page(ch: Character) -> void:
+	for child in _skill_box.get_children():
+		_skill_box.remove_child(child)
+		child.queue_free()
+	var head := Label.new()
+	head.text = tr("Rangs à répartir : %d / %d") % [free_ranks_left(), free_ranks_total()]
+	head.theme_type_variation = &"SectionLabel"
+	_skill_box.add_child(head)
+	var help := Label.new()
+	help.text = tr("Le passé donne déjà 4 rangs et la classe 8. Aucune compétence ne dépasse %d à la création : un rang au-delà revient aux rangs à répartir.") % max_creation_rank()
+	help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	help.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+	_skill_box.add_child(help)
+	var suggest := Button.new()
+	suggest.text = tr("Répartition suggérée par la classe")
+	suggest.pressed.connect(_suggest_skill_ranks)
+	_skill_box.add_child(suggest)
+	for category: String in Skills.CATEGORY_NAMES:
+		var ids := Skills.ids_in(category)
+		if ids.is_empty():
+			continue
+		var cat := Label.new()
+		cat.text = tr(Skills.CATEGORY_NAMES[category])
+		cat.add_theme_color_override("font_color", UITheme.GOLD)
+		_skill_box.add_child(cat)
+		var grid := GridContainer.new()
+		grid.columns = 8
+		grid.add_theme_constant_override("h_separation", 6)
+		for skill_id in ids:
+			var name_label := CharacterPage.make_label(Skills.name_of(skill_id), CharacterPage.skill_tip(ch, skill_id) + "\n\n" +
+				"\n".join(PackedStringArray(ch.skill_rank_parts(skill_id).map(func(p): return "%s : %d" % [p[0], int(p[1])]))))
+			name_label.custom_minimum_size.x = 150
+			name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			grid.add_child(name_label)
+			var minus := _small_button("−", change_skill_rank.bind(skill_id, -1), grid)
+			minus.disabled = int(_skill_ranks.get(skill_id, 0)) <= 0
+			var rank := Label.new()
+			rank.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			rank.custom_minimum_size = Vector2(32, 0)
+			rank.text = str(ch.skill_rank(skill_id))
+			if not ch.is_trained(skill_id):
+				rank.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+			grid.add_child(rank)
+			var plus := _small_button("+", change_skill_rank.bind(skill_id, 1), grid)
+			plus.disabled = free_ranks_left() <= 0 or ch.skill_rank(skill_id) >= max_creation_rank()
+		_skill_box.add_child(grid)
+
+
 func _on_background_selected(background_id: String) -> void:
 	_background = background_id
+	_reset_creation_choices("background/", DB.backgrounds[background_id])
 	# Une compétence déjà donnée par le passé ne peut pas être choisie en plus.
-	var granted: Array = DB.backgrounds[background_id].get("skills", [])
+	var granted: Dictionary = DB.backgrounds[background_id].get("skills", {})
 	for key: String in _creation_choices:
 		_creation_choices[key] = _creation_choices[key].filter(func(v): return v not in granted)
 	_fill_missing_choices()
@@ -246,7 +385,7 @@ func _reset_creation_choices(prefix: String, source: Dictionary) -> void:
 	for key: String in _creation_choices.keys():
 		if key.begins_with(prefix):
 			_creation_choices.erase(key)
-	var granted: Array = DB.backgrounds.get(_background, {}).get("skills", [])
+	var granted: Dictionary = DB.backgrounds.get(_background, {}).get("skills", {})
 	for spec: Dictionary in _creation_specs(source):
 		_creation_choices[prefix + spec["id"]] = spec.get("default", []).filter(func(v): return v not in granted)
 	_fill_missing_choices()
@@ -255,13 +394,13 @@ func _reset_creation_choices(prefix: String, source: Dictionary) -> void:
 ## Complète les choix de création incomplets avec les premières options libres (une compétence
 ## par défaut déjà donnée par le passé est remplacée par une autre).
 func _fill_missing_choices() -> void:
-	var granted: Array = DB.backgrounds.get(_background, {}).get("skills", [])
-	for pair in [["species/", DB.species.get(_species, {})], ["class/", DB.classes.get(_class, {})]]:
+	var granted: Dictionary = DB.backgrounds.get(_background, {}).get("skills", {})
+	for pair in [["species/", DB.species.get(_species, {})], ["class/", DB.classes.get(_class, {})],
+			["background/", DB.backgrounds.get(_background, {})]]:
 		for spec: Dictionary in _creation_specs(pair[1]):
 			var key: String = pair[0] + spec["id"]
 			var values: Array = _creation_choices.get(key, [])
-			for o in spec.get("options", []):
-				var value: String = o if o is String else o["id"]
+			for value: String in Choices.raw_options(spec):
 				if values.size() >= int(spec.get("count", 1)):
 					break
 				if value not in values and not (spec.get("type") == "skill" and value in granted):
@@ -286,7 +425,7 @@ func _fill_creation_choices(box: VBoxContainer, prefix: String, source: Dictiona
 	for child in box.get_children():
 		box.remove_child(child)
 		child.queue_free()
-	var granted: Array = DB.backgrounds.get(_background, {}).get("skills", [])
+	var granted: Dictionary = DB.backgrounds.get(_background, {}).get("skills", {})
 	for spec: Dictionary in _creation_specs(source):
 		var key: String = prefix + spec["id"]
 		var values: Array = _creation_choices.get(key, [])
@@ -295,10 +434,12 @@ func _fill_creation_choices(box: VBoxContainer, prefix: String, source: Dictiona
 		title.text = tr("%s : %d / %d") % [spec.get("name", ""), values.size(), count]
 		title.theme_type_variation = &"SectionLabel"
 		box.add_child(title)
-		var flow := HFlowContainer.new()
+		# Liste longue (passé Sur mesure : tous les dons, toutes les compétences) : une seule ligne qui défile.
+		var flow: Container = HFlowContainer.new()
 		box.add_child(flow)
-		var options: Array = spec.get("options", []).map(func(o): return o if o is String else o["id"])
-		for value: String in options:
+		if Choices.raw_options(spec).size() > 6:
+			flow = _scroll_row(flow)
+		for value: String in Choices.raw_options(spec):
 			var button := Button.new()
 			button.text = Choices.value_name(spec, value)
 			button.tooltip_text = Choices.value_description(spec, value)
@@ -315,7 +456,7 @@ func _fill_creation_choices(box: VBoxContainer, prefix: String, source: Dictiona
 
 ## Tous les choix de création sont-ils complets ?
 func _creation_choices_complete() -> bool:
-	for pair in [["species/", DB.species[_species]], ["class/", DB.classes[_class]]]:
+	for pair in [["species/", DB.species[_species]], ["class/", DB.classes[_class]], ["background/", DB.backgrounds[_background]]]:
 		for spec: Dictionary in _creation_specs(pair[1]):
 			if _creation_choices.get(pair[0] + spec["id"], []).size() < int(spec.get("count", 1)):
 				return false
@@ -563,7 +704,12 @@ func _refresh() -> void:
 			if keep.has(part):
 				_look[part] = keep[part]
 	_fill_look_page()
+	if not _skills_seeded:
+		_skills_seeded = true
+		_skill_ranks = build_character().suggested_skill_ranks()
+	_clamp_skill_ranks()
 	var ch := build_character()
+	_fill_skill_page(ch)
 	portrait.texture = ArtProvider.portrait(ch)
 	sheet_text.text = CharacterSheet.bbcode(ch)
 	_sheet.show_character(ch)
@@ -571,10 +717,12 @@ func _refresh() -> void:
 	class_text.text = _class_info(DB.classes[_class])
 	_fill_creation_choices(_class_choice_box, "class/", DB.classes[_class])
 	_fill_creation_choices(_species_choice_box, "species/", DB.species[_species])
+	_fill_creation_choices(_background_choice_box, "background/", DB.backgrounds[_background])
 	background_text.text = _background_info(DB.backgrounds[_background])
 	_refresh_abilities()
 	_refresh_creator_points()
-	start_button.disabled = ch.name == "" or not _point_buy.is_valid() or not _creation_choices_complete()
+	start_button.disabled = ch.name == "" or not _point_buy.is_valid() or not _creation_choices_complete() \
+		or free_ranks_left() != 0
 
 
 func _refresh_abilities() -> void:
@@ -611,15 +759,13 @@ func _class_info(cls: Dictionary) -> String:
 	for slot in Equipment.SLOTS:
 		if equipment.has(slot):
 			gear.append(Equipment.describe(equipment[slot]))
-	var saves := PackedStringArray(cls.get("resist_proficiencies", []).map(func(id): return Abilities.short_of(id)))
-	var text := "[i]%s[/i]\n%s\n%s\n%s" % [
+	var text := "[i]%s[/i]\n%s\n%s" % [
 		cls.get("description", ""),
-		_field(tr("Résistances maîtrisées :"), ", ".join(saves)),
-		_field(tr("Maîtrises :"), tr("au choix, ci-dessous")),
+		_field(tr("Compétences :"), _ranks_text(cls.get("skill_ranks", {}))),
 		_field(tr("Équipement :"), " · ".join(gear))] + "\n" + _field(tr("Actions :"),
 		", ".join(PackedStringArray(cls.get("actions", []).map(func(id): return Actions.name_of(id)))))
 	if cls.has("spell_slots"):
-		text += "\n" + _field(tr("Sorts :"), tr("emplacements de sort qui augmentent avec le niveau (au niveau 1 : %s)") %
+		text += "\n" + _field(tr("Sorts :"), tr("mana qui augmente avec le niveau (au niveau 1 : %s)") %
 			ClassFeatures.slots_text(int(Spellcasting.slots(cls["spell_slots"], 1).get(Spellcasting.SLOT_KEY, 0)),
 				Spellcasting.max_level(cls["spell_slots"], 1)))
 	var features := PackedStringArray()
@@ -631,11 +777,9 @@ func _class_info(cls: Dictionary) -> String:
 
 
 func _background_info(background: Dictionary) -> String:
-	var text := "[i]%s[/i]\n%s" % [
-		Loc.gendered(background.get("description", ""), _gender), _field(tr("Maîtrises :"), _skill_names(background.get("skills", [])))]
-	var feat_id := Feats.for_background(background["id"])
-	if feat_id != "":
-		text += "\n" + _field(tr("Don :"), "%s — %s" % [Feats.name_of(feat_id), Feats.summary_of(feat_id)])
+	var text := "[i]%s[/i]" % Loc.gendered(background.get("description", ""), _gender)
+	if not background.get("skills", {}).is_empty():  # Sur mesure : ses compétences se choisissent plus bas
+		text += "\n" + _field(tr("Compétences :"), _ranks_text(background["skills"]))
 	if background.has("gold"):
 		text += "   " + _field(tr("Or :"), "+%d po" % int(background["gold"]))
 	return text
@@ -643,6 +787,11 @@ func _background_info(background: Dictionary) -> String:
 
 func _field(label: String, value: String) -> String:
 	return "[color=%s]%s[/color] %s" % [UITheme.GOLD.to_html(false), label, value]
+
+
+## « Érudition +2, Perspicacité +2 ».
+func _ranks_text(ranks: Dictionary) -> String:
+	return ", ".join(PackedStringArray(ranks.keys().map(func(id): return "%s +%d" % [Skills.name_of(id), int(ranks[id])])))
 
 
 func _skill_names(ids: Array) -> String:

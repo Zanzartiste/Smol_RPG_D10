@@ -137,12 +137,12 @@ func _on_search_changed(text: String) -> void:
 
 
 func refresh() -> void:
-	life.refresh_load()
 	_gold_label.text = tr("Or : %d po") % life.character.gold
-	_load_label.text = tr("Charge : %.1f / %.0f kg") % [life.carried_weight(), life.carry_capacity()]
-	_load_label.add_theme_color_override("font_color",
-		UITheme.BAD if life.carried_weight() > life.carry_capacity() else UITheme.TEXT_DIM)
 	_fill_member_tabs()
+	var load := _member.encumbrance()
+	_load_label.text = tr("Encombrement de %s : %d (DEX −%d)") % [_member.name, load, load] if load > 0 \
+		else tr("Encombrement de %s : aucun") % _member.name
+	_load_label.add_theme_color_override("font_color", UITheme.BAD if load > 0 else UITheme.TEXT_DIM)
 	_fill_filters()
 	_fill_equipment()
 	_fill_bag()
@@ -224,14 +224,16 @@ func _fill_bag() -> void:
 		label.fit_content = true
 		label.scroll_active = false
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var weight := Items.weight_of(item_id) * int(inventory[item_id])
-		label.text = "%s ×%d\n[font_size=14][color=%s]%s%s[/color][/font_size]" % [Items.bbcode_name(item_id),
-			int(inventory[item_id]), UITheme.TEXT_DIM.to_html(false), Items.summary(item_id),
-			(" · %s kg" % String.num(weight, 2)) if weight > 0.0 else ""]
+		label.text = "%s ×%d\n[font_size=14][color=%s]%s[/color][/font_size]" % [Items.bbcode_name(item_id),
+			int(inventory[item_id]), UITheme.TEXT_DIM.to_html(false), Items.summary(item_id)]
 		label.tooltip_text = Items.description_of(item_id)
 		row.add_child(label)
 		if Items.is_equipment(item_id):
 			row.add_child(_small_button(tr("Équiper"), _on_equip.bind(item_id)))
+			if _member.can_dual_wield(item_id):
+				var second := _small_button(tr("Main secondaire"), _on_equip.bind(item_id, "off_hand"))
+				second.tooltip_text = tr("Tenir cette arme dans l'autre main : chaque attaque se fait au choix avec l'une ou l'autre, et chacune peut parer (avec le style À deux armes, on frappe des deux mains).")
+				row.add_child(second)
 			var problem := _member.encumbrance_reason(item_id)
 			if problem != "":
 				label.text += "\n[font_size=14][color=%s]%s : %s[/color][/font_size]" % [UITheme.BAD.to_html(false),
@@ -247,8 +249,8 @@ func _fill_bag() -> void:
 
 # --- Actions ------------------------------------------------------------------
 
-func _on_equip(item_id: String) -> void:
-	if life.equip(_member, item_id):
+func _on_equip(item_id: String, slot := "") -> void:
+	if life.equip(_member, item_id, slot):
 		_after(tr("%s équipe : %s.") % [_member.name, Items.name_of(item_id)])
 
 

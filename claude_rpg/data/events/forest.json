@@ -619,6 +619,7 @@
 						{
 							"type": "combat",
 							"enemies": ["bandit", "bandit", "bandit_mender"],
+							"group": "bandits",
 							"victory": {
 								"text": "Le camp est à vous : quelques pièces, des bandages, et une marmite encore chaude.",
 								"effects": [{"type": "gold", "amount": 8}]
@@ -642,6 +643,7 @@
 						{
 							"type": "combat",
 							"enemies": ["bandit", "bandit", "bandit_mender"],
+							"group": "bandits",
 							"victory": {"text": "Les brigands ne surprendront plus personne.", "effects": []},
 							"fled": {"text": "Vous détalez entre les arbres.", "effects": []}
 						}

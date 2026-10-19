@@ -1,2 +1,5 @@
 # Export Web local (le workflow GitHub Pages le refait en ligne)
 build/
+
+# Verrous de LibreOffice (fichier ouvert)
+.~lock.*

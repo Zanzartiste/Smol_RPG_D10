@@ -1,6 +1,7 @@
 [
 	{
 		"id": "wolf",
+		"natural": true,
 		"ai": "hunter",
 		"morale": "pack",
 		"skills": {"perception": 3, "stealth": 2, "physique": 2},
@@ -12,14 +13,14 @@
 				"name": "Morsure",
 				"weight": 3,
 				"target": "enemy",
-				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str"}, "damage_type": "piercing"}]
+				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 5, "fixed": true}, "damage_type": "piercing"}]
 			},
 			{
 				"name": "Croc-en-jambe",
 				"weight": 1,
 				"target": "enemy",
 				"effects": [
-					{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": -1}, "damage_type": "piercing"},
+					{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 4, "fixed": true}, "damage_type": "piercing"},
 					{"type": "status", "status": "prone", "stacks": 1}
 				]
 			}
@@ -31,6 +32,7 @@
 	},
 	{
 		"id": "dire_wolf",
+		"natural": true,
 		"ai": "hunter",
 		"leader": true,
 		"skills": {"perception": 3, "stealth": 2, "physique": 3},
@@ -44,7 +46,7 @@
 				"name": "Morsure brutale",
 				"weight": 3,
 				"target": "enemy",
-				"effects": [{"type": "attack", "skill": "physique", "ability": "str", "damage": {"threshold": "str", "dice": 2}, "damage_type": "piercing"}]
+				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 7, "fixed": true}, "damage_type": "piercing"}]
 			},
 			{
 				"name": "Hurlement terrifiant",
@@ -55,24 +57,25 @@
 			}
 		],
 		"xp": 200,
-		"loot": [{"item": "wolf_pelt", "chance": 1.0, "count": 2}, {"item": "ring_of_protection", "chance": 1.0}],
+		"loot": [{"item": "wolf_pelt", "chance": 1.0, "count": 2}, {"item": "ring_of_protection", "chance": 1.0}, {"item": "monster_bone", "chance": 0.5}],
 		"death_cause": "Dévoré par l'alpha des loups",
 		"art": {"type": "wolf", "fur": "#3c3a40", "belly": "#6a6670", "eyes": "#e0402a"}
 	},
 	{
 		"id": "bandit",
 		"morale": "coward",
+		"group": "bandits",
 		"skills": {"weapon_melee": 2, "stealth": 2, "persuasion": 2, "perception": 2, "physique": 2},
-		"armor": 1,
+		"equipment": {"main_hand": "shortsword", "armor": "leather"},
 		"name": "Brigand",
 		"size": 0,
 		"abilities": {"str": 4, "dex": 5, "con": 5, "int": 4, "wis": 4, "cha": 4},
 		"actions": [
 			{
-				"name": "Cimeterre",
+				"name": "Épée courte",
 				"weight": 3,
 				"target": "enemy",
-				"effects": [{"type": "attack", "weapon": "scimitar"}]
+				"effects": [{"type": "attack", "weapon": "shortsword"}]
 			},
 			{
 				"name": "Dague empoisonnée",
@@ -87,7 +90,7 @@
 		],
 		"xp": 25,
 		"gold": "1d6",
-		"loot": [{"item": "dagger", "chance": 0.3}, {"item": "shortsword", "chance": 0.15}, {"item": "studded_leather", "chance": 0.1}],
+		"loot": [{"item": "dagger", "chance": 0.3}, {"item": "big_sausage", "chance": 0.15}],
 		"death_cause": "Tué par des brigands",
 		"art": {
 			"type": "humanoid",
@@ -98,8 +101,9 @@
 	{
 		"id": "bandit_mender",
 		"morale": "coward",
+		"group": "bandits",
 		"skills": {"weapon_melee": 1, "medicine": 3, "perception": 2, "persuasion": 2},
-		"armor": 0,
+		"equipment": {"main_hand": "quarterstaff", "armor": "padded"},
 		"name": "Rebouteux des brigands",
 		"size": 0,
 		"abilities": {"str": 3, "dex": 4, "con": 4, "int": 5, "wis": 6, "cha": 4},
@@ -144,7 +148,7 @@
 				"name": "Coup de poing",
 				"weight": 3,
 				"target": "enemy",
-				"effects": [{"type": "attack", "skill": "physique", "ability": "str", "damage": {"threshold": "str"}, "damage_type": "bludgeoning"}]
+				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 4, "fixed": true}, "damage_type": "bludgeoning"}]
 			},
 			{
 				"name": "Coup de tête",
@@ -152,7 +156,7 @@
 				"announced": true,
 				"target": "enemy",
 				"effects": [
-					{"type": "attack", "skill": "physique", "ability": "str", "damage": {"threshold": "str", "dice": 1}, "damage_type": "bludgeoning"},
+					{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 5, "fixed": true}, "damage_type": "bludgeoning"},
 					{"type": "status", "status": "stunned", "stacks": 1}
 				]
 			}
@@ -168,6 +172,7 @@
 	},
 	{
 		"id": "giant_rat",
+		"natural": true,
 		"ai": "hunter",
 		"morale": "pack",
 		"name": "Rat géant",
@@ -178,14 +183,14 @@
 				"name": "Morsure",
 				"weight": 3,
 				"target": "enemy",
-				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 1}, "damage_type": "piercing"}]
+				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 5, "fixed": true}, "damage_type": "piercing"}]
 			},
 			{
 				"name": "Morsure infectée",
 				"weight": 1,
 				"target": "enemy",
 				"effects": [
-					{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": 2}, "damage_type": "piercing"},
+					{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": 2, "dice": 5, "fixed": true}, "damage_type": "piercing"},
 					{"type": "status", "status": "poisoned", "stacks": 2}
 				]
 			}
@@ -205,7 +210,7 @@
 				"name": "Coup de bec",
 				"weight": 2,
 				"target": "enemy",
-				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 1}, "damage_type": "piercing"}]
+				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 4, "fixed": true}, "damage_type": "piercing"}]
 			},
 			{
 				"name": "Distraction",
@@ -227,7 +232,7 @@
 				"name": "Morsure spectrale",
 				"weight": 1,
 				"target": "enemy",
-				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 1}, "damage_type": "force"}]
+				"effects": [{"type": "attack", "skill": "physique", "ability": "dex", "damage": {"threshold": "str", "dice": 5, "fixed": true}, "damage_type": "force"}]
 			}
 		],
 		"art": {"type": "wolf", "fur": "#8fc3e8", "belly": "#d8ecf8", "eyes": "#ffffff"}
