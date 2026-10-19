@@ -1343,6 +1343,27 @@ func _test_world_map() -> bool:
 		"un lieu déjà visité est accessible de partout")
 	_expect(WorldMap.is_safe("town") and not WorldMap.is_safe("forest"), "lieu sûr ou sauvage")
 	_expect(LifeState.from_dict(life.to_dict()).visited == life.visited, "lieux visités sauvegardés")
+	_expect(WorldMap.travel_block_reason(life) == "", "rien n'empêche de partir")
+	life.flags["no_travel"] = true
+	_expect(WorldMap.travel_block_reason(life) != "", "marqueur no_travel (prison…) : on ne peut pas partir")
+	life.flags.erase("no_travel")
+
+	# Arène : groupe remis sur pied avant et après, ni XP ni butin, défaite sans mort.
+	life.character.hp = 1
+	var spec := Game.arena_spec("town", 3)
+	_expect(spec["enemies"] == ["bandit", "bandit", "bandit"] and spec["on_defeat"] == "knockout" and spec["training"],
+		"arène : trois brigands, sans risque de mort")
+	_expect(life.character.hp == life.character.max_hp, "arène : soigné avant le combat")
+	var xp := life.character.xp
+	var gold := life.character.gold
+	var combat := Game.start_combat(spec)
+	for enemy in combat.enemies():
+		enemy.hp = 0
+	combat._check_end()
+	life.character.hp = 2
+	Game.finish_combat()
+	_expect(combat.outcome == "victory" and life.character.xp == xp and life.character.gold == gold, "arène : ni XP ni butin")
+	_expect(life.character.hp == life.character.max_hp and not life.dead, "arène : soigné après le combat")
 	return true
 
 

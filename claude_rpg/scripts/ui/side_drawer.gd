@@ -4,12 +4,14 @@ extends Control
 ## onglet déroule sa page ; elle se replie quand la souris s'en va. Cliquer sur un onglet épingle la page
 ## (elle reste ouverte jusqu'au clic suivant).
 ## Onglets : Personnage (PV), Inventaire (or), Quêtes, Journal, Relations, Sorts (lanceurs de sorts seulement),
-## Notes. Raccourcis (voir SHORTCUTS) : P, I (page), Q, J, E, M, N ; Échap replie une page épinglée.
+## Notes, Carte (consultable partout ; l'onglet rougit quand on ne peut pas voyager).
+## Raccourcis (voir SHORTCUTS) : P, I (page), Q, J, E, M, N, V ; Échap replie une page épinglée.
 ## Les détails (calculs, descriptions) s'affichent au survol de chaque ligne.
 
 signal inventory_requested
 signal carnet_requested
 signal level_up_requested
+signal travel_requested(location_id: String)
 
 const PANEL_WIDTH := 440.0
 const TAB_WIDTH := 132.0
@@ -18,13 +20,14 @@ const TOP_MARGIN := 60.0
 const CLOSE_DELAY := 0.35  # secondes hors du tiroir avant qu'il se replie
 const SPEED := 7.0  # vitesse d'ouverture (fraction par seconde)
 
-const PAGES := ["character", "inventory", "quests", "journal", "social", "spells", "notes"]
+const PAGES := ["character", "inventory", "quests", "journal", "social", "spells", "notes", "map"]
 ## Touche -> page (l'inventaire complet reste sur I, le carnet sur C).
-const SHORTCUTS := {KEY_P: "character", KEY_Q: "quests", KEY_J: "journal", KEY_E: "social", KEY_M: "spells", KEY_N: "notes"}
+const SHORTCUTS := {KEY_P: "character", KEY_Q: "quests", KEY_J: "journal", KEY_E: "social", KEY_M: "spells", KEY_N: "notes", KEY_V: "map"}
 const JOURNAL_SHOWN := 150  # entrées affichées au plus (les plus récentes)
 
 var life: LifeState
 var locked := false  # pendant un combat : on ne change ni l'équipement ni les sorts
+var travel_block := func() -> String: return ""  # raison qui empêche de voyager ("" : rien), fournie par l'écran principal
 var member: Character  # personnage affiché (héros ou compagnon)
 
 var _slider := Control.new()
@@ -163,6 +166,8 @@ func _refresh_tabs() -> void:
 	_tab_buttons["social"].text = tr("Relations")
 	_tab_buttons["journal"].text = tr("Journal")
 	_tab_buttons["notes"].text = tr("Notes")
+	_tab_buttons["map"].text = tr("Carte")
+	_tab_buttons["map"].modulate = Color(1.0, 0.55, 0.5) if travel_block.call() != "" else Color.WHITE
 	for key: int in SHORTCUTS:
 		_tab_buttons[SHORTCUTS[key]].tooltip_text = tr("Raccourci : %s") % OS.get_keycode_string(key)
 	var casters := life.party().filter(func(c): return c.max_resource(Spellcasting.SLOT_KEY) > 0 or not c.known_spells().is_empty())
@@ -207,6 +212,8 @@ func _build_page() -> void:
 			_build_journal()
 		"notes":
 			_build_notes()
+		"map":
+			_build_map()
 		"social":
 			_build_social()
 		"spells":
@@ -331,6 +338,25 @@ func _build_journal() -> void:
 			_add_label(tr("Jour %d") % current_day, "", "", UITheme.GOLD)
 		var slot_name: String = slots[clampi(int(entry["slot"]), 0, slots.size() - 1)]["name"]
 		_add_label("%s — %s" % [slot_name, entry["text"]], tr(LifeState.JOURNAL_KINDS.get(entry["kind"], "")))
+
+
+## Carte du monde : cliquer un lieu accessible y emmène (sauf en combat, pendant un événement, en prison…).
+func _build_map() -> void:
+	_add_label(tr("Carte"), tr("Lieux sûrs, lieux sauvages, et ceux que vous avez déjà visités"), "SectionLabel")
+	var legend := RichTextLabel.new()
+	legend.bbcode_enabled = true
+	legend.fit_content = true
+	legend.text = WorldMapCanvas.legend()
+	_content.add_child(legend)
+	var blocked: String = travel_block.call()
+	if blocked != "":
+		_add_label(blocked, "", "", UITheme.BAD)
+	var canvas := WorldMapCanvas.new(life, blocked)
+	canvas.custom_minimum_size = Vector2(0, 340)
+	canvas.travel_requested.connect(func(loc_id: String):
+		close()
+		travel_requested.emit(loc_id), CONNECT_DEFERRED)
+	_content.add_child(canvas)
 
 
 ## Notes libres du joueur, sauvegardées avec la vie.

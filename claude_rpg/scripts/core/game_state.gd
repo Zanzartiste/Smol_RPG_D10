@@ -76,6 +76,24 @@ func resolve_choice(choice: Dictionary, roll: Dictionary = {}) -> Dictionary:
 var combat: Combat
 
 
+## Combat d'entraînement de l'arène d'un lieu (locations.json › arena) : le groupe est remis sur pied (repos
+## long, inconscients compris), puis affronte `count` adversaires ; « training » : ni mort, ni butin, ni XP.
+func arena_spec(location_id: String, count: int) -> Dictionary:
+	var arena: Dictionary = DB.locations[location_id]["arena"]
+	_restore_party()
+	var enemies: Array = []
+	for i in clampi(count, 1, int(arena.get("max", 4))):
+		enemies.append(arena["creature"])
+	return {"enemies": enemies, "on_defeat": "knockout", "training": true,
+		"victory": {"text": Loc.ui("La foule applaudit.")}, "defeat": {"text": Loc.ui("On vous relève sous les sifflets.")}}
+
+
+func _restore_party() -> void:
+	for member in life.party():
+		member.hp = maxi(member.hp, 1)
+		member.long_rest()
+
+
 func start_combat(spec: Dictionary) -> Combat:
 	# Brouillard, orage : un combat en plein air se déroule dans la pénombre (Couvert +1).
 	if not spec.has("light") and DB.locations.get(life.location, {}).get("rest", {}).get("type", "") == "camp":
@@ -103,7 +121,10 @@ func finish_combat() -> Dictionary:
 	var lines: Array[String] = []
 	var knockout: bool = c.spec.get("on_defeat", "death") == "knockout"
 
-	if c.outcome == "victory":
+	var training: bool = c.spec.get("training", false)
+	if training:
+		c.recover_thrown()  # entraînement : les objets lancés reviennent
+	if c.outcome == "victory" and not training:
 		var xp := 0
 		for enemy in c.enemies():
 			if enemy.fled:
@@ -157,7 +178,9 @@ func finish_combat() -> Dictionary:
 		if not knockout:
 			lines.append(Loc.ui("Vos compagnons vous ramènent à vous."))
 
-	var fled_ids: Array = c.enemies().filter(func(e): return e.fled and e.creature.has("id")).map(func(e): return e.creature["id"])
+	if training:
+		_restore_party()
+	var fled_ids: Array = [] if training else c.enemies().filter(func(e): return e.fled and e.creature.has("id")).map(func(e): return e.creature["id"])
 	life.note_fled(life.location, fled_ids)
 	var key := c.outcome
 	var foes := PackedStringArray(c.enemies().map(func(e): return e.name))

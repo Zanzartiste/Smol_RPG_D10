@@ -874,6 +874,10 @@ static func _validate_social(db: Node, errors: Array[String]) -> void:
 			errors.append(lctx + " : map doit valoir {\"x\", \"y\"} entre 0 et 1")
 		for other: String in loc.get("links", []):
 			_expect_ref(db.locations, other, "lieu", lctx + " › links", errors)
+		if loc.has("arena"):
+			_expect_ref(db.creatures, loc["arena"].get("creature"), "créature", lctx + " › arena", errors)
+			if int(loc["arena"].get("max", 4)) < 1 or int(loc["arena"].get("max", 4)) > 4:
+				errors.append(lctx + " › arena : max doit valoir de 1 à 4")
 		var groups: Array = loc.get("encounters", []).duplicate()
 		for hunt: Dictionary in loc.get("hunt", []):
 			groups.append(hunt.get("enemies", []) + ([hunt["extra"]] if hunt.has("extra") else []))

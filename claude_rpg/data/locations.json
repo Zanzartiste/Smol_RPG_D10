@@ -1,6 +1,7 @@
 [
 	{"id": "town", "name": "Brumeval", "description": "Le bourg, son marché et sa taverne.", "art": "town",
 		"map": {"x": 0.42, "y": 0.55}, "links": ["forest", "home"],
+		"arena": {"name": "Arène de Brumeval", "description": "des combats d'entraînement contre des brigands", "creature": "bandit", "max": 4},
 		"rest": {"type": "inn", "name": "Passer une nuit à l'auberge", "cost": 5},
 		"hunt": [
 			{"id": "thugs", "name": "des brigands dans les ruelles", "skill": "perception", "difficulty": 2, "enemies": ["bandit", "bandit"], "extra": "bandit"}

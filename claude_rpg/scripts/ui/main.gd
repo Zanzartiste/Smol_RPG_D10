@@ -67,6 +67,8 @@ func _ready() -> void:
 	drawer.inventory_requested.connect(open_inventory)
 	drawer.carnet_requested.connect(open_carnet)
 	drawer.level_up_requested.connect(_on_level_up_requested)
+	drawer.travel_requested.connect(_on_map_travel)
+	drawer.travel_block = _travel_block_reason
 	add_child(drawer)
 	_refresh_sheet()
 	_show_hub()
@@ -98,10 +100,6 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	if key.keycode == KEY_C and not dice_tray.is_playing():
 		open_carnet()
-		accept_event()
-		return
-	if key.keycode == KEY_V and not dice_tray.is_playing():
-		open_map()
 		accept_event()
 		return
 	if key.keycode == KEY_F12:
@@ -382,12 +380,22 @@ func _on_location_chosen(location_id: String) -> void:
 	_show_hub()
 
 
-## Carte du monde (touche V) : cliquer un lieu accessible y emmène.
-func open_map() -> void:
-	if _can_open_overlay() and Game.current_event.is_empty():
-		var view := WorldMapView.new(Game.life)
-		view.travel_requested.connect(_on_location_chosen, CONNECT_DEFERRED)
-		_open_overlay(view)
+## Raison qui empêche de voyager depuis la carte (onglet Carte du tiroir) : combat, événement en cours,
+## fenêtre ouverte, ou marqueur d'événement (WorldMap.travel_block_reason). "" : on peut partir.
+func _travel_block_reason() -> String:
+	if Game.life == null or Game.life.dead:
+		return tr("Vous ne voyagerez plus.")
+	if combat_view.visible:
+		return tr("Impossible de partir en plein combat.")
+	var blocked := WorldMap.travel_block_reason(Game.life)
+	if blocked == "" and (not Game.current_event.is_empty() or _overlay != null):
+		blocked = tr("Terminez d'abord ce qui se passe ici.")
+	return blocked
+
+
+func _on_map_travel(location_id: String) -> void:
+	if _travel_block_reason() == "":
+		_on_location_chosen(location_id)
 
 
 func _has_people(location_id: String) -> bool:
@@ -407,13 +415,31 @@ func _show_location_menu(location_id: String, intro := "") -> void:
 	if _has_people(location_id):
 		_add_choice(tr("Parler à quelqu'un que vous voyez"), _show_people.bind(location_id))
 	_add_choice(tr("Chercher…"), _show_search_menu.bind(location_id))
+	if loc.has("arena"):
+		_add_choice("%s — %s" % [loc["arena"]["name"], loc["arena"].get("description", "")], _show_arena.bind(location_id))
 	for shop_id in Shops.of_location(location_id):
 		_add_choice("%s — %s" % [Shops.name_of(shop_id), Shops.def(shop_id).get("description", "")],
 			open_shop.bind(shop_id))
-	_add_choice(tr("Carte (V)"), open_map)
 	_add_choice("%s (R)" % Game.rest_name(), _on_rest)
 	_add_choice(tr("Repos court (une période)"), _on_rest.bind(true))
 	_on_hub = true
+
+
+## Arène (locations.json › arena) : des combats d'entraînement contre 1 à `max` adversaires, pour tester le
+## combat. Le groupe est remis sur pied avant et après ; ni mort, ni butin, ni XP (Game.arena_spec).
+func _show_arena(location_id: String) -> void:
+	var arena: Dictionary = DB.locations[location_id]["arena"]
+	title_label.text = arena["name"]
+	body_text.text = tr("Combats d'entraînement : le groupe est soigné avant et après, sans risque de mort, sans butin ni expérience.")
+	_clear_choices()
+	var creature := Creatures.name_of(arena["creature"])
+	for count in range(1, int(arena.get("max", 4)) + 1):
+		_add_choice(tr("Affronter %d × %s") % [count, creature], _start_arena.bind(location_id, count))
+	_add_choice(tr("Retour"), _show_location_menu.bind(location_id))
+
+
+func _start_arena(location_id: String, count: int) -> void:
+	_run_combat(Game.arena_spec(location_id, count))
 
 
 ## Les gens présents dans un lieu, et la possibilité de chercher un garde, un villageois…

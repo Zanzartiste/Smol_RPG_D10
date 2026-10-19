@@ -42,6 +42,14 @@ static func can_travel(life: LifeState, location_id: String) -> bool:
 		and (is_visited(life, location_id) or location_id in links_of(here))
 
 
+## Raison qui empêche de se déplacer ("" : rien). Un événement peut poser le marqueur `no_travel` (prison,
+## blessure grave…), avec éventuellement `no_travel_reason` comme texte.
+static func travel_block_reason(life: LifeState) -> String:
+	if life.flags.get("no_travel", false):
+		return String(life.flags.get("no_travel_reason", Loc.ui("Vous ne pouvez pas partir d'ici pour l'instant.")))
+	return ""
+
+
 ## Se rend dans un lieu (sans passer de temps pour l'instant) et le marque comme visité.
 static func travel(life: LifeState, location_id: String) -> void:
 	visit(life, current(life))

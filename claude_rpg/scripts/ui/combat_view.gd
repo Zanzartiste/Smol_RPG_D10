@@ -37,6 +37,7 @@ var _pending := {}  # action en attente de cible : {"kind": "action"|"item", "ac
 var _log_shown := 0
 var _stream_pos := 0  # étapes de Combat.stream déjà animées
 var _reaction := {}  # réaction en attente du joueur : {"target", "kind", "info"}
+var _catcher: ClickCatcher  # attente d'un clic (rythme du combat), null sinon
 var _action_buttons: Array[Button] = []  # choix numérotés (1-9) de la catégorie ouverte, ou réactions
 var _entries := {}  # catégorie -> choix (voir _collect_entries)
 var _category := "attacks"  # catégorie ouverte, gardée d'un tour à l'autre
@@ -97,7 +98,9 @@ func run(spec: Dictionary, background_texture: Texture2D) -> Dictionary:
 ## (option click_to_continue_combat). Le texte s'affiche en bas de l'écran.
 func _wait_click(text: String) -> void:
 	var catcher := ClickCatcher.new()
-	catcher.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	catcher.top_level = true  # hors de la mise en page du conteneur : couvre tout l'écran de combat
+	catcher.position = global_position
+	catcher.size = size
 	var label := Label.new()
 	label.text = text
 	label.add_theme_color_override("font_color", UITheme.GOLD)
@@ -110,8 +113,26 @@ func _wait_click(text: String) -> void:
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	catcher.add_child(label)
 	add_child(catcher)
+	_catcher = catcher
 	await catcher.clicked
+	_catcher = null
 	catcher.queue_free()
+
+
+## Un clic n'importe où sur l'écran de combat fait avancer : dés en cours, puis « cliquez pour continuer ».
+func _input(event: InputEvent) -> void:
+	var click := event as InputEventMouseButton
+	if click == null or not click.pressed or click.button_index != MOUSE_BUTTON_LEFT or not is_visible_in_tree():
+		return
+	var hovered := get_viewport().gui_get_hovered_control()
+	if hovered == null or not (hovered == self or is_ancestor_of(hovered)):
+		return  # clic sur le tiroir ou une fenêtre par-dessus
+	if dice_tray.is_playing():
+		dice_tray.skip()
+		get_viewport().set_input_as_handled()
+	elif _catcher != null:
+		get_viewport().set_input_as_handled()
+		_catcher.clicked.emit()
 
 
 ## Couche invisible plein écran qui attend un clic ou une touche de validation.
@@ -119,12 +140,7 @@ class ClickCatcher extends Control:
 	signal clicked
 
 	func _ready() -> void:
-		mouse_filter = Control.MOUSE_FILTER_STOP
-
-	func _gui_input(event: InputEvent) -> void:
-		if event is InputEventMouseButton and event.pressed:
-			accept_event()
-			clicked.emit()
+		mouse_filter = Control.MOUSE_FILTER_STOP  # bloque les boutons en dessous ; le clic passe par CombatView._input
 
 	func _unhandled_input(event: InputEvent) -> void:
 		if event.is_action_pressed("ui_accept"):
