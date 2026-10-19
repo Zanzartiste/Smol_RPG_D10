@@ -67,7 +67,8 @@ func _ready() -> void:
 	drawer.inventory_requested.connect(open_inventory)
 	drawer.carnet_requested.connect(open_carnet)
 	drawer.level_up_requested.connect(_on_level_up_requested)
-	drawer.map_requested.connect(open_map)
+	drawer.travel_requested.connect(_on_map_travel)
+	drawer.travel_block = _travel_block_reason
 	add_child(drawer)
 	_refresh_sheet()
 	_show_hub()
@@ -85,10 +86,6 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	# Raccourcis du tiroir (P, Q, J, E, M, N ; Échap replie une page épinglée), même en combat.
 	if not dice_tray.is_playing() and drawer.handle_key(key.keycode):
-		accept_event()
-		return
-	if key.keycode == KEY_V and not dice_tray.is_playing():
-		open_map()
 		accept_event()
 		return
 	if combat_view.visible:
@@ -383,22 +380,22 @@ func _on_location_chosen(location_id: String) -> void:
 	_show_hub()
 
 
-## Carte du monde (touche V, onglet Carte) : consultable partout, même en combat ; cliquer un lieu accessible
-## y emmène, sauf en combat, pendant un événement ou si un marqueur l'interdit (WorldMap.travel_block_reason).
-func open_map() -> void:
-	if _overlay != null or Game.life == null or Game.life.dead:
-		return
-	var blocked := WorldMap.travel_block_reason(Game.life)
+## Raison qui empêche de voyager depuis la carte (onglet Carte du tiroir) : combat, événement en cours,
+## fenêtre ouverte, ou marqueur d'événement (WorldMap.travel_block_reason). "" : on peut partir.
+func _travel_block_reason() -> String:
+	if Game.life == null or Game.life.dead:
+		return tr("Vous ne voyagerez plus.")
 	if combat_view.visible:
-		blocked = tr("Impossible de partir en plein combat.")
-	elif not Game.current_event.is_empty():
-		blocked = tr("Terminez d'abord ce qui se passe ici.") if blocked == "" else blocked
-	var view := WorldMapView.new(Game.life, blocked)
-	view.travel_requested.connect(_on_location_chosen, CONNECT_DEFERRED)
-	drawer.close()
-	_overlay = view
-	view.closed.connect(func(): _overlay = null)  # pas de sauvegarde : on peut être en plein combat
-	add_child(view)
+		return tr("Impossible de partir en plein combat.")
+	var blocked := WorldMap.travel_block_reason(Game.life)
+	if blocked == "" and (not Game.current_event.is_empty() or _overlay != null):
+		blocked = tr("Terminez d'abord ce qui se passe ici.")
+	return blocked
+
+
+func _on_map_travel(location_id: String) -> void:
+	if _travel_block_reason() == "":
+		_on_location_chosen(location_id)
 
 
 func _has_people(location_id: String) -> bool:

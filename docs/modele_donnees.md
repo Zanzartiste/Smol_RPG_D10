@@ -664,7 +664,8 @@ Calcul des dégâts subis :
 - `map` : `{"x", "y"}` entre 0 et 1, position du lieu sur la carte. `links` : lieux reliés (dans les deux sens).
 - `LifeState.visited` (sauvegardé) : lieux déjà visités. `WorldMap.can_travel` : on va dans un lieu visité
   (téléportation, par simplicité, sans passer de temps) ou relié au lieu actuel (on le découvre).
-- Fenêtre `WorldMapView` (touche V ou onglet « Carte » du tiroir, sous Notes) : points rouges (sauvages), bleus
+- Page Carte du tiroir (`WorldMapCanvas`, survol de l'onglet ou touche V ; l'onglet rougit quand on ne peut pas
+  voyager) : points rouges (sauvages), bleus
   (sûrs), vert (lieu actuel), contour doré pour les lieux visités, clair pour les voisins inconnus. Elle se
   consulte partout, même en combat ; on ne peut s'y déplacer qu'au calme : pas en combat, pas pendant un
   événement, ni avec le marqueur `no_travel` (prison… ; texte dans `no_travel_reason`), voir
