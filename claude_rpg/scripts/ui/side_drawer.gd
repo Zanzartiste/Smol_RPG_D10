@@ -4,12 +4,14 @@ extends Control
 ## onglet déroule sa page ; elle se replie quand la souris s'en va. Cliquer sur un onglet épingle la page
 ## (elle reste ouverte jusqu'au clic suivant).
 ## Onglets : Personnage (PV), Inventaire (or), Quêtes, Journal, Relations, Sorts (lanceurs de sorts seulement),
-## Notes. Raccourcis (voir SHORTCUTS) : P, I (page), Q, J, E, M, N ; Échap replie une page épinglée.
+## Notes, puis Carte (un bouton qui ouvre la carte du monde, même en combat ou pendant un événement).
+## Raccourcis (voir SHORTCUTS) : P, I (page), Q, J, E, M, N, V (carte) ; Échap replie une page épinglée.
 ## Les détails (calculs, descriptions) s'affichent au survol de chaque ligne.
 
 signal inventory_requested
 signal carnet_requested
 signal level_up_requested
+signal map_requested
 
 const PANEL_WIDTH := 440.0
 const TAB_WIDTH := 132.0
@@ -61,6 +63,13 @@ func _ready() -> void:
 		tab.pressed.connect(_on_tab_pressed.bind(page_id))
 		_tabs.add_child(tab)
 		_tab_buttons[page_id] = tab
+	var map_tab := Button.new()
+	map_tab.custom_minimum_size = Vector2(TAB_WIDTH, TAB_HEIGHT)
+	map_tab.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	map_tab.text = tr("Carte")
+	map_tab.tooltip_text = tr("Carte du monde (raccourci : V)")
+	map_tab.pressed.connect(func(): map_requested.emit())
+	_tabs.add_child(map_tab)
 	_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	_slider.add_child(_panel)
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED

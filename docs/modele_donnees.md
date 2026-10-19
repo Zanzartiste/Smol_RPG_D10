@@ -664,10 +664,19 @@ Calcul des dégâts subis :
 - `map` : `{"x", "y"}` entre 0 et 1, position du lieu sur la carte. `links` : lieux reliés (dans les deux sens).
 - `LifeState.visited` (sauvegardé) : lieux déjà visités. `WorldMap.can_travel` : on va dans un lieu visité
   (téléportation, par simplicité, sans passer de temps) ou relié au lieu actuel (on le découvre).
-- Fenêtre `WorldMapView` (touche V ou « Carte » dans le menu du lieu) : points rouges (sauvages), bleus (sûrs),
-  vert (lieu actuel), contour doré pour les lieux visités, clair pour les voisins inconnus.
-- Le hub est le menu du lieu actuel (`LifeState.location`) : se promener, parler, chercher, boutiques, carte,
+- Fenêtre `WorldMapView` (touche V ou onglet « Carte » du tiroir, sous Notes) : points rouges (sauvages), bleus
+  (sûrs), vert (lieu actuel), contour doré pour les lieux visités, clair pour les voisins inconnus. Elle se
+  consulte partout, même en combat ; on ne peut s'y déplacer qu'au calme : pas en combat, pas pendant un
+  événement, ni avec le marqueur `no_travel` (prison… ; texte dans `no_travel_reason`), voir
+  `WorldMap.travel_block_reason`.
+- Le hub est le menu du lieu actuel (`LifeState.location`) : se promener, parler, chercher, arène, boutiques,
   repos.
+
+## Arène (`locations.json › arena`)
+- `{"name", "description", "creature", "max"}` (`max` de 1 à 4) : combats d'entraînement contre 1 à `max`
+  créatures, pour tester le combat (Brumeval : des brigands).
+- `Game.arena_spec(lieu, nombre)` : le groupe est remis sur pied (repos long) avant et après ; spec
+  `"training": true` et `on_defeat: knockout` : ni mort, ni XP, ni butin, objets lancés rendus, pas de fuyards.
 
 ## Récolte (`locations.json › gather`)
 

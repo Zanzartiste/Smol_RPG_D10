@@ -1,6 +1,6 @@
 class_name WorldMapView
 extends Control
-## Fenêtre de la carte du monde (touche V ou bouton Carte du menu d'un lieu). Chaque lieu est un point :
+## Fenêtre de la carte du monde (touche V ou onglet Carte du tiroir), consultable partout. Chaque lieu est un point :
 ## rouge (sauvage), bleu (sûr : ville, domicile), vert (lieu actuel), relié à ses voisins par des segments.
 ## Un contour doré marque les lieux déjà visités, où l'on peut se rendre directement ; un contour clair, les
 ## voisins encore inconnus. Cliquer un point accessible y emmène (signal travel_requested). Règles : WorldMap.
@@ -16,11 +16,13 @@ const HERE := Color("#6fb24f")
 const UNKNOWN := Color("#d8d0bf")
 
 var life: LifeState
+var block_reason := ""  # non vide : la carte se consulte, mais on ne peut pas se déplacer (combat, prison…)
 var _canvas := Control.new()
 
 
-func _init(life_state: LifeState) -> void:
+func _init(life_state: LifeState, blocked := "") -> void:
 	life = life_state
+	block_reason = blocked
 
 
 func _ready() -> void:
@@ -59,6 +61,11 @@ func _ready() -> void:
 		HERE.to_html(false), tr("vous êtes ici"), SAFE.to_html(false), tr("lieu sûr"), WILD.to_html(false), tr("lieu sauvage"),
 		UITheme.GOLD.to_html(false), tr("déjà visité : cliquez pour y aller")]
 	root.add_child(legend)
+	if block_reason != "":
+		var blocked := Label.new()
+		blocked.text = block_reason
+		blocked.add_theme_color_override("font_color", UITheme.BAD)
+		root.add_child(blocked)
 
 	_canvas.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_canvas.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -101,10 +108,10 @@ func _draw_map() -> void:
 	for loc_id: String in DB.location_order:
 		var p := _point(loc_id)
 		var color := HERE if loc_id == here else (SAFE if WorldMap.is_safe(loc_id) else WILD)
-		if loc_id != here and not WorldMap.can_travel(life, loc_id):
+		if loc_id != here and not WorldMap.can_travel(life, loc_id) and not WorldMap.is_visited(life, loc_id):
 			color = color.darkened(0.5)
 		_canvas.draw_circle(p, RADIUS, color, true, -1.0, true)
-		if loc_id != here and WorldMap.can_travel(life, loc_id):
+		if loc_id != here and (WorldMap.can_travel(life, loc_id) or WorldMap.is_visited(life, loc_id)):
 			var ring := UITheme.GOLD if WorldMap.is_visited(life, loc_id) else UNKNOWN
 			_canvas.draw_arc(p, RADIUS + 4, 0, TAU, 32, ring, 3.0, true)
 
@@ -128,13 +135,16 @@ func _on_canvas_input(event: InputEvent) -> void:
 	var loc_id := location_at(_canvas.get_local_mouse_position())
 	if event is InputEventMouseMotion:
 		_canvas.tooltip_text = _tooltip(loc_id)
-		_canvas.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if WorldMap.can_travel(life, loc_id) \
-			else Control.CURSOR_ARROW
+		_canvas.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if _can_go(loc_id) else Control.CURSOR_ARROW
 	var click := event as InputEventMouseButton
-	if click != null and click.pressed and click.button_index == MOUSE_BUTTON_LEFT and WorldMap.can_travel(life, loc_id):
+	if click != null and click.pressed and click.button_index == MOUSE_BUTTON_LEFT and _can_go(loc_id):
 		accept_event()
 		travel_requested.emit(loc_id)
 		close_view()
+
+
+func _can_go(loc_id: String) -> bool:
+	return block_reason == "" and WorldMap.can_travel(life, loc_id)
 
 
 func _tooltip(loc_id: String) -> String:
@@ -143,5 +153,7 @@ func _tooltip(loc_id: String) -> String:
 	var loc: Dictionary = DB.locations[loc_id]
 	var status := tr("Vous êtes ici.")
 	if loc_id != WorldMap.current(life):
-		status = tr("Cliquez pour y aller.") if WorldMap.can_travel(life, loc_id) else tr("Trop loin : passez par un lieu voisin.")
+		status = tr("Trop loin : passez par un lieu voisin.")
+		if WorldMap.can_travel(life, loc_id):
+			status = block_reason if block_reason != "" else tr("Cliquez pour y aller.")
 	return "%s\n%s\n%s" % [loc["name"], loc.get("description", ""), status]
