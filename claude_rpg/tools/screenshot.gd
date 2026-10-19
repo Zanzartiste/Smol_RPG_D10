@@ -90,6 +90,9 @@ func _ready() -> void:
 	main.open_carnet()
 	await _capture("2h_carnet.png")
 	main._overlay.close_view()
+	main.open_map()
+	await _capture("2i_map.png")
+	main._overlay.close_view()
 	main._show_hub()
 	Meta.settings["manual_skill_ability"] = true  # pour montrer les boutons d'attribut
 	main._on_location_chosen("forest")

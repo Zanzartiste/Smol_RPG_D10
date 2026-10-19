@@ -100,6 +100,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		open_carnet()
 		accept_event()
 		return
+	if key.keycode == KEY_V and not dice_tray.is_playing():
+		open_map()
+		accept_event()
+		return
 	if key.keycode == KEY_F12:
 		Game.toggle_debug()
 		accept_event()
@@ -126,7 +130,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 ## Bouton « Monter de niveau » de la fiche : seulement depuis le hub (pas au milieu d'un événement).
 func _on_level_up_requested() -> void:
 	if not _on_hub:
-		Game.life.notices.append(tr("Vous monterez de niveau de retour en ville."))
+		Game.life.notices.append(tr("Vous monterez de niveau une fois de retour au calme."))
 		return
 	drawer.close()
 	_leveling = true
@@ -161,19 +165,10 @@ func _show_hub() -> void:
 	if not visit.is_empty():
 		_show_event(visit)
 		return
-	illustration.texture = ArtProvider.location_image("town", life)
-	title_label.text = tr("Jour %d — %s — %s") % [life.day, life.slot_name(), Weather.describe(life.day)]
 	var text := ""
 	for notice in life.take_notices():
 		text += "[color=%s]• %s[/color]\n" % [UITheme.GOLD.to_html(false), notice]
-	body_text.text = text + tr("Où souhaitez-vous aller ?")
-	_clear_choices()
-	for loc_id in DB.location_order:
-		var loc: Dictionary = DB.locations[loc_id]
-		_add_choice("%s — %s" % [loc["name"], loc.get("description", "")], _on_location_chosen.bind(loc_id))
-	_add_choice("%s (R)" % Game.rest_name(), _on_rest)
-	_add_choice(tr("Repos court (une période)"), _on_rest.bind(true))
-	_on_hub = true
+	_show_location_menu(WorldMap.current(life), text)
 
 func _show_event(ev: Dictionary) -> void:
 	var life := Game.life
@@ -379,27 +374,34 @@ func _on_feat_chosen(member: Character, feat_id: String) -> void:
 
 
 
-## Un lieu avec des boutiques ou des habitants ouvre son menu ; les autres tirent directement un événement.
+## Se rendre dans un lieu (carte, « Où est… ? ») : on arrive dans son menu.
 func _on_location_chosen(location_id: String) -> void:
-	Game.life.location = location_id
+	WorldMap.travel(Game.life, location_id)
 	_refresh_sheet()
-	if Shops.of_location(location_id).is_empty() and not _has_people(location_id):
-		_show_event(Game.draw_event(location_id))
-	else:
-		_show_location_menu(location_id)
+	Saves.save_all()
+	_show_hub()
+
+
+## Carte du monde (touche V) : cliquer un lieu accessible y emmène.
+func open_map() -> void:
+	if _can_open_overlay() and Game.current_event.is_empty():
+		var view := WorldMapView.new(Game.life)
+		view.travel_requested.connect(_on_location_chosen, CONNECT_DEFERRED)
+		_open_overlay(view)
 
 
 func _has_people(location_id: String) -> bool:
 	return not Social.roles_in(location_id).is_empty()
 
 
-## Menu d'un lieu : se promener (événement au hasard), entrer dans une boutique, ou revenir.
-## Les boutiques ne font pas passer le temps.
-func _show_location_menu(location_id: String) -> void:
+## Menu du lieu où l'on se trouve (c'est le hub) : se promener (événement au hasard), parler, chercher, entrer
+## dans une boutique, ouvrir la carte, se reposer. Les boutiques ne font pas passer le temps.
+func _show_location_menu(location_id: String, intro := "") -> void:
+	var life := Game.life
 	var loc: Dictionary = DB.locations[location_id]
-	illustration.texture = ArtProvider.location_image(loc.get("art", location_id), Game.life)
-	title_label.text = loc["name"]
-	body_text.text = loc.get("description", "")
+	illustration.texture = ArtProvider.location_image(loc.get("art", location_id), life)
+	title_label.text = tr("%s — Jour %d — %s — %s") % [loc["name"], life.day, life.slot_name(), Weather.describe(life.day)]
+	body_text.text = intro + loc.get("description", "")
 	_clear_choices()
 	_add_choice(tr("Se promener (événement au hasard)"), _show_event_from.bind(location_id))
 	if _has_people(location_id):
@@ -408,8 +410,10 @@ func _show_location_menu(location_id: String) -> void:
 	for shop_id in Shops.of_location(location_id):
 		_add_choice("%s — %s" % [Shops.name_of(shop_id), Shops.def(shop_id).get("description", "")],
 			open_shop.bind(shop_id))
+	_add_choice(tr("Carte (V)"), open_map)
 	_add_choice("%s (R)" % Game.rest_name(), _on_rest)
-	_add_choice(tr("Retour"), _show_hub)
+	_add_choice(tr("Repos court (une période)"), _on_rest.bind(true))
+	_on_hub = true
 
 
 ## Les gens présents dans un lieu, et la possibilité de chercher un garde, un villageois…

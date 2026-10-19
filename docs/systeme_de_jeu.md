@@ -169,6 +169,9 @@ chance de réussite (calculée exactement).
   - Une parade par tour, ou une par main avec une arme (ou un bouclier) dans chaque main. Quand deux objets peuvent
     parer, le joueur choisit lequel (un tir ne se pare qu'au bouclier).
   - On peut parer après une esquive qui n'a pas suffi.
+  - **Bouclier magique** : un lanceur qui connaît le sort Bouclier (équipé, avec le mana pour le payer) peut parer
+    avec, même un tir : [rang de Magie] d10 contre son seuil d'incantation. La parade coûte le mana du sort. C'est
+    un choix de parade de plus ; l'IA ne s'en sert que si rien d'autre ne pare.
 - **Contre-attaque** : avant le jet de l'attaquant. L'Esquive naturelle tombe à 0 pour les deux ; les deux font un
   jet d'attaque en opposition ; le plus de succès touche (égalité : l'attaquant initial), avec un critique selon
   l'écart ; le perdant ne peut ni esquiver ni parer cette attaque. Contre un tir, il faut soi-même une arme de tir
@@ -176,6 +179,9 @@ chance de réussite (calculée exactement).
 - **Contresort** : quand un ennemi lance un sort, un lanceur de sorts peut le contrer, avant de savoir si le sort
   touchera : opposition des compétences d'incantation ; s'il a plus de succès, le sort est annulé (l'action est perdue).
   Il dépense sa réaction.
+- **Barre d'actions** : les actions sont rangées en catégories (Attaques, Sorts, Capacités, Objets, Lancer).
+  Survoler une catégorie l'ouvre (souris), un clic aussi (tactile) ; Tab passe à la suivante, 1-9 choisit.
+  La catégorie ouverte est gardée d'un tour à l'autre.
 - **Réactions automatiques** (option de l'écran titre) : tout le groupe réagit seul, comme l'IA.
 - **Qui choisit** : le joueur, pour ses personnages, sauf ceux joués par l'IA. Pendant le tour ennemi, le jeu
   s'arrête à chaque occasion (« Contre-attaquer / Laisser venir », « Esquiver / Ne pas esquiver », « Parer /

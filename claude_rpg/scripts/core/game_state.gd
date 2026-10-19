@@ -23,6 +23,7 @@ func start_life(character: Character, seed_value: int = 0) -> void:
 	life.rng.seed = seed_value if seed_value != 0 else randi()
 	life.character = character
 	_place_in_start_district(life)
+	WorldMap.visit(life, WorldMap.current(life))
 	Social.on_new_life()  # les relations avec le héros repartent de zéro, les souvenirs restent
 	current_event = {}
 	life_changed.emit()

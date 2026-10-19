@@ -1068,8 +1068,11 @@ func _parry(attacker: Combatant, target: Combatant, e: Dictionary, beats: Array[
 	var pool := target.parry_pool(target.use_prepared(), attacker.is_ranged_attack(e),
 		Equipment.has_property(attacker.attack_weapon(e), "impact"))
 	target.parry_choice = ""
+	if pool["item"] == Combatant.MAGIC_SHIELD:
+		target.consume(Actions.def(Combatant.MAGIC_SHIELD))
+		_beat(beats, Loc.ui("%s lève un bouclier magique.") % target.name)
 	var roll := Dice.roll_pool(rng, int(pool["count"]), int(pool["threshold"]))
-	_beat(beats, Loc.ui("%s pare (%s) : %d succès.") % [target.name, Items.name_of(pool["item"]).to_lower(), int(roll["successes"])],
+	_beat(beats, Loc.ui("%s pare (%s) : %d succès.") % [target.name, Combatant.parry_item_name(pool["item"]), int(roll["successes"])],
 		_roll_info(Loc.ui("Parade (%s)") % target.name, roll), fast)
 	var tens := Dice.count_value(roll, 10)
 	if tens > 0 and Equipment.has_property(pool["item"], "dangerous_parry") and not attacker.attack_is_dangerous_parry(e):

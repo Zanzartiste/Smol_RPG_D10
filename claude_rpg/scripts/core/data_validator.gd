@@ -868,6 +868,12 @@ static func _validate_social(db: Node, errors: Array[String]) -> void:
 		if not rest.is_empty() and rest.get("type") not in ["camp", "inn", "home"]:
 			errors.append("locations.json › %s : rest.type doit valoir camp, inn ou home" % loc["id"])
 		var lctx := "locations.json › %s" % loc["id"]
+		var map: Variant = loc.get("map", {})
+		if not map is Dictionary or not map.has("x") or not map.has("y") \
+				or float(map["x"]) < 0.0 or float(map["x"]) > 1.0 or float(map["y"]) < 0.0 or float(map["y"]) > 1.0:
+			errors.append(lctx + " : map doit valoir {\"x\", \"y\"} entre 0 et 1")
+		for other: String in loc.get("links", []):
+			_expect_ref(db.locations, other, "lieu", lctx + " › links", errors)
 		var groups: Array = loc.get("encounters", []).duplicate()
 		for hunt: Dictionary in loc.get("hunt", []):
 			groups.append(hunt.get("enemies", []) + ([hunt["extra"]] if hunt.has("extra") else []))

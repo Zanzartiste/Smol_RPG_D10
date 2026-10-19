@@ -1,10 +1,12 @@
 [
 	{"id": "town", "name": "Brumeval", "description": "Le bourg, son marché et sa taverne.", "art": "town",
+		"map": {"x": 0.42, "y": 0.55}, "links": ["forest", "home"],
 		"rest": {"type": "inn", "name": "Passer une nuit à l'auberge", "cost": 5},
 		"hunt": [
 			{"id": "thugs", "name": "des brigands dans les ruelles", "skill": "perception", "difficulty": 2, "enemies": ["bandit", "bandit"], "extra": "bandit"}
 		]},
 	{"id": "forest", "name": "Forêt des Murmures", "description": "Des bois profonds où rôdent loups et secrets.", "art": "forest", "wild": true,
+		"map": {"x": 0.68, "y": 0.32},
 		"rest": {"type": "camp", "name": "Camper", "event_chance": 0.25},
 		"encounters": [["wolf"], ["wolf", "wolf"], ["bandit", "bandit"], ["giant_rat", "giant_rat"]],
 		"hunt": [
@@ -22,6 +24,6 @@
 				"skill": "survival", "difficulty": 1,
 				"failure": "Tout ce que vous trouvez casse sous la main.", "fumble": "Une branche morte vous tombe dessus.", "fumble_hp": -1}
 		]},
-	{"id": "home", "name": "Chez soi", "description": "Se reposer et panser ses plaies.", "art": "home",
+	{"id": "home", "name": "Chez soi", "description": "Se reposer et panser ses plaies.", "art": "home", "map": {"x": 0.3, "y": 0.68},
 		"rest": {"type": "home", "name": "Dormir chez soi"}}
 ]

@@ -17,6 +17,7 @@ var recorded := false  # déjà inscrite dans la chronique
 var notices: Array[String] = []  # messages à afficher au prochain retour au hub
 var reputation: Dictionary = {}  # id de lieu -> réputation du héros (−100 à 100)
 var location := ""  # dernier lieu visité (où l'on se repose)
+var visited: Array[String] = []  # lieux déjà visités : on peut s'y rendre depuis la carte (WorldMap)
 var crafted: Dictionary = {}  # station -> objets fabriqués (le métier se dessine)
 var quests: Dictionary = {}  # id de quête -> {"status": "active" | "done" | "failed", "step"} (voir Quests)
 ## Journal de la vie, dans l'ordre : [{"day", "slot", "kind", "text"}]. Sortes : event, combat, quest, social,
@@ -360,7 +361,7 @@ func to_dict() -> Dictionary:
 		"rng_state": str(rng.state),
 		"day": day, "slot": slot, "flags": flags, "seen": seen, "last_seen_day": last_seen_day,
 		"dead": dead, "death_cause": death_cause, "recorded": recorded, "notices": notices,
-		"pending_combat": pending_combat, "shops": shops, "reputation": reputation, "location": location,
+		"pending_combat": pending_combat, "shops": shops, "reputation": reputation, "location": location, "visited": visited,
 		"crafted": crafted, "last_initiative_day": last_initiative_day, "quests": quests, "journal": journal, "notes": notes, "quest_defs": quest_defs,
 		"bestiary": bestiary, "lost_items": lost_items, "gathered": gathered,
 		"revenge": revenge, "warned": warned,
@@ -385,6 +386,7 @@ static func from_dict(data: Dictionary) -> LifeState:
 	life.notices.assign(data.get("notices", []))
 	life.reputation = Character._int_dict(data.get("reputation", {}))
 	life.location = data.get("location", "")
+	life.visited.assign(data.get("visited", []))
 	life.crafted = Character._int_dict(data.get("crafted", {}))
 	life.notes = String(data.get("notes", ""))
 	life.quest_defs = data.get("quest_defs", {})

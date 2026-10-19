@@ -660,6 +660,15 @@ Calcul des dégâts subis :
   (titre du hub). Conditions `{"type": "season", "in": [...]}` et `{"type": "weather", "in": [...]}`.
 - Un combat dans un lieu de camp prend la lumière de la météo (`light`).
 
+## Carte du monde (`locations.json › map`, `links`)
+- `map` : `{"x", "y"}` entre 0 et 1, position du lieu sur la carte. `links` : lieux reliés (dans les deux sens).
+- `LifeState.visited` (sauvegardé) : lieux déjà visités. `WorldMap.can_travel` : on va dans un lieu visité
+  (téléportation, par simplicité, sans passer de temps) ou relié au lieu actuel (on le découvre).
+- Fenêtre `WorldMapView` (touche V ou « Carte » dans le menu du lieu) : points rouges (sauvages), bleus (sûrs),
+  vert (lieu actuel), contour doré pour les lieux visités, clair pour les voisins inconnus.
+- Le hub est le menu du lieu actuel (`LifeState.location`) : se promener, parler, chercher, boutiques, carte,
+  repos.
+
 ## Récolte (`locations.json › gather`)
 
 - `[{"id", "name", "item", "count"? (1), "skill", "ability"?, "difficulty", "failure"?, "fumble"?, "fumble_hp"?}]`.

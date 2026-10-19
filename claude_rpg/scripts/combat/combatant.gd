@@ -9,6 +9,7 @@ extends RefCounted
 ## Les jets sont des réserves de d10 (voir Dice) : {"count": dés, "threshold": seuil}.
 
 const RELOAD_ACTION := "reload"  # action Recharger (actions.json)
+const MAGIC_SHIELD := "mage_shield"  # sort Bouclier : sert aussi à parer (actions.json)
 
 var id := ""  # unique dans le combat
 var name := ""
@@ -411,13 +412,13 @@ func parry_item(ranged := false) -> String:
 	if parry_choice in options:
 		return parry_choice
 	var off: String = character.equipment.get("off_hand", "")
-	if Equipment.is_shield(off) or options.is_empty():
-		return off if off in options else ""
+	if Equipment.is_shield(off) and off in options:
+		return off
 	var best := ""
 	for item: String in options:
-		if parry_threshold(item) > parry_threshold(best):
+		if item != MAGIC_SHIELD and parry_threshold(item) > parry_threshold(best):
 			best = item
-	return best
+	return MAGIC_SHIELD if best == "" and MAGIC_SHIELD in options else best
 
 
 ## Objets d'un personnage qui peuvent parer (le joueur choisit : bouclier ou arme) ; un tir : le bouclier seul.
@@ -428,13 +429,31 @@ func parry_options(ranged := false) -> Array[String]:
 	for item: String in [character.weapon_id(), character.equipment.get("off_hand", "")]:
 		if item != "" and item not in result and parry_threshold(item) >= 0 and (not ranged or Equipment.is_shield(item)):
 			result.append(item)
+	if can_magic_shield():
+		result.append(MAGIC_SHIELD)
 	return result
+
+
+## Bouclier magique : un lanceur qui connaît le sort Bouclier (et a le mana pour le payer) peut parer avec,
+## même un tir, par la compétence d'incantation contre son seuil d'incantation.
+func can_magic_shield() -> bool:
+	if character == null or not character.combat_actions().has(MAGIC_SHIELD):
+		return false
+	var action := Actions.def(MAGIC_SHIELD)
+	return unavailable_reason(action) == "" and not needs_blood(action)
+
+
+## Nom de ce qui pare (objet, ou « bouclier magique »).
+static func parry_item_name(item: String) -> String:
+	return Loc.ui("bouclier magique") if item == MAGIC_SHIELD else Items.name_of(item).to_lower()
 
 
 ## Seuil de parade de l'objet qui pare (-1 : il ne pare pas).
 func parry_threshold(item: String) -> int:
 	if item == "":
 		return -1
+	if item == MAGIC_SHIELD:
+		return spell_threshold()
 	return Equipment.parry_of(item, character != null and item == character.weapon_id() and character.two_handed_grip())
 
 
@@ -443,6 +462,10 @@ func parry_threshold(item: String) -> int:
 ## (`impact`) baisse ce seuil de 1.
 func parry_pool(bonus := 0, ranged := false, impact := false) -> Dictionary:
 	var item := parry_item(ranged)
+	if item == MAGIC_SHIELD:
+		var magic := spell_pool(bonus)
+		magic["item"] = item
+		return magic
 	var skill := "physique" if item == "" or "physique" in Equipment.skills_for(item) else "weapon_melee"
 	if Equipment.is_shield(item):
 		skill = "weapon_melee"

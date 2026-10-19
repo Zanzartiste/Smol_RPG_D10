@@ -73,17 +73,18 @@ func buy_unlock(unlock_id: String) -> bool:
 	return true
 
 
+## En mode debug, tout est disponible (espèces, classes, passés).
 func is_species_available(species_id: String) -> bool:
-	return not DB.species[species_id].get("locked", false) or is_unlocked("species:" + species_id)
+	return Game.debug or not DB.species[species_id].get("locked", false) or is_unlocked("species:" + species_id)
 
 
 func is_class_available(class_id: String) -> bool:
-	return not DB.classes[class_id].get("locked", false) or is_unlocked("class:" + class_id)
+	return Game.debug or not DB.classes[class_id].get("locked", false) or is_unlocked("class:" + class_id)
 
 
 ## Passé verrouillé (Sur mesure) : débloqué en mourant de vieillesse (voir record_life).
 func is_background_available(background_id: String) -> bool:
-	return not DB.backgrounds[background_id].get("locked", false) or is_unlocked("background:" + background_id)
+	return Game.debug or not DB.backgrounds[background_id].get("locked", false) or is_unlocked("background:" + background_id)
 
 
 func mark_event_seen(event_id: String) -> void:

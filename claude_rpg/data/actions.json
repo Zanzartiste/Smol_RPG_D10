@@ -103,7 +103,7 @@
 	{
 		"id": "mage_shield",
 		"name": "Bouclier",
-		"description": "Une barrière de force invisible vous protège.",
+		"description": "Une barrière de force invisible vous protège. En réaction, le sort sert aussi à parer un coup, même un tir : jet de Magie contre votre seuil d'incantation, pour son coût en mana.",
 		"target": "self",
 		"cost": "spell_slot",
 		"spell_level": 1,

@@ -92,7 +92,7 @@ func _ready() -> void:
 	_species_buttons = species
 	_class_buttons = classes
 	var backgrounds := _fill_buttons(_scroll_row(background_buttons), DB.backgrounds,
-		func(id): return Meta.is_background_available(id) or Game.debug, _on_background_selected)
+		Meta.is_background_available, _on_background_selected)
 	var genders := _fill_buttons(gender_buttons, _index(DB.rules["genders"]), func(_id): return true, _on_gender_selected)
 	_build_ability_grid()
 	_build_upgrade_grid()

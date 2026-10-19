@@ -28,7 +28,9 @@ const TESTS := [
 	"_test_encumbrance",
 	"_test_weapon_properties",
 	"_test_throw_and_shield",
+	"_test_magic_shield_parry",
 	"_test_lost_items_and_stock",
+	"_test_world_map",
 	"_test_new_species",
 	"_test_damage_types",
 	"_test_economy",
@@ -1291,6 +1293,56 @@ func _test_throw_and_shield() -> bool:
 	_expect(combat.hero.parry_item() == "longsword" and combat.hero.parry_item(true) == "shield", "parade au choix du joueur")
 	combat.hero.parry_choice = ""
 	Game.combat = null
+	return true
+
+
+func _test_magic_shield_parry() -> bool:
+	# Bouclier magique : un lanceur qui connaît le sort Bouclier peut parer avec, même un tir, par la
+	# compétence d'incantation ; la parade coûte le mana du sort. Sans mana, il n'est plus proposé.
+	var mage := _at_level("human", "wizard", 5)
+	for entry: Dictionary in mage.choice_specs():
+		if entry["spec"].get("id") == "spells":
+			mage.choices[entry["key"]] = ["magic_missile", "mage_shield", "sleep"]
+	mage.equip_spell("mage_shield")
+	Game.start_life(mage, 21)
+	var combat := Game.start_combat({"enemies": ["dire_wolf"]})
+	var hero := combat.hero
+	_expect(Combatant.MAGIC_SHIELD in hero.parry_options(true), "bouclier magique : il pare même un tir")
+	hero.parry_choice = Combatant.MAGIC_SHIELD
+	var pool := hero.parry_pool()
+	_expect(pool["item"] == Combatant.MAGIC_SHIELD and pool["count"] == hero.spell_pool()["count"]
+		and pool["threshold"] == hero.spell_threshold(), "bouclier magique : jet de Magie contre l'incantation")
+	var wolf := combat.enemies()[0]
+	var bite: Dictionary = wolf.creature["actions"][0]["effects"][0]
+	var mana := int(Game.life.character.resources["spell_slot"])
+	var beats: Array[Dictionary] = []
+	hero.reactions = 1
+	combat._parry(wolf, hero, bite, beats, true)
+	_expect(hero.reactions == 0 and int(Game.life.character.resources["spell_slot"]) == mana - Spellcasting.cost_of(Actions.def("mage_shield")),
+		"bouclier magique : une réaction et le mana du sort")
+	Game.life.character.resources["spell_slot"] = 0
+	_expect(Combatant.MAGIC_SHIELD not in hero.parry_options(true), "sans mana, pas de bouclier magique")
+	hero.parry_choice = ""
+	Game.combat = null
+	return true
+
+
+func _test_world_map() -> bool:
+	# Carte : on va dans un lieu relié (on le découvre) ou déjà visité (téléportation) ; les liaisons valent
+	# dans les deux sens ; les lieux visités sont sauvegardés.
+	Game.start_life(Character.create("human", "fighter", "Carto"), 21)
+	var life := Game.life
+	life.location = "home"
+	life.visited.assign(["home"])
+	_expect(WorldMap.links_of("home") == ["town"] and "home" in WorldMap.links_of("town"), "liaisons dans les deux sens")
+	_expect(WorldMap.can_travel(life, "town") and not WorldMap.can_travel(life, "forest") and not WorldMap.can_travel(life, "home"),
+		"depuis chez soi : la ville voisine, pas la forêt (trop loin) ni le lieu actuel")
+	WorldMap.travel(life, "town")
+	WorldMap.travel(life, "forest")
+	_expect(life.location == "forest" and WorldMap.can_travel(life, "home") and WorldMap.is_visited(life, "home"),
+		"un lieu déjà visité est accessible de partout")
+	_expect(WorldMap.is_safe("town") and not WorldMap.is_safe("forest"), "lieu sûr ou sauvage")
+	_expect(LifeState.from_dict(life.to_dict()).visited == life.visited, "lieux visités sauvegardés")
 	return true
 
 

@@ -411,4 +411,6 @@ désormais dans la feuille de route du §10. Restent ici :
 
 - **Banc d'équilibrage** : `tools/combat_bench.tscn` (taux de victoire par classe et par rencontre).
 - **Mode debug** : F12 en jeu, ou lancer avec `-- --debug`. Il affiche les choix verrouillés (grisés, avec la raison),
-  qui sont cachés en jeu normal.
+  qui sont cachés en jeu normal, et débloque tout à la création (espèces, classes, passés).
+- **Tutoriel** : une première vie guidée (réinitialisable à la création), mais seulement quand les systèmes seront
+  stabilisés, pour ne pas expliquer un système qui pourrait disparaître.

@@ -11,12 +11,16 @@ extends VBoxContainer
 ## qui a gardé des actions, le joueur choisit sa réaction : contre-attaquer (avant le jet), esquiver (si
 ## l'attaque touche), parer (avant les dégâts) — sauf si l'IA joue ce personnage.
 ## Les étapes du combat (Combat.stream) sont animées au fil de l'eau, y compris avant un choix de réaction.
-## Raccourcis : 1-9 pour les actions (et les réactions), Échap annule le ciblage ; une touche accélère les dés.
+## Les actions sont rangées par catégorie (Attaques, Sorts, Capacités, Objets, Lancer).
+## Raccourcis : 1-9 pour les actions (et les réactions), Tab change de catégorie, Échap annule le ciblage ;
+## une touche accélère les dés.
 
 signal _turn_finished
 signal _reaction_chosen(react: bool)
 
 const LOG_LINES := 6
+const CATEGORIES := ["attacks", "spells", "abilities", "items", "throw"]
+const CATEGORY_NAMES := {"attacks": "Attaques", "spells": "Sorts", "abilities": "Capacités", "items": "Objets", "throw": "Lancer"}
 
 @onready var background: TextureRect = %Background
 @onready var battle: BattleView = %Battle
@@ -24,7 +28,7 @@ const LOG_LINES := 6
 @onready var turn_label: Label = %TurnLabel
 @onready var log_text: RichTextLabel = %LogText
 @onready var hint_label: Label = %HintLabel
-@onready var action_bar: HFlowContainer = %ActionBar
+@onready var action_bar: VBoxContainer = %ActionBar
 
 var combat: Combat
 var _actor: Combatant  # personnage contrôlé par le joueur dont c'est le tour (null sinon)
@@ -33,7 +37,11 @@ var _pending := {}  # action en attente de cible : {"kind": "action"|"item", "ac
 var _log_shown := 0
 var _stream_pos := 0  # étapes de Combat.stream déjà animées
 var _reaction := {}  # réaction en attente du joueur : {"target", "kind", "info"}
-var _action_buttons: Array[Button] = []
+var _action_buttons: Array[Button] = []  # choix numérotés (1-9) de la catégorie ouverte, ou réactions
+var _entries := {}  # catégorie -> choix (voir _collect_entries)
+var _category := "attacks"  # catégorie ouverte, gardée d'un tour à l'autre
+var _tab_buttons := {}
+var _entries_row: HFlowContainer
 
 
 func _ready() -> void:
@@ -146,92 +154,164 @@ func _refresh() -> void:
 	_fill_action_bar()
 
 
-## Une action par bouton (avec ses dés, son bonus et ses utilisations), puis Objet, Fuir et Passer.
+## Barre d'actions en deux lignes : les catégories (Attaques, Sorts, Capacités, Objets, Lancer) avec Fuir, IA et Fin du
+## tour, puis les choix de la catégorie ouverte. Survoler une catégorie l'ouvre (souris) ; un clic aussi (tactile).
 func _fill_action_bar() -> void:
-	for child in action_bar.get_children():
-		action_bar.remove_child(child)
-		child.queue_free()
+	_clear(action_bar)
 	_action_buttons.clear()
+	_tab_buttons.clear()
+	_entries = {}
+	_entries_row = null
 	if not _reaction.is_empty():
+		_entries_row = _row()
 		_fill_reaction_bar()
 		return
 	if _actor == null or combat.is_over():
 		return
 	var enabled := not _busy
+	_entries = _collect_entries(enabled)
+	if _entries[_category].is_empty():
+		for cat: String in CATEGORIES:
+			if not _entries[cat].is_empty():
+				_category = cat
+				break
+	var tabs := _row()
+	for cat: String in CATEGORIES:
+		var tab := Button.new()
+		tab.text = tr(CATEGORY_NAMES[cat])
+		tab.toggle_mode = true
+		tab.button_pressed = cat == _category
+		tab.disabled = _entries[cat].is_empty()
+		tab.custom_minimum_size.x = 104
+		tab.pressed.connect(_show_category.bind(cat), CONNECT_DEFERRED)
+		tab.mouse_entered.connect(_show_category.bind(cat))
+		tabs.add_child(tab)
+		_tab_buttons[cat] = tab
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tabs.add_child(spacer)
+	if combat.can_flee_now(_actor):
+		_button(tr("Fuir (%d %%)") % roundi(combat.flee_chance(_actor) * 100), _on_flee_pressed, enabled, tabs)
+	var auto := _button(tr("IA : %s") % (tr("oui") if _actor.is_auto() else tr("non")), _on_auto_toggled, enabled, tabs)
+	auto.tooltip_text = tr("Laisser l'IA jouer ce personnage (à partir de maintenant)")
+	_button(tr("Fin du tour"), _on_pass_pressed, enabled, tabs)
+	_entries_row = _row()
+	_fill_entries()
+
+
+## Choix de chaque catégorie : {"title", "details", "tooltip", "enabled", "call"}.
+func _collect_entries(enabled: bool) -> Dictionary:
+	var result := {}
+	for cat: String in CATEGORIES:
+		result[cat] = []
 	for choice in combat.action_choices(_actor):
 		var action: Dictionary = choice["action"]
-		var label := "%d. %s" % [_action_buttons.size() + 1, _action_label(_actor, action)]
-		if not choice["available"]:
-			label += " (%s)" % choice["reason"]
-		var button := _button(label, _on_action_pressed.bind(action), enabled and choice["available"])
-		button.tooltip_text = "%s\n%s" % [action.get("description", ""), Actions.text_of(action["id"])]
-		_action_buttons.append(button)
-	var items := combat.usable_items()
-	var item_menu := MenuButton.new()
-	item_menu.text = tr("Objet")
-	item_menu.flat = false
-	item_menu.disabled = not enabled or items.is_empty()
-	for i in items.size():
-		item_menu.get_popup().add_item("%s ×%d" % [items[i]["item"]["name"], items[i]["count"]], i)
-	item_menu.get_popup().id_pressed.connect(_on_item_chosen, CONNECT_DEFERRED)
-	action_bar.add_child(item_menu)
+		var cat := "abilities"
+		if Spellcasting.is_spell(action):
+			cat = "spells"
+		elif action.get("effects", []).any(func(e): return e.get("type") == "attack"):
+			cat = "attacks"
+		var parts := _action_label(_actor, action)
+		result[cat].append({"title": parts[0], "details": parts[1] if choice["available"] else choice["reason"],
+			"tooltip": "%s\n%s" % [action.get("description", ""), Actions.text_of(action["id"])],
+			"enabled": enabled and choice["available"], "call": _on_action_pressed.bind(action)})
+	var can_throw := combat.actions_left > 0 and not combat.living("enemy").is_empty()
 	var throwables := combat.throwables(_actor)
-	var throw_menu := MenuButton.new()
-	throw_menu.text = tr("Lancer")
-	throw_menu.flat = false
-	throw_menu.tooltip_text = tr("Lancer un objet ou l'arme tenue (une action). Ce qui n'est pas fait pour être lancé compte comme une arme improvisée ; l'objet est perdu jusqu'à la fin du combat, et ramassé après une victoire.")
-	throw_menu.disabled = not enabled or throwables.is_empty() or combat.actions_left <= 0 or combat.living("enemy").is_empty()
 	for i in throwables.size():
 		var entry: Dictionary = throwables[i]
 		var weapon := Combat.throw_weapon(entry["id"])
-		var label: String = entry["name"] + (tr(" (en main)") if entry["slot"] != "" else " ×%d" % entry["count"])
-		label += " — " + Equipment.damage_text(Equipment.weapon_damage(weapon)) + (tr(", improvisée") if weapon != entry["id"] else "")
-		throw_menu.get_popup().add_item(label, i)
-	throw_menu.get_popup().id_pressed.connect(_on_throw_chosen, CONNECT_DEFERRED)
-	action_bar.add_child(throw_menu)
-	if combat.can_flee_now(_actor):
-		_button(tr("Fuir (%d %%)") % roundi(combat.flee_chance(_actor) * 100), _on_flee_pressed, enabled)
-	var auto := _button(tr("IA : %s") % (tr("oui") if _actor.is_auto() else tr("non")), _on_auto_toggled, enabled)
-	auto.tooltip_text = tr("Laisser l'IA jouer ce personnage (à partir de maintenant)")
-	_button(tr("Fin du tour"), _on_pass_pressed, enabled)
+		result["throw"].append({
+			"title": entry["name"] + (tr(" (en main)") if entry["slot"] != "" else " ×%d" % entry["count"]),
+			"details": Equipment.damage_text(Equipment.weapon_damage(weapon)) + (tr(", improvisée") if weapon != entry["id"] else ""),
+			"tooltip": tr("Lancer un objet ou l'arme tenue (une action). Ce qui n'est pas fait pour être lancé compte comme une arme improvisée ; l'objet est perdu jusqu'à la fin du combat, et ramassé après une victoire."),
+			"enabled": enabled and can_throw, "call": _on_throw_chosen.bind(i)})
+	var items := combat.usable_items()
+	for i in items.size():
+		var item: Dictionary = items[i]["item"]
+		result["items"].append({"title": "%s ×%d" % [item["name"], items[i]["count"]], "details": "",
+			"tooltip": Items.description_of(item["id"]), "enabled": enabled, "call": _on_item_chosen.bind(i)})
+	return result
 
 
-## Ex. « Attaque (Épée longue) — tranchant, 2d10 ≤ 8, toucher 2d10 ≤ 7 », « Projectile magique — force, 3d10 ≤ 6 [2/2] ».
-func _action_label(actor: Combatant, action: Dictionary) -> String:
-	var label: String = action["name"]
+## Ouvre une catégorie (survol ou clic) sans reconstruire les onglets.
+func _show_category(cat: String) -> void:
+	if _entries_row == null or not _reaction.is_empty() or _entries.get(cat, []).is_empty():
+		return
+	for other: String in _tab_buttons:
+		_tab_buttons[other].set_pressed_no_signal(other == cat)
+	if cat == _category:
+		return
+	_category = cat
+	_fill_entries()
+
+
+func _fill_entries() -> void:
+	_clear(_entries_row)
+	_action_buttons.clear()
+	for entry: Dictionary in _entries[_category]:
+		var text := "%d. %s" % [_action_buttons.size() + 1, entry["title"]]
+		if entry["details"] != "":
+			text += "\n" + entry["details"]
+		var button := _button(text, entry["call"], entry["enabled"], _entries_row)
+		button.tooltip_text = entry["tooltip"]
+		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		button.custom_minimum_size.x = 210
+		button.add_theme_font_size_override("font_size", 14)
+		_action_buttons.append(button)
+
+
+## Titre et détails d'une action, ex. « Attaque (Épée longue) » / « tranchant 2d10 ≤ 8, toucher 2d10 ≤ 7 »,
+## « Projectile magique [coût 1 · 2/4] » / « force 3d10 ≤ 6 ».
+func _action_label(actor: Combatant, action: Dictionary) -> Array[String]:
+	var title: String = action["name"]
+	var details := ""
 	for e: Dictionary in action.get("effects", []):
 		if e.get("type") in ["attack", "damage"]:
 			if e.get("weapon") is bool and e.get("weapon"):
-				label += " (%s)" % Equipment.name_of(actor.character.weapon_id())
+				title += " (%s)" % Equipment.name_of(actor.character.weapon_id())
 			var type := actor.damage_type(e)
 			var attack := actor.attack_pool(e) if e.get("type") == "attack" else {}
 			var damage := actor.damage_pool(e, attack)
-			label += " — %s%s" % [(DamageTypes.name_of(type).to_lower() + " ") if type != "" else "",
+			details = "%s%s" % [(DamageTypes.name_of(type).to_lower() + " ") if type != "" else "",
 				Dice.pool_text(int(damage["count"]), int(damage["threshold"]))]
 			for part: Dictionary in actor.bonus_damage(e):
-				label += " + %s %s" % [DamageTypes.name_of(part["damage_type"]).to_lower(),
+				details += " + %s %s" % [DamageTypes.name_of(part["damage_type"]).to_lower(),
 					Dice.pool_text(int(part.get("dice", 1)), int(part.get("threshold", 5)))]
 			if not attack.is_empty():
-				label += tr(", toucher %s") % Dice.pool_text(int(attack["count"]), int(attack["threshold"]))
+				details += tr(", toucher %s") % Dice.pool_text(int(attack["count"]), int(attack["threshold"]))
 			break
 	var key := actor.resource_key(action)
 	if key != "":
 		var left := int(actor.character.resources.get(key, 0))
 		if Spellcasting.is_slot(key):
-			label += tr(" [coût %d · %d/%d]") % [Spellcasting.cost_of(action), left, actor.character.max_resource(key)]
+			title += tr(" [coût %d · %d/%d]") % [Spellcasting.cost_of(action), left, actor.character.max_resource(key)]
 		else:
-			label += " [%d/%d]" % [left, actor.character.max_resource(key)]
+			title += " [%d/%d]" % [left, actor.character.max_resource(key)]
 	if action.has("per_combat"):
-		label += " [%d/%d]" % [int(actor.uses.get(action["id"], 0)), int(action["per_combat"])]
-	return label
+		title += " [%d/%d]" % [int(actor.uses.get(action["id"], 0)), int(action["per_combat"])]
+	return [title, details]
 
 
-func _button(text: String, on_pressed: Callable, enabled: bool) -> Button:
+func _row() -> HFlowContainer:
+	var row := HFlowContainer.new()
+	row.add_theme_constant_override("h_separation", 6)
+	row.add_theme_constant_override("v_separation", 6)
+	action_bar.add_child(row)
+	return row
+
+
+func _clear(container: Container) -> void:
+	for child in container.get_children():
+		container.remove_child(child)
+		child.queue_free()
+
+
+func _button(text: String, on_pressed: Callable, enabled: bool, parent: Container = null) -> Button:
 	var button := Button.new()
 	button.text = text
 	button.disabled = not enabled
 	button.pressed.connect(on_pressed, CONNECT_DEFERRED)
-	action_bar.add_child(button)
+	(parent if parent != null else _entries_row).add_child(button)
 	return button
 
 
@@ -325,7 +405,7 @@ func _fill_reaction_bar() -> void:
 					target.parry_choice = options[i]
 					var pool := target.parry_pool(combat.target_prepared_bonus(target))
 					target.parry_choice = ""
-					_action_buttons.append(_button("%d. %s" % [i + 1, tr("Parer avec %s (%s)") % [Items.name_of(options[i]).to_lower(),
+					_action_buttons.append(_button("%d. %s" % [i + 1, tr("Parer avec %s (%s)") % [Combatant.parry_item_name(options[i]),
 						Dice.pool_text(pool["count"], pool["threshold"])]], _on_parry_with.bind(options[i]), true))
 				_action_buttons.append(_button("%d. %s" % [options.size() + 1, tr("Encaisser")], _on_reaction.bind(false), true))
 				return
@@ -442,6 +522,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		dice_tray.skip()
 	elif key.keycode == KEY_ESCAPE:
 		_cancel_pending()
+	elif key.keycode == KEY_TAB and not _entries.is_empty():
+		var open: Array = CATEGORIES.filter(func(c): return not _entries[c].is_empty())
+		if not open.is_empty():
+			_show_category(open[(open.find(_category) + 1) % open.size()])
 	elif key.keycode >= KEY_1 and key.keycode <= KEY_9:
 		var index: int = key.keycode - KEY_1
 		if index < _action_buttons.size() and not _action_buttons[index].disabled:
